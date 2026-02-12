@@ -4,14 +4,15 @@ import { GistSyncService, createBirdDexExport, mergeImportedData } from '@/lib/g
 import type { GistSyncSettings, BirdDexData } from '@/lib/types'
 import { toast } from 'sonner'
 
-export function useGistSync() {
-  const [syncSettings, setSyncSettings] = useKV<GistSyncSettings>('gist-sync-settings', {
+export function useGistSync(userId: number) {
+  const prefix = `u${userId}_`
+  const [syncSettings, setSyncSettings] = useKV<GistSyncSettings>(`${prefix}gist-sync-settings`, {
     enabled: false,
     isPublic: false,
     autoSync: false
   })
 
-  const [githubToken, setGithubToken] = useKV<string>('github-token', '')
+  const [githubToken, setGithubToken] = useKV<string>(`${prefix}github-token`, '')
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncService] = useState(() => new GistSyncService())
 

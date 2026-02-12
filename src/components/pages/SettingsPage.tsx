@@ -1,19 +1,12 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Download, Upload, GithubLogo, CloudArrowUp, CloudArrowDown, Trash, LockKey, Globe, Info } from '@phosphor-icons/react'
+import { Download, Upload, Info } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
-import { useGistSync } from '@/hooks/use-gist-sync'
-import { mergeImportedData } from '@/lib/gist-sync'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface SettingsPageProps {
   data: ReturnType<typeof useBirdDexData>
@@ -26,11 +19,6 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
-  const [showTokenDialog, setShowTokenDialog] = useState(false)
-  const [githubToken, setGithubTokenInput] = useState('')
-  const [tokenVisibility, setTokenVisibility] = useState<'public' | 'private'>('private')
-
-  const gistSync = useGistSync()
 
   const handleImportEBird = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -90,77 +78,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     toast.success('Life list exported')
   }
 
-  const handleEnableSync = async () => {
-    if (!githubToken) {
-      toast.error('Please enter a GitHub token')
-      return
-    }
-
-    try {
-      await gistSync.enableSync(tokenVisibility === 'public', githubToken)
-      await handlePushToGist()
-      setShowTokenDialog(false)
-      setGithubTokenInput('')
-    } catch (error) {
-      console.error('Sync enable failed:', error)
-    }
-  }
-
-  const handleDisableSync = async (deleteGist: boolean) => {
-    try {
-      await gistSync.disableSync(deleteGist)
-    } catch (error) {
-      console.error('Sync disable failed:', error)
-    }
-  }
-
-  const handlePushToGist = async () => {
-    try {
-      await gistSync.pushToGist({
-        photos: data.photos,
-        outings: data.outings,
-        observations: data.observations,
-        lifeList: data.lifeList,
-        savedSpots: data.savedSpots
-      })
-    } catch (error) {
-      console.error('Push failed:', error)
-    }
-  }
-
-  const handlePullFromGist = async () => {
-    try {
-      const remoteData = await gistSync.pullFromGist()
-      if (!remoteData) return
-
-      const localData = {
-        version: '1.0',
-        exportedAt: new Date().toISOString(),
-        photos: data.photos,
-        outings: data.outings,
-        observations: data.observations,
-        lifeList: data.lifeList,
-        savedSpots: data.savedSpots
-      }
-
-      const merged = mergeImportedData(localData, remoteData)
-
-      data.importLifeListEntries(merged.lifeList)
-      toast.success('Data merged from GitHub')
-    } catch (error) {
-      console.error('Pull failed:', error)
-    }
-  }
-
-  const handleToggleVisibility = async () => {
-    const newVisibility = !gistSync.syncSettings?.isPublic
-    try {
-      await gistSync.updateVisibility(newVisibility)
-    } catch (error) {
-      console.error('Toggle visibility failed:', error)
-    }
-  }
-
   return (
     <div className="p-4 space-y-6">
       <div className="space-y-2">
@@ -209,207 +126,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           />
         </div>
       </Card>
-
-      <Card className="p-4 space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <GithubLogo size={20} weight="fill" />
-            <h3 className="font-semibold text-foreground">GitHub Sync</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Backup your BirdDex data to a GitHub Gist
-          </p>
-        </div>
-
-        {!gistSync.syncSettings?.enabled ? (
-          <>
-            <Alert>
-              <AlertDescription className="text-sm space-y-2">
-                <p>
-                  Store your data in a GitHub Gist (public or private) to backup and sync across devices.
-                  You'll need a GitHub Personal Access Token with 'gist' scope.
-                </p>
-                <a 
-                  href="https://github.com/settings/tokens/new?scopes=gist&description=BirdDex%20Sync"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline text-xs"
-                >
-                  <Info size={14} />
-                  Create a token on GitHub
-                </a>
-              </AlertDescription>
-            </Alert>
-            <Button
-              className="w-full"
-              onClick={() => setShowTokenDialog(true)}
-            >
-              <GithubLogo size={20} className="mr-2" weight="fill" />
-              Enable GitHub Sync
-            </Button>
-          </>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  {gistSync.syncSettings.isPublic ? (
-                    <Globe size={16} className="text-muted-foreground" />
-                  ) : (
-                    <LockKey size={16} className="text-muted-foreground" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {gistSync.syncSettings.isPublic ? 'Public' : 'Private'} Gist
-                  </span>
-                </div>
-                {gistSync.syncSettings.lastSyncTime && (
-                  <p className="text-xs text-muted-foreground">
-                    Last synced: {new Date(gistSync.syncSettings.lastSyncTime).toLocaleString()}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggleVisibility}
-                disabled={gistSync.isSyncing}
-              >
-                Make {gistSync.syncSettings.isPublic ? 'Private' : 'Public'}
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="auto-sync" className="text-sm font-medium">
-                  Auto-sync on changes
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Automatically backup after each outing
-                </p>
-              </div>
-              <Switch
-                id="auto-sync"
-                checked={gistSync.syncSettings.autoSync}
-                onCheckedChange={gistSync.toggleAutoSync}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={handlePushToGist}
-                disabled={gistSync.isSyncing}
-              >
-                <CloudArrowUp size={20} className="mr-2" />
-                Push
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handlePullFromGist}
-                disabled={gistSync.isSyncing}
-              >
-                <CloudArrowDown size={20} className="mr-2" />
-                Pull
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
-                onClick={() => handleDisableSync(false)}
-                disabled={gistSync.isSyncing}
-              >
-                Disable Sync (Keep Gist)
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={() => handleDisableSync(true)}
-                disabled={gistSync.isSyncing}
-              >
-                <Trash size={20} className="mr-2" />
-                Disable & Delete Gist
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      <Dialog open={showTokenDialog} onOpenChange={setShowTokenDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enable GitHub Sync</DialogTitle>
-            <DialogDescription className="space-y-2">
-              <p>Create a Personal Access Token with 'gist' scope.</p>
-              <a 
-                href="https://github.com/settings/tokens/new?scopes=gist&description=BirdDex%20Sync"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
-              >
-                <GithubLogo size={16} />
-                Create token on GitHub →
-              </a>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="token">GitHub Personal Access Token</Label>
-              <Input
-                id="token"
-                type="password"
-                placeholder="ghp_..."
-                value={githubToken}
-                onChange={(e) => setGithubTokenInput(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>Gist Visibility</Label>
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant={tokenVisibility === 'private' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setTokenVisibility('private')}
-                >
-                  <LockKey size={20} className="mr-2" />
-                  Private
-                </Button>
-                <Button
-                  type="button"
-                  variant={tokenVisibility === 'public' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setTokenVisibility('public')}
-                >
-                  <Globe size={20} className="mr-2" />
-                  Public
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {tokenVisibility === 'private' 
-                  ? 'Only you can see this gist'
-                  : 'Anyone with the link can view this gist'}
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTokenDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEnableSync} disabled={!githubToken || gistSync.isSyncing}>
-              Enable Sync
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
@@ -463,13 +179,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">Data Storage</h3>
         <p className="text-sm text-muted-foreground">
-          By default, your data is stored locally on this device. Enable GitHub Sync to backup
-          your data to the cloud and access it from multiple devices.
+          Your data is stored securely in the cloud, tied to your GitHub account.
+          It's private to you and accessible from any device where you're signed in.
         </p>
-        <div className="text-xs text-muted-foreground space-y-1 pt-2">
-          <p>• <strong>Local storage:</strong> Fast, always available, device-specific</p>
-          <p>• <strong>GitHub Gist:</strong> Cloud backup, multi-device sync, portable</p>
-        </div>
       </Card>
     </div>
   )
