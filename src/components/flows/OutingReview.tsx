@@ -45,16 +45,32 @@ export default function OutingReview({
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
     try {
-      const prompt = (window.spark.llmPrompt as any)`Given the GPS coordinates ${lat.toFixed(4)}, ${lon.toFixed(4)}, suggest a likely location name. This could be a park, nature reserve, city, or general area name. Return ONLY the location name as a short string (e.g., "Central Park, NYC" or "Golden Gate Park, San Francisco" or "Austin, TX"). Be concise and practical.`
+      const prompt = (window.spark.llmPrompt as any)`Given GPS coordinates ${lat.toFixed(6)}, ${lon.toFixed(6)}, identify the most likely location name for a bird watching outing.
+
+Consider:
+- Named parks, nature reserves, wildlife refuges, or conservation areas
+- City parks or urban green spaces
+- Lakes, rivers, beaches, or coastal areas
+- General geographic areas (city, region, state)
+
+Return ONLY the location name as a concise string. Examples:
+- "Golden Gate Park, San Francisco, CA"
+- "Central Park, New York, NY"
+- "Everglades National Park, FL"
+- "Monterey Bay, CA"
+- "Austin, TX"
+
+Location name:`
       
       const response = await window.spark.llm(prompt, 'gpt-4o-mini', false)
-      const cleanName = response.trim().replace(/^["']|["']$/g, '')
+      const cleanName = response.trim().replace(/^["']|["']$/g, '').split('\n')[0]
       setSuggestedLocation(cleanName)
       setLocationName(cleanName)
     } catch (error) {
       console.error('Failed to fetch location name:', error)
-      setSuggestedLocation(`Location near ${lat.toFixed(4)}, ${lon.toFixed(4)}`)
-      setLocationName(`Location near ${lat.toFixed(4)}, ${lon.toFixed(4)}`)
+      const fallback = `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+      setSuggestedLocation(fallback)
+      setLocationName(fallback)
     } finally {
       setIsLoadingLocation(false)
     }
