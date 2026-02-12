@@ -67,3 +67,21 @@ export interface ImportPreview {
   conflict?: 'duplicate' | 'update_dates' | 'new'
   existingEntry?: LifeListEntry
 }
+
+export interface GistSyncSettings {
+  enabled: boolean
+  gistId?: string
+  isPublic: boolean
+  lastSyncTime?: string
+  autoSync: boolean
+}
+
+export interface BirdDexData {
+  version: string
+  exportedAt: string
+  photos: Photo[]
+  outings: Outing[]
+  observations: Observation[]
+  lifeList: LifeListEntry[]
+  savedSpots: SavedSpot[]
+}

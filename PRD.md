@@ -82,6 +82,13 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Progression**: Outings tab → Scrollable list of outings (most recent first) → Tap outing → Detail view with header (date, location, map pin), photo strip, species list, notes field
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
+### 11. GitHub Gist Sync
+- **Functionality**: Backup all Bird-Dex data (photos, outings, observations, life list, saved spots) to a GitHub Gist; supports public or private visibility; automatic or manual sync
+- **Purpose**: Provide cloud backup, enable multi-device sync, and offer portable data storage outside the VM
+- **Trigger**: User navigates to Settings and enables GitHub Sync
+- **Progression**: Settings → Tap "Enable GitHub Sync" → Enter Personal Access Token → Choose public/private → Enable sync → Initial data push to Gist → Toggle auto-sync if desired → Use Push/Pull buttons for manual sync
+- **Success criteria**: Gist created with all data in JSON format; data persists between sessions; pull merges remote data intelligently; push updates Gist with latest local data; visibility can be toggled; auto-sync pushes after each outing save
+
 ## Edge Case Handling
 
 - **No EXIF data** - Prompt user to manually set date/time and location; use current time as default
@@ -95,6 +102,9 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Import conflicts** - Show side-by-side comparison; prefer newer dates for last seen; ask user to resolve ambiguous matches
 - **Empty outing** - Require at least one confirmed species before saving; show validation message
 - **Tab suspension** - Persist upload state to KV; resume workflow on return
+- **Token security** - Store GitHub token encrypted in KV store; never log or display token
+- **Sync conflicts** - When pulling from Gist, merge intelligently (prefer newer dates, don't duplicate by ID, combine counts)
+- **Large data export** - Warn user if data export exceeds 10MB (Gist limit is 100MB per file)
 
 ## Design Direction
 

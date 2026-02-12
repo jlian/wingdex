@@ -1,4 +1,5 @@
 import { useKV } from '@github/spark/hooks'
+import { useEffect, useRef } from 'react'
 import type { Photo, Outing, Observation, LifeListEntry, SavedSpot } from '@/lib/types'
 
 export function useBirdDexData() {
@@ -7,6 +8,11 @@ export function useBirdDexData() {
   const [observations, setObservations] = useKV<Observation[]>('observations', [])
   const [lifeList, setLifeList] = useKV<LifeListEntry[]>('lifeList', [])
   const [savedSpots, setSavedSpots] = useKV<SavedSpot[]>('savedSpots', [])
+  const [syncTrigger, setSyncTrigger] = useKV<number>('sync-trigger', 0)
+  
+  const triggerSync = () => {
+    setSyncTrigger(current => (current || 0) + 1)
+  }
 
   const addPhotos = (newPhotos: Photo[]) => {
     setPhotos(current => [...(current || []), ...newPhotos])
@@ -14,18 +20,21 @@ export function useBirdDexData() {
 
   const addOuting = (outing: Outing) => {
     setOutings(current => [outing, ...(current || [])])
+    triggerSync()
   }
 
   const updateOuting = (outingId: string, updates: Partial<Outing>) => {
     setOutings(current =>
       (current || []).map(o => (o.id === outingId ? { ...o, ...updates } : o))
     )
+    triggerSync()
   }
 
   const deleteOuting = (outingId: string) => {
     setOutings(current => (current || []).filter(o => o.id !== outingId))
     setObservations(current => (current || []).filter(obs => obs.outingId !== outingId))
     setPhotos(current => (current || []).filter(p => p.outingId !== outingId))
+    triggerSync()
   }
 
   const addObservations = (newObservations: Observation[]) => {
@@ -147,6 +156,7 @@ export function useBirdDexData() {
     observations: observations || [],
     lifeList: lifeList || [],
     savedSpots: savedSpots || [],
+    syncTrigger: syncTrigger || 0,
     addPhotos,
     addOuting,
     updateOuting,

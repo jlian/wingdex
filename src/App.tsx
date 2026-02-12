@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { House, List, Bird, Gear, CloudArrowUp } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
+import { useGistSync } from '@/hooks/use-gist-sync'
 import HomePage from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
 import LifeListPage from '@/components/pages/LifeListPage'
@@ -24,6 +25,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData()
+  const gistSync = useGistSync()
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -36,6 +38,25 @@ function App() {
     }
     fetchUser()
   }, [])
+
+  useEffect(() => {
+    if (gistSync.syncSettings?.enabled && gistSync.syncSettings?.autoSync && data.syncTrigger > 0) {
+      const autoSync = async () => {
+        try {
+          await gistSync.pushToGist({
+            photos: data.photos,
+            outings: data.outings,
+            observations: data.observations,
+            lifeList: data.lifeList,
+            savedSpots: data.savedSpots
+          })
+        } catch (error) {
+          console.error('Auto-sync failed:', error)
+        }
+      }
+      autoSync()
+    }
+  }, [data.syncTrigger, gistSync.syncSettings?.enabled, gistSync.syncSettings?.autoSync])
 
   if (!user) {
     return (
@@ -70,6 +91,14 @@ function App() {
             <h1 className="font-serif text-xl font-semibold text-foreground">
               Bird-Dex
             </h1>
+            {gistSync.syncSettings?.enabled && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full">
+                <div className={`w-1.5 h-1.5 rounded-full ${gistSync.isSyncing ? 'bg-accent animate-pulse' : 'bg-primary'}`} />
+                <span className="text-xs text-primary font-medium">
+                  {gistSync.isSyncing ? 'Syncing' : 'Synced'}
+                </span>
+              </div>
+            )}
           </div>
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatarUrl} alt={user.login} />
