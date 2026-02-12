@@ -17,8 +17,10 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
   const thisMonth = new Date()
   const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)
   const newThisMonth = lifeList.filter(entry => {
-    const firstSeen = new Date(entry.firstSeenDate)
-    return firstSeen >= thisMonthStart
+    // Use addedDate (when added to BirdDex) if available, fall back to firstSeenDate
+    const dateStr = entry.addedDate || entry.firstSeenDate
+    const added = new Date(dateStr)
+    return added >= thisMonthStart
   }).length
 
   return (
@@ -26,7 +28,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
       <section className="space-y-4">
         <div className="text-center py-8 space-y-4">
           <h2 className="font-serif text-3xl font-semibold text-foreground">
-            Welcome to your Bird-Dex
+            Welcome to your BirdDex
           </h2>
           <p className="text-muted-foreground">
             Track your sightings and build your life list

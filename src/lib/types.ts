@@ -38,6 +38,8 @@ export interface LifeListEntry {
   speciesName: string
   firstSeenDate: string
   lastSeenDate: string
+  /** When this species was first added to BirdDex (wall-clock time) */
+  addedDate?: string
   totalOutings: number
   totalCount: number
   bestPhotoId?: string

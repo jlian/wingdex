@@ -81,6 +81,7 @@ export function useBirdDexData() {
               speciesName: obs.speciesName,
               firstSeenDate: outing.startTime,
               lastSeenDate: outing.startTime,
+              addedDate: new Date().toISOString(),
               totalOutings: 1,
               totalCount: obs.count,
               bestPhotoId: obs.representativePhotoId,

@@ -2,7 +2,7 @@ import { Octokit } from 'octokit'
 import type { BirdDexData, GistSyncSettings } from './types'
 
 const GIST_FILENAME = 'birddex-data.json'
-const GIST_DESCRIPTION = 'Bird-Dex Life List & Sighting Data'
+const GIST_DESCRIPTION = 'BirdDex Life List & Sighting Data'
 
 export class GistSyncService {
   private octokit: Octokit | null = null
@@ -96,7 +96,7 @@ export class GistSyncService {
     })
 
     return response.data
-      .filter(gist => gist.description?.includes('Bird-Dex'))
+      .filter(gist => gist.description?.includes('BirdDex'))
       .map(gist => ({
         id: gist.id,
         description: gist.description || '',

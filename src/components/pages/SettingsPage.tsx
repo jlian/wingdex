@@ -217,7 +217,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             <h3 className="font-semibold text-foreground">GitHub Sync</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Backup your Bird-Dex data to a GitHub Gist
+            Backup your BirdDex data to a GitHub Gist
           </p>
         </div>
 
@@ -230,7 +230,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                   You'll need a GitHub Personal Access Token with 'gist' scope.
                 </p>
                 <a 
-                  href="https://github.com/settings/tokens/new?scopes=gist&description=Bird-Dex%20Sync"
+                  href="https://github.com/settings/tokens/new?scopes=gist&description=BirdDex%20Sync"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary hover:underline text-xs"
@@ -347,7 +347,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             <DialogDescription className="space-y-2">
               <p>Create a Personal Access Token with 'gist' scope.</p>
               <a 
-                href="https://github.com/settings/tokens/new?scopes=gist&description=Bird-Dex%20Sync"
+                href="https://github.com/settings/tokens/new?scopes=gist&description=BirdDex%20Sync"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
@@ -450,9 +450,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       </Card>
 
       <Card className="p-4 space-y-2">
-        <h3 className="font-semibold text-foreground">About Bird-Dex</h3>
+        <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
-          Bird-Dex helps you track bird sightings and maintain a life list.
+          BirdDex helps you track bird sightings and maintain a life list.
           Compatible with eBird for import/export.
         </p>
         <p className="text-xs text-muted-foreground">

@@ -67,7 +67,7 @@ function App() {
           </div>
           <div className="space-y-2">
             <h1 className="font-serif text-4xl font-semibold text-foreground">
-              Bird-Dex
+              BirdDex
             </h1>
             <p className="text-muted-foreground text-lg">
               Your Personal Bird Life List & Sighting Tracker
@@ -89,7 +89,7 @@ function App() {
           <div className="flex items-center gap-2">
             <Bird size={28} weight="duotone" className="text-primary" />
             <h1 className="font-serif text-xl font-semibold text-foreground">
-              Bird-Dex
+              BirdDex
             </h1>
             {gistSync.syncSettings?.enabled && (
               <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full">

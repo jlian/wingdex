@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,8 +18,6 @@ interface OutingReviewProps {
   cluster: PhotoCluster
   data: ReturnType<typeof useBirdDexData>
   userId: number
-  /** When true, auto-create outing and proceed as soon as location resolves */
-  autoConfirm?: boolean
   /** Pre-fill location from a previous outing (user can override) */
   defaultLocationName?: string
   onConfirm: (
@@ -34,30 +32,19 @@ export default function OutingReview({
   cluster,
   data,
   userId,
-  autoConfirm = false,
   defaultLocationName = '',
   onConfirm
 }: OutingReviewProps) {
+  const hasGps = !!(cluster.centerLat && cluster.centerLon)
   const [locationName, setLocationName] = useState(defaultLocationName)
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+  const [isLoadingLocation, setIsLoadingLocation] = useState(hasGps)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
-  const confirmedRef = useRef(false)
 
   useEffect(() => {
-    if (cluster.centerLat && cluster.centerLon) {
-      fetchLocationName(cluster.centerLat, cluster.centerLon)
-    } else if (autoConfirm) {
-      // No GPS — auto-confirm with default or unknown location
-      doConfirm(defaultLocationName || 'Unknown Location')
+    if (hasGps) {
+      fetchLocationName(cluster.centerLat!, cluster.centerLon!)
     }
   }, [cluster.centerLat, cluster.centerLon])
-
-  // Auto-confirm when location resolves and autoConfirm is enabled
-  useEffect(() => {
-    if (autoConfirm && locationName && !isLoadingLocation && !confirmedRef.current) {
-      doConfirm(locationName)
-    }
-  }, [autoConfirm, locationName, isLoadingLocation])
 
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
@@ -115,9 +102,6 @@ export default function OutingReview({
   }
 
   const doConfirm = (name: string) => {
-    if (confirmedRef.current) return
-    confirmedRef.current = true
-
     const outingId = `outing_${Date.now()}`
     const outing = {
       id: outingId,
@@ -168,13 +152,7 @@ export default function OutingReview({
         )}
       </div>
 
-      {autoConfirm && isLoadingLocation ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span>Creating outing &amp; identifying location...</span>
-        </div>
-      ) : (
-        <>
+      <>
           <div className="space-y-2">
             <Label htmlFor="location-name">Location Name</Label>
             {isLoadingLocation ? (
@@ -223,7 +201,6 @@ export default function OutingReview({
             {isLoadingLocation ? 'Loading...' : 'Continue to Species Identification'}
           </Button>
         </>
-      )}
     </div>
   )
 }
