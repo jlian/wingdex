@@ -410,6 +410,45 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </DialogContent>
       </Dialog>
 
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Info size={20} />
+            <h3 className="font-semibold text-foreground">Vision API Test</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Test if the AI bird identification is working properly
+          </p>
+        </div>
+        
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              try {
+                toast.info('Testing Vision API access...')
+                const testPrompt = (window.spark.llmPrompt as any)`Test message: respond with "API is working" if you receive this.`
+                const response = await window.spark.llm(testPrompt, 'gpt-4o', false)
+                toast.success('Vision API is accessible!')
+                console.log('API Test Response:', response)
+              } catch (error) {
+                toast.error(`Vision API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                console.error('API Test Error:', error)
+              }
+            }}
+          >
+            Test Vision API Connection
+          </Button>
+          
+          <Alert>
+            <AlertDescription className="text-xs">
+              If the test fails, bird identification will not work. Check browser console for detailed errors.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </Card>
+
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About Bird-Dex</h3>
         <p className="text-sm text-muted-foreground">

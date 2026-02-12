@@ -34,11 +34,11 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Success criteria**: Photos correctly grouped by temporal and spatial proximity; outing created with accurate metadata from EXIF; no manual intervention required for typical cases
 
 ### 4. AI Species Identification with Crop Tool (GitHub Models Vision)
-- **Functionality**: Send each photo to GitHub Models vision API with location + month context; receive top 5 species candidates with confidence scores; includes integrated crop tool to focus on specific birds for improved identification accuracy
-- **Purpose**: Dramatically reduce manual species identification effort while maintaining accuracy through user confirmation; crop feature allows users to isolate the bird subject for better AI results (Merlin-like functionality)
+- **Functionality**: AI automatically detects and crops to bird subject in each photo, then sends to GitHub Models vision API with location + month context; receives top 5 species candidates with confidence scores; users can manually refine any crop for better identification accuracy
+- **Purpose**: Dramatically reduce manual species identification effort while maintaining accuracy through user confirmation; AI crop feature automatically isolates bird subject for better results, with user refinement option (Merlin-like functionality)
 - **Trigger**: After outing grouping confirmed (automatic)
-- **Progression**: Outing created → Each photo queued for inference → Downscaled image sent to API with full image data and prompt → Response parsed → Species suggestions aggregated → Display top candidates with supporting photos → User can crop individual photos → Cropped photo re-analyzed by AI → Updated suggestions displayed
-- **Success criteria**: Inference completes within 30s for typical outing (10-20 photos); suggestions ranked by confidence and frequency; user can confirm/reject/mark as "possible"; crop tool allows intuitive selection of bird region; re-identification with cropped image improves accuracy
+- **Progression**: Outing created → Each photo queued for inference → AI analyzes photo to detect bird location → Auto-crop applied if confident → Downscaled cropped image sent to API for species ID → Response parsed → Species suggestions aggregated → Display top candidates with supporting photos → User can manually refine crops → Re-run identification with user-refined crop → Updated suggestions displayed
+- **Success criteria**: Inference completes within 45s for typical outing (10-20 photos); AI crop successfully focuses on bird in 60%+ of photos; suggestions ranked by confidence and frequency; user can confirm/reject/mark as "possible"; manual crop tool allows intuitive refinement of bird region; re-identification with refined crop improves accuracy; clear visual distinction between AI crops and manual crops
 
 ### 5. Observation Confirmation & Editing
 - **Functionality**: Review AI-suggested species, see supporting photos, mark as Confirmed/Possible/Rejected, set count per species, choose representative photo

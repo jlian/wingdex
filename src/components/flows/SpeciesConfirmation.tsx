@@ -140,33 +140,41 @@ export default function SpeciesConfirmation({
               const fullPhoto = photos.find(p => p.id === photo.id)
               const displaySrc = (fullPhoto as any)?.croppedDataUrl || photo.thumbnail
               const hasCrop = !!(fullPhoto as any)?.croppedDataUrl
+              const isAICropped = !!(fullPhoto as any)?.aiCropped
               
               return (
                 <div key={photo.id} className="relative group">
                   <img
                     src={displaySrc}
                     alt="Bird"
-                    className="w-full aspect-square object-cover rounded"
+                    className="w-full aspect-square object-cover rounded border-2 border-border"
                   />
                   {hasCrop && (
-                    <div className="absolute top-1 right-1 bg-accent text-accent-foreground text-xs px-1 rounded">
-                      Cropped
+                    <div className={`absolute top-1 right-1 text-xs px-1.5 py-0.5 rounded ${
+                      isAICropped ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground'
+                    }`}>
+                      {isAICropped ? 'AI Crop' : 'Manual'}
                     </div>
                   )}
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="absolute inset-0 m-auto w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute inset-0 m-auto w-10 h-10 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90"
                     onClick={() => onCropPhoto(idx)}
+                    title={hasCrop ? 'Refine crop' : 'Crop photo'}
                   >
-                    <Crop size={16} weight="bold" />
+                    <Crop size={18} weight="bold" />
                   </Button>
                 </div>
               )
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Hover over photos and click <Crop size={12} className="inline" weight="bold" /> to crop and improve identification
+            {suggestions.length === 0 ? (
+              <>Photos with <span className="text-accent font-medium">AI Crop</span> were auto-focused on birds. Hover and click <Crop size={12} className="inline" weight="bold" /> to manually refine any crop for better results.</>
+            ) : (
+              <>Hover over photos and click <Crop size={12} className="inline" weight="bold" /> to manually crop and improve identification</>
+            )}
           </p>
         </div>
       )}

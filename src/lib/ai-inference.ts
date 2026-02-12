@@ -5,12 +5,74 @@ interface VisionResult {
   confidence: number
 }
 
+export interface SuggestedCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+  confidence: number
+}
+
+export async function suggestBirdCrop(imageDataUrl: string): Promise<SuggestedCrop | null> {
+  try {
+    console.log('🔍 Starting AI crop suggestion...')
+    const prompt = (window.spark.llmPrompt as any)`You are a computer vision expert specializing in bird photography. Analyze this image and identify the bounding box coordinates for the bird subject.
+
+Look for:
+- Any bird species in the image (even if partially visible or distant)
+- The tightest rectangular area that contains the entire bird
+- Consider the bird's body, head, tail, and wings
+
+Return coordinates as percentages of the image dimensions (0-100).
+
+If NO bird is visible, return null for cropBox.
+
+Return ONLY valid JSON in this exact format:
+{
+  "cropBox": {
+    "x": 25.5,
+    "y": 30.2,
+    "width": 45.0,
+    "height": 40.8,
+    "confidence": 0.85
+  }
+}
+
+Where:
+- x: left edge as % from left
+- y: top edge as % from top  
+- width: width as % of image width
+- height: height as % of image height
+- confidence: 0.0-1.0 how confident you are this contains a bird
+
+Image to analyze: ${imageDataUrl}`
+
+    console.log('📤 Sending crop detection request to Vision API...')
+    const response = await window.spark.llm(prompt, 'gpt-4o', true)
+    console.log('📥 Crop detection response:', response)
+    
+    const parsed = JSON.parse(response)
+    
+    if (parsed.cropBox && typeof parsed.cropBox.confidence === 'number' && parsed.cropBox.confidence >= 0.5) {
+      console.log('✅ AI crop suggestion successful:', parsed.cropBox)
+      return parsed.cropBox
+    }
+    
+    console.log('⚠️ No confident crop suggestion found')
+    return null
+  } catch (error) {
+    console.error('❌ Crop suggestion error:', error)
+    return null
+  }
+}
+
 export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
   month?: number
 ): Promise<VisionResult[]> {
   try {
+    console.log('🐦 Starting bird species identification...')
     let contextStr = ''
     
     if (location) {
@@ -22,6 +84,8 @@ export async function identifyBirdInPhoto(
                          'July', 'August', 'September', 'October', 'November', 'December']
       contextStr += ` The photo was taken in ${monthNames[month]}.`
     }
+    
+    console.log('📍 Context:', contextStr || 'No GPS/date context')
     
     const prompt = (window.spark.llmPrompt as any)`You are an expert ornithologist with extensive knowledge of bird species worldwide. Carefully analyze this image to identify any bird species present.${contextStr}
 
@@ -50,19 +114,31 @@ Use standard common names followed by scientific names in parentheses (e.g., "Am
 
 Image to analyze: ${imageDataUrl}`
     
+    console.log('📤 Sending bird ID request to Vision API (gpt-4o)...')
     const response = await window.spark.llm(prompt, 'gpt-4o', true)
+    console.log('📥 Bird ID raw response:', response)
+    
     const parsed = JSON.parse(response)
+    console.log('📋 Parsed response:', parsed)
     
     if (parsed.candidates && Array.isArray(parsed.candidates)) {
-      return parsed.candidates
+      const filtered = parsed.candidates
         .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
         .slice(0, 5)
+      
+      console.log(`✅ Found ${filtered.length} bird candidates:`, filtered)
+      return filtered
     }
     
+    console.log('⚠️ No valid candidates in response')
     return []
   } catch (error) {
-    console.error('AI inference error:', error)
-    return []
+    console.error('❌ AI inference error:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    throw error
   }
 }
 

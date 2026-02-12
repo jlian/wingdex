@@ -6,7 +6,7 @@ import { X, CloudArrowUp, Crop } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { extractEXIF, generateThumbnail, computeFileHash, downscaleForInference } from '@/lib/photo-utils'
 import { clusterPhotosIntoOutings } from '@/lib/clustering'
-import { identifyBirdInPhoto, aggregateSpeciesSuggestions } from '@/lib/ai-inference'
+import { identifyBirdInPhoto, aggregateSpeciesSuggestions, suggestBirdCrop } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
 import SpeciesConfirmation from '@/components/flows/SpeciesConfirmation'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
@@ -23,6 +23,7 @@ type FlowStep = 'upload' | 'processing' | 'review' | 'crop' | 'species' | 'compl
 
 interface PhotoWithCrop extends Photo {
   croppedDataUrl?: string
+  aiCropped?: boolean
 }
 
 export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
@@ -43,13 +44,65 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     setProcessingMessage('Running AI bird identification...')
 
     const photoResults = new Map<string, any[]>()
+    const totalSteps = clusterPhotos.length * 2
 
     for (let i = 0; i < clusterPhotos.length; i++) {
       const photo = clusterPhotos[i]
       
       try {
+        setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Detecting bird location...`)
+        
         const imageToAnalyze = photo.croppedDataUrl || photo.dataUrl
-        const downscaled = await downscaleForInference(imageToAnalyze, 1200)
+        
+        let finalImage = imageToAnalyze
+        if (!photo.croppedDataUrl) {
+          const cropSuggestion = await suggestBirdCrop(imageToAnalyze)
+          setProgress(((i * 2 + 1) / totalSteps) * 100)
+          
+          if (cropSuggestion && cropSuggestion.confidence > 0.6) {
+            const img = new Image()
+            await new Promise((resolve, reject) => {
+              img.onload = resolve
+              img.onerror = reject
+              img.src = imageToAnalyze
+            })
+            
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              const cropX = (cropSuggestion.x / 100) * img.width
+              const cropY = (cropSuggestion.y / 100) * img.height
+              const cropWidth = (cropSuggestion.width / 100) * img.width
+              const cropHeight = (cropSuggestion.height / 100) * img.height
+              
+              canvas.width = cropWidth
+              canvas.height = cropHeight
+              
+              ctx.drawImage(
+                img,
+                cropX,
+                cropY,
+                cropWidth,
+                cropHeight,
+                0,
+                0,
+                cropWidth,
+                cropHeight
+              )
+              
+              finalImage = canvas.toDataURL('image/jpeg', 0.9)
+              
+              setPhotos(prev => prev.map(p => 
+                p.id === photo.id ? { ...p, croppedDataUrl: finalImage, aiCropped: true } : p
+              ))
+              
+              toast.success(`Auto-cropped bird in photo ${i + 1}`)
+            }
+          }
+        }
+        
+        setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Identifying species...`)
+        const downscaled = await downscaleForInference(finalImage, 1200)
         
         const results = await identifyBirdInPhoto(
           downscaled,
@@ -60,12 +113,18 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         photoResults.set(photo.id, results)
       } catch (error) {
         console.error('Inference failed for photo:', error)
+        toast.error(`Failed to identify photo ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
 
-      setProgress(((i + 1) / clusterPhotos.length) * 100)
+      setProgress(((i * 2 + 2) / totalSteps) * 100)
     }
 
     const aggregated = aggregateSpeciesSuggestions(photoResults)
+    
+    if (aggregated.length === 0) {
+      toast.error('No birds identified. Try manually cropping photos to focus on the bird.')
+    }
+    
     setSuggestions(aggregated)
     setStep('species')
   }
@@ -177,7 +236,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const updatedPhotos = [...photos]
     updatedPhotos[currentCropPhotoIndex] = {
       ...updatedPhotos[currentCropPhotoIndex],
-      croppedDataUrl: croppedImageUrl
+      croppedDataUrl: croppedImageUrl,
+      aiCropped: false
     }
     setPhotos(updatedPhotos)
     
