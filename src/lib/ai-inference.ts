@@ -1,5 +1,3 @@
-import type { SpeciesSuggestion } from './types'
-
 // GitHub Models via Spark proxy — use full owner/model format
 const VISION_MODEL = 'openai/gpt-4.1'
 const TEXT_MODEL = 'openai/gpt-4.1-mini'
@@ -242,41 +240,3 @@ export async function textLLM(prompt: string): Promise<string> {
 }
 
 export { VISION_MODEL, TEXT_MODEL }
-
-export function aggregateSpeciesSuggestions(
-  photoResults: Map<string, VisionResult[]>
-): SpeciesSuggestion[] {
-  const speciesMap = new Map<string, {
-    totalConfidence: number
-    count: number
-    supportingPhotos: string[]
-  }>()
-
-  for (const [photoId, results] of photoResults.entries()) {
-    for (const result of results) {
-      const existing = speciesMap.get(result.species)
-      if (existing) {
-        existing.totalConfidence += result.confidence
-        existing.count++
-        existing.supportingPhotos.push(photoId)
-      } else {
-        speciesMap.set(result.species, {
-          totalConfidence: result.confidence, count: 1, supportingPhotos: [photoId]
-        })
-      }
-    }
-  }
-
-  const suggestions: SpeciesSuggestion[] = []
-  for (const [species, data] of speciesMap.entries()) {
-    const avgConfidence = data.totalConfidence / data.count
-    const frequencyBoost = Math.min(data.count / 5, 0.2)
-    suggestions.push({
-      speciesName: species,
-      confidence: Math.min(avgConfidence + frequencyBoost, 1.0),
-      supportingPhotos: data.supportingPhotos,
-      count: 1,
-    })
-  }
-  return suggestions.sort((a, b) => b.confidence - a.confidence)
-}

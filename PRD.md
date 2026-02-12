@@ -1,4 +1,4 @@
-# Bird-Dex: Personal Bird Life-List & Sighting Tracker
+# BirdDex: Personal Bird Life-List & Sighting Tracker
 
 A mobile-first web application that helps birders track their sightings, maintain a life list, and stay synchronized with eBird through photo-based species identification using AI vision inference.
 
@@ -55,15 +55,15 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Success criteria**: Life list updates in real-time as outings are saved; search filters species instantly; species detail shows complete history
 
 ### 7. eBird CSV Import
-- **Functionality**: Upload eBird "My eBird Data" export CSV; parse species, date, location, count columns; show preview with conflict resolution; merge into Bird-Dex
-- **Purpose**: Allow users to bring existing eBird history into Bird-Dex without re-entering data
+- **Functionality**: Upload eBird "My eBird Data" export CSV; parse species, date, location, count columns; show preview with conflict resolution; merge into BirdDex
+- **Purpose**: Allow users to bring existing eBird history into BirdDex without re-entering data
 - **Trigger**: User taps "Import from eBird" in settings/export screen
 - **Progression**: Import screen → Choose file → CSV parsed → Show preview table → Map columns if needed → Resolve conflicts (prefer newer dates, skip exact duplicates) → Confirm import → Data merged into Life List and Outings
 - **Success criteria**: Standard eBird CSV formats parsed correctly; life list first/last dates updated; imported outings created; no data loss or duplication
 
 ### 8. eBird CSV Export
 - **Functionality**: Export any outing in eBird Record Format CSV (one row per species with date, time, location, count, comments)
-- **Purpose**: Submit Bird-Dex sightings to eBird to maintain synchronized records across platforms
+- **Purpose**: Submit BirdDex sightings to eBird to maintain synchronized records across platforms
 - **Trigger**: User taps "Export to eBird" on an outing detail screen
 - **Progression**: Outing detail → Tap export icon → Choose "eBird Format" → CSV generated → Download/share dialog → File saved/shared
 - **Success criteria**: Generated CSV matches eBird Record Format specification; imports successfully into eBird; all species, counts, and locations preserved
@@ -82,12 +82,11 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Progression**: Outings tab → Scrollable list of outings (most recent first) → Tap outing → Detail view with header (date, location, map pin), photo strip, species list, notes field
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
-### 11. GitHub Gist Sync
-- **Functionality**: Backup all Bird-Dex data (photos, outings, observations, life list, saved spots) to a GitHub Gist; supports public or private visibility; automatic or manual sync
-- **Purpose**: Provide cloud backup, enable multi-device sync, and offer portable data storage outside the VM
-- **Trigger**: User navigates to Settings and enables GitHub Sync
-- **Progression**: Settings → Tap "Enable GitHub Sync" → Enter Personal Access Token → Choose public/private → Enable sync → Initial data push to Gist → Toggle auto-sync if desired → Use Push/Pull buttons for manual sync
-- **Success criteria**: Gist created with all data in JSON format; data persists between sessions; pull merges remote data intelligently; push updates Gist with latest local data; visibility can be toggled; auto-sync pushes after each outing save
+### 11. Cloud Data Storage
+- **Functionality**: All BirdDex data (photos, outings, observations, life list, saved spots) is automatically stored server-side via Spark's KV store, scoped per GitHub user ID
+- **Purpose**: Zero-configuration cloud persistence; data is always backed up and available across sessions
+- **Trigger**: Automatic — no user action required
+- **Success criteria**: Data persists between sessions; each user's data isolated by user ID; no manual backup steps needed
 
 ## Edge Case Handling
 
@@ -102,9 +101,7 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Import conflicts** - Show side-by-side comparison; prefer newer dates for last seen; ask user to resolve ambiguous matches
 - **Empty outing** - Require at least one confirmed species before saving; show validation message
 - **Tab suspension** - Persist upload state to KV; resume workflow on return
-- **Token security** - Store GitHub token encrypted in KV store; never log or display token
-- **Sync conflicts** - When pulling from Gist, merge intelligently (prefer newer dates, don't duplicate by ID, combine counts)
-- **Large data export** - Warn user if data export exceeds 10MB (Gist limit is 100MB per file)
+- **Large data export** - Warn user if data export exceeds reasonable size limits
 
 ## Design Direction
 
