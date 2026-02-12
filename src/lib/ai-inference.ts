@@ -1,5 +1,9 @@
 import type { SpeciesSuggestion } from './types'
 
+// GitHub Models via Spark proxy — use full owner/model format
+const VISION_MODEL = 'openai/gpt-4.1'
+const TEXT_MODEL = 'openai/gpt-4.1-mini'
+
 interface VisionResult {
   species: string
   confidence: number
@@ -13,82 +17,168 @@ export interface SuggestedCrop {
   confidence: number
 }
 
+/* ------------------------------------------------------------------ */
+/*  Image helpers                                                      */
+/* ------------------------------------------------------------------ */
+
+function compressImage(img: HTMLImageElement, maxDim: number, quality: number): string {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas not supported')
+
+  const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
+  canvas.width = Math.round(img.width * scale)
+  canvas.height = Math.round(img.height * scale)
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+function safeParseJSON(text: string): any {
+  try { return JSON.parse(text) } catch {}
+  const m1 = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (m1) { try { return JSON.parse(m1[1].trim()) } catch {} }
+  const m2 = text.match(/\{[\s\S]*\}/)
+  if (m2) { try { return JSON.parse(m2[0]) } catch {} }
+  return null
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms))
+}
+
+/* ------------------------------------------------------------------ */
+/*  Direct /_spark/llm  — bypasses SDK max_tokens=1000 & temp=1.0     */
+/* ------------------------------------------------------------------ */
+
+type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' | 'auto' } }
+
+interface LLMOpts {
+  jsonMode?: boolean
+  maxTokens?: number
+  temperature?: number
+}
+
+/** Text-only call */
+async function sparkTextLLM(prompt: string, model: string, opts: LLMOpts = {}): Promise<string> {
+  const { jsonMode = false, maxTokens = 2000, temperature = 0.2 } = opts
+  const body = {
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant. Return only what is asked.' },
+      { role: 'user', content: prompt },
+    ],
+    temperature, top_p: 1.0, max_tokens: maxTokens, model,
+    response_format: { type: jsonMode ? 'json_object' : 'text' },
+  }
+  const res = await fetch('/_spark/llm', {
+    method: 'POST', body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) { const t = await res.text(); throw new Error(`LLM ${res.status}: ${t.substring(0, 300)}`) }
+  return ((await res.json()) as any).choices[0].message.content
+}
+
+/**
+ * Vision call using proper OpenAI multimodal message format.
+ * Image is sent as an image_url content part, NOT embedded as raw text.
+ */
+async function sparkVisionLLM(
+  textPrompt: string,
+  imageDataUrl: string,
+  model: string,
+  opts: LLMOpts & { detail?: 'low' | 'high' | 'auto' } = {}
+): Promise<string> {
+  const { jsonMode = false, maxTokens = 2000, temperature = 0.2, detail = 'auto' } = opts
+  const userContent: ContentPart[] = [
+    { type: 'text', text: textPrompt },
+    { type: 'image_url', image_url: { url: imageDataUrl, detail } },
+  ]
+  const body = {
+    messages: [
+      { role: 'system', content: 'You are an expert ornithologist assistant. Return only what is asked.' },
+      { role: 'user', content: userContent },
+    ],
+    temperature, top_p: 1.0, max_tokens: maxTokens, model,
+    response_format: { type: jsonMode ? 'json_object' : 'text' },
+  }
+  console.log(`📤 Vision request: ~${Math.round(JSON.stringify(body).length / 1024)}KB, detail=${detail}`)
+  const res = await fetch('/_spark/llm', {
+    method: 'POST', body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) { const t = await res.text(); throw new Error(`LLM ${res.status}: ${t.substring(0, 300)}`) }
+  return ((await res.json()) as any).choices[0].message.content
+}
+
+/* ------------------------------------------------------------------ */
+/*  Retry wrapper                                                      */
+/* ------------------------------------------------------------------ */
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const ms = 2000 * attempt
+        console.log(`🔄 Retry ${attempt}/${retries} after ${ms}ms...`)
+        await delay(ms)
+      }
+      return await fn()
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.warn(`⚠️ Attempt ${attempt + 1} failed:`, lastError.message)
+      if (/\b(400|413|422)\b/.test(lastError.message)) break
+    }
+  }
+  throw lastError!
+}
+
+/* ------------------------------------------------------------------ */
+/*  Public API                                                         */
+/* ------------------------------------------------------------------ */
+
 export async function suggestBirdCrop(imageDataUrl: string): Promise<SuggestedCrop | null> {
   try {
     console.log('🔍 Starting AI crop suggestion...')
-    
-    const img = new Image()
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-      img.src = imageDataUrl
-    })
-    
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Canvas not supported')
-    
-    const maxDim = 512
-    const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
-    canvas.width = img.width * scale
-    canvas.height = img.height * scale
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    const compressedImage = canvas.toDataURL('image/jpeg', 0.6)
-    
-    console.log(`📐 Image compressed from ${imageDataUrl.length} to ${compressedImage.length} bytes for crop detection`)
-    
-    const prompt = (window.spark.llmPrompt as any)`You are a computer vision expert specializing in bird photography. Analyze this image and identify the bounding box coordinates for the bird subject.
+    const img = await loadImage(imageDataUrl)
+    const compressed = compressImage(img, 384, 0.4)
+    console.log(`📐 Crop: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
 
-Look for:
-- Any bird species in the image (even if partially visible or distant)
-- The tightest rectangular area that contains the entire bird
-- Consider the bird's body, head, tail, and wings
+    const text = `Find the bird in this photo. Return a GENEROUS bounding box that fully contains the entire bird with some margin around it. Include head, tail, feet, and wing tips with extra space.
+JSON: {"cropBox":{"x":20,"y":25,"width":50,"height":45,"confidence":0.85}}
+No bird: {"cropBox":null}`
 
-Return coordinates as percentages of the image dimensions (0-100).
+    const response = await withRetry(() =>
+      sparkVisionLLM(text, compressed, VISION_MODEL, {
+        jsonMode: true, maxTokens: 200, temperature: 0.1, detail: 'low',
+      })
+    )
+    console.log('📥 Crop response:', response.substring(0, 200))
 
-If NO bird is visible, return null for cropBox.
+    const parsed = safeParseJSON(response)
+    if (!parsed) { console.warn('⚠️ Parse failed'); return null }
 
-Return ONLY valid JSON in this exact format:
-{
-  "cropBox": {
-    "x": 25.5,
-    "y": 30.2,
-    "width": 45.0,
-    "height": 40.8,
-    "confidence": 0.85
-  }
-}
-
-Where:
-- x: left edge as % from left
-- y: top edge as % from top  
-- width: width as % of image width
-- height: height as % of image height
-- confidence: 0.0-1.0 how confident you are this contains a bird
-
-Image to analyze: ${compressedImage}`
-
-    console.log('📤 Sending crop detection request to Vision API (gpt-4o)...')
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
-    console.log('📥 Crop detection response:', response)
-    
-    const parsed = JSON.parse(response)
-    
-    if (parsed.cropBox && typeof parsed.cropBox.confidence === 'number' && parsed.cropBox.confidence >= 0.5) {
-      console.log('✅ AI crop suggestion successful:', parsed.cropBox)
-      return parsed.cropBox
-    }
-    
-    console.log('⚠️ No confident crop suggestion found (confidence below 0.5)')
-    return null
-  } catch (error) {
-    console.error('❌ Crop suggestion error:', error)
-    if (error instanceof Error) {
-      console.error('❌ Error message:', error.message)
-      if (error.message.includes('token') || error.message.includes('quota') || error.message.includes('413')) {
-        console.error('❌ Image too large for API - this should not happen with compression')
+    if (parsed.cropBox && typeof parsed.cropBox.confidence === 'number' && parsed.cropBox.confidence >= 0.4) {
+      const { x, y, width, height } = parsed.cropBox
+      if (x >= 0 && y >= 0 && width > 5 && height > 5 && x + width <= 101 && y + height <= 101) {
+        console.log('✅ AI crop:', parsed.cropBox)
+        return parsed.cropBox
       }
     }
+    console.log('⚠️ No confident crop found')
+    return null
+  } catch (error) {
+    console.error('❌ Crop error:', error)
     return null
   }
 }
@@ -99,105 +189,59 @@ export async function identifyBirdInPhoto(
   month?: number
 ): Promise<VisionResult[]> {
   try {
-    console.log('🐦 Starting bird species identification...')
-    
-    const img = new Image()
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-      img.src = imageDataUrl
-    })
-    
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Canvas not supported')
-    
-    const maxDim = 768
-    const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
-    canvas.width = img.width * scale
-    canvas.height = img.height * scale
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    const compressedImage = canvas.toDataURL('image/jpeg', 0.7)
-    
-    console.log(`📐 Image compressed from ${imageDataUrl.length} to ${compressedImage.length} bytes for bird ID`)
-    
-    let contextStr = ''
-    
-    if (location) {
-      contextStr += ` The photo was taken at GPS coordinates ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`
-    }
-    
+    console.log('🐦 Starting bird ID...')
+    const img = await loadImage(imageDataUrl)
+    const compressed = compressImage(img, 512, 0.5)
+    console.log(`📐 ID: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
+
+    let ctx = ''
+    if (location) ctx += ` GPS: ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`
     if (month !== undefined) {
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                         'July', 'August', 'September', 'October', 'November', 'December']
-      contextStr += ` The photo was taken in ${monthNames[month]}.`
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+      ctx += ` Month: ${months[month]}.`
     }
-    
-    console.log('📍 Context:', contextStr || 'No GPS/date context')
-    
-    const prompt = (window.spark.llmPrompt as any)`You are an expert ornithologist with extensive knowledge of bird species worldwide. Carefully analyze this image to identify any bird species present.${contextStr}
 
-IMPORTANT: Look closely at the entire image. Birds may be:
-- In the center or edges of the frame
-- Partially visible or partially obscured
-- At various distances from the camera
-- In any orientation or posture
+    const text = `Identify bird species in this photo.${ctx}
+Return top 5 candidates as JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.95}]}
+Confidence: 0.8-1.0 definitive, 0.5-0.79 likely, 0.3-0.49 possible.
+No bird: {"candidates":[]}`
 
-Provide your top 5 most likely species identifications with confidence scores (0.0 to 1.0):
-- Use confidence 0.8-1.0 for clear, definitive identifications
-- Use confidence 0.5-0.79 for likely but uncertain identifications
-- Use confidence 0.3-0.49 for possible identifications with ambiguity
-- Only include species with at least 0.3 confidence
+    const response = await withRetry(() =>
+      sparkVisionLLM(text, compressed, VISION_MODEL, {
+        jsonMode: true, maxTokens: 500, temperature: 0.2, detail: 'auto',
+      })
+    )
+    console.log('📥 Bird ID response:', response.substring(0, 300))
 
-If NO bird is clearly visible in the image, return an empty candidates array.
+    const parsed = safeParseJSON(response)
+    if (!parsed) { console.error('❌ Parse failed'); return [] }
 
-Return ONLY a valid JSON object in this exact format (no additional text):
-{
-  "candidates": [
-    {"species": "Common Name (Scientific name)", "confidence": 0.95}
-  ]
-}
-
-Use standard common names followed by scientific names in parentheses (e.g., "American Robin (Turdus migratorius)").
-
-Image to analyze: ${compressedImage}`
-    
-    console.log('📤 Sending bird ID request to Vision API (gpt-4o)...')
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
-    console.log('📥 Bird ID raw response:', response)
-    
-    const parsed = JSON.parse(response)
-    console.log('📋 Parsed response:', parsed)
-    
     if (parsed.candidates && Array.isArray(parsed.candidates)) {
       const filtered = parsed.candidates
         .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
         .slice(0, 5)
-      
-      console.log(`✅ Found ${filtered.length} bird candidates:`, filtered)
+      console.log(`✅ ${filtered.length} candidates:`, filtered)
       return filtered
     }
-    
-    console.log('⚠️ No valid candidates in response')
     return []
   } catch (error) {
-    console.error('❌ AI inference error:', error)
+    console.error('❌ Bird ID error:', error)
     if (error instanceof Error) {
-      console.error('❌ Error message:', error.message)
-      console.error('❌ Error stack:', error.stack)
-      
-      if (error.message.includes('token') || error.message.includes('quota') || error.message.includes('413')) {
-        console.error('❌ Image too large for API')
-        throw new Error('Image too large. Please try with smaller images or fewer photos.')
-      }
-      if (error.message.includes('rate limit')) {
-        console.error('❌ Rate limit exceeded - wait a moment and try again')
-        throw new Error('Rate limit exceeded. Please wait a moment and try again.')
-      }
+      if (error.message.includes('413') || error.message.includes('too large'))
+        throw new Error('Image too large for API.')
+      if (error.message.includes('429') || error.message.includes('rate'))
+        throw new Error('Rate limited. Wait a moment and try again.')
     }
     throw error
   }
 }
+
+/** Text-only LLM for non-vision tasks (location lookup, API test, etc.) */
+export async function textLLM(prompt: string): Promise<string> {
+  return sparkTextLLM(prompt, TEXT_MODEL, { maxTokens: 200, temperature: 0.3 })
+}
+
+export { VISION_MODEL, TEXT_MODEL }
 
 export function aggregateSpeciesSuggestions(
   photoResults: Map<string, VisionResult[]>
@@ -207,39 +251,32 @@ export function aggregateSpeciesSuggestions(
     count: number
     supportingPhotos: string[]
   }>()
-  
+
   for (const [photoId, results] of photoResults.entries()) {
     for (const result of results) {
       const existing = speciesMap.get(result.species)
-      
       if (existing) {
         existing.totalConfidence += result.confidence
         existing.count++
         existing.supportingPhotos.push(photoId)
       } else {
         speciesMap.set(result.species, {
-          totalConfidence: result.confidence,
-          count: 1,
-          supportingPhotos: [photoId]
+          totalConfidence: result.confidence, count: 1, supportingPhotos: [photoId]
         })
       }
     }
   }
-  
+
   const suggestions: SpeciesSuggestion[] = []
-  
   for (const [species, data] of speciesMap.entries()) {
     const avgConfidence = data.totalConfidence / data.count
     const frequencyBoost = Math.min(data.count / 5, 0.2)
-    const finalConfidence = Math.min(avgConfidence + frequencyBoost, 1.0)
-    
     suggestions.push({
       speciesName: species,
-      confidence: finalConfidence,
+      confidence: Math.min(avgConfidence + frequencyBoost, 1.0),
       supportingPhotos: data.supportingPhotos,
-      count: 1
+      count: 1,
     })
   }
-  
   return suggestions.sort((a, b) => b.confidence - a.confidence)
 }

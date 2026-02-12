@@ -41,19 +41,29 @@ export default function SpeciesConfirmation({
   onComplete,
   onCropPhoto
 }: SpeciesConfirmationProps) {
-  const [decisions, setDecisions] = useState<Map<string, SpeciesDecision>>(
-    new Map(
-      suggestions.map(s => [
+  const isSinglePhoto = cluster.photos.length === 1
+
+  // Auto-confirm top species if confidence >= 80%
+  const [decisions, setDecisions] = useState<Map<string, SpeciesDecision>>(() => {
+    const topSuggestion = suggestions[0]
+    const autoConfirmTop = topSuggestion && topSuggestion.confidence >= 0.8
+
+    return new Map(
+      suggestions.map((s, idx) => [
         s.speciesName,
         {
           speciesName: s.speciesName,
-          status: 'pending' as ObservationStatus,
+          status: (autoConfirmTop && idx === 0
+            ? 'confirmed'
+            : autoConfirmTop && isSinglePhoto
+              ? 'rejected'
+              : 'pending') as ObservationStatus,
           count: 1,
           representativePhotoId: s.supportingPhotos[0]
         }
       ])
     )
-  )
+  })
 
   const handleStatusChange = (speciesName: string, status: ObservationStatus) => {
     setDecisions(prev => {
@@ -61,6 +71,15 @@ export default function SpeciesConfirmation({
       const existing = updated.get(speciesName)
       if (existing) {
         updated.set(speciesName, { ...existing, status })
+
+        // Single photo: confirming one species rejects all others
+        if (isSinglePhoto && status === 'confirmed') {
+          for (const [name, dec] of updated.entries()) {
+            if (name !== speciesName && dec.status !== 'confirmed') {
+              updated.set(name, { ...dec, status: 'rejected' })
+            }
+          }
+        }
       }
       return updated
     })

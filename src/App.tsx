@@ -24,14 +24,8 @@ function App() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [activeTab, setActiveTab] = useState('home')
   const [showAddPhotos, setShowAddPhotos] = useState(false)
-  const [testFile, setTestFile] = useState<File | null>(null)
   const data = useBirdDexData()
   const gistSync = useGistSync()
-
-  const handleTestPhotoReady = (file: File) => {
-    setTestFile(file)
-    setShowAddPhotos(true)
-  }
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -119,7 +113,6 @@ function App() {
             <HomePage
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
-              onTestPhotoReady={handleTestPhotoReady}
             />
           </TabsContent>
 
@@ -173,12 +166,8 @@ function App() {
       {showAddPhotos && (
         <AddPhotosFlow
           data={data}
-          onClose={() => {
-            setShowAddPhotos(false)
-            setTestFile(null)
-          }}
+          onClose={() => setShowAddPhotos(false)}
           userId={user.id}
-          testFile={testFile}
         />
       )}
 

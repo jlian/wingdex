@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Download, Upload, GithubLogo, CloudArrowUp, CloudArrowDown, Trash, LockKey, Globe, Info } from '@phosphor-icons/react'
+import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
 import { useGistSync } from '@/hooks/use-gist-sync'
@@ -428,8 +429,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             onClick={async () => {
               try {
                 toast.info('Testing Vision API access...')
-                const testPrompt = (window.spark.llmPrompt as any)`Test message: respond with "API is working" if you receive this.`
-                const response = await window.spark.llm(testPrompt, 'gpt-4o', false)
+                const response = await textLLM('Test message: respond with "API is working" if you receive this.')
                 toast.success('Vision API is accessible!')
                 console.log('API Test Response:', response)
               } catch (error) {

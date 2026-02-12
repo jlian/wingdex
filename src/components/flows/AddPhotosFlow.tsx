@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { X, CloudArrowUp, Crop } from '@phosphor-icons/react'
+import { X, CloudArrowUp, MapPin } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { extractEXIF, generateThumbnail, computeFileHash, downscaleForInference } from '@/lib/photo-utils'
+import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
 import { clusterPhotosIntoOutings } from '@/lib/clustering'
 import { identifyBirdInPhoto, aggregateSpeciesSuggestions, suggestBirdCrop } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
@@ -17,7 +17,6 @@ interface AddPhotosFlowProps {
   data: ReturnType<typeof useBirdDexData>
   onClose: () => void
   userId: number
-  testFile?: File | null
 }
 
 type FlowStep = 'upload' | 'processing' | 'review' | 'crop' | 'species' | 'complete'
@@ -27,7 +26,7 @@ interface PhotoWithCrop extends Photo {
   aiCropped?: boolean
 }
 
-export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPhotosFlowProps) {
+export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
   const [step, setStep] = useState<FlowStep>('upload')
   const [photos, setPhotos] = useState<PhotoWithCrop[]>([])
   const [currentClusterIndex, setCurrentClusterIndex] = useState(0)
@@ -35,18 +34,18 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
   const [progress, setProgress] = useState(0)
   const [currentCropPhotoIndex, setCurrentCropPhotoIndex] = useState<number | null>(null)
   const [processingMessage, setProcessingMessage] = useState('')
+  const [useGeoContext, setUseGeoContext] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  console.log('🐦 AddPhotosFlow mounted - AI processing ready')
+  // Seed default location from user's most recent outing
+  const [lastLocationName, setLastLocationName] = useState(() => {
+    const sorted = [...data.outings].sort((a, b) =>
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    )
+    return sorted[0]?.locationName || ''
+  })
 
   const clusters = photos.length > 0 ? clusterPhotosIntoOutings(photos) : []
-
-  useEffect(() => {
-    if (testFile) {
-      console.log('🧪 Test file detected, auto-loading:', testFile.name)
-      handleFileSelect({ target: { files: [testFile] } } as any)
-    }
-  }, [testFile])
 
   const runInference = async (clusterPhotos: PhotoWithCrop[], outingId: string) => {
     setStep('processing')
@@ -60,17 +59,18 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
       const photo = clusterPhotos[i]
       
       try {
-        setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Detecting bird location...`)
+        setProcessingMessage(`Photo ${i + 1}/${clusterPhotos.length}: Detecting bird location...`)
         
         const imageToAnalyze = photo.croppedDataUrl || photo.dataUrl
         
+        // Step 1: AI crop detection (only if no existing crop)
         let finalImage = imageToAnalyze
         if (!photo.croppedDataUrl) {
           console.log(`🔍 Photo ${i + 1}: Starting AI crop detection`)
           const cropSuggestion = await suggestBirdCrop(imageToAnalyze)
           setProgress(((i * 2 + 1) / totalSteps) * 100)
           
-          if (cropSuggestion && cropSuggestion.confidence > 0.5) {
+          if (cropSuggestion) {
             console.log(`✂️ Photo ${i + 1}: Applying AI crop (confidence: ${cropSuggestion.confidence})`)
             const img = new Image()
             await new Promise((resolve, reject) => {
@@ -82,27 +82,29 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
             if (ctx) {
-              const cropX = (cropSuggestion.x / 100) * img.width
-              const cropY = (cropSuggestion.y / 100) * img.height
-              const cropWidth = (cropSuggestion.width / 100) * img.width
-              const cropHeight = (cropSuggestion.height / 100) * img.height
+              // Add 25% padding around the detected bird so it isn't clipped
+              const pad = 0.25
+              const rawX = (cropSuggestion.x / 100) * img.width
+              const rawY = (cropSuggestion.y / 100) * img.height
+              const rawW = (cropSuggestion.width / 100) * img.width
+              const rawH = (cropSuggestion.height / 100) * img.height
+              const padX = rawW * pad
+              const padY = rawH * pad
+              const cropX = Math.max(0, rawX - padX)
+              const cropY = Math.max(0, rawY - padY)
+              const cropWidth = Math.min(img.width - cropX, rawW + padX * 2)
+              const cropHeight = Math.min(img.height - cropY, rawH + padY * 2)
               
-              canvas.width = cropWidth
-              canvas.height = cropHeight
+              canvas.width = Math.round(cropWidth)
+              canvas.height = Math.round(cropHeight)
               
               ctx.drawImage(
                 img,
-                cropX,
-                cropY,
-                cropWidth,
-                cropHeight,
-                0,
-                0,
-                cropWidth,
-                cropHeight
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, canvas.width, canvas.height
               )
               
-              finalImage = canvas.toDataURL('image/jpeg', 0.9)
+              finalImage = canvas.toDataURL('image/jpeg', 0.85)
               
               setPhotos(prev => prev.map(p => 
                 p.id === photo.id ? { ...p, croppedDataUrl: finalImage, aiCropped: true } : p
@@ -111,20 +113,23 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
               toast.success(`🤖 AI cropped bird in photo ${i + 1}`, { duration: 2000 })
             }
           } else {
-            console.log(`⚠️ Photo ${i + 1}: No confident crop found (confidence: ${cropSuggestion?.confidence || 0})`)
+            console.log(`⚠️ Photo ${i + 1}: No crop found, using full image`)
           }
         } else {
           console.log(`✅ Photo ${i + 1}: Using existing crop`)
+          setProgress(((i * 2 + 1) / totalSteps) * 100)
         }
         
-        setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Identifying species...`)
+        // Step 2: Bird species identification (identifyBirdInPhoto handles its own compression)
+        // Add a small delay between API calls to avoid rate limiting
+        await new Promise(r => setTimeout(r, 800))
+        setProcessingMessage(`Photo ${i + 1}/${clusterPhotos.length}: Identifying species...`)
         console.log(`🐦 Photo ${i + 1}: Starting bird identification`)
-        const downscaled = await downscaleForInference(finalImage, 800)
         
         const results = await identifyBirdInPhoto(
-          downscaled,
-          photo.gps,
-          photo.exifTime ? new Date(photo.exifTime).getMonth() : undefined
+          finalImage,
+          useGeoContext ? photo.gps : undefined,
+          useGeoContext && photo.exifTime ? new Date(photo.exifTime).getMonth() : undefined
         )
         
         console.log(`✅ Photo ${i + 1}: Found ${results.length} bird candidates`)
@@ -135,6 +140,11 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
       }
 
       setProgress(((i * 2 + 2) / totalSteps) * 100)
+      
+      // Rate-limit: wait between consecutive photos
+      if (i < clusterPhotos.length - 1) {
+        await new Promise(r => setTimeout(r, 500))
+      }
     }
 
     console.log('📊 Aggregating species suggestions from all photos...')
@@ -168,6 +178,7 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
       
       try {
         const exif = await extractEXIF(file)
+        console.log(`📷 ${file.name}: EXIF = time:${exif.timestamp || 'none'}, GPS:${exif.gps ? `${exif.gps.lat.toFixed(4)},${exif.gps.lon.toFixed(4)}` : 'none'}`)
         const thumbnail = await generateThumbnail(file)
         const hash = await computeFileHash(file)
 
@@ -222,6 +233,10 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
     lat?: number,
     lon?: number
   ) => {
+    // Remember location for subsequent outings in this batch
+    if (locationName && locationName !== 'Unknown Location') {
+      setLastLocationName(locationName)
+    }
     const cluster = clusters[currentClusterIndex]
     
     const updatedPhotos = cluster.photos.map((p: any) => {
@@ -276,9 +291,8 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
     setStep('processing')
     
     try {
-      const downscaled = await downscaleForInference(croppedImageUrl, 800)
       const results = await identifyBirdInPhoto(
-        downscaled,
+        croppedImageUrl,
         photo.gps,
         photo.exifTime ? new Date(photo.exifTime).getMonth() : undefined
       )
@@ -370,6 +384,19 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
                   onChange={handleFileSelect}
                 />
               </div>
+
+              <div
+                className="flex items-center justify-center gap-2 cursor-pointer select-none"
+                onClick={() => setUseGeoContext(prev => !prev)}
+              >
+                <div className={`w-9 h-5 rounded-full relative transition-colors ${useGeoContext ? 'bg-primary' : 'bg-muted'}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${useGeoContext ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+                <MapPin size={16} className="text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Use GPS &amp; date for better species ID
+                </span>
+              </div>
             </div>
           )}
 
@@ -387,6 +414,8 @@ export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPh
               cluster={clusters[currentClusterIndex]}
               data={data}
               userId={userId}
+              autoConfirm={!!clusters[currentClusterIndex]?.centerLat}
+              defaultLocationName={lastLocationName}
               onConfirm={handleOutingConfirmed}
             />
           )}
