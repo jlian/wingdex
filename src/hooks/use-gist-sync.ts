@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/use-kv'
 import { GistSyncService, createBirdDexExport, mergeImportedData } from '@/lib/gist-sync'
 import type { GistSyncSettings, BirdDexData } from '@/lib/types'
 import { toast } from 'sonner'

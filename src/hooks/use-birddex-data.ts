@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/use-kv'
 import type { Photo, Outing, Observation, LifeListEntry, SavedSpot } from '@/lib/types'
 
 export function useBirdDexData(userId: number) {

@@ -7,6 +7,11 @@ interface VisionResult {
   confidence: number
 }
 
+export interface BirdIdResult {
+  candidates: VisionResult[]
+  cropBox?: { x: number; y: number; width: number; height: number }
+}
+
 export interface SuggestedCrop {
   x: number
   y: number
@@ -185,7 +190,7 @@ export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
   month?: number
-): Promise<VisionResult[]> {
+): Promise<BirdIdResult> {
   try {
     console.log('🐦 Starting bird ID...')
     const img = await loadImage(imageDataUrl)
@@ -200,9 +205,11 @@ export async function identifyBirdInPhoto(
     }
 
     const text = `Identify bird species in this photo.${ctx}
-Return top 5 candidates as JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.95}]}
+Also locate the bird and return a bounding box as percentage coordinates (0-100).
+Return JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.95}],"cropBox":{"x":20,"y":25,"width":50,"height":45}}
 Confidence: 0.8-1.0 definitive, 0.5-0.79 likely, 0.3-0.49 possible.
-No bird: {"candidates":[]}`
+The cropBox should be a GENEROUS box around the bird with some margin. Include head, tail, feet, wings with extra space.
+No bird: {"candidates":[],"cropBox":null}`
 
     const response = await withRetry(() =>
       sparkVisionLLM(text, compressed, VISION_MODEL, {
@@ -212,16 +219,25 @@ No bird: {"candidates":[]}`
     console.log('📥 Bird ID response:', response.substring(0, 300))
 
     const parsed = safeParseJSON(response)
-    if (!parsed) { console.error('❌ Parse failed'); return [] }
+    if (!parsed) { console.error('❌ Parse failed'); return { candidates: [] } }
 
-    if (parsed.candidates && Array.isArray(parsed.candidates)) {
-      const filtered = parsed.candidates
-        .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
-        .slice(0, 5)
-      console.log(`✅ ${filtered.length} candidates:`, filtered)
-      return filtered
+    const candidates = (parsed.candidates && Array.isArray(parsed.candidates))
+      ? parsed.candidates
+          .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
+          .slice(0, 5)
+      : []
+    console.log(`✅ ${candidates.length} candidates:`, candidates)
+
+    let cropBox: BirdIdResult['cropBox'] = undefined
+    if (parsed.cropBox && typeof parsed.cropBox.x === 'number') {
+      const { x, y, width, height } = parsed.cropBox
+      if (x >= 0 && y >= 0 && width > 5 && height > 5 && x + width <= 101 && y + height <= 101) {
+        cropBox = { x, y, width, height }
+        console.log('✅ AI crop box:', cropBox)
+      }
     }
-    return []
+
+    return { candidates, cropBox }
   } catch (error) {
     console.error('❌ Bird ID error:', error)
     if (error instanceof Error) {

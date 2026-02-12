@@ -9,9 +9,11 @@ interface ImageCropDialogProps {
   onCrop: (croppedImageUrl: string) => void
   onCancel: () => void
   open: boolean
+  /** Optional initial crop position as percentage coordinates (0-100) from AI */
+  initialCropBox?: { x: number; y: number; width: number; height: number }
 }
 
-export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open }: ImageCropDialogProps) {
+export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, initialCropBox }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0, width: 100, height: 100 })
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -23,49 +25,106 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open }: Im
   useEffect(() => {
     if (open && imageRef.current) {
       const img = imageRef.current
-      const minDim = Math.min(img.naturalWidth, img.naturalHeight)
-      const cropSize = minDim * 0.6
-      setCrop({
-        x: (img.naturalWidth - cropSize) / 2,
-        y: (img.naturalHeight - cropSize) / 2,
-        width: cropSize,
-        height: cropSize
-      })
+      if (initialCropBox) {
+        // Initialize from AI-suggested crop (percentage coords → pixel coords)
+        const pad = 0.1 // 10% extra padding
+        const rawX = (initialCropBox.x / 100) * img.naturalWidth
+        const rawY = (initialCropBox.y / 100) * img.naturalHeight
+        const rawW = (initialCropBox.width / 100) * img.naturalWidth
+        const rawH = (initialCropBox.height / 100) * img.naturalHeight
+        const padX = rawW * pad
+        const padY = rawH * pad
+        const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
+        const centerX = rawX + rawW / 2
+        const centerY = rawY + rawH / 2
+        setCrop({
+          x: Math.max(0, Math.min(centerX - cropSize / 2, img.naturalWidth - cropSize)),
+          y: Math.max(0, Math.min(centerY - cropSize / 2, img.naturalHeight - cropSize)),
+          width: Math.min(cropSize, img.naturalWidth),
+          height: Math.min(cropSize, img.naturalHeight),
+        })
+      } else {
+        const minDim = Math.min(img.naturalWidth, img.naturalHeight)
+        const cropSize = minDim * 0.6
+        setCrop({
+          x: (img.naturalWidth - cropSize) / 2,
+          y: (img.naturalHeight - cropSize) / 2,
+          width: cropSize,
+          height: cropSize
+        })
+      }
     }
-  }, [open, imageUrl])
+  }, [open, imageUrl, initialCropBox])
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imageRef.current) return
-    const rect = e.currentTarget.getBoundingClientRect()
+  const getPointerPosition = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
+    if (!imageRef.current) return null
+    const rect = currentTarget.getBoundingClientRect()
     const scaleX = imageRef.current.naturalWidth / rect.width
     const scaleY = imageRef.current.naturalHeight / rect.height
-    const x = (e.clientX - rect.left) * scaleX
-    const y = (e.clientY - rect.top) * scaleY
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+      scaleX,
+      scaleY
+    }
+  }
 
+  const startDrag = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
+    const pos = getPointerPosition(clientX, clientY, currentTarget)
+    if (!pos) return
     if (
-      x >= crop.x &&
-      x <= crop.x + crop.width &&
-      y >= crop.y &&
-      y <= crop.y + crop.height
+      pos.x >= crop.x &&
+      pos.x <= crop.x + crop.width &&
+      pos.y >= crop.y &&
+      pos.y <= crop.y + crop.height
     ) {
-      setDragStart({ x: x - crop.x, y: y - crop.y })
+      setDragStart({ x: pos.x - crop.x, y: pos.y - crop.y })
       setIsDragging(true)
     }
   }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const moveDrag = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
     if (!isDragging || !dragStart || !imageRef.current) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const scaleX = imageRef.current.naturalWidth / rect.width
-    const scaleY = imageRef.current.naturalHeight / rect.height
-    const x = Math.max(0, Math.min((e.clientX - rect.left) * scaleX - dragStart.x, imageRef.current.naturalWidth - crop.width))
-    const y = Math.max(0, Math.min((e.clientY - rect.top) * scaleY - dragStart.y, imageRef.current.naturalHeight - crop.height))
+    const pos = getPointerPosition(clientX, clientY, currentTarget)
+    if (!pos) return
+    const x = Math.max(0, Math.min(pos.x - dragStart.x, imageRef.current.naturalWidth - crop.width))
+    const y = Math.max(0, Math.min(pos.y - dragStart.y, imageRef.current.naturalHeight - crop.height))
     setCrop(prev => ({ ...prev, x, y }))
   }
 
-  const handleMouseUp = () => {
+  const endDrag = () => {
     setIsDragging(false)
     setDragStart(null)
+  }
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    startDrag(e.clientX, e.clientY, e.currentTarget)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    moveDrag(e.clientX, e.clientY, e.currentTarget)
+  }
+
+  const handleMouseUp = () => {
+    endDrag()
+  }
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    startDrag(touch.clientX, touch.clientY, e.currentTarget)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return
+    // Prevent scroll while dragging
+    if (isDragging) e.preventDefault()
+    const touch = e.touches[0]
+    moveDrag(touch.clientX, touch.clientY, e.currentTarget)
+  }
+
+  const handleTouchEnd = () => {
+    endDrag()
   }
 
   const handleCrop = async () => {
@@ -120,11 +179,15 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open }: Im
         <div className="flex-1 overflow-hidden">
           <div
             ref={containerRef}
-            className="relative w-full h-full cursor-move"
+            className="relative w-full h-full cursor-move touch-none"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             <img
               ref={imageRef}

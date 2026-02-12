@@ -12,7 +12,8 @@ import {
 import { toast } from 'sonner'
 import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
 import { clusterPhotosIntoOutings } from '@/lib/clustering'
-import { identifyBirdInPhoto, suggestBirdCrop } from '@/lib/ai-inference'
+import { identifyBirdInPhoto } from '@/lib/ai-inference'
+import type { BirdIdResult } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
@@ -28,7 +29,6 @@ type FlowStep =
   | 'upload'
   | 'extracting'
   | 'review'
-  | 'photo-crop'
   | 'photo-manual-crop'
   | 'photo-processing'
   | 'photo-confirm'
@@ -37,6 +37,7 @@ type FlowStep =
 interface PhotoWithCrop extends Photo {
   croppedDataUrl?: string
   aiCropped?: boolean
+  aiCropBox?: { x: number; y: number; width: number; height: number }
 }
 
 interface PhotoResult {
@@ -83,96 +84,46 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const fullCurrentPhoto = getFullPhoto(currentPhotoIndex)
 
-  // ─── Apply AI crop with padding ──────────────────────────
-  const applyCrop = async (
-    imageDataUrl: string,
-    cropBox: { x: number; y: number; width: number; height: number }
-  ): Promise<string> => {
-    const img = new Image()
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-      img.src = imageDataUrl
-    })
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')!
-    const pad = 0.25
-    const rawX = (cropBox.x / 100) * img.width
-    const rawY = (cropBox.y / 100) * img.height
-    const rawW = (cropBox.width / 100) * img.width
-    const rawH = (cropBox.height / 100) * img.height
-    const padX = rawW * pad
-    const padY = rawH * pad
-    const cropX = Math.max(0, rawX - padX)
-    const cropY = Math.max(0, rawY - padY)
-    const cropWidth = Math.min(img.width - cropX, rawW + padX * 2)
-    const cropHeight = Math.min(img.height - cropY, rawH + padY * 2)
-    canvas.width = Math.round(cropWidth)
-    canvas.height = Math.round(cropHeight)
-    ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg', 0.85)
-  }
-
-  // ─── Step 1: Crop detection for current photo ────────────
-  const runCropDetection = async (photoIdx: number) => {
+  // ─── Step 1: Send full image directly to species ID ─────
+  const runSpeciesId = async (photoIdx: number, imageUrl?: string) => {
     const photo = getFullPhoto(photoIdx)
     if (!photo) return
 
     setCurrentPhotoIndex(photoIdx)
-    setStep('photo-crop')
-    setProcessingMessage(
-      `Photo ${photoIdx + 1}/${clusterPhotos.length}: Looking for birds...`
-    )
-
-    try {
-      const imageToAnalyze = photo.croppedDataUrl || photo.dataUrl
-      console.log(`🔍 Photo ${photoIdx + 1}: AI crop detection`)
-      const cropSuggestion = await suggestBirdCrop(imageToAnalyze)
-
-      if (cropSuggestion) {
-        console.log(`✂️ AI crop (confidence: ${cropSuggestion.confidence})`)
-        const croppedUrl = await applyCrop(imageToAnalyze, cropSuggestion)
-
-        setPhotos(prev =>
-          prev.map(p =>
-            p.id === photo.id
-              ? { ...p, croppedDataUrl: croppedUrl, aiCropped: true }
-              : p
-          )
-        )
-        await runSpeciesId(photoIdx, croppedUrl)
-      } else {
-        console.log('⚠️ No bird detected — asking user to crop or skip')
-        setStep('photo-manual-crop')
-      }
-    } catch (error) {
-      console.error('Crop detection failed:', error)
-      setStep('photo-manual-crop')
-    }
-  }
-
-  // ─── Step 1a: Species ID on cropped image ────────────────
-  const runSpeciesId = async (photoIdx: number, imageUrl: string) => {
-    const photo = getFullPhoto(photoIdx)
-    if (!photo) return
-
     setStep('photo-processing')
+    const analyzeUrl = imageUrl || photo.croppedDataUrl || photo.dataUrl
     setProcessingMessage(
       `Photo ${photoIdx + 1}/${clusterPhotos.length}: Identifying species...`
     )
 
     try {
       await new Promise(r => setTimeout(r, 500))
-      const results = await identifyBirdInPhoto(
-        imageUrl,
+      const result: BirdIdResult = await identifyBirdInPhoto(
+        analyzeUrl,
         useGeoContext ? photo.gps : undefined,
         useGeoContext && photo.exifTime
           ? new Date(photo.exifTime).getMonth()
           : undefined
       )
-      console.log(`✅ Found ${results.length} candidates`)
-      setCurrentCandidates(results)
-      setStep('photo-confirm')
+      console.log(`✅ Found ${result.candidates.length} candidates`)
+
+      // Store AI crop box on the photo if we got one
+      if (result.cropBox) {
+        setPhotos(prev =>
+          prev.map(p =>
+            p.id === photo.id ? { ...p, aiCropBox: result.cropBox } : p
+          )
+        )
+      }
+
+      if (result.candidates.length === 0 && !imageUrl) {
+        // No species found on full image — ask user to crop and retry
+        console.log('⚠️ No species identified — asking user to crop or skip')
+        setStep('photo-manual-crop')
+      } else {
+        setCurrentCandidates(result.candidates)
+        setStep('photo-confirm')
+      }
     } catch (error) {
       console.error('Species ID failed:', error)
       toast.error('Species identification failed')
@@ -186,7 +137,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
-      setTimeout(() => runCropDetection(nextIdx), 300)
+      setTimeout(() => runSpeciesId(nextIdx), 300)
     } else {
       saveOuting(results ?? photoResults)
     }
@@ -361,7 +312,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     setPhotoResults([])
     setCurrentCandidates([])
-    runCropDetection(0)
+    runSpeciesId(0)
   }
 
   // ─── Manual crop callback ───────────────────────────────
@@ -374,6 +325,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           : p
       )
     )
+    // After manual crop, send cropped image to species ID (pass imageUrl so we don't re-prompt for crop)
     await runSpeciesId(currentPhotoIndex, croppedImageUrl)
   }
 
@@ -384,7 +336,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       case 'extracting': return 'Reading Photos...'
       case 'review':
         return `Review Outing${clusters.length > 1 ? ` ${currentClusterIndex + 1} of ${clusters.length}` : ''}`
-      case 'photo-crop':
       case 'photo-processing':
       case 'photo-confirm':
         return `Photo ${currentPhotoIndex + 1} of ${clusterPhotos.length}`
@@ -475,7 +426,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           )}
 
           {/* Photo crop / processing spinner */}
-          {(step === 'photo-crop' || step === 'photo-processing') && (
+          {step === 'photo-processing' && (
             <div className="space-y-4 py-8">
               {fullCurrentPhoto && (
                 <div className="flex justify-center">
@@ -486,7 +437,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                   />
                 </div>
               )}
-              <Progress value={step === 'photo-crop' ? 33 : 66} className="w-full" />
+              <Progress value={66} className="w-full" />
               <p className="text-center text-sm text-muted-foreground">
                 {processingMessage}
               </p>
@@ -518,6 +469,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               onConfirm={confirmCurrentPhoto}
               onSkip={advanceToNextPhoto}
               onRecrop={() => setStep('photo-manual-crop')}
+              aiCropBox={fullCurrentPhoto.aiCropBox}
             />
           )}
 
@@ -541,6 +493,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           onCrop={handleManualCrop}
           onCancel={() => advanceToNextPhoto()}
           open={true}
+          initialCropBox={fullCurrentPhoto.aiCropBox}
         />
       )}
     </>
@@ -564,6 +517,7 @@ interface PerPhotoConfirmProps {
   ) => void
   onSkip: () => void
   onRecrop: () => void
+  aiCropBox?: { x: number; y: number; width: number; height: number }
 }
 
 function PerPhotoConfirm({
@@ -573,7 +527,8 @@ function PerPhotoConfirm({
   totalPhotos,
   onConfirm,
   onSkip,
-  onRecrop
+  onRecrop,
+  aiCropBox
 }: PerPhotoConfirmProps) {
   const displayImage = photo.croppedDataUrl || photo.thumbnail
   const isAICropped = !!photo.aiCropped
@@ -630,19 +585,44 @@ function PerPhotoConfirm({
 
   return (
     <div className="space-y-4">
-      {/* Photo */}
+      {/* Photo — zoomed to bird if AI crop box available */}
       <div className="flex justify-center relative">
-        <img
-          src={displayImage}
-          alt="Bird"
-          className={`max-h-56 rounded-lg object-contain border-2 ${
-            isAICropped ? 'border-accent' : 'border-border'
-          }`}
-        />
-        {isAICropped && (
-          <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium shadow">
-            🤖 AI Cropped
+        {aiCropBox && !photo.croppedDataUrl ? (
+          <div
+            className="relative max-h-56 rounded-lg overflow-hidden border-2 border-accent"
+            style={{ width: '100%', maxWidth: '320px' }}
+          >
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              paddingBottom: `${(aiCropBox.height / aiCropBox.width) * 100}%`,
+              overflow: 'hidden',
+            }}>
+              <img
+                src={photo.dataUrl || photo.thumbnail}
+                alt="Bird"
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  left: `${-(aiCropBox.x / aiCropBox.width) * 100}%`,
+                  top: `${-(aiCropBox.y / aiCropBox.height) * 100}%`,
+                  width: `${(100 / aiCropBox.width) * 100}%`,
+                  height: 'auto',
+                }}
+              />
+            </div>
+            <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium shadow">
+              🔍 AI Zoomed
+            </div>
           </div>
+        ) : (
+          <img
+            src={displayImage}
+            alt="Bird"
+            className={`max-h-56 rounded-lg object-contain border-2 ${
+              isAICropped ? 'border-accent' : 'border-border'
+            }`}
+          />
         )}
       </div>
 
