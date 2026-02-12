@@ -47,8 +47,8 @@ Where:
 
 Image to analyze: ${imageDataUrl}`
 
-    console.log('📤 Sending crop detection request to Vision API...')
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
+    console.log('📤 Sending crop detection request to Vision API (gpt-4o-mini)...')
+    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
     console.log('📥 Crop detection response:', response)
     
     const parsed = JSON.parse(response)
@@ -58,10 +58,16 @@ Image to analyze: ${imageDataUrl}`
       return parsed.cropBox
     }
     
-    console.log('⚠️ No confident crop suggestion found')
+    console.log('⚠️ No confident crop suggestion found (confidence below 0.5)')
     return null
   } catch (error) {
     console.error('❌ Crop suggestion error:', error)
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message)
+      if (error.message.includes('token') || error.message.includes('quota')) {
+        console.error('❌ This looks like a token/quota issue with the LLM API')
+      }
+    }
     return null
   }
 }
@@ -114,8 +120,8 @@ Use standard common names followed by scientific names in parentheses (e.g., "Am
 
 Image to analyze: ${imageDataUrl}`
     
-    console.log('📤 Sending bird ID request to Vision API (gpt-4o)...')
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
+    console.log('📤 Sending bird ID request to Vision API (gpt-4o-mini)...')
+    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
     console.log('📥 Bird ID raw response:', response)
     
     const parsed = JSON.parse(response)
@@ -134,10 +140,18 @@ Image to analyze: ${imageDataUrl}`
     return []
   } catch (error) {
     console.error('❌ AI inference error:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined
-    })
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message)
+      console.error('❌ Error stack:', error.stack)
+      
+      if (error.message.includes('token') || error.message.includes('quota')) {
+        console.error('❌ This looks like a token/quota issue with the LLM API')
+        console.error('💡 Try using gpt-4o-mini or check your API quota')
+      }
+      if (error.message.includes('rate limit')) {
+        console.error('❌ Rate limit exceeded - wait a moment and try again')
+      }
+    }
     throw error
   }
 }

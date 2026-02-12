@@ -36,6 +36,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [processingMessage, setProcessingMessage] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  console.log('🐦 AddPhotosFlow mounted - AI processing ready')
+
   const clusters = photos.length > 0 ? clusterPhotosIntoOutings(photos) : []
 
   const runInference = async (clusterPhotos: PhotoWithCrop[], outingId: string) => {
@@ -56,10 +58,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         
         let finalImage = imageToAnalyze
         if (!photo.croppedDataUrl) {
+          console.log(`🔍 Photo ${i + 1}: Starting AI crop detection`)
           const cropSuggestion = await suggestBirdCrop(imageToAnalyze)
           setProgress(((i * 2 + 1) / totalSteps) * 100)
           
-          if (cropSuggestion && cropSuggestion.confidence > 0.6) {
+          if (cropSuggestion && cropSuggestion.confidence > 0.5) {
+            console.log(`✂️ Photo ${i + 1}: Applying AI crop (confidence: ${cropSuggestion.confidence})`)
             const img = new Image()
             await new Promise((resolve, reject) => {
               img.onload = resolve
@@ -96,12 +100,17 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 p.id === photo.id ? { ...p, croppedDataUrl: finalImage, aiCropped: true } : p
               ))
               
-              toast.success(`Auto-cropped bird in photo ${i + 1}`)
+              toast.success(`🤖 AI cropped bird in photo ${i + 1}`, { duration: 2000 })
             }
+          } else {
+            console.log(`⚠️ Photo ${i + 1}: No confident crop found (confidence: ${cropSuggestion?.confidence || 0})`)
           }
+        } else {
+          console.log(`✅ Photo ${i + 1}: Using existing crop`)
         }
         
         setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Identifying species...`)
+        console.log(`🐦 Photo ${i + 1}: Starting bird identification`)
         const downscaled = await downscaleForInference(finalImage, 1200)
         
         const results = await identifyBirdInPhoto(
@@ -110,19 +119,26 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           photo.exifTime ? new Date(photo.exifTime).getMonth() : undefined
         )
         
+        console.log(`✅ Photo ${i + 1}: Found ${results.length} bird candidates`)
         photoResults.set(photo.id, results)
       } catch (error) {
-        console.error('Inference failed for photo:', error)
+        console.error(`❌ Photo ${i + 1}: Inference failed:`, error)
         toast.error(`Failed to identify photo ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
 
       setProgress(((i * 2 + 2) / totalSteps) * 100)
     }
 
+    console.log('📊 Aggregating species suggestions from all photos...')
     const aggregated = aggregateSpeciesSuggestions(photoResults)
+    console.log(`✅ Aggregation complete: ${aggregated.length} species found`)
     
     if (aggregated.length === 0) {
-      toast.error('No birds identified. Try manually cropping photos to focus on the bird.')
+      console.warn('⚠️ No birds identified in any photo')
+      toast.error('No birds identified. Try manually cropping photos to focus on the bird.', { duration: 5000 })
+    } else {
+      console.log('🎉 Species identified:', aggregated.map(s => `${s.speciesName} (${Math.round(s.confidence * 100)}%)`))
+      toast.success(`Found ${aggregated.length} bird species!`, { duration: 3000 })
     }
     
     setSuggestions(aggregated)

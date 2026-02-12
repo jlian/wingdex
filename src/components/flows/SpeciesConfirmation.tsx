@@ -147,19 +147,23 @@ export default function SpeciesConfirmation({
                   <img
                     src={displaySrc}
                     alt="Bird"
-                    className="w-full aspect-square object-cover rounded border-2 border-border"
+                    className={`w-full aspect-square object-cover rounded ${
+                      hasCrop ? 'border-2' : 'border-2'
+                    } ${
+                      isAICropped ? 'border-accent' : hasCrop ? 'border-primary' : 'border-border'
+                    }`}
                   />
                   {hasCrop && (
-                    <div className={`absolute top-1 right-1 text-xs px-1.5 py-0.5 rounded ${
+                    <div className={`absolute top-1 right-1 text-xs px-1.5 py-0.5 rounded shadow-sm font-medium ${
                       isAICropped ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground'
                     }`}>
-                      {isAICropped ? 'AI Crop' : 'Manual'}
+                      {isAICropped ? '🤖 AI' : '✂️ Manual'}
                     </div>
                   )}
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="absolute inset-0 m-auto w-10 h-10 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90"
+                    className="absolute inset-0 m-auto w-10 h-10 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 hover:bg-background"
                     onClick={() => onCropPhoto(idx)}
                     title={hasCrop ? 'Refine crop' : 'Crop photo'}
                   >
@@ -170,11 +174,7 @@ export default function SpeciesConfirmation({
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            {suggestions.length === 0 ? (
-              <>Photos with <span className="text-accent font-medium">AI Crop</span> were auto-focused on birds. Hover and click <Crop size={12} className="inline" weight="bold" /> to manually refine any crop for better results.</>
-            ) : (
-              <>Hover over photos and click <Crop size={12} className="inline" weight="bold" /> to manually crop and improve identification</>
-            )}
+            Photos with <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/20 text-accent font-medium">🤖 AI</span> borders were auto-cropped to focus on birds. Hover and click <Crop size={12} className="inline" weight="bold" /> to manually refine any crop for better identification.
           </p>
         </div>
       )}
