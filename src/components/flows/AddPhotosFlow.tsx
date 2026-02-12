@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -17,6 +17,7 @@ interface AddPhotosFlowProps {
   data: ReturnType<typeof useBirdDexData>
   onClose: () => void
   userId: number
+  testFile?: File | null
 }
 
 type FlowStep = 'upload' | 'processing' | 'review' | 'crop' | 'species' | 'complete'
@@ -26,7 +27,7 @@ interface PhotoWithCrop extends Photo {
   aiCropped?: boolean
 }
 
-export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
+export default function AddPhotosFlow({ data, onClose, userId, testFile }: AddPhotosFlowProps) {
   const [step, setStep] = useState<FlowStep>('upload')
   const [photos, setPhotos] = useState<PhotoWithCrop[]>([])
   const [currentClusterIndex, setCurrentClusterIndex] = useState(0)
@@ -39,6 +40,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   console.log('🐦 AddPhotosFlow mounted - AI processing ready')
 
   const clusters = photos.length > 0 ? clusterPhotosIntoOutings(photos) : []
+
+  useEffect(() => {
+    if (testFile) {
+      console.log('🧪 Test file detected, auto-loading:', testFile.name)
+      handleFileSelect({ target: { files: [testFile] } } as any)
+    }
+  }, [testFile])
 
   const runInference = async (clusterPhotos: PhotoWithCrop[], outingId: string) => {
     setStep('processing')
@@ -111,7 +119,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         
         setProcessingMessage(`Processing photo ${i + 1}/${clusterPhotos.length}: Identifying species...`)
         console.log(`🐦 Photo ${i + 1}: Starting bird identification`)
-        const downscaled = await downscaleForInference(finalImage, 1200)
+        const downscaled = await downscaleForInference(finalImage, 800)
         
         const results = await identifyBirdInPhoto(
           downscaled,
@@ -268,7 +276,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     setStep('processing')
     
     try {
-      const downscaled = await downscaleForInference(croppedImageUrl, 1200)
+      const downscaled = await downscaleForInference(croppedImageUrl, 800)
       const results = await identifyBirdInPhoto(
         downscaled,
         photo.gps,

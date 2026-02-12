@@ -51,7 +51,7 @@ Consider:
 - Named parks, nature reserves, wildlife refuges, or conservation areas
 - City parks or urban green spaces
 - Lakes, rivers, beaches, or coastal areas
-- General geographic areas (city, region, state)
+- General geographic areas (city, region, state/province, country)
 
 Return ONLY the location name as a concise string. Examples:
 - "Golden Gate Park, San Francisco, CA"
@@ -59,16 +59,20 @@ Return ONLY the location name as a concise string. Examples:
 - "Everglades National Park, FL"
 - "Monterey Bay, CA"
 - "Austin, TX"
+- "Taipei, Taiwan"
 
 Location name:`
       
-      const response = await window.spark.llm(prompt, 'gpt-4o-mini', false)
+      console.log('📍 Fetching location name from GPS coordinates...')
+      const response = await window.spark.llm(prompt, 'gpt-4o', false)
       const cleanName = response.trim().replace(/^["']|["']$/g, '').split('\n')[0]
+      console.log('✅ Location identified:', cleanName)
       setSuggestedLocation(cleanName)
       setLocationName(cleanName)
     } catch (error) {
-      console.error('Failed to fetch location name:', error)
+      console.error('❌ Failed to fetch location name:', error)
       const fallback = `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+      console.log('⚠️ Using fallback location:', fallback)
       setSuggestedLocation(fallback)
       setLocationName(fallback)
     } finally {

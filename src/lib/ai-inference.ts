@@ -16,6 +16,27 @@ export interface SuggestedCrop {
 export async function suggestBirdCrop(imageDataUrl: string): Promise<SuggestedCrop | null> {
   try {
     console.log('🔍 Starting AI crop suggestion...')
+    
+    const img = new Image()
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+      img.src = imageDataUrl
+    })
+    
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas not supported')
+    
+    const maxDim = 512
+    const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
+    canvas.width = img.width * scale
+    canvas.height = img.height * scale
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const compressedImage = canvas.toDataURL('image/jpeg', 0.6)
+    
+    console.log(`📐 Image compressed from ${imageDataUrl.length} to ${compressedImage.length} bytes for crop detection`)
+    
     const prompt = (window.spark.llmPrompt as any)`You are a computer vision expert specializing in bird photography. Analyze this image and identify the bounding box coordinates for the bird subject.
 
 Look for:
@@ -45,10 +66,10 @@ Where:
 - height: height as % of image height
 - confidence: 0.0-1.0 how confident you are this contains a bird
 
-Image to analyze: ${imageDataUrl}`
+Image to analyze: ${compressedImage}`
 
-    console.log('📤 Sending crop detection request to Vision API (gpt-4o-mini)...')
-    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
+    console.log('📤 Sending crop detection request to Vision API (gpt-4o)...')
+    const response = await window.spark.llm(prompt, 'gpt-4o', true)
     console.log('📥 Crop detection response:', response)
     
     const parsed = JSON.parse(response)
@@ -64,8 +85,8 @@ Image to analyze: ${imageDataUrl}`
     console.error('❌ Crop suggestion error:', error)
     if (error instanceof Error) {
       console.error('❌ Error message:', error.message)
-      if (error.message.includes('token') || error.message.includes('quota')) {
-        console.error('❌ This looks like a token/quota issue with the LLM API')
+      if (error.message.includes('token') || error.message.includes('quota') || error.message.includes('413')) {
+        console.error('❌ Image too large for API - this should not happen with compression')
       }
     }
     return null
@@ -79,6 +100,27 @@ export async function identifyBirdInPhoto(
 ): Promise<VisionResult[]> {
   try {
     console.log('🐦 Starting bird species identification...')
+    
+    const img = new Image()
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+      img.src = imageDataUrl
+    })
+    
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas not supported')
+    
+    const maxDim = 768
+    const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
+    canvas.width = img.width * scale
+    canvas.height = img.height * scale
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const compressedImage = canvas.toDataURL('image/jpeg', 0.7)
+    
+    console.log(`📐 Image compressed from ${imageDataUrl.length} to ${compressedImage.length} bytes for bird ID`)
+    
     let contextStr = ''
     
     if (location) {
@@ -118,10 +160,10 @@ Return ONLY a valid JSON object in this exact format (no additional text):
 
 Use standard common names followed by scientific names in parentheses (e.g., "American Robin (Turdus migratorius)").
 
-Image to analyze: ${imageDataUrl}`
+Image to analyze: ${compressedImage}`
     
-    console.log('📤 Sending bird ID request to Vision API (gpt-4o-mini)...')
-    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
+    console.log('📤 Sending bird ID request to Vision API (gpt-4o)...')
+    const response = await window.spark.llm(prompt, 'gpt-4o', true)
     console.log('📥 Bird ID raw response:', response)
     
     const parsed = JSON.parse(response)
@@ -144,12 +186,13 @@ Image to analyze: ${imageDataUrl}`
       console.error('❌ Error message:', error.message)
       console.error('❌ Error stack:', error.stack)
       
-      if (error.message.includes('token') || error.message.includes('quota')) {
-        console.error('❌ This looks like a token/quota issue with the LLM API')
-        console.error('💡 Try using gpt-4o-mini or check your API quota')
+      if (error.message.includes('token') || error.message.includes('quota') || error.message.includes('413')) {
+        console.error('❌ Image too large for API')
+        throw new Error('Image too large. Please try with smaller images or fewer photos.')
       }
       if (error.message.includes('rate limit')) {
         console.error('❌ Rate limit exceeded - wait a moment and try again')
+        throw new Error('Rate limit exceeded. Please wait a moment and try again.')
       }
     }
     throw error

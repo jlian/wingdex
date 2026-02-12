@@ -2,14 +2,16 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CloudArrowUp, MapPin, CalendarBlank } from '@phosphor-icons/react'
+import TestHelper from '@/components/TestHelper'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 
 interface HomePageProps {
   data: ReturnType<typeof useBirdDexData>
   onAddPhotos: () => void
+  onTestPhotoReady?: (file: File) => void
 }
 
-export default function HomePage({ data, onAddPhotos }: HomePageProps) {
+export default function HomePage({ data, onAddPhotos, onTestPhotoReady }: HomePageProps) {
   const { outings, lifeList } = data
 
   const recentOutings = outings.slice(0, 5)
@@ -23,6 +25,10 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
 
   return (
     <div className="p-4 space-y-6">
+      {onTestPhotoReady && (
+        <TestHelper onTestPhotoReady={onTestPhotoReady} />
+      )}
+      
       <section className="space-y-4">
         <div className="text-center py-8 space-y-4">
           <h2 className="font-serif text-3xl font-semibold text-foreground">

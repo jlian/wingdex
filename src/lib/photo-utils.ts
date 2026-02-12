@@ -153,7 +153,7 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
   })
 }
 
-export async function downscaleForInference(dataUrl: string, maxDim = 1200): Promise<string> {
+export async function downscaleForInference(dataUrl: string, maxDim = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     
@@ -170,7 +170,7 @@ export async function downscaleForInference(dataUrl: string, maxDim = 1200): Pro
       canvas.height = img.height * scale
       
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      resolve(canvas.toDataURL('image/jpeg', 0.85))
+      resolve(canvas.toDataURL('image/jpeg', 0.75))
     }
     
     img.onerror = () => reject(new Error('Failed to load image'))
