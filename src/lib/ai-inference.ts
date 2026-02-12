@@ -11,9 +11,6 @@ export async function identifyBirdInPhoto(
   month?: number
 ): Promise<VisionResult[]> {
   try {
-    const base64Data = imageDataUrl.split(',')[1] || ''
-    const imagePreview = base64Data.substring(0, 100)
-    
     let contextStr = ''
     
     if (location) {
@@ -26,7 +23,7 @@ export async function identifyBirdInPhoto(
       contextStr += ` Month: ${monthNames[month]}.`
     }
     
-    const fullContext = `You are an expert ornithologist. Analyze this image and identify any bird species present.${contextStr}
+    const promptText = `You are an expert ornithologist. Analyze this image and identify any bird species present.${contextStr}
 
 Return the top 5 most likely bird species with confidence scores (0.0 to 1.0). If no bird is visible, return an empty array.
 
@@ -38,12 +35,10 @@ Return ONLY a JSON object in this exact format:
   ]
 }
 
-Use standard common names followed by scientific names in parentheses. Be conservative with confidence scores.
-
-Image data: ${imagePreview}`
+Use standard common names followed by scientific names in parentheses. Be conservative with confidence scores.`
     
-    // @ts-expect-error - TypeScript struggles with template literal tags but runtime is correct
-    const prompt = window.spark.llmPrompt`${fullContext}`
+    const prompt = window.spark.llmPrompt([`${promptText}\n\nImage: `, ''], imageDataUrl) as unknown as string
+    
     const response = await window.spark.llm(prompt, 'gpt-4o', true)
     const parsed = JSON.parse(response)
     

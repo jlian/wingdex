@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, Question, X as XIcon } from '@phosphor-icons/react'
+import { CheckCircle, Question, X as XIcon, Crop } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
-import type { SpeciesSuggestion, ObservationStatus } from '@/lib/types'
+import type { SpeciesSuggestion, ObservationStatus, Photo } from '@/lib/types'
 
 interface PhotoCluster {
   photos: any[]
@@ -21,7 +21,9 @@ interface SpeciesConfirmationProps {
   cluster: PhotoCluster
   suggestions: SpeciesSuggestion[]
   data: ReturnType<typeof useBirdDexData>
+  photos?: Photo[]
   onComplete: (outingId: string) => void
+  onCropPhoto?: (photoIndex: number) => void
 }
 
 interface SpeciesDecision {
@@ -35,7 +37,9 @@ export default function SpeciesConfirmation({
   cluster,
   suggestions,
   data,
-  onComplete
+  photos,
+  onComplete,
+  onCropPhoto
 }: SpeciesConfirmationProps) {
   const [decisions, setDecisions] = useState<Map<string, SpeciesDecision>>(
     new Map(
@@ -128,6 +132,34 @@ export default function SpeciesConfirmation({
 
   return (
     <div className="space-y-4">
+      {photos && onCropPhoto && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Photos</p>
+          <div className="grid grid-cols-4 gap-2">
+            {cluster.photos.map((photo, idx) => (
+              <div key={photo.id} className="relative group">
+                <img
+                  src={photo.thumbnail}
+                  alt="Bird"
+                  className="w-full aspect-square object-cover rounded"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute inset-0 m-auto w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => onCropPhoto(idx)}
+                >
+                  <Crop size={16} weight="bold" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Hover over photos and click <Crop size={12} className="inline" weight="bold" /> to crop and improve identification
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
           Review AI-suggested species and confirm your observations

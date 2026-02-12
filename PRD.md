@@ -26,19 +26,19 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Progression**: Home → Tap "Add Photos" → Native picker opens → Select multiple photos → Photos load with progress indicator → EXIF parsed → Thumbnails generated → Photos displayed in review UI
 - **Success criteria**: All selected photos loaded; EXIF timestamp and GPS extracted when present; thumbnails generated at ~400px width; file hash computed for de-duplication
 
-### 3. Intelligent Outing Clustering
-- **Functionality**: Group uploaded photos into logical "outings" using time + distance heuristics (within 4 hours AND 5km if GPS exists, time-only if GPS missing)
-- **Purpose**: Automatically organize photos into checklists matching real-world birding sessions
+### 3. Intelligent Outing Clustering (Automatic)
+- **Functionality**: Automatically group uploaded photos into logical "outings" using time + distance heuristics (within 4 hours AND 5km if GPS exists, time-only if GPS missing); outing is created automatically upon photo upload
+- **Purpose**: Eliminate manual outing creation step by using EXIF data to intelligently organize photos into checklists matching real-world birding sessions
 - **Trigger**: After photos are uploaded and EXIF parsed
-- **Progression**: Photos uploaded → Clustering algorithm runs → Proposed outings displayed → User reviews split → Option to merge/split manually → Confirm grouping
-- **Success criteria**: Photos correctly grouped by temporal and spatial proximity; user can manually adjust groups; no photos lost in grouping
+- **Progression**: Photos uploaded → EXIF extracted → Clustering algorithm runs → Outing automatically created with date/time/location from EXIF → Photos linked to outing → AI identification begins immediately
+- **Success criteria**: Photos correctly grouped by temporal and spatial proximity; outing created with accurate metadata from EXIF; no manual intervention required for typical cases
 
-### 4. AI Species Identification (GitHub Models Vision)
-- **Functionality**: Send each photo to GitHub Models vision API with location + month context; receive top 5 species candidates with confidence scores
-- **Purpose**: Dramatically reduce manual species identification effort while maintaining accuracy through user confirmation
-- **Trigger**: After outing grouping confirmed
-- **Progression**: Outing created → Each photo queued for inference → Downscaled image sent to API with prompt → Response parsed → Species suggestions aggregated → Display top candidates with supporting photos
-- **Success criteria**: Inference completes within 30s for typical outing (10-20 photos); suggestions ranked by confidence and frequency; user can confirm/reject/mark as "possible"
+### 4. AI Species Identification with Crop Tool (GitHub Models Vision)
+- **Functionality**: Send each photo to GitHub Models vision API with location + month context; receive top 5 species candidates with confidence scores; includes integrated crop tool to focus on specific birds for improved identification accuracy
+- **Purpose**: Dramatically reduce manual species identification effort while maintaining accuracy through user confirmation; crop feature allows users to isolate the bird subject for better AI results (Merlin-like functionality)
+- **Trigger**: After outing grouping confirmed (automatic)
+- **Progression**: Outing created → Each photo queued for inference → Downscaled image sent to API with full image data and prompt → Response parsed → Species suggestions aggregated → Display top candidates with supporting photos → User can crop individual photos → Cropped photo re-analyzed by AI → Updated suggestions displayed
+- **Success criteria**: Inference completes within 30s for typical outing (10-20 photos); suggestions ranked by confidence and frequency; user can confirm/reject/mark as "possible"; crop tool allows intuitive selection of bird region; re-identification with cropped image improves accuracy
 
 ### 5. Observation Confirmation & Editing
 - **Functionality**: Review AI-suggested species, see supporting photos, mark as Confirmed/Possible/Rejected, set count per species, choose representative photo
