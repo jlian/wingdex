@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +33,32 @@ export default function OutingReview({
   onConfirm
 }: OutingReviewProps) {
   const [locationName, setLocationName] = useState('')
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+  const [suggestedLocation, setSuggestedLocation] = useState('')
+
+  useEffect(() => {
+    if (cluster.centerLat && cluster.centerLon) {
+      fetchLocationName(cluster.centerLat, cluster.centerLon)
+    }
+  }, [cluster.centerLat, cluster.centerLon])
+
+  const fetchLocationName = async (lat: number, lon: number) => {
+    setIsLoadingLocation(true)
+    try {
+      const prompt = (window.spark.llmPrompt as any)`Given the GPS coordinates ${lat.toFixed(4)}, ${lon.toFixed(4)}, suggest a likely location name. This could be a park, nature reserve, city, or general area name. Return ONLY the location name as a short string (e.g., "Central Park, NYC" or "Golden Gate Park, San Francisco" or "Austin, TX"). Be concise and practical.`
+      
+      const response = await window.spark.llm(prompt, 'gpt-4o-mini', false)
+      const cleanName = response.trim().replace(/^["']|["']$/g, '')
+      setSuggestedLocation(cleanName)
+      setLocationName(cleanName)
+    } catch (error) {
+      console.error('Failed to fetch location name:', error)
+      setSuggestedLocation(`Location near ${lat.toFixed(4)}, ${lon.toFixed(4)}`)
+      setLocationName(`Location near ${lat.toFixed(4)}, ${lon.toFixed(4)}`)
+    } finally {
+      setIsLoadingLocation(false)
+    }
+  }
 
   const handleConfirm = () => {
     const outingId = `outing_${Date.now()}`
@@ -85,12 +111,26 @@ export default function OutingReview({
 
       <div className="space-y-2">
         <Label htmlFor="location-name">Location Name</Label>
-        <Input
-          id="location-name"
-          placeholder="e.g., Central Park, NYC"
-          value={locationName}
-          onChange={e => setLocationName(e.target.value)}
-        />
+        {isLoadingLocation ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Identifying location from GPS...</span>
+          </div>
+        ) : (
+          <>
+            <Input
+              id="location-name"
+              placeholder="e.g., Central Park, NYC"
+              value={locationName}
+              onChange={e => setLocationName(e.target.value)}
+            />
+            {suggestedLocation && (
+              <p className="text-xs text-muted-foreground">
+                Suggested: {suggestedLocation}
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -111,9 +151,10 @@ export default function OutingReview({
 
       <Button
         onClick={handleConfirm}
+        disabled={isLoadingLocation}
         className="w-full bg-primary text-primary-foreground"
       >
-        Continue to Species Identification
+        {isLoadingLocation ? 'Loading...' : 'Continue to Species Identification'}
       </Button>
     </div>
   )

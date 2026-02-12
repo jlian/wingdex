@@ -130,43 +130,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     }
 
     setPhotos(processedPhotos)
-    
-    const photoClusters = clusterPhotosIntoOutings(processedPhotos)
-    
-    if (photoClusters.length > 0) {
-      const firstCluster = photoClusters[0]
-      const outingId = `outing_${Date.now()}`
-      
-      const outing = {
-        id: outingId,
-        userId: userId.toString(),
-        startTime: firstCluster.startTime.toISOString(),
-        endTime: firstCluster.endTime.toISOString(),
-        locationName: firstCluster.centerLat && firstCluster.centerLon 
-          ? `${firstCluster.centerLat.toFixed(4)}, ${firstCluster.centerLon.toFixed(4)}`
-          : 'Unknown Location',
-        lat: firstCluster.centerLat,
-        lon: firstCluster.centerLon,
-        notes: '',
-        createdAt: new Date().toISOString()
-      }
-
-      data.addOuting(outing)
-      
-      const updatedPhotos = firstCluster.photos.map(p => ({
-        ...p,
-        outingId
-      }))
-
-      data.addPhotos(updatedPhotos as Photo[])
-      setPhotos(updatedPhotos as PhotoWithCrop[])
-
-      toast.success(`Outing automatically created from EXIF data`)
-      
-      await runInference(updatedPhotos as PhotoWithCrop[], outingId)
-    } else {
-      setStep('review')
-    }
+    setStep('review')
   }
 
   const handleOutingConfirmed = async (
@@ -177,39 +141,51 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   ) => {
     const cluster = clusters[currentClusterIndex]
     
-    const updatedPhotos = cluster.photos.map(p => ({
-      ...p,
-      outingId
+    const updatedPhotos = cluster.photos.map((p: any) => {
+      const fullPhoto = photos.find(fp => fp.id === p.id)
+      return {
+        ...fullPhoto,
+        outingId
+      }
+    })
+
+    data.addPhotos(updatedPhotos as Photo[])
+    
+    const photosForInference = updatedPhotos as PhotoWithCrop[]
+    setPhotos(prev => prev.map(p => {
+      const updated = photosForInference.find(up => up.id === p.id)
+      return updated || p
     }))
 
-    data.addPhotos(updatedPhotos)
-
-    await runInference(updatedPhotos as PhotoWithCrop[], outingId)
+    await runInference(photosForInference, outingId)
   }
 
   const handleCropPhoto = (photoIndex: number) => {
-    setCurrentCropPhotoIndex(photoIndex)
-    setStep('crop')
+    const cluster = clusters[currentClusterIndex]
+    const photoId = cluster.photos[photoIndex].id
+    const actualPhotoIndex = photos.findIndex(p => p.id === photoId)
+    
+    if (actualPhotoIndex !== -1) {
+      setCurrentCropPhotoIndex(actualPhotoIndex)
+      setStep('crop')
+    }
   }
 
   const handleCropApplied = async (croppedImageUrl: string) => {
     if (currentCropPhotoIndex === null) return
     
-    setPhotos(prev => {
-      const updated = [...prev]
-      updated[currentCropPhotoIndex] = {
-        ...updated[currentCropPhotoIndex],
-        croppedDataUrl: croppedImageUrl
-      }
-      return updated
-    })
+    const updatedPhotos = [...photos]
+    updatedPhotos[currentCropPhotoIndex] = {
+      ...updatedPhotos[currentCropPhotoIndex],
+      croppedDataUrl: croppedImageUrl
+    }
+    setPhotos(updatedPhotos)
     
-    toast.success('Crop applied - will use cropped version for identification')
+    toast.success('Crop applied - re-running identification...')
     setCurrentCropPhotoIndex(null)
-    setStep('species')
     
     const cluster = clusters[currentClusterIndex]
-    const photo = photos[currentCropPhotoIndex]
+    const photo = updatedPhotos[currentCropPhotoIndex]
     
     setProcessingMessage('Re-running AI identification with cropped image...')
     setProgress(0)
@@ -224,21 +200,27 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       )
       
       const newResults = new Map<string, any[]>()
-      newResults.set(photo.id, results)
       
-      suggestions.forEach(s => {
-        const otherPhotos = s.supportingPhotos.filter(pid => pid !== photo.id)
-        if (otherPhotos.length > 0) {
-          otherPhotos.forEach(pid => {
-            if (!newResults.has(pid)) {
-              newResults.set(pid, [{ species: s.speciesName, confidence: s.confidence }])
-            }
-          })
+      cluster.photos.forEach((clusterPhoto: any) => {
+        const fullPhoto = updatedPhotos.find(p => p.id === clusterPhoto.id)
+        if (fullPhoto?.id === photo.id) {
+          newResults.set(photo.id, results)
+        } else {
+          const existingSuggestion = suggestions.find(s => 
+            s.supportingPhotos.includes(clusterPhoto.id)
+          )
+          if (existingSuggestion) {
+            newResults.set(clusterPhoto.id, [{
+              species: existingSuggestion.speciesName,
+              confidence: existingSuggestion.confidence
+            }])
+          }
         }
       })
       
       const aggregated = aggregateSpeciesSuggestions(newResults)
       setSuggestions(aggregated)
+      setProgress(100)
       setStep('species')
     } catch (error) {
       console.error('Re-inference failed:', error)

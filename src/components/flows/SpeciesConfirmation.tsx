@@ -136,23 +136,34 @@ export default function SpeciesConfirmation({
         <div className="space-y-2">
           <p className="text-sm font-medium text-foreground">Photos</p>
           <div className="grid grid-cols-4 gap-2">
-            {cluster.photos.map((photo, idx) => (
-              <div key={photo.id} className="relative group">
-                <img
-                  src={photo.thumbnail}
-                  alt="Bird"
-                  className="w-full aspect-square object-cover rounded"
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute inset-0 m-auto w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onCropPhoto(idx)}
-                >
-                  <Crop size={16} weight="bold" />
-                </Button>
-              </div>
-            ))}
+            {cluster.photos.map((photo, idx) => {
+              const fullPhoto = photos.find(p => p.id === photo.id)
+              const displaySrc = (fullPhoto as any)?.croppedDataUrl || photo.thumbnail
+              const hasCrop = !!(fullPhoto as any)?.croppedDataUrl
+              
+              return (
+                <div key={photo.id} className="relative group">
+                  <img
+                    src={displaySrc}
+                    alt="Bird"
+                    className="w-full aspect-square object-cover rounded"
+                  />
+                  {hasCrop && (
+                    <div className="absolute top-1 right-1 bg-accent text-accent-foreground text-xs px-1 rounded">
+                      Cropped
+                    </div>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute inset-0 m-auto w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onCropPhoto(idx)}
+                  >
+                    <Crop size={16} weight="bold" />
+                  </Button>
+                </div>
+              )
+            })}
           </div>
           <p className="text-xs text-muted-foreground">
             Hover over photos and click <Crop size={12} className="inline" weight="bold" /> to crop and improve identification
