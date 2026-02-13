@@ -89,6 +89,32 @@ A mobile-first web application for **reverse birders** — people who take photo
 - **Trigger**: Automatic — no user action required
 - **Success criteria**: Outing/observation/life list data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
 
+## Implementation Status
+
+| Feature | Status | Notes |
+|---|---|---|
+| #1 Auth & User Isolation | ✅ Done | Spark auth with dev-user fallback |
+| #2 Multi-Photo Upload + EXIF | ✅ Done | Multi-select, GPS, timestamps, thumbnails, dedup |
+| #3 Outing Clustering | ✅ Done | 8hr/10km thresholds, merge with existing outings |
+| #4 AI Species ID + Crop | ✅ Done | Single GPT-4.1 call returns candidates + bounding box |
+| #5 Observation Confirmation | ⚠️ Partial | Confirm/Possible/Skip works during wizard; no post-save editing |
+| #6 Life List | ⚠️ Partial | Display + search + Wikimedia images; no species detail/timeline view |
+| #7 eBird Import | ⚠️ Basic | Parses CSV into life list entries; doesn't create outings |
+| #8 eBird Export | ⚠️ Mismatch | Exports life list CSV; per-outing eBird Record Format not yet exposed in UI |
+| #9 Saved Locations | ❌ Not built | Types + data hooks exist, no UI |
+| #10 Outing Detail | ❌ Not built | Outing cards are read-only; no tap-to-expand or editing |
+| #11 Cloud Storage | ⚠️ Needs work | Photo base64 data still written to KV/localStorage (will overflow) |
+| Animations | ❌ Not built | Only spinner pulse; no staggered/spring/confetti |
+
+## Upcoming Priorities
+
+1. **Stop persisting photo blobs** — Only store photo metadata (hash, filename, EXIF). Photos are ephemeral; Wikimedia images provide visual context afterward
+2. **Outing detail view** — Tappable outing cards showing species list, Wikimedia images, notes editing, per-outing eBird export
+3. **Manual species entry** — Text input with autocomplete for when AI returns no candidates
+4. **Post-save editing** — Delete or change observations within a saved outing
+5. **Saved locations UI** — Save/select favorite birding spots when photos lack GPS
+6. **Animations** — Staggered card reveals, new-species celebration, spring transitions
+
 ## Edge Case Handling
 
 - **No EXIF data** - Prompt user to manually set date/time and location; use current time as default

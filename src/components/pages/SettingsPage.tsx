@@ -168,8 +168,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
-          BirdDex helps you track bird sightings and maintain a life list.
-          Compatible with eBird for import/export.
+          Photo-first bird identification for reverse birders.
+          Upload photos, let AI identify the species, build your life list.
         </p>
         <p className="text-xs text-muted-foreground">
           Version 1.0.0
@@ -179,8 +179,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">Data Storage</h3>
         <p className="text-sm text-muted-foreground">
-          Your data is stored securely in the cloud, tied to your GitHub account.
-          It's private to you and accessible from any device where you're signed in.
+          Your birding records (outings, species, sightings) are stored in the cloud
+          tied to your GitHub account. Bird images in the life list come from
+          Wikimedia Commons.
         </p>
       </Card>
     </div>

@@ -304,7 +304,18 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const fullPhoto = photos.find(fp => fp.id === p.id)
       return { ...fullPhoto, outingId }
     })
-    data.addPhotos(updatedPhotos as Photo[])
+    // Persist only metadata — strip large base64 blobs to avoid KV/localStorage overflow
+    const photosForStorage = updatedPhotos.map((p: any) => ({
+      id: p.id,
+      outingId: p.outingId,
+      dataUrl: '',      // ephemeral — not persisted
+      thumbnail: '',    // ephemeral — not persisted
+      exifTime: p.exifTime,
+      gps: p.gps,
+      fileHash: p.fileHash,
+      fileName: p.fileName,
+    }))
+    data.addPhotos(photosForStorage as Photo[])
     setPhotos(prev =>
       prev.map(p => {
         const updated = updatedPhotos.find((up: any) => up.id === p.id)
