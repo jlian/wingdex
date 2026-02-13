@@ -164,7 +164,7 @@ export default function OutingReview({
         {cluster.centerLat && cluster.centerLon ? (
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle size={18} weight="fill" className="text-green-500" />
-            <span className="text-green-600 font-medium">GPS detected</span>
+            <span className="text-green-600 dark:text-green-400 font-medium">GPS detected</span>
             <span className="text-muted-foreground">
               ({cluster.centerLat.toFixed(4)}, {cluster.centerLon.toFixed(4)})
             </span>
@@ -172,7 +172,7 @@ export default function OutingReview({
         ) : (
           <div className="flex items-center gap-2 text-sm">
             <XCircle size={18} weight="fill" className="text-amber-500" />
-            <span className="text-amber-600 font-medium">No GPS data in photo</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">No GPS data in photo</span>
           </div>
         )}
       </div>

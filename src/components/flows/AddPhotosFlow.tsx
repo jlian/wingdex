@@ -725,7 +725,7 @@ function PerPhotoConfirm({
         {isHighConfidence && !showAlternatives ? (
           /* HIGH CONFIDENCE — auto-selected, alternatives hidden */
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
               <CheckCircle size={16} weight="fill" />
               <span>High confidence, auto-selected</span>
             </div>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +11,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck, CaretDown } from '@phosphor-icons/react'
+import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
@@ -31,6 +32,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   const handleImportEBird = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -100,6 +102,33 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           Signed in as {user.login}
         </p>
       </div>
+
+      {/* Appearance */}
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Appearance</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose your preferred color scheme
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { value: 'light', label: 'Light', icon: Sun },
+            { value: 'dark', label: 'Dark', icon: Moon },
+            { value: 'system', label: 'System', icon: Desktop },
+          ] as const).map(({ value, label, icon: Icon }) => (
+            <Button
+              key={value}
+              variant={theme === value ? 'default' : 'outline'}
+              className="flex flex-col items-center gap-1.5 h-auto py-3"
+              onClick={() => setTheme(value)}
+            >
+              <Icon size={20} />
+              <span className="text-xs">{label}</span>
+            </Button>
+          ))}
+        </div>
+      </Card>
 
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
