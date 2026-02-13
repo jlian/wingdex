@@ -1,6 +1,6 @@
 # BirdDex
 
-A photo-first bird identification and life list tracker built on [GitHub Spark](https://githubnext.com/projects/github-spark). Upload your bird photos, let AI identify the species, and build your personal BirdDex over time.
+A photo-first bird identification and life list tracker built on [GitHub Spark](https://github.com/features/spark). Upload your bird photos, let AI identify the species, and build your personal BirdDex over time.
 
 **[Try it →](https://birddex--jlian.github.app)**
 
