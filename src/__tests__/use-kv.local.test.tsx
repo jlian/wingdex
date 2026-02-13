@@ -29,6 +29,8 @@ function Harness<T>({
 }
 
 describe('useKV (local runtime)', () => {
+  const key = 'u1_test_key'
+
   beforeEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
@@ -39,13 +41,13 @@ describe('useKV (local runtime)', () => {
   })
 
   it('initializes from localStorage and does not hit Spark KV', async () => {
-    localStorage.setItem('birddex_kv_test_key', JSON.stringify(['saved']))
+    localStorage.setItem(`birddex_kv_${key}`, JSON.stringify(['saved']))
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
     let latest: KVControls<string[]> | null = null
     render(
       <Harness
-        storageKey="test_key"
+        storageKey={key}
         initialValue={[]}
         onChange={(controls) => {
           latest = controls
@@ -63,7 +65,7 @@ describe('useKV (local runtime)', () => {
     let latest: KVControls<string[]> | null = null
     render(
       <Harness
-        storageKey="test_key"
+        storageKey={key}
         initialValue={[]}
         onChange={(controls) => {
           latest = controls
@@ -79,14 +81,14 @@ describe('useKV (local runtime)', () => {
       latest!.setValue(['a', 'b'])
     })
     await waitFor(() => {
-      expect(localStorage.getItem('birddex_kv_test_key')).toBe(JSON.stringify(['a', 'b']))
+      expect(localStorage.getItem(`birddex_kv_${key}`)).toBe(JSON.stringify(['a', 'b']))
     })
 
     act(() => {
       latest!.deleteValue()
     })
     await waitFor(() => {
-      expect(localStorage.getItem('birddex_kv_test_key')).toBeNull()
+      expect(localStorage.getItem(`birddex_kv_${key}`)).toBeNull()
       expect(latest?.value).toEqual([])
     })
   })
@@ -95,7 +97,7 @@ describe('useKV (local runtime)', () => {
     let latest: KVControls<string[]> | null = null
     render(
       <Harness
-        storageKey="test_key"
+        storageKey={key}
         initialValue={[]}
         onChange={(controls) => {
           latest = controls
@@ -110,7 +112,7 @@ describe('useKV (local runtime)', () => {
     act(() => {
       window.dispatchEvent(
         new StorageEvent('storage', {
-          key: 'birddex_kv_test_key',
+          key: `birddex_kv_${key}`,
           newValue: JSON.stringify(['sync']),
         }),
       )
@@ -118,6 +120,60 @@ describe('useKV (local runtime)', () => {
 
     await waitFor(() => {
       expect(latest?.value).toEqual(['sync'])
+    })
+  })
+
+  it('throws for non user-scoped keys', () => {
+    expect(() => {
+      render(
+        <Harness
+          storageKey="test_key"
+          initialValue={[]}
+          onChange={() => {}}
+        />,
+      )
+    }).toThrow('[useKV] Invalid key "test_key". Keys must be user-scoped (e.g. u123_photos).')
+  })
+
+  it('keeps user-scoped keys isolated from each other', async () => {
+    localStorage.setItem('birddex_kv_u1_photos', JSON.stringify(['u1-photo']))
+    localStorage.setItem('birddex_kv_u2_photos', JSON.stringify(['u2-photo']))
+
+    let userOne: KVControls<string[]> | null = null
+    let userTwo: KVControls<string[]> | null = null
+
+    render(
+      <>
+        <Harness
+          storageKey="u1_photos"
+          initialValue={[]}
+          onChange={(controls) => {
+            userOne = controls
+          }}
+        />
+        <Harness
+          storageKey="u2_photos"
+          initialValue={[]}
+          onChange={(controls) => {
+            userTwo = controls
+          }}
+        />
+      </>,
+    )
+
+    await waitFor(() => {
+      expect(userOne?.value).toEqual(['u1-photo'])
+      expect(userTwo?.value).toEqual(['u2-photo'])
+    })
+
+    act(() => {
+      userOne!.setValue(['updated-u1'])
+    })
+
+    await waitFor(() => {
+      expect(localStorage.getItem('birddex_kv_u1_photos')).toBe(JSON.stringify(['updated-u1']))
+      expect(localStorage.getItem('birddex_kv_u2_photos')).toBe(JSON.stringify(['u2-photo']))
+      expect(userTwo?.value).toEqual(['u2-photo'])
     })
   })
 })

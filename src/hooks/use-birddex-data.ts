@@ -1,5 +1,6 @@
 import { useKV } from '@/hooks/use-kv'
 import type { Photo, Outing, Observation, DexEntry, SavedSpot } from '@/lib/types'
+import { getUserStorageKey } from '@/lib/storage-keys'
 
 export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
 
@@ -63,12 +64,11 @@ export function buildDexFromState(
 }
 
 export function useBirdDexData(userId: number) {
-  const prefix = `u${userId}_`
-  const [photos, setPhotos] = useKV<Photo[]>(`${prefix}photos`, [])
-  const [outings, setOutings] = useKV<Outing[]>(`${prefix}outings`, [])
-  const [observations, setObservations] = useKV<Observation[]>(`${prefix}observations`, [])
-  const [dex, setDex] = useKV<DexEntry[]>(`${prefix}dex`, [])
-  const [savedSpots, setSavedSpots] = useKV<SavedSpot[]>(`${prefix}savedSpots`, [])
+  const [photos, setPhotos] = useKV<Photo[]>(getUserStorageKey(userId, 'photos'), [])
+  const [outings, setOutings] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
+  const [observations, setObservations] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])
+  const [dex, setDex] = useKV<DexEntry[]>(getUserStorageKey(userId, 'dex'), [])
+  const [savedSpots, setSavedSpots] = useKV<SavedSpot[]>(getUserStorageKey(userId, 'savedSpots'), [])
 
   const addPhotos = (newPhotos: Photo[]) => {
     setPhotos(current => [...(current || []), ...newPhotos])

@@ -40,7 +40,7 @@ describe('useKV (Spark runtime)', () => {
   })
 
   it('does not repeatedly refetch Spark KV when rerendered with new [] literals', async () => {
-    const key = 'spark_existing'
+    const key = 'u1_spark_existing'
     const keyUrlPart = `/${encodeURIComponent(key)}`
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -89,7 +89,7 @@ describe('useKV (Spark runtime)', () => {
   })
 
   it('seeds a missing Spark key once instead of posting repeatedly', async () => {
-    const key = 'spark_missing'
+    const key = 'u1_spark_missing'
     const keyUrlPart = `/${encodeURIComponent(key)}`
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
