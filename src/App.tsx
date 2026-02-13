@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { House, List, Bird, Gear, CloudArrowUp } from '@phosphor-icons/react'
+import { House, List, Bird, Gear, CloudArrowUp, Plus } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 
 import HomePage from '@/components/pages/HomePage'
@@ -27,7 +27,6 @@ function App() {
     const fetchUser = async () => {
       try {
         const userInfo = await window.spark.user()
-        // Validate that we got a real user object (not a 403 error body)
         if (userInfo && typeof userInfo.login === 'string' && typeof userInfo.id === 'number') {
           setUser(userInfo)
         } else {
@@ -66,7 +65,7 @@ function App() {
               BirdDex
             </h1>
             <p className="text-muted-foreground text-lg">
-              Your Personal Bird Life List & Sighting Tracker
+              Photo-First Bird Identification
             </p>
           </div>
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -86,26 +85,67 @@ function AppContent({ user }: { user: UserInfo }) {
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData(user.id)
 
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      <Toaster position="top-center" />
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Bird size={28} weight="duotone" className="text-primary" />
-            <h1 className="font-serif text-xl font-semibold text-foreground">
-              BirdDex
-            </h1>
-          </div>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatarUrl} alt={user.login} />
-            <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
-        </div>
-      </header>
+  const navItems = [
+    { value: 'home', label: 'Home', icon: House },
+    { value: 'outings', label: 'Outings', icon: List },
+    { value: 'lifelist', label: 'Life List', icon: Bird },
+    { value: 'settings', label: 'Settings', icon: Gear },
+  ]
 
-      <main className="max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+  return (
+    <div className="min-h-screen bg-background">
+      <Toaster position="top-center" />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* ── Top header + desktop nav ──────────────────────── */}
+        <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              {/* Logo */}
+              <div className="flex items-center gap-2">
+                <Bird size={28} weight="duotone" className="text-primary" />
+                <h1 className="font-serif text-xl font-semibold text-foreground">
+                  BirdDex
+                </h1>
+              </div>
+
+              {/* Desktop nav — hidden on mobile */}
+              <TabsList className="hidden md:flex bg-transparent gap-1 h-auto p-0">
+                {navItems.map(item => (
+                  <TabsTrigger
+                    key={item.value}
+                    value={item.value}
+                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
+                      data-[state=active]:bg-primary/10 data-[state=active]:text-primary
+                      data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <item.icon size={18} />
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {/* Right side: upload + avatar */}
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddPhotos(true)}
+                  className="hidden sm:flex bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  <Plus size={16} className="mr-1" weight="bold" />
+                  Add Photos
+                </Button>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.avatarUrl} alt={user.login} />
+                  <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* ── Main content ────────────────────────────────── */}
+        <main className="max-w-6xl mx-auto pb-20 md:pb-8">
           <TabsContent value="home" className="mt-0">
             <HomePage
               data={data}
@@ -124,41 +164,24 @@ function AppContent({ user }: { user: UserInfo }) {
           <TabsContent value="settings" className="mt-0">
             <SettingsPage data={data} user={user} />
           </TabsContent>
+        </main>
 
-          <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
-            <TabsList className="w-full h-16 bg-transparent grid grid-cols-4 rounded-none">
+        {/* ── Mobile bottom nav — hidden on desktop ────────── */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border md:hidden z-50">
+          <TabsList className="w-full h-16 bg-transparent grid grid-cols-4 rounded-none">
+            {navItems.map(item => (
               <TabsTrigger
-                value="home"
+                key={item.value}
+                value={item.value}
                 className="flex flex-col gap-1 data-[state=active]:text-primary"
               >
-                <House size={24} />
-                <span className="text-xs">Home</span>
+                <item.icon size={22} />
+                <span className="text-[11px]">{item.label}</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="outings"
-                className="flex flex-col gap-1 data-[state=active]:text-primary"
-              >
-                <List size={24} />
-                <span className="text-xs">Outings</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="lifelist"
-                className="flex flex-col gap-1 data-[state=active]:text-primary"
-              >
-                <Bird size={24} />
-                <span className="text-xs">Life List</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="flex flex-col gap-1 data-[state=active]:text-primary"
-              >
-                <Gear size={24} />
-                <span className="text-xs">Settings</span>
-              </TabsTrigger>
-            </TabsList>
-          </nav>
-        </Tabs>
-      </main>
+            ))}
+          </TabsList>
+        </nav>
+      </Tabs>
 
       {showAddPhotos && (
         <AddPhotosFlow
@@ -168,9 +191,10 @@ function AppContent({ user }: { user: UserInfo }) {
         />
       )}
 
+      {/* Mobile FAB — hidden on desktop (desktop has header button) */}
       <Button
         size="lg"
-        className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg bg-accent text-accent-foreground"
+        className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg bg-accent text-accent-foreground md:hidden z-40"
         onClick={() => setShowAddPhotos(true)}
       >
         <CloudArrowUp size={28} weight="bold" />

@@ -1,7 +1,11 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CloudArrowUp, MapPin, CalendarBlank, Camera } from '@phosphor-icons/react'
+import {
+  CloudArrowUp, MapPin, CalendarBlank, Camera, Bird,
+  ArrowRight, Binoculars, Image as ImageIcon
+} from '@phosphor-icons/react'
+import { useBirdImage } from '@/hooks/use-bird-image'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 
 interface HomePageProps {
@@ -12,91 +16,223 @@ interface HomePageProps {
 export default function HomePage({ data, onAddPhotos }: HomePageProps) {
   const { outings, lifeList } = data
 
-  const recentOutings = outings.slice(0, 5)
-  
+  const recentOutings = outings.slice(0, 3)
+  const recentSpecies = lifeList
+    .slice()
+    .sort((a, b) => new Date(b.addedDate || b.firstSeenDate).getTime() - new Date(a.addedDate || a.firstSeenDate).getTime())
+    .slice(0, 6)
+
   const thisMonth = new Date()
   const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)
   const newThisMonth = lifeList.filter(entry => {
-    // Use addedDate (when added to BirdDex) if available, fall back to firstSeenDate
     const dateStr = entry.addedDate || entry.firstSeenDate
-    const added = new Date(dateStr)
-    return added >= thisMonthStart
+    return new Date(dateStr) >= thisMonthStart
   }).length
 
+  const totalPhotos = data.photos.length
+
   return (
-    <div className="p-4 space-y-6">
-      <section className="space-y-4">
-        <div className="text-center py-8 space-y-4">
-          <h2 className="font-serif text-3xl font-semibold text-foreground">
-            Got bird photos?
-          </h2>
-          <p className="text-muted-foreground">
-            Upload them and let AI identify the species.<br />
-            <span className="text-xs opacity-70">Photos first, ID later — reverse birding.</span>
-          </p>
-          <Button
-            size="lg"
-            onClick={onAddPhotos}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Camera size={20} className="mr-2" weight="bold" />
-            Upload &amp; Identify
-          </Button>
+    <div className="space-y-8 pb-8">
+      {/* ── Hero Section ───────────────────────────────── */}
+      <section className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
+        <div className="px-4 sm:px-6 py-10 sm:py-16 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground leading-tight">
+                  Got bird photos?
+                </h2>
+                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+                  Upload your photos, let AI identify the species, and build your
+                  life list — <em>reverse birding</em> at its finest.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  size="lg"
+                  onClick={onAddPhotos}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
+                >
+                  <Camera size={20} className="mr-2" weight="bold" />
+                  Upload &amp; Identify
+                </Button>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <ImageIcon size={16} /> AI-powered ID
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Bird size={16} /> Auto life list
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Binoculars size={16} /> eBird export
+                </span>
+              </div>
+            </div>
+
+            {/* Stats cards — right side on desktop, below on mobile */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <StatCard
+                value={lifeList.length}
+                label="Species"
+                accent="text-primary"
+              />
+              <StatCard
+                value={outings.length}
+                label="Outings"
+                accent="text-secondary"
+              />
+              <StatCard
+                value={newThisMonth}
+                label="New This Month"
+                accent="text-accent"
+              />
+              <StatCard
+                value={totalPhotos}
+                label="Photos"
+                accent="text-muted-foreground"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
-        <Card className="p-4 space-y-1">
-          <div className="text-3xl font-bold text-primary font-serif">
-            {lifeList.length}
-          </div>
-          <div className="text-sm text-muted-foreground">Total Species</div>
-        </Card>
-        <Card className="p-4 space-y-1">
-          <div className="text-3xl font-bold text-accent font-serif">
-            {newThisMonth}
-          </div>
-          <div className="text-sm text-muted-foreground">New This Month</div>
-        </Card>
-      </section>
+      <div className="px-4 sm:px-6 space-y-8 max-w-4xl mx-auto">
+        {/* ── Recent Species ─────────────────────────────── */}
+        {recentSpecies.length > 0 && (
+          <section className="space-y-4">
+            <h3 className="font-serif text-xl font-semibold text-foreground">
+              Recent Species
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {recentSpecies.map(entry => (
+                <SpeciesCard
+                  key={entry.speciesName}
+                  speciesName={entry.speciesName}
+                  date={entry.addedDate || entry.firstSeenDate}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {recentOutings.length > 0 && (
-        <section className="space-y-3">
-          <h3 className="text-lg font-semibold text-foreground">
-            Recent Outings
-          </h3>
-          <div className="space-y-3">
-            {recentOutings.map(outing => {
-              const observations = data.getOutingObservations(outing.id)
-              const confirmed = observations.filter(
-                obs => obs.certainty === 'confirmed'
-              )
-              
-              return (
-                <Card key={outing.id} className="p-4 space-y-2 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
+        {/* ── Recent Outings ─────────────────────────────── */}
+        {recentOutings.length > 0 && (
+          <section className="space-y-4">
+            <h3 className="font-serif text-xl font-semibold text-foreground">
+              Recent Outings
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {recentOutings.map(outing => {
+                const observations = data.getOutingObservations(outing.id)
+                const confirmed = observations.filter(
+                  obs => obs.certainty === 'confirmed'
+                )
+
+                return (
+                  <Card key={outing.id} className="p-4 space-y-3 hover:shadow-md transition-shadow">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CalendarBlank size={16} />
+                        <CalendarBlank size={15} />
                         {new Date(outing.startTime).toLocaleDateString()}
                       </div>
                       {outing.locationName && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin size={16} />
-                          {outing.locationName}
+                          <MapPin size={15} weight="fill" className="text-primary" />
+                          <span className="truncate">{outing.locationName}</span>
                         </div>
                       )}
                     </div>
-                    <Badge variant="secondary">
-                      {confirmed.length} species
-                    </Badge>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
-      )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {confirmed.slice(0, 4).map(obs => (
+                        <Badge key={obs.id} variant="secondary" className="text-xs">
+                          {obs.speciesName.split('(')[0].trim()}
+                        </Badge>
+                      ))}
+                      {confirmed.length > 4 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{confirmed.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Empty state ────────────────────────────────── */}
+        {lifeList.length === 0 && (
+          <section className="text-center py-12 space-y-4">
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Bird size={40} className="text-primary" weight="duotone" />
+              </div>
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="font-serif text-xl font-semibold text-foreground">
+                Start your birding journey
+              </h3>
+              <p className="text-muted-foreground">
+                Upload bird photos from your camera roll and let AI do the identification.
+                Your life list builds itself.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={onAddPhotos}
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              <Camera size={20} className="mr-2" weight="bold" />
+              Upload Your First Photos
+            </Button>
+          </section>
+        )}
+      </div>
     </div>
+  )
+}
+
+function StatCard({ value, label, accent }: { value: number; label: string; accent: string }) {
+  return (
+    <Card className="p-4 sm:p-5 space-y-1 text-center">
+      <div className={`text-2xl sm:text-3xl font-bold font-serif ${accent}`}>
+        {value}
+      </div>
+      <div className="text-xs sm:text-sm text-muted-foreground">{label}</div>
+    </Card>
+  )
+}
+
+function SpeciesCard({ speciesName, date }: { speciesName: string; date: string }) {
+  const displayName = speciesName.split('(')[0].trim()
+  const wikiImage = useBirdImage(speciesName)
+
+  return (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow group">
+      <div className="aspect-square bg-muted overflow-hidden">
+        {wikiImage ? (
+          <img
+            src={wikiImage}
+            alt={displayName}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Bird size={32} className="text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
+      <div className="p-2.5">
+        <p className="font-serif text-sm font-semibold text-foreground truncate">
+          {displayName}
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          {new Date(date).toLocaleDateString()}
+        </p>
+      </div>
+    </Card>
   )
 }

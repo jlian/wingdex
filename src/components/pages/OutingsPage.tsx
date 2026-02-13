@@ -25,7 +25,12 @@ export default function OutingsPage({ data }: OutingsPageProps) {
 
   if (outings.length === 0) {
     return (
-      <div className="p-4 py-16 text-center space-y-2">
+      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-2xl mx-auto">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Bird size={32} className="text-primary" weight="duotone" />
+          </div>
+        </div>
         <p className="text-lg text-muted-foreground">No outings yet</p>
         <p className="text-sm text-muted-foreground">
           Upload photos to create your first outing
@@ -50,12 +55,12 @@ export default function OutingsPage({ data }: OutingsPageProps) {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto">
       <h2 className="font-serif text-2xl font-semibold text-foreground">
         Your Outings
       </h2>
       
-      <div className="space-y-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {outings.map(outing => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
@@ -224,7 +229,7 @@ function OutingDetail({
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
