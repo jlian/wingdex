@@ -21,10 +21,19 @@ function AlertDialogTrigger({
 }
 
 function AlertDialogPortal({
+  container,
   ...props
 }: ComponentProps<typeof AlertDialogPrimitive.Portal>) {
+  const defaultContainer = typeof document !== 'undefined'
+    ? document.getElementById('spark-app')
+    : undefined
+
   return (
-    <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+    <AlertDialogPrimitive.Portal
+      data-slot="alert-dialog-portal"
+      container={container ?? defaultContainer ?? undefined}
+      {...props}
+    />
   )
 }
 

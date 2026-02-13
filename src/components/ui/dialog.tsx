@@ -17,9 +17,20 @@ function DialogTrigger({
 }
 
 function DialogPortal({
+  container,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+  const defaultContainer = typeof document !== 'undefined'
+    ? document.getElementById('spark-app')
+    : undefined
+
+  return (
+    <DialogPrimitive.Portal
+      data-slot="dialog-portal"
+      container={container ?? defaultContainer ?? undefined}
+      {...props}
+    />
+  )
 }
 
 function DialogClose({
