@@ -117,8 +117,8 @@ test.describe('App smoke tests', () => {
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
-    // Should start on the upload step with "Choose Photos" button
-    await expect(page.getByRole('button', { name: 'Choose Photos' })).toBeVisible();
+    // Should start on the upload step with "Select Photos" button
+    await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible();
 
     // Upload a test image
     const fileInput = page.locator('input[type="file"]');
