@@ -39,6 +39,7 @@ export function groupPreviewsIntoOutings(
       startTime,
       endTime,
       locationName: first.location,
+      defaultLocationName: first.location,
       lat: first.lat,
       lon: first.lon,
       notes: 'Imported from eBird',

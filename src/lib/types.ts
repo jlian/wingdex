@@ -15,6 +15,7 @@ export interface Outing {
   startTime: string
   endTime: string
   locationName: string
+  defaultLocationName?: string
   lat?: number
   lon?: number
   notes: string

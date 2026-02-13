@@ -134,6 +134,7 @@ export default function OutingReview({
       startTime: cluster.startTime.toISOString(),
       endTime: cluster.endTime.toISOString(),
       locationName: name || 'Unknown Location',
+      defaultLocationName: name || 'Unknown Location',
       lat: cluster.centerLat,
       lon: cluster.centerLon,
       notes: '',

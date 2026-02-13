@@ -1,0 +1,133 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import OutingsPage from '@/components/pages/OutingsPage'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { Outing } from '@/lib/types'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
+const baseOuting: Outing = {
+  id: 'outing_1',
+  userId: 'dev-user',
+  startTime: '2026-02-10T21:42:00.000Z',
+  endTime: '2026-02-10T22:42:00.000Z',
+  locationName: 'Central Park, New York',
+  defaultLocationName: 'Central Park, New York',
+  lat: 40.7829,
+  lon: -73.9654,
+  notes: '',
+  createdAt: '2026-02-10T21:42:00.000Z',
+}
+
+function createDataStore(): BirdDexDataStore {
+  return {
+    photos: [],
+    outings: [baseOuting],
+    observations: [],
+    dex: [],
+    savedSpots: [],
+    addPhotos: vi.fn(),
+    addOuting: vi.fn(),
+    updateOuting: vi.fn(),
+    deleteOuting: vi.fn(),
+    addObservations: vi.fn(),
+    updateObservation: vi.fn(),
+    updateDex: vi.fn(() => ({ newSpeciesCount: 0 })),
+    addSavedSpot: vi.fn(),
+    deleteSavedSpot: vi.fn(),
+    getOutingObservations: vi.fn(() => []),
+    getOutingPhotos: vi.fn(() => []),
+    getDexEntry: vi.fn(),
+    importDexEntries: vi.fn(),
+    importFromEBird: vi.fn(() => ({ newSpeciesCount: 0 })),
+    clearAllData: vi.fn(),
+    loadSeedData: vi.fn(),
+  }
+}
+
+describe('OutingsPage location name editing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('saves top outing name using trimmed value', () => {
+    const data = createDataStore()
+
+    render(
+      <OutingsPage
+        data={data}
+        selectedOutingId={baseOuting.id}
+        onSelectOuting={vi.fn()}
+        onSelectSpecies={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
+    fireEvent.change(screen.getByLabelText('Outing name'), {
+      target: { value: '  Prospect Park  ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(data.updateOuting).toHaveBeenCalledWith(baseOuting.id, {
+      locationName: 'Prospect Park',
+      defaultLocationName: 'Central Park, New York',
+    })
+    expect(toast.success).toHaveBeenCalledWith('Outing name saved')
+  })
+
+  it('resets to default API location name when cleared', () => {
+    const data = createDataStore()
+
+    render(
+      <OutingsPage
+        data={data}
+        selectedOutingId={baseOuting.id}
+        onSelectOuting={vi.fn()}
+        onSelectSpecies={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
+    fireEvent.change(screen.getByLabelText('Outing name'), {
+      target: { value: '   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(data.updateOuting).toHaveBeenCalledWith(baseOuting.id, {
+      locationName: 'Central Park, New York',
+      defaultLocationName: 'Central Park, New York',
+    })
+    expect(toast.success).toHaveBeenCalledWith('Outing name reset')
+  })
+
+  it('preserves existing location as default when missing on first rename', () => {
+    const data = createDataStore()
+    data.outings = [{ ...baseOuting, defaultLocationName: undefined }]
+
+    render(
+      <OutingsPage
+        data={data}
+        selectedOutingId={baseOuting.id}
+        onSelectOuting={vi.fn()}
+        onSelectSpecies={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
+    fireEvent.change(screen.getByLabelText('Outing name'), {
+      target: { value: 'Prospect Park' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(data.updateOuting).toHaveBeenCalledWith(baseOuting.id, {
+      locationName: 'Prospect Park',
+      defaultLocationName: 'Central Park, New York',
+    })
+  })
+})

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -171,6 +171,8 @@ function OutingDetail({
   const possible = observations.filter(obs => obs.certainty === 'possible')
   const [editingNotes, setEditingNotes] = useState(false)
   const [notes, setNotes] = useState(outing.notes || '')
+  const [editingLocationName, setEditingLocationName] = useState(false)
+  const [locationName, setLocationName] = useState(outing.locationName || '')
   const [addingSpecies, setAddingSpecies] = useState(false)
   const [newSpeciesName, setNewSpeciesName] = useState('')
   const [newSpeciesCount, setNewSpeciesCount] = useState(1)
@@ -200,6 +202,25 @@ function OutingDetail({
     data.updateOuting(outing.id, { notes })
     setEditingNotes(false)
     toast.success('Notes saved')
+  }
+
+  const handleSaveLocationName = () => {
+    const nextLocationName = locationName.trim()
+    const resetLocationName = outing.defaultLocationName || outing.locationName || 'Unknown Location'
+    const resolvedLocationName = nextLocationName || resetLocationName
+    const resolvedDefaultLocationName = outing.defaultLocationName || outing.locationName || 'Unknown Location'
+
+    data.updateOuting(outing.id, {
+      locationName: resolvedLocationName,
+      defaultLocationName: resolvedDefaultLocationName,
+    })
+    setLocationName(resolvedLocationName)
+    setEditingLocationName(false)
+    if (!nextLocationName) {
+      toast.success('Outing name reset')
+      return
+    }
+    toast.success('Outing name saved')
   }
 
   const handleDeleteObservation = (obsId: string, speciesName: string) => {
@@ -233,6 +254,13 @@ function OutingDetail({
       : `${Math.round(durationMs / 60000)}m`
     : null
 
+  useEffect(() => {
+    setNotes(outing.notes || '')
+    setEditingNotes(false)
+    setLocationName(outing.locationName || '')
+    setEditingLocationName(false)
+  }, [outing.id, outing.notes, outing.locationName])
+
   return (
     <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
       {/* Header */}
@@ -241,9 +269,47 @@ function OutingDetail({
           <ArrowLeft size={20} />
         </Button>
         <div className="flex-1 min-w-0">
-          <h2 className="font-serif text-2xl font-semibold text-foreground">
-            {outing.locationName || 'Outing'}
-          </h2>
+          {editingLocationName ? (
+            <div className="space-y-2">
+              <Input
+                aria-label="Outing name"
+                value={locationName}
+                onChange={e => setLocationName(e.target.value)}
+                placeholder="Outing name"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveLocationName}>
+                  <Check size={14} className="mr-1" />
+                  Save
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setLocationName(outing.locationName || '')
+                    setEditingLocationName(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-serif text-2xl font-semibold text-foreground">
+                {outing.locationName || 'Outing'}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingLocationName(true)}
+                aria-label="Edit outing name"
+              >
+                <PencilSimple size={14} />
+              </Button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <CalendarBlank size={14} />
@@ -278,7 +344,7 @@ function OutingDetail({
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <MapPin size={16} weight="fill" className="text-primary flex-shrink-0" />
-          <span className="truncate">{outing.locationName}</span>
+          <span className="truncate">{outing.defaultLocationName || outing.locationName}</span>
           <span className="text-xs flex-shrink-0">
             ({outing.lat.toFixed(4)}°, {outing.lon.toFixed(4)}°)
           </span>
