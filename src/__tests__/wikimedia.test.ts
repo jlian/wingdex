@@ -46,7 +46,10 @@ describe('getWikimediaImage', () => {
     // Strategy 1: common name — no image
     mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
     // Strategy 2: scientific name — has image
-    mockWikiResponse(wikiData({ thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-sci.jpg' } }))
+    mockWikiResponse(wikiData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-sci.jpg' },
+      originalimage: undefined,
+    }))
 
     const result = await getWikimediaImage('Unique Warbler B (Scientificus nameicus)')
     expect(result).toContain('sci.jpg')
@@ -59,7 +62,10 @@ describe('getWikimediaImage', () => {
     // Strategy 2: scientific name — no match (404)
     mockWikiResponse(null)
     // Strategy 3: common name + " bird" — has image
-    mockWikiResponse(wikiData({ thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' } }))
+    mockWikiResponse(wikiData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' },
+      originalimage: undefined,
+    }))
 
     const result = await getWikimediaImage('Unique Robin C (Turdus uniqueus)')
     expect(result).toContain('fallback.jpg')
@@ -76,13 +82,14 @@ describe('getWikimediaImage', () => {
     expect(result).toBeUndefined()
   })
 
-  it('resizes thumbnail URL to requested size', async () => {
+  it('prefers thumbnail URL when available', async () => {
     mockWikiResponse(wikiData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/100px-bird.jpg' },
+      originalimage: { source: 'https://upload.wikimedia.org/original-bird.jpg' },
     }))
 
     const result = await getWikimediaImage('Unique Finch E', 500)
-    expect(result).toContain('500px-')
+    expect(result).toContain('100px-bird.jpg')
   })
 
   it('caches results for subsequent calls', async () => {
@@ -100,7 +107,10 @@ describe('getWikimediaImage', () => {
     // Strategy 1: no image
     mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
     // Strategy 3 (no strategy 2 since no scientific name): common name + " bird"
-    mockWikiResponse(wikiData({ thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-bird-suffix.jpg' } }))
+    mockWikiResponse(wikiData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-bird-suffix.jpg' },
+      originalimage: undefined,
+    }))
 
     const result = await getWikimediaImage('Unique Heron G')
     expect(result).toContain('bird-suffix.jpg')
@@ -128,7 +138,7 @@ describe('getWikimediaSummary', () => {
     expect(result).toBeDefined()
     expect(result!.title).toBe('Northern Cardinal')
     expect(result!.extract).toContain('songbird')
-    expect(result!.imageUrl).toContain('cardinal.jpg')
+    expect(result!.imageUrl).toContain('100px-bird.jpg')
     expect(result!.pageUrl).toContain('Northern_Cardinal')
   })
 

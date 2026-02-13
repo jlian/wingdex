@@ -5,8 +5,8 @@
  */
 import { getDisplayName, getScientificName } from './utils'
 
-const imageCache = new Map<string, string | null>()
-const summaryCache = new Map<string, WikiSummary | null>()
+const imageCache = new Map<string, string>()
+const summaryCache = new Map<string, WikiSummary>()
 
 /**
  * Manual overrides for species whose eBird common name doesn't match any Wikipedia article.
@@ -43,9 +43,9 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
 }
 
 /** Extract image URL from a Wikipedia summary response */
-function extractImageUrl(data: NonNullable<Awaited<ReturnType<typeof fetchSummary>>>, size: number): string | undefined {
+function extractImageUrl(data: NonNullable<Awaited<ReturnType<typeof fetchSummary>>>, _size: number): string | undefined {
   if (data.thumbnail?.source) {
-    return data.thumbnail.source.replace(/\/\d+px-/, `/${size}px-`)
+    return data.thumbnail.source
   }
   if (data.originalimage?.source) {
     return data.originalimage.source
@@ -72,7 +72,7 @@ export async function getWikimediaImage(
   const cacheKey = common.toLowerCase()
 
   if (imageCache.has(cacheKey)) {
-    return imageCache.get(cacheKey) ?? undefined
+    return imageCache.get(cacheKey)
   }
 
   // Strategy 0: Check manual overrides for known mismatches
@@ -114,7 +114,9 @@ export async function getWikimediaImage(
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
-  imageCache.set(cacheKey, imageUrl ?? null)
+  if (imageUrl) {
+    imageCache.set(cacheKey, imageUrl)
+  }
   return imageUrl
 }
 
@@ -129,7 +131,7 @@ export async function getWikimediaSummary(
   const cacheKey = common.toLowerCase()
 
   if (summaryCache.has(cacheKey)) {
-    return summaryCache.get(cacheKey) ?? undefined
+    return summaryCache.get(cacheKey)
   }
 
   // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
@@ -152,7 +154,7 @@ export async function getWikimediaSummary(
       const summary: WikiSummary = {
         title: data.title || common,
         extract: data.extract,
-        imageUrl: data.originalimage?.source || extractImageUrl(data, 800),
+        imageUrl: extractImageUrl(data, 800),
         pageUrl: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
       }
       summaryCache.set(cacheKey, summary)
@@ -160,6 +162,5 @@ export async function getWikimediaSummary(
     }
   }
 
-  summaryCache.set(cacheKey, null)
   return undefined
 }
