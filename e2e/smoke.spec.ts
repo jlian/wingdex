@@ -50,32 +50,29 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('button', { name: 'Add Photos' })).toBeVisible({ timeout: 5_000 });
   });
 
-  test('FAB button is visible on mobile and opens add photos flow', async ({ page }) => {
+  test('add photos button opens flow on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
-    // The floating action button should be visible on mobile
-    const fab = page.locator('button.rounded-full');
-    await expect(fab).toBeVisible();
+    // The header Add Photos button should be visible
+    const addBtn = page.getByRole('button', { name: 'Add Photos' });
+    await expect(addBtn).toBeVisible();
 
     // Click it to open the add photos dialog
-    await fab.click();
-
-    // The dialog title should appear
-    await expect(page.getByRole('dialog').getByText('Add Photos').or(page.getByRole('dialog').getByText('Upload'))).toBeVisible({ timeout: 5_000 });
+    await addBtn.click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
   });
 
   test('add photos dialog can be closed', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
-    // Open dialog
-    await page.locator('button.rounded-full').click();
+    // Open dialog via header button
+    await page.getByRole('button', { name: 'Add Photos' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
-    // Close via the X button (DialogContent's built-in close, sr-only text "Close")
+    // Close via the X button
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
   });

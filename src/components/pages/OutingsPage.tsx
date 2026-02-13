@@ -7,13 +7,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
-  Trash, PencilSimple, Check, Plus, X, Bird, CaretRight, Clock,
-  ListChecks, CheckCircle, HashStraight
+  Trash, PencilSimple, Check, Plus, X, Bird, Clock
 } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/ui/empty-state'
+import { BirdRow } from '@/components/ui/bird-row'
+import { StatCard } from '@/components/ui/stat-card'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
-import { getDisplayName, getScientificName } from '@/lib/utils'
+import { getDisplayName } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Outing, Observation } from '@/lib/types'
@@ -250,23 +251,13 @@ function OutingDetail({
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-3 text-center">
-          <ListChecks size={18} className="text-primary mx-auto mb-1" />
-          <p className="text-xl font-semibold text-foreground">{confirmed.length + possible.length}</p>
-          <p className="text-xs text-muted-foreground">Species</p>
-        </Card>
-        <Card className="p-3 text-center">
-          <CheckCircle size={18} className="text-primary mx-auto mb-1" />
-          <p className="text-xl font-semibold text-foreground">{confirmed.length}</p>
-          <p className="text-xs text-muted-foreground">Confirmed</p>
-        </Card>
-        <Card className="p-3 text-center">
-          <HashStraight size={18} className="text-primary mx-auto mb-1" />
-          <p className="text-xl font-semibold text-foreground">
-            {observations.reduce((sum, o) => sum + o.count, 0)}
-          </p>
-          <p className="text-xs text-muted-foreground">Total Count</p>
-        </Card>
+        <StatCard value={confirmed.length + possible.length} label="Species" accent="text-primary" />
+        <StatCard value={confirmed.length} label="Confirmed" accent="text-secondary" />
+        <StatCard
+          value={observations.reduce((sum, o) => sum + o.count, 0)}
+          label="Total Count"
+          accent="text-accent"
+        />
       </div>
 
       {/* Location */}
@@ -336,16 +327,26 @@ function OutingDetail({
 
         {/* Confirmed species */}
         {confirmed.length > 0 && (
-          <Card className="divide-y divide-border overflow-hidden">
+          <div className="divide-y divide-border">
             {confirmed.map(obs => (
-              <ObservationRow
+              <BirdRow
                 key={obs.id}
-                obs={obs}
+                speciesName={obs.speciesName}
+                subtitle={obs.count > 1 ? `x${obs.count}` : undefined}
                 onClick={() => onSelectSpecies(obs.speciesName)}
-                onDelete={() => handleDeleteObservation(obs.id, obs.speciesName)}
+                actions={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteObservation(obs.id, obs.speciesName) }}
+                  >
+                    <Trash size={14} />
+                  </Button>
+                }
               />
             ))}
-          </Card>
+          </div>
         )}
 
         {/* Possible species */}
@@ -354,26 +355,39 @@ function OutingDetail({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider pt-1">
               Possible
             </p>
-            <Card className="divide-y divide-border overflow-hidden">
+            <div className="divide-y divide-border">
               {possible.map(obs => (
-                <ObservationRow
+                <BirdRow
                   key={obs.id}
-                  obs={obs}
+                  speciesName={obs.speciesName}
+                  subtitle={obs.count > 1 ? `x${obs.count}` : undefined}
                   onClick={() => onSelectSpecies(obs.speciesName)}
-                  onDelete={() => handleDeleteObservation(obs.id, obs.speciesName)}
+                  actions={
+                    <>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">possible</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteObservation(obs.id, obs.speciesName) }}
+                      >
+                        <Trash size={14} />
+                      </Button>
+                    </>
+                  }
                 />
               ))}
-            </Card>
+            </div>
           </>
         )}
 
         {confirmed.length === 0 && possible.length === 0 && (
-          <Card className="p-6 text-center">
+          <div className="py-8 text-center">
             <Bird size={32} className="text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
               No species recorded yet
             </p>
-          </Card>
+          </div>
         )}
       </div>
 
@@ -432,69 +446,6 @@ function OutingDetail({
           <Trash size={16} />
         </Button>
       </div>
-    </div>
-  )
-}
-
-// ─── Observation Row with Wikimedia image ─────────────────
-
-function ObservationRow({
-  obs,
-  onClick,
-  onDelete,
-}: {
-  obs: Observation
-  onClick: () => void
-  onDelete: () => void
-}) {
-  const displayName = getDisplayName(obs.speciesName)
-  const scientificName = getScientificName(obs.speciesName)
-  const wikiImage = useBirdImage(obs.speciesName)
-
-  return (
-    <div className="flex items-center gap-3 md:gap-4 px-3 py-2.5 hover:bg-muted/50 transition-colors">
-      <button
-        className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 text-left cursor-pointer"
-        onClick={onClick}
-      >
-        {wikiImage ? (
-          <img
-            src={wikiImage}
-            alt={displayName}
-            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-            <Bird size={20} className="text-muted-foreground/40" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="md:flex md:items-baseline md:gap-2">
-            <p className="font-serif font-semibold text-sm text-foreground truncate">
-              {displayName}
-            </p>
-            {scientificName && (
-              <p className="text-xs text-muted-foreground italic truncate">{scientificName}</p>
-            )}
-          </div>
-          {obs.count > 1 && (
-            <p className="text-xs text-muted-foreground mt-0.5">x{obs.count}</p>
-          )}
-        </div>
-        {obs.certainty === 'possible' && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">possible</Badge>
-        )}
-        <CaretRight size={16} className="text-muted-foreground/40 flex-shrink-0" />
-      </button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
-        onClick={(e) => { e.stopPropagation(); onDelete() }}
-      >
-        <Trash size={14} />
-      </Button>
     </div>
   )
 }

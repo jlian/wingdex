@@ -1,10 +1,10 @@
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird,
   Binoculars, Image as ImageIcon, ArrowRight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
+import { StatCard } from '@/components/ui/stat-card'
 import { getDisplayName } from '@/lib/utils'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 
@@ -283,17 +283,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
         </section>
       </div>
     </div>
-  )
-}
-
-function StatCard({ value, label, accent }: { value: number; label: string; accent: string }) {
-  return (
-    <Card className="p-3 sm:p-4 space-y-0.5 text-center">
-      <div className={`text-xl sm:text-2xl font-bold font-serif ${accent}`}>
-        {value}
-      </div>
-      <div className="text-[11px] sm:text-xs text-muted-foreground">{label}</div>
-    </Card>
   )
 }
 

@@ -6,9 +6,11 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird, MapPin, Eye, Binoculars
+  Bird, MapPin
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
+import { BirdRow } from '@/components/ui/bird-row'
+import { StatCard } from '@/components/ui/stat-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -111,13 +113,17 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
       </div>
 
       <div className="divide-y divide-border">
-        {filteredList.map((entry, i) => (
-          <SpeciesRow
-            key={entry.speciesName}
-            entry={entry}
-            onClick={() => onSelectSpecies(entry.speciesName)}
-          />
-        ))}
+        {filteredList.map((entry) => {
+          const dateStr = entry.addedDate || entry.firstSeenDate
+          return (
+            <BirdRow
+              key={entry.speciesName}
+              speciesName={entry.speciesName}
+              subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${new Date(dateStr).toLocaleDateString()}`}
+              onClick={() => onSelectSpecies(entry.speciesName)}
+            />
+          )
+        })}
       </div>
 
       {filteredList.length === 0 && searchQuery && (
@@ -126,56 +132,6 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
         </div>
       )}
     </div>
-  )
-}
-
-// ─── Species Row (compact list item) ──────────────────────
-
-function SpeciesRow({
-  entry,
-  onClick,
-}: {
-  entry: LifeListEntry
-  onClick: () => void
-}) {
-  const displayName = getDisplayName(entry.speciesName)
-  const scientificName = getScientificName(entry.speciesName)
-  const wikiImage = useBirdImage(entry.speciesName)
-  const dateStr = entry.addedDate || entry.firstSeenDate
-
-  return (
-    <button
-      className="flex items-center gap-3 md:gap-4 py-2.5 w-full text-left rounded-md hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
-      onClick={onClick}
-    >
-      {wikiImage ? (
-        <img
-          src={wikiImage}
-          alt={displayName}
-          className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-          <Bird size={20} className="text-muted-foreground/40" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="md:flex md:items-baseline md:gap-2">
-          <p className="font-serif font-semibold text-sm text-foreground truncate">
-            {displayName}
-          </p>
-          {scientificName && (
-            <p className="text-xs text-muted-foreground italic truncate">
-              {scientificName}
-            </p>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {entry.totalOutings} {entry.totalOutings === 1 ? 'outing' : 'outings'} · {entry.totalCount} seen · {new Date(dateStr).toLocaleDateString()}
-        </p>
-      </div>
-    </button>
   )
 }
 
@@ -260,23 +216,13 @@ function SpeciesDetail({
 
         {/* Stat cards */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="p-3 text-center">
-            <Eye size={18} className="text-primary mx-auto mb-1" />
-            <p className="text-xl font-semibold text-foreground">{entry.totalCount}</p>
-            <p className="text-xs text-muted-foreground">Total Seen</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <Binoculars size={18} className="text-primary mx-auto mb-1" />
-            <p className="text-xl font-semibold text-foreground">{entry.totalOutings}</p>
-            <p className="text-xs text-muted-foreground">{entry.totalOutings === 1 ? 'Outing' : 'Outings'}</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <CalendarBlank size={18} className="text-primary mx-auto mb-1" />
-            <p className="text-xl font-semibold text-foreground">
-              {new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            </p>
-            <p className="text-xs text-muted-foreground">First Seen</p>
-          </Card>
+          <StatCard value={entry.totalCount} label="Total Seen" accent="text-primary" />
+          <StatCard value={entry.totalOutings} label={entry.totalOutings === 1 ? 'Outing' : 'Outings'} accent="text-secondary" />
+          <StatCard
+            value={new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            label="First Seen"
+            accent="text-accent"
+          />
         </div>
 
         {/* About */}
