@@ -191,7 +191,7 @@ function OutingDetail({
     a.download = `birddex-outing-${new Date(outing.startTime).toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('Outing exported as eBird CSV')
+    toast.success('Outing exported in eBird Record CSV format')
   }
 
   const handleDeleteOuting = () => {

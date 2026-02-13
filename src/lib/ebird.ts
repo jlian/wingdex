@@ -1,6 +1,54 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
 
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+const EBIRD_RECORD_HEADERS = [
+  'Common Name',
+  'Genus',
+  'Species',
+  'Number',
+  'Species Comments',
+  'Location Name',
+  'Latitude',
+  'Longitude',
+  'Date',
+  'Start Time',
+  'State/Province',
+  'Country Code',
+  'Protocol',
+  'Number of Observers',
+  'Duration',
+  'All observations reported?',
+  'Effort Distance Miles',
+  'Effort area acres',
+  'Submission Comments',
+] as const
+
+interface RecordExportOptions {
+  includeHeader?: boolean
+}
+
+function sanitizeForEBird(value: string): string {
+  return value
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/"/g, '')
+    .trim()
+}
+
+function splitScientificName(scientificName: string): { genus: string; species: string } {
+  const cleaned = sanitizeForEBird(scientificName)
+  if (!cleaned) return { genus: '', species: '' }
+  const parts = cleaned.split(/\s+/)
+  if (parts.length < 2) return { genus: parts[0] || '', species: '' }
+  return {
+    genus: parts[0],
+    species: parts.slice(1).join(' '),
+  }
+}
+
 /**
  * Groups parsed import previews into outing-shaped data.
  * Records sharing the same date + location become one outing.
@@ -74,61 +122,60 @@ export function groupPreviewsIntoOutings(
 
 export function exportOutingToEBirdCSV(
   outing: Outing,
-  observations: Observation[]
+  observations: Observation[],
+  options: RecordExportOptions = {}
 ): string {
-  const headers = [
-    'Common Name',
-    'Species',
-    'Count',
-    'Location',
-    'Latitude',
-    'Longitude',
-    'Date',
-    'Time',
-    'Protocol',
-    'Comments'
-  ]
-  
+  const { includeHeader = false } = options
+
+  const outingDate = new Date(outing.startTime)
+  const date = `${String(outingDate.getMonth() + 1).padStart(2, '0')}/${String(outingDate.getDate()).padStart(2, '0')}/${outingDate.getFullYear()}`
+  const time = `${String(outingDate.getHours()).padStart(2, '0')}:${String(outingDate.getMinutes()).padStart(2, '0')}`
+
   const rows = observations
     .filter(obs => obs.certainty === 'confirmed')
     .map(obs => {
-      const species = getDisplayName(obs.speciesName)
-      const scientific = getScientificName(obs.speciesName) || ''
-      
-      const date = new Date(outing.startTime).toLocaleDateString('en-US')
-      const time = new Date(outing.startTime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      })
-      
+      const commonName = sanitizeForEBird(getDisplayName(obs.speciesName))
+      const scientificName = getScientificName(obs.speciesName) || ''
+      const { genus, species } = splitScientificName(scientificName)
+      const speciesComments = sanitizeForEBird(obs.notes || '')
+      const submissionComments = sanitizeForEBird(outing.notes || '')
+
       return [
+        commonName,
+        genus,
         species,
-        scientific,
-        obs.count.toString(),
-        outing.locationName,
+        obs.count > 0 ? String(obs.count) : 'X',
+        speciesComments,
+        sanitizeForEBird(outing.locationName),
         outing.lat?.toFixed(6) || '',
         outing.lon?.toFixed(6) || '',
         date,
         time,
+        '',
+        '',
         'Incidental',
-        obs.notes || outing.notes || ''
+        '1',
+        '',
+        'N',
+        '',
+        '',
+        submissionComments,
       ]
     })
-  
+
   const csv = [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...(includeHeader ? [EBIRD_RECORD_HEADERS.join(',')] : []),
+    ...rows.map(row => row.map(cell => csvEscape(cell)).join(','))
   ].join('\n')
-  
+
   return csv
 }
 
 export function parseEBirdCSV(csvContent: string): ImportPreview[] {
   const lines = csvContent.split('\n').filter(line => line.trim())
   if (lines.length === 0) return []
-  
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase())
+
+  const headers = parseCSVLine(lines[0]).map(header => header.trim().toLowerCase())
   const previews: ImportPreview[] = []
   
   for (let i = 1; i < lines.length; i++) {
@@ -149,13 +196,16 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
     const time = row['time'] || row['start time'] || ''
     
     if (speciesName && date) {
+      const normalizedDate = normalizeDate(date)
+      if (!normalizedDate) continue
+
       const fullName = scientificName && !speciesName.includes('(')
         ? `${speciesName} (${scientificName})`
         : speciesName
-      
+
       previews.push({
         speciesName: fullName,
-        date: normalizeDate(date),
+        date: normalizedDate,
         location: location || 'Unknown',
         count: isNaN(count) ? 1 : count,
         lat: isNaN(lat) ? undefined : lat,
@@ -172,25 +222,31 @@ function parseCSVLine(line: string): string[] {
   const values: string[] = []
   let current = ''
   let inQuotes = false
-  
+
   for (let i = 0; i < line.length; i++) {
     const char = line[i]
-    
+
     if (char === '"') {
-      inQuotes = !inQuotes
+      const nextChar = line[i + 1]
+      if (inQuotes && nextChar === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
     } else if (char === ',' && !inQuotes) {
-      values.push(current.trim())
+      values.push(current.trim().replace(/^"|"$/g, ''))
       current = ''
     } else {
       current += char
     }
   }
-  
-  values.push(current.trim())
+
+  values.push(current.trim().replace(/^"|"$/g, ''))
   return values
 }
 
-function normalizeDate(dateStr: string): string {
+function normalizeDate(dateStr: string): string | null {
   try {
     const date = new Date(dateStr)
     if (!isNaN(date.getTime())) {
@@ -199,7 +255,7 @@ function normalizeDate(dateStr: string): string {
   } catch {
     
   }
-  return new Date().toISOString()
+  return null
 }
 
 export function detectImportConflicts(
@@ -217,10 +273,7 @@ export function detectImportConflicts(
     const firstSeen = new Date(existing.firstSeenDate)
     const lastSeen = new Date(existing.lastSeenDate)
     
-    if (
-      previewDate.toDateString() === firstSeen.toDateString() &&
-      preview.location === existing.notes
-    ) {
+    if (previewDate >= firstSeen && previewDate <= lastSeen) {
       return { ...preview, conflict: 'duplicate', existingEntry: existing }
     }
     
@@ -253,7 +306,7 @@ export function exportDexToCSV(dex: DexEntry[]): string {
   
   const csv = [
     headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...rows.map(row => row.map(cell => csvEscape(cell)).join(','))
   ].join('\n')
   
   return csv
