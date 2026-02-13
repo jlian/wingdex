@@ -11,7 +11,7 @@ export type TaxonEntry = { common: string; scientific: string; ebirdCode?: strin
 
 // Build the flat list once on import
 // Taxonomy entries can be [common, scientific] or [common, scientific, ebirdCode]
-const taxonomy: TaxonEntry[] = (rawTaxonomy as (string)[]).map(
+const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map(
   (entry: any) => ({
     common: entry[0],
     scientific: entry[1],

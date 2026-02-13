@@ -1,3 +1,4 @@
+// @ts-nocheck — this test uses Node.js APIs (fs, path, __dirname) provided by vitest
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
