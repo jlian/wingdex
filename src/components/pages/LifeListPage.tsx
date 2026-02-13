@@ -14,12 +14,13 @@ import type { LifeListEntry, Observation } from '@/lib/types'
 
 interface LifeListPageProps {
   data: ReturnType<typeof useBirdDexData>
+  selectedSpecies: string | null
+  onSelectSpecies: (name: string | null) => void
 }
 
-export default function LifeListPage({ data }: LifeListPageProps) {
+export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }: LifeListPageProps) {
   const { lifeList } = data
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null)
 
   const filteredList = lifeList.filter(entry =>
     entry.speciesName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -27,7 +28,7 @@ export default function LifeListPage({ data }: LifeListPageProps) {
 
   if (lifeList.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-6 py-16 text-center space-y-3">
         <div className="flex justify-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Bird size={32} className="text-primary" weight="duotone" />
@@ -44,20 +45,20 @@ export default function LifeListPage({ data }: LifeListPageProps) {
   if (selectedSpecies) {
     const entry = lifeList.find(e => e.speciesName === selectedSpecies)
     if (!entry) {
-      setSelectedSpecies(null)
+      onSelectSpecies(null)
       return null
     }
     return (
       <SpeciesDetail
         entry={entry}
         data={data}
-        onBack={() => setSelectedSpecies(null)}
+        onBack={() => onSelectSpecies(null)}
       />
     )
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 py-6 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="space-y-1">
           <h2 className="font-serif text-2xl font-semibold text-foreground">
@@ -86,7 +87,7 @@ export default function LifeListPage({ data }: LifeListPageProps) {
           <SpeciesCard
             key={entry.speciesName}
             entry={entry}
-            onClick={() => setSelectedSpecies(entry.speciesName)}
+            onClick={() => onSelectSpecies(entry.speciesName)}
           />
         ))}
       </div>
@@ -187,7 +188,7 @@ function SpeciesDetail({
   const ebirdUrl = `https://ebird.org/explore?q=${encodeURIComponent(displayName)}`
 
   return (
-    <div className="max-w-3xl mx-auto pb-8">
+    <div className="max-w-4xl mx-auto pb-8">
       {/* Header */}
       <div className="px-4 sm:px-6 py-4">
         <Button variant="ghost" size="sm" onClick={onBack} className="mb-3 -ml-2">
@@ -197,7 +198,9 @@ function SpeciesDetail({
       </div>
 
       {/* Hero image */}
-      {(wikiImage || summary?.imageUrl) && (
+      {summaryLoading ? (
+        <div className="w-full h-48 sm:h-64 lg:h-80 bg-muted animate-pulse" />
+      ) : (summary?.imageUrl || wikiImage) ? (
         <div className="w-full h-48 sm:h-64 lg:h-80 bg-muted overflow-hidden">
           <img
             src={summary?.imageUrl || wikiImage}
@@ -205,7 +208,7 @@ function SpeciesDetail({
             className="w-full h-full object-cover"
           />
         </div>
-      )}
+      ) : null}
 
       <div className="px-4 sm:px-6 space-y-6 mt-5">
         {/* Name + badges */}

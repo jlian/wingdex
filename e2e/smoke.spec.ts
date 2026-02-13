@@ -17,11 +17,12 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
-    const nav = page.locator('nav');
-    await expect(nav.getByText('Home')).toBeVisible();
-    await expect(nav.getByText('Outings')).toBeVisible();
-    await expect(nav.getByText('Life List')).toBeVisible();
-    await expect(nav.getByText('Settings')).toBeVisible();
+    // On desktop (default viewport), nav tabs are in the header
+    const header = page.locator('header');
+    await expect(header.getByText('Home')).toBeVisible();
+    await expect(header.getByText('Outings')).toBeVisible();
+    await expect(header.getByText('Life List')).toBeVisible();
+    await expect(header.getByText('Settings')).toBeVisible();
   });
 
   test('can navigate between tabs', async ({ page }) => {
@@ -29,31 +30,32 @@ test.describe('App smoke tests', () => {
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
     // Click Outings tab
-    await page.getByRole('tab', { name: 'Outings' }).click();
+    await page.getByRole('tab', { name: 'Outings' }).first().click();
     await expect(
       page.getByText('Your Outings').or(page.getByText('No outings yet'))
     ).toBeVisible({ timeout: 5_000 });
 
     // Click Life List tab
-    await page.getByRole('tab', { name: 'Life List' }).click();
+    await page.getByRole('tab', { name: 'Life List' }).first().click();
     await expect(
       page.getByText('Your life list is empty').or(page.getByRole('heading', { name: 'Life List' }))
     ).toBeVisible({ timeout: 5_000 });
 
     // Click Settings tab
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Settings' }).first().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Navigate back to Home
-    await page.getByRole('tab', { name: 'Home' }).click();
-    await expect(page.getByText('Upload & Identify').or(page.getByText('Add Photos'))).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('tab', { name: 'Home' }).first().click();
+    await expect(page.getByRole('button', { name: 'Add Photos' })).toBeVisible({ timeout: 5_000 });
   });
 
-  test('FAB button is visible and opens add photos flow', async ({ page }) => {
+  test('FAB button is visible on mobile and opens add photos flow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
-    // The floating action button should be visible
+    // The floating action button should be visible on mobile
     const fab = page.locator('button.rounded-full');
     await expect(fab).toBeVisible();
 
@@ -65,6 +67,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('add photos dialog can be closed', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 

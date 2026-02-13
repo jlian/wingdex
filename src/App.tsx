@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -19,6 +19,41 @@ interface UserInfo {
   id: number
   isOwner: boolean
 }
+
+// ─── URL Hash Router ──────────────────────────────────────
+
+function parseHash(): { tab: string; subId?: string } {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return { tab: 'home' }
+  const [segment, ...rest] = hash.split('/')
+  const subId = rest.length > 0 ? decodeURIComponent(rest.join('/')) : undefined
+  if (['home', 'outings', 'lifelist', 'settings'].includes(segment)) {
+    return { tab: segment, subId }
+  }
+  return { tab: 'home' }
+}
+
+function useHashRouter() {
+  const [route, setRoute] = useState(parseHash)
+
+  useEffect(() => {
+    const onChange = () => setRoute(parseHash())
+    window.addEventListener('popstate', onChange)
+    return () => window.removeEventListener('popstate', onChange)
+  }, [])
+
+  const navigate = useCallback((tab: string, subId?: string) => {
+    const hash = subId
+      ? `#${tab}/${encodeURIComponent(subId)}`
+      : tab === 'home' ? '' : `#${tab}`
+    window.history.pushState(null, '', hash || window.location.pathname)
+    setRoute({ tab, subId })
+  }, [])
+
+  return { tab: route.tab, subId: route.subId, navigate }
+}
+
+// ─── App ──────────────────────────────────────────────────
 
 function App() {
   const [user, setUser] = useState<UserInfo | null>(null)
@@ -81,7 +116,7 @@ function App() {
 }
 
 function AppContent({ user }: { user: UserInfo }) {
-  const [activeTab, setActiveTab] = useState('home')
+  const { tab, subId, navigate } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData(user.id)
 
@@ -96,10 +131,10 @@ function AppContent({ user }: { user: UserInfo }) {
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={tab} onValueChange={(val) => navigate(val)}>
         {/* ── Top header + desktop nav ──────────────────────── */}
         <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo */}
               <div className="flex items-center gap-2">
@@ -145,7 +180,7 @@ function AppContent({ user }: { user: UserInfo }) {
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="max-w-6xl mx-auto pb-20 md:pb-8">
+        <main className="max-w-5xl mx-auto pb-20 md:pb-8">
           <TabsContent value="home" className="mt-0">
             <HomePage
               data={data}
@@ -154,11 +189,19 @@ function AppContent({ user }: { user: UserInfo }) {
           </TabsContent>
 
           <TabsContent value="outings" className="mt-0">
-            <OutingsPage data={data} />
+            <OutingsPage
+              data={data}
+              selectedOutingId={subId ?? null}
+              onSelectOuting={(id) => navigate('outings', id ?? undefined)}
+            />
           </TabsContent>
 
           <TabsContent value="lifelist" className="mt-0">
-            <LifeListPage data={data} />
+            <LifeListPage
+              data={data}
+              selectedSpecies={subId ?? null}
+              onSelectSpecies={(name) => navigate('lifelist', name ?? undefined)}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-0">

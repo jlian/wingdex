@@ -31,11 +31,53 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
 
   const totalPhotos = data.photos.length
 
+  if (lifeList.length === 0) {
+    return (
+      <div className="px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-md mx-auto text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bird size={40} className="text-primary" weight="duotone" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-foreground leading-tight">
+              Got bird photos?
+            </h2>
+            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+              Upload your photos, let AI identify the species, and build your
+              life list — <em>reverse birding</em> at its finest.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            onClick={onAddPhotos}
+            className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
+          >
+            <Camera size={20} className="mr-2" weight="bold" />
+            Upload &amp; Identify
+          </Button>
+          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <ImageIcon size={16} /> AI-powered ID
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Bird size={16} /> Auto life list
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Binoculars size={16} /> eBird export
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8 pb-8">
-      {/* ── Hero Section ───────────────────────────────── */}
-      <section className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
-        <div className="px-4 sm:px-6 py-10 sm:py-16 max-w-4xl mx-auto">
+    <div className="pb-8">
+      {/* ── Hero + Stats ───────────────────────────────── */}
+      <section className="border-b border-border/40">
+        <div className="px-4 sm:px-6 py-8 sm:py-12">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-5">
               <div className="space-y-3">
@@ -47,30 +89,16 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
                   life list — <em>reverse birding</em> at its finest.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  size="lg"
-                  onClick={onAddPhotos}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
-                >
-                  <Camera size={20} className="mr-2" weight="bold" />
-                  Upload &amp; Identify
-                </Button>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <ImageIcon size={16} /> AI-powered ID
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Bird size={16} /> Auto life list
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Binoculars size={16} /> eBird export
-                </span>
-              </div>
+              <Button
+                size="lg"
+                onClick={onAddPhotos}
+                className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
+              >
+                <Camera size={20} className="mr-2" weight="bold" />
+                Upload &amp; Identify
+              </Button>
             </div>
 
-            {/* Stats cards — right side on desktop, below on mobile */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <StatCard
                 value={lifeList.length}
@@ -97,8 +125,8 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
         </div>
       </section>
 
-      <div className="px-4 sm:px-6 space-y-8 max-w-4xl mx-auto">
-        {/* ── Recent Species ─────────────────────────────── */}
+      {/* ── Recent Species ─────────────────────────────── */}
+      <div className="px-4 sm:px-6 space-y-8 pt-6">
         {recentSpecies.length > 0 && (
           <section className="space-y-4">
             <h3 className="font-serif text-xl font-semibold text-foreground">
@@ -159,34 +187,6 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
                 )
               })}
             </div>
-          </section>
-        )}
-
-        {/* ── Empty state ────────────────────────────────── */}
-        {lifeList.length === 0 && (
-          <section className="text-center py-12 space-y-4">
-            <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bird size={40} className="text-primary" weight="duotone" />
-              </div>
-            </div>
-            <div className="space-y-2 max-w-md mx-auto">
-              <h3 className="font-serif text-xl font-semibold text-foreground">
-                Start your birding journey
-              </h3>
-              <p className="text-muted-foreground">
-                Upload bird photos from your camera roll and let AI do the identification.
-                Your life list builds itself.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              onClick={onAddPhotos}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-            >
-              <Camera size={20} className="mr-2" weight="bold" />
-              Upload Your First Photos
-            </Button>
           </section>
         )}
       </div>

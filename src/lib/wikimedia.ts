@@ -107,7 +107,7 @@ export async function getWikimediaSummary(
       const summary: WikiSummary = {
         title: data.title || common,
         extract: data.extract,
-        imageUrl: extractImageUrl(data, 400),
+        imageUrl: data.originalimage?.source || extractImageUrl(data, 800),
         pageUrl: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
       }
       summaryCache.set(cacheKey, summary)

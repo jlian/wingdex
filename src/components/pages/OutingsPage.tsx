@@ -17,15 +17,16 @@ import type { Outing, Observation } from '@/lib/types'
 
 interface OutingsPageProps {
   data: ReturnType<typeof useBirdDexData>
+  selectedOutingId: string | null
+  onSelectOuting: (id: string | null) => void
 }
 
-export default function OutingsPage({ data }: OutingsPageProps) {
+export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: OutingsPageProps) {
   const { outings } = data
-  const [selectedOutingId, setSelectedOutingId] = useState<string | null>(null)
 
   if (outings.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-6 py-16 text-center space-y-3">
         <div className="flex justify-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Bird size={32} className="text-primary" weight="duotone" />
@@ -42,23 +43,28 @@ export default function OutingsPage({ data }: OutingsPageProps) {
   if (selectedOutingId) {
     const outing = outings.find(o => o.id === selectedOutingId)
     if (!outing) {
-      setSelectedOutingId(null)
+      onSelectOuting(null)
       return null
     }
     return (
       <OutingDetail
         outing={outing}
         data={data}
-        onBack={() => setSelectedOutingId(null)}
+        onBack={() => onSelectOuting(null)}
       />
     )
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto">
-      <h2 className="font-serif text-2xl font-semibold text-foreground">
-        Your Outings
-      </h2>
+    <div className="px-4 sm:px-6 py-6 space-y-5">
+      <div className="space-y-1">
+        <h2 className="font-serif text-2xl font-semibold text-foreground">
+          Your Outings
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {outings.length} {outings.length === 1 ? 'outing' : 'outings'} recorded
+        </p>
+      </div>
       
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {outings.map(outing => {
@@ -72,7 +78,7 @@ export default function OutingsPage({ data }: OutingsPageProps) {
               outing={outing}
               photos={photos}
               confirmed={confirmed}
-              onClick={() => setSelectedOutingId(outing.id)}
+              onClick={() => onSelectOuting(outing.id)}
             />
           )
         })}
@@ -229,7 +235,7 @@ function OutingDetail({
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
