@@ -79,6 +79,7 @@ function useHashRouter() {
 
 function App() {
   const [user, setUser] = useState<UserInfo | null>(null)
+  const [showApp, setShowApp] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -98,31 +99,63 @@ function App() {
     fetchUser()
   }, [])
 
+  useEffect(() => {
+    if (!user) {
+      setShowApp(false)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowApp(true)
+    }, 50)
+
+    return () => window.clearTimeout(timer)
+  }, [user])
+
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-6 px-4">
-          <div className="flex justify-center">
-            <Bird size={64} weight="duotone" className="text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="font-serif text-4xl font-semibold text-foreground">
-              BirdDex
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Photo-First Bird Identification
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span>Loading...</span>
-          </div>
-        </div>
-      </div>
-    )
+    return <BootShell />
   }
 
-  return <AppContent user={user} />
+  return (
+    <div className={`transition-opacity duration-150 ease-out ${showApp ? 'opacity-100' : 'opacity-0'}`}>
+      <AppContent user={user} />
+    </div>
+  )
+}
+
+function BootShell() {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
+            <div className="hidden md:flex gap-2">
+              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
+              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
+              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
+              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+        <div className="h-8 w-52 rounded-md bg-muted animate-pulse" />
+        <div className="h-20 w-full rounded-xl bg-muted animate-pulse" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="h-16 rounded-lg bg-muted animate-pulse" />
+          <div className="h-16 rounded-lg bg-muted animate-pulse" />
+          <div className="h-16 rounded-lg bg-muted animate-pulse" />
+          <div className="h-16 rounded-lg bg-muted animate-pulse" />
+        </div>
+      </main>
+    </div>
+  )
 }
 
 function AppContent({ user }: { user: UserInfo }) {
