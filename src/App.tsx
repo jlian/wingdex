@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { House, List, Bird, Gear, Plus } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
+import { getStableDevUserId } from '@/lib/dev-user'
 
 import HomePage from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
@@ -18,31 +19,6 @@ interface UserInfo {
   email: string
   id: number
   isOwner: boolean
-}
-
-const DEV_USER_ID_KEY = 'birddex_dev_user_id'
-
-function getStableDevUserId(): number {
-  try {
-    const stored = window.localStorage.getItem(DEV_USER_ID_KEY)
-    const parsed = stored ? Number.parseInt(stored, 10) : Number.NaN
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed
-    }
-
-    const seed = `${window.location.hostname}:${window.location.pathname}`
-    let hash = 0
-    for (let index = 0; index < seed.length; index++) {
-      hash = (hash * 31 + seed.charCodeAt(index)) | 0
-    }
-
-    const randomPart = Math.floor(Math.random() * 1_000_000)
-    const generated = (Math.abs(hash * 31 + randomPart) % 900_000_000) + 100_000_000
-    window.localStorage.setItem(DEV_USER_ID_KEY, String(generated))
-    return generated
-  } catch {
-    return Math.floor(Math.random() * 900_000_000) + 100_000_000
-  }
 }
 
 function getFallbackUser(): UserInfo {
