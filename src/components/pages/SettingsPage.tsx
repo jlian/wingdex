@@ -1,12 +1,15 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Download, Upload, Info } from '@phosphor-icons/react'
+import { Download, Upload, Info, MapPin, Plus, Trash, X, Check } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import type { SavedSpot } from '@/lib/types'
 
 interface SettingsPageProps {
   data: ReturnType<typeof useBirdDexData>
@@ -165,6 +168,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
+      <SavedLocationsSection data={data} />
+
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
@@ -185,5 +190,168 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </p>
       </Card>
     </div>
+  )
+}
+
+// ─── Saved Locations ──────────────────────────────────────
+
+function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexData> }) {
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [lat, setLat] = useState('')
+  const [lon, setLon] = useState('')
+  const [gettingLocation, setGettingLocation] = useState(false)
+
+  const handleAdd = () => {
+    const parsedLat = parseFloat(lat)
+    const parsedLon = parseFloat(lon)
+    if (!name.trim() || isNaN(parsedLat) || isNaN(parsedLon)) {
+      toast.error('Please fill in all fields with valid values')
+      return
+    }
+    const spot: SavedSpot = {
+      id: `spot_${Date.now()}`,
+      name: name.trim(),
+      lat: parsedLat,
+      lon: parsedLon,
+      createdAt: new Date().toISOString(),
+    }
+    data.addSavedSpot(spot)
+    setName('')
+    setLat('')
+    setLon('')
+    setAdding(false)
+    toast.success(`Saved "${spot.name}"`)
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported')
+      return
+    }
+    setGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6))
+        setLon(pos.coords.longitude.toFixed(6))
+        setGettingLocation(false)
+      },
+      (err) => {
+        toast.error(`Location error: ${err.message}`)
+        setGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <MapPin size={18} weight="fill" className="text-primary" />
+            Saved Locations
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Your favorite birding spots
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAdding(!adding)}
+        >
+          {adding ? <X size={14} className="mr-1" /> : <Plus size={14} className="mr-1" />}
+          {adding ? 'Cancel' : 'Add'}
+        </Button>
+      </div>
+
+      {adding && (
+        <div className="space-y-3 p-3 rounded-md border border-primary/30 bg-muted/30">
+          <div className="space-y-1">
+            <Label htmlFor="spot-name">Name</Label>
+            <Input
+              id="spot-name"
+              placeholder="e.g. Riverside Park"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="spot-lat">Latitude</Label>
+              <Input
+                id="spot-lat"
+                type="number"
+                step="any"
+                placeholder="43.6532"
+                value={lat}
+                onChange={e => setLat(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="spot-lon">Longitude</Label>
+              <Input
+                id="spot-lon"
+                type="number"
+                step="any"
+                placeholder="-79.3832"
+                value={lon}
+                onChange={e => setLon(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUseCurrentLocation}
+              disabled={gettingLocation}
+            >
+              <MapPin size={14} className="mr-1" />
+              {gettingLocation ? 'Getting...' : 'Use Current Location'}
+            </Button>
+            <Button size="sm" onClick={handleAdd} disabled={!name.trim()}>
+              <Check size={14} className="mr-1" />
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {data.savedSpots.length === 0 && !adding ? (
+        <p className="text-sm text-muted-foreground text-center py-3">
+          No saved locations yet
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {data.savedSpots.map(spot => (
+            <div
+              key={spot.id}
+              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
+            >
+              <MapPin size={16} className="text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{spot.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {spot.lat.toFixed(4)}°, {spot.lon.toFixed(4)}°
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                onClick={() => {
+                  data.deleteSavedSpot(spot.id)
+                  toast.success(`Removed "${spot.name}"`)
+                }}
+              >
+                <Trash size={14} />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }
