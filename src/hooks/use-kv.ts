@@ -33,10 +33,11 @@ async function probeSparkKv(): Promise<boolean> {
   const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
   if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
   try {
-    // Probe the base KV URL (lists all keys) — NOT /_spark/kv/keys,
-    // which the runtime interprets as a lookup for a key named "keys".
-    const res = await fetch(KV_BASE, { method: 'GET' })
-    _sparkKvAvailable = res.ok
+    // Probe by GETting a specific key. The listing endpoint (/_spark/kv)
+    // isn't supported by the production runtime. A 404 on a single key
+    // means "key not found" which still proves KV is reachable.
+    const res = await fetch(`${KV_BASE}/__probe__`, { method: 'GET' })
+    _sparkKvAvailable = res.ok || res.status === 404
     _sparkKvCheckedAt = Date.now()
   } catch {
     _sparkKvAvailable = false
