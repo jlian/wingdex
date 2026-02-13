@@ -2,6 +2,14 @@
     "name": "birddex",
     "private": true,
     "version": "0.9.0",
+    "description": "Photo-first bird identification and life list tracker, built on GitHub Spark",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jlian/birddex.git"
+    },
+    "author": "John Lian",
+    "license": "MIT",
+    "keywords": ["birding", "bird-identification", "life-list", "ebird", "github-spark"],
     "type": "module",
     "scripts": {
         "dev": "vite",
