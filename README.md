@@ -6,12 +6,13 @@ A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.
 
 ## Features
 
-- **Photo upload with EXIF extraction** — GPS coordinates, timestamps, and automatic outing clustering
-- **AI bird detection & species ID** — Powered by GPT-4.1 vision via GitHub Models. Auto-crops to the bird, identifies species with confidence scores
-- **Per-photo confirmation flow** — Review each photo individually: high-confidence IDs are auto-selected, low-confidence shows alternatives, no bird detected offers manual crop or skip
-- **Life list** — Tracks every confirmed species with first/last seen dates, total sightings, and best photo
-- **eBird import/export** — Import your existing eBird CSV data or export your life list
-- **Per-user data isolation** — All data is scoped to your GitHub account via Spark's KV store
+- **Photo upload with EXIF extraction** - GPS coordinates, timestamps, and automatic outing clustering
+- **AI bird detection and species ID** - Powered by GPT-4.1 vision via GitHub Models. Auto-crops to the bird, identifies species with confidence scores
+- **Per-photo confirmation flow** - Review each photo: high-confidence IDs are auto-selected, low-confidence shows alternatives, no bird detected offers manual crop or skip
+- **Life list** - Tracks every confirmed species with first/last seen dates, total sightings, and best photo. Species detail view with sighting history
+- **eBird import/export** - Import your eBird CSV data as full outings (grouped by date and location) or export your life list. In-app instructions for downloading from eBird
+- **Confetti celebration** - Canvas-based confetti animation when new species are added to your life list
+- **Per-user data isolation** - All data is scoped to your GitHub account via Spark's KV store
 
 ## Tech Stack
 
@@ -25,7 +26,7 @@ A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.
 
 1. **Upload** bird photos from your device
 2. **EXIF data** is extracted (GPS, timestamp) and photos are clustered into outings by time and location
-3. **Review the outing** — confirm date, location (auto-resolved from GPS via Nominatim), and notes
+3. **Review the outing** - confirm date, location (auto-resolved from GPS via Nominatim), and notes
 4. **Per-photo AI pipeline:**
    - AI detects and crops to the bird in each photo (25% padding)
    - If no bird found, you can manually crop or skip
@@ -41,24 +42,25 @@ src/
   components/
     flows/
       AddPhotosFlow.tsx            - Upload, outing review, per-photo ID flow
-      OutingReview.tsx             - Outing metadata + location review
+      OutingReview.tsx             - Outing metadata and location review
     pages/
-      HomePage.tsx                 - Dashboard with stats + recent outings
-      OutingsPage.tsx              - Outing list + detail view
-      LifeListPage.tsx             - Species list + detail view
-      SettingsPage.tsx             - Import/export, saved locations, data management
+      HomePage.tsx                 - Dashboard with stats, recent species/outings, highlights
+      OutingsPage.tsx              - Outing list + detail view with stats and species
+      LifeListPage.tsx             - Species list + detail view with sighting history
+      SettingsPage.tsx             - Import/export, eBird instructions, saved locations
     ui/
       bird-row.tsx                 - Shared species row component
       stat-card.tsx                - Shared stat card component
       empty-state.tsx              - Shared empty state component
+      confetti.tsx                 - Canvas-based confetti animation
       ...                          - Radix-based UI primitives
   hooks/
-    use-birddex-data.ts            - Per-user KV data layer
+    use-birddex-data.ts            - Per-user KV data layer with eBird import
     use-kv.ts                      - Spark KV with localStorage fallback
   lib/
     ai-inference.ts                - Vision AI: crop detection, species ID
     clustering.ts                  - Time+distance outing clustering
-    ebird.ts                       - eBird CSV import/export
+    ebird.ts                       - eBird CSV import/export, outing grouping
     photo-utils.ts                 - EXIF parser, thumbnails, hashing
     types.ts                       - TypeScript interfaces
     utils.ts                       - Tailwind merge + species name helpers

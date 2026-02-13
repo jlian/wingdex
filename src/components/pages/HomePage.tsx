@@ -45,7 +45,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </div>
           <div className="space-y-3">
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-foreground leading-tight">
-              Got bird photos?
+              Got bird pics?
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
               Upload your photos, let AI identify the species, and build your
@@ -85,7 +85,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             <div className="space-y-4">
               <div className="space-y-2">
                 <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground leading-tight">
-                  Got bird photos?
+                  Got bird pics?
                 </h2>
                 <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
                   Upload your photos, let AI identify the species, and build your
