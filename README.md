@@ -4,34 +4,36 @@ A photo-first bird identification and life list tracker built on [GitHub Spark](
 
 **[Try it →](https://birddex--jlian.github.app)**
 
+<img width="1133" height="913" alt="image" src="https://github.com/user-attachments/assets/86636186-bef4-45cb-becc-3760ff9951c2" />
+
 ## What is BirdDex?
 
-BirdDex is for **reverse birders**: people who take photos first and identify species later. Instead of checklists and field guides, you upload photos you already took, and AI handles the species identification. You just confirm with a tap.
+BirdDex is for **reverse birding**: people who take photos first and identify species later. Instead of checklists and field guides, you upload photos you already took, and AI handles the species identification. You just confirm with a tap.
 
-**Your photos are never stored.** They're used only during identification and immediately discarded — all bird imagery in the app comes from Wikipedia. Upload a whole day's worth of photos at once via the **batch upload wizard**, which clusters them into outings, identifies each bird, and lets you confirm results in one flow. Every species in your BirdDex links back to the outings where you saw it, and every outing links to its species in the BirdDex — so you can always **cross-reference between your life list and your field trips**.
+**Your photos are never stored.** They're used only during identification and immediately discarded. Upload a whole day's worth of photos at once via the **batch upload wizard**, which clusters them into outings, identifies each bird, and lets you confirm results in one flow. Every species in your BirdDex links back to the outings where you saw it, and every outing links to its species in the BirdDex — so you can always **cross-reference between your BirdDex and your field trips**.
 
 ### Features
 
-- **AI species identification** - A single GPT-4.1 vision call per photo returns ranked species candidates with confidence scores and a bounding box around the bird, using GPS coordinates and season as context. Species names are grounded against a bundled eBird taxonomy (~11,000 species)
-- **Batch upload wizard** - Drop a whole day's worth of photos and the wizard handles the rest: photos are automatically grouped into outings by time and GPS proximity (5hr / 6km thresholds), with merging into existing outings when sessions overlap. Duplicate photos are detected via SHA-256 hash
-- **EXIF extraction** - GPS coordinates, timestamps, and thumbnails are parsed client-side from photo metadata
-- **BirdDex life list** - Every confirmed species is tracked with first/last seen dates, total sightings, and Wikipedia reference imagery. Searchable and sortable by name, date, or sighting count
-- **Species detail view** - Hero image, Wikipedia summary, sighting history cross-referenced across all outings, and external links to eBird, Wikipedia, and All About Birds. Every outing links to its species in the BirdDex and vice versa
-- **Outing management** - Editable location names and notes, manual species entry with taxonomy-backed autocomplete, per-observation delete, per-outing eBird CSV export, and Google Maps links for GPS coordinates
-- **eBird integration** - Import your eBird CSV to create full outings grouped by date and location with confirmed observations, or export your life list and individual outings in eBird Record Format
-- **Dark mode** - Light, dark, and system appearance modes with persistent preference
-- **Saved locations** - Store frequently-visited birding spots with geolocation support, Google Maps links, and nearby outing counts
-- **Dashboard** - Stat cards (species, outings, new this month, photos), recent species and outings, and highlights (most seen, first species, best outing)
-- **Privacy-first** - Photos are used only during AI identification and are never stored or persisted. All bird imagery in the app comes from Wikipedia. Data is scoped to your GitHub account via Spark's KV store
+- **Privacy-first** - Photos are never stored; all bird imagery comes from Wikipedia
+- **Batch upload** - Drop a day's photos; they're auto-grouped into outings by time/GPS proximity, merged with existing sessions, and deduplicated by hash
+- **EXIF extraction** - GPS, timestamps, and thumbnails parsed client-side
+- **AI species ID** - GPT-4.1 vision returns ranked candidates with confidence scores and bounding boxes, grounded against ~11,000 eBird species
+- **BirdDex Life list** - First/last seen, total sightings, Wikipedia imagery; searchable and sortable
+- **Species detail** - Hero image, Wikipedia summary, sighting history, and links to eBird / All About Birds
+- **Outing management** - Editable locations/notes, taxonomy autocomplete, per-observation delete, eBird CSV export, Google Maps links
+- **eBird integration** - Import/export checklists and life lists in eBird Record Format
+- **Dark mode** - Light, dark, and system themes
+- **Saved locations** - Bookmark birding spots with geolocation and nearby outing counts
+- **Dashboard** - Stats, recent activity, and highlights at a glance
 
 ## How it works
 
-1. **Upload** one or more bird photos from your device
-2. **EXIF data** is extracted client-side (GPS, timestamp) and photos are clustered into outings
-3. **Review the outing** - confirm date, location (auto-resolved via Nominatim geocoding), and notes
-4. **AI identifies each photo** - a single vision call returns species candidates with confidence scores and a crop bounding box, using GPS and season as context
-5. **Confirm each result** - accept the top suggestion, mark as "possible," pick an alternative, manually crop and retry, or skip
-6. **Observations saved** to your BirdDex with species, count, and confidence
+1. **Upload** bird photos from your device
+2. **EXIF** GPS & timestamps are extracted and photos are clustered into outings
+3. **Review** the outing — confirm date, location (auto-geocoded), and notes
+4. **AI identifies** each bird with ranked suggestions, confidence scores, and a crop box
+5. **Confirm** — accept, mark as possible, pick an alternative, re-crop, or skip
+6. **Saved** to your BirdDex with species, count, and confidence
 
 ## Tech stack
 
