@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird, MapPin
+  Bird
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -22,9 +20,10 @@ interface BirdDexPageProps {
   data: BirdDexDataStore
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
+  onSelectOuting: (id: string) => void
 }
 
-export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies }: BirdDexPageProps) {
+export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: BirdDexPageProps) {
   const { dex } = data
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('recent')
@@ -63,6 +62,7 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies }: 
         entry={entry}
         data={data}
         onBack={() => onSelectSpecies(null)}
+        onSelectOuting={onSelectOuting}
       />
     )
   }
@@ -141,10 +141,12 @@ function SpeciesDetail({
   entry,
   data,
   onBack,
+  onSelectOuting,
 }: {
   entry: DexEntry
   data: BirdDexDataStore
   onBack: () => void
+  onSelectOuting: (id: string) => void
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
@@ -152,12 +154,12 @@ function SpeciesDetail({
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
 
   // Find all sightings of this species across outings
-  const sightings: Array<{ observation: Observation; outing: { locationName: string; startTime: string } }> = []
+  const sightings: Array<{ observation: Observation; outing: { id: string; locationName: string; startTime: string } }> = []
   for (const outing of data.outings) {
     const obs = data.getOutingObservations(outing.id)
     for (const o of obs) {
       if (o.speciesName === entry.speciesName && o.certainty !== 'rejected') {
-        sightings.push({ observation: o, outing: { locationName: outing.locationName, startTime: outing.startTime } })
+        sightings.push({ observation: o, outing: { id: outing.id, locationName: outing.locationName, startTime: outing.startTime } })
       }
     }
   }
@@ -278,32 +280,30 @@ function SpeciesDetail({
             <h3 className="font-semibold text-foreground">
               Sighting History ({sightings.length})
             </h3>
-            <Card className="divide-y divide-border overflow-hidden">
+            <div className="divide-y divide-border">
               {sightings.map(({ observation, outing }) => (
-                <div key={observation.id} className="flex items-center gap-3 px-3 py-2.5">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin size={16} className="text-primary" weight="fill" />
-                  </div>
+                <button
+                  key={observation.id}
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                  onClick={() => onSelectOuting(outing.id)}
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {outing.locationName || 'Unknown location'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(outing.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                      {observation.count > 1 && (
-                        <span className="ml-1.5">x{observation.count}</span>
-                      )}
+                    <div className="md:flex md:items-baseline md:gap-2">
+                      <p className="font-serif font-semibold text-sm text-foreground truncate">
+                        {outing.locationName || 'Unknown location'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(outing.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {observation.count > 1 && ` · x${observation.count}`}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {observation.certainty.charAt(0).toUpperCase() + observation.certainty.slice(1)}
                     </p>
                   </div>
-                  <Badge
-                    variant={observation.certainty === 'confirmed' ? 'secondary' : 'outline'}
-                    className="text-[10px] flex-shrink-0"
-                  >
-                    {observation.certainty}
-                  </Badge>
-                </div>
+                </button>
               ))}
-            </Card>
+            </div>
           </div>
         )}
 

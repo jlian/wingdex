@@ -252,6 +252,7 @@ function AppContent({ user }: { user: UserInfo }) {
               data={data}
               selectedSpecies={tab === 'birddex' ? (subId ?? null) : null}
               onSelectSpecies={(name) => navigate('birddex', name ?? undefined)}
+              onSelectOuting={(id) => navigate('outings', id)}
             />
           </TabsContent>
 
