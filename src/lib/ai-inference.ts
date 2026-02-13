@@ -14,14 +14,6 @@ export interface BirdIdResult {
   cropBox?: { x: number; y: number; width: number; height: number }
 }
 
-export interface SuggestedCrop {
-  x: number
-  y: number
-  width: number
-  height: number
-  confidence: number
-}
-
 /* ------------------------------------------------------------------ */
 /*  Image helpers                                                      */
 /* ------------------------------------------------------------------ */
@@ -152,42 +144,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
 /*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
-export async function suggestBirdCrop(imageDataUrl: string): Promise<SuggestedCrop | null> {
-  try {
-    console.log('🔍 Starting AI crop suggestion...')
-    const img = await loadImage(imageDataUrl)
-    const compressed = compressImage(img, 384, 0.4)
-    console.log(`📐 Crop: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
-
-    const text = `Find the bird in this photo. Return a GENEROUS bounding box that fully contains the entire bird with some margin around it. Include head, tail, feet, and wing tips with extra space.
-JSON: {"cropBox":{"x":20,"y":25,"width":50,"height":45,"confidence":0.85}}
-No bird: {"cropBox":null}`
-
-    const response = await withRetry(() =>
-      sparkVisionLLM(text, compressed, VISION_MODEL, {
-        jsonMode: true, maxTokens: 200, temperature: 0.1, detail: 'low',
-      })
-    )
-    console.log('📥 Crop response:', response.substring(0, 200))
-
-    const parsed = safeParseJSON(response)
-    if (!parsed) { console.warn('⚠️ Parse failed'); return null }
-
-    if (parsed.cropBox && typeof parsed.cropBox.confidence === 'number' && parsed.cropBox.confidence >= 0.4) {
-      const { x, y, width, height } = parsed.cropBox
-      if (x >= 0 && y >= 0 && width > 5 && height > 5 && x + width <= 101 && y + height <= 101) {
-        console.log('✅ AI crop:', parsed.cropBox)
-        return parsed.cropBox
-      }
-    }
-    console.log('⚠️ No confident crop found')
-    return null
-  } catch (error) {
-    console.error('❌ Crop error:', error)
-    return null
-  }
-}
-
 export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
@@ -221,7 +177,10 @@ No bird: {"candidates":[],"cropBox":null}`
     console.log('📥 Bird ID response:', response.substring(0, 300))
 
     const parsed = safeParseJSON(response)
-    if (!parsed) { console.error('❌ Parse failed'); return { candidates: [] } }
+    if (!parsed) {
+      console.error('❌ Parse failed')
+      throw new Error('AI returned an unparseable response. Please try again.')
+    }
 
     const rawCandidates = (parsed.candidates && Array.isArray(parsed.candidates))
       ? parsed.candidates
