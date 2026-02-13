@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { MapPin, CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
 import { findMatchingOuting } from '@/lib/clustering'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import { toast } from 'sonner'
 
 interface PhotoCluster {
   photos: any[]
@@ -96,6 +97,7 @@ export default function OutingReview({
       setLocationName(name)
     } catch (error) {
       console.error('❌ Reverse geocoding failed:', error)
+      toast.warning('Could not look up location name — using coordinates instead')
       // Fall back to default location or coordinate string
       const fallback = defaultLocationName || `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
       console.log('⚠️ Using fallback:', fallback)
