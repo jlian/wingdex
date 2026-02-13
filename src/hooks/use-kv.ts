@@ -33,9 +33,7 @@ async function probeSparkKv(): Promise<boolean> {
   const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
   if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
   try {
-    // Probe the base KV URL (lists all keys) — NOT /_spark/kv/keys,
-    // which the runtime interprets as a lookup for a key named "keys".
-    const res = await fetch(KV_BASE, { method: 'GET' })
+    const res = await fetch(`${KV_BASE}/keys`, { method: 'GET' })
     _sparkKvAvailable = res.ok
     _sparkKvCheckedAt = Date.now()
   } catch {
