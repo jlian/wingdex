@@ -7,11 +7,16 @@
 
 import rawTaxonomy from './taxonomy.json'
 
-export type TaxonEntry = { common: string; scientific: string }
+export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string }
 
 // Build the flat list once on import
-const taxonomy: TaxonEntry[] = (rawTaxonomy as [string, string][]).map(
-  ([common, scientific]) => ({ common, scientific })
+// Taxonomy entries can be [common, scientific] or [common, scientific, ebirdCode]
+const taxonomy: TaxonEntry[] = (rawTaxonomy as (string)[]).map(
+  (entry: any) => ({
+    common: entry[0],
+    scientific: entry[1],
+    ...(entry[2] ? { ebirdCode: entry[2] } : {}),
+  })
 )
 
 // Pre-compute lower-cased names for search
@@ -126,6 +131,51 @@ export function findBestMatch(name: string): TaxonEntry | null {
 export function normalizeSpeciesName(name: string): string {
   const match = findBestMatch(name)
   return match ? match.common : name
+}
+
+/**
+ * Generate an eBird 6-letter species code from a common name.
+ * Follows the Bird Banding Lab code algorithm (extended to 6 chars):
+ *   1 word  → first 6 chars
+ *   2 words → first 3 of each
+ *   3 words → first 2 + first 1 + first 3
+ *   4+ words → first 1 of words 1…(n-1) + fill from last word
+ *
+ * Note: ~5% of species have disambiguation suffixes (e.g. "comkin1")
+ * that this cannot predict. The generated code works for most species.
+ */
+export function getEbirdCode(commonName: string): string {
+  // Use stored eBird species code if available
+  const match = taxonomy.find(t => t.common.toLowerCase() === commonName.toLowerCase())
+  if (match?.ebirdCode) return match.ebirdCode
+
+  // Fallback: generate code algorithmically
+  // Strip apostrophes, split on hyphens and spaces
+  const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
+  const n = words.length
+  let code: string
+
+  if (n === 0) return ''
+  if (n === 1) {
+    code = words[0].substring(0, 6)
+  } else if (n === 2) {
+    code = words[0].substring(0, 3) + words[1].substring(0, 3)
+  } else if (n === 3) {
+    code = words[0].substring(0, 2) + words[1].substring(0, 1) + words[2].substring(0, 3)
+  } else {
+    // 4+ words: first char of first (n-1) words + chars from last word to reach 6
+    const charsFromLast = Math.max(1, 7 - n)
+    const prefixChars = 6 - charsFromLast
+    code = words.slice(0, n - 1).map(w => w[0]).join('').substring(0, prefixChars)
+      + words[n - 1].substring(0, charsFromLast)
+  }
+
+  return code.toLowerCase()
+}
+
+/** Get the eBird species page URL for a common name */
+export function getEbirdUrl(commonName: string): string {
+  return `https://ebird.org/species/${getEbirdCode(commonName)}`
 }
 
 /** Total number of species in the taxonomy */

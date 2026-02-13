@@ -10,6 +10,7 @@ import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
+import { getEbirdUrl } from '@/lib/taxonomy'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
@@ -163,7 +164,7 @@ function SpeciesDetail({
     }
   }
 
-  const ebirdUrl = `https://ebird.org/explore?q=${encodeURIComponent(displayName)}`
+  const ebirdUrl = getEbirdUrl(displayName)
   const heroImage = summary?.imageUrl || wikiImage
 
   return (
