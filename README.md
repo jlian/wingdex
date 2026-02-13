@@ -39,7 +39,7 @@ BirdDex is for **reverse birding**: people who take photos first and identify sp
 
 | Layer | Technology |
 |-------|------------|
-| Platform | [GitHub Spark]([https://githubnext.com/projects/github-spark](https://github.com/features/spark)) - hosting, KV storage, LLM proxy, GitHub auth |
+| Platform | [GitHub Spark](https://github.com/features/spark) - hosting, KV storage, LLM proxy, GitHub auth |
 | Frontend | React 19, TypeScript, Vite 7 |
 | Styling | Tailwind CSS 4, Radix UI primitives, Phosphor Icons |
 | AI | GPT-4.1 (vision) via Spark's `/_spark/llm` proxy |
