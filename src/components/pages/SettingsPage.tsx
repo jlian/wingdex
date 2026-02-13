@@ -4,10 +4,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Download, Upload, Info, MapPin, Plus, Trash, X, Check } from '@phosphor-icons/react'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
+import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST } from '@/lib/seed-data'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
 
@@ -170,6 +176,86 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
       <SavedLocationsSection data={data} />
 
+      {/* Data Storage & Privacy */}
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold text-foreground flex items-center gap-2">
+          <ShieldCheck size={18} className="text-primary" />
+          Data Storage &amp; Privacy
+        </h3>
+        <div className="text-sm text-muted-foreground space-y-2">
+          <p>
+            <strong>Your photos are never stored.</strong> Photos are processed
+            locally for AI identification and then discarded — they never leave
+            your device or get uploaded to any server.
+          </p>
+          <p>
+            Your birding records (outings, species, sightings) are stored on
+            GitHub&apos;s infrastructure, scoped entirely to your GitHub
+            account. <strong>We don&apos;t operate any servers or databases</strong> —
+            all data lives in GitHub&apos;s key-value store tied to your login.
+          </p>
+          <p>
+            Species images in the life list are loaded on-demand from Wikimedia
+            Commons and Wikipedia. No images are cached or stored.
+          </p>
+        </div>
+      </Card>
+
+      {/* Data Management */}
+      <Card className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground flex items-center gap-2">
+          <Database size={18} />
+          Data Management
+        </h3>
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => {
+              data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST)
+              toast.success('Demo data loaded — 5 outings, 17 species')
+            }}
+          >
+            <Database size={20} className="mr-2" />
+            Load Demo Data
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash size={20} className="mr-2" />
+                Delete All Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all your outings, observations,
+                  life list entries, and saved locations. This action cannot be
+                  undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    data.clearAllData()
+                    toast.success('All data deleted')
+                  }}
+                >
+                  Delete Everything
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </Card>
+
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
@@ -178,15 +264,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </p>
         <p className="text-xs text-muted-foreground">
           Version 1.0.0
-        </p>
-      </Card>
-
-      <Card className="p-4 space-y-2">
-        <h3 className="font-semibold text-foreground">Data Storage</h3>
-        <p className="text-sm text-muted-foreground">
-          Your birding records (outings, species, sightings) are stored in the cloud
-          tied to your GitHub account. Bird images in the life list come from
-          Wikimedia Commons.
         </p>
       </Card>
     </div>

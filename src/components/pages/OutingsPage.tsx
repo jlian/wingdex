@@ -67,7 +67,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
       </div>
       
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {outings.map(outing => {
+        {outings.map((outing, i) => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
@@ -78,6 +78,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
               outing={outing}
               photos={photos}
               confirmed={confirmed}
+              index={i}
               onClick={() => onSelectOuting(outing.id)}
             />
           )
@@ -93,11 +94,13 @@ function OutingCard({
   outing,
   photos,
   confirmed,
+  index = 0,
   onClick,
 }: {
   outing: Outing
   photos: any[]
   confirmed: Observation[]
+  index?: number
   onClick: () => void
 }) {
   const firstSpecies = confirmed[0]?.speciesName
@@ -106,19 +109,23 @@ function OutingCard({
 
   return (
     <Card
-      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]"
+      className={`overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] animate-card-in stagger-${Math.min(index + 1, 18)}`}
       onClick={onClick}
     >
-      {heroSrc && (
-        <div className="h-32 bg-muted overflow-hidden">
+      <div className="aspect-[4/3] bg-muted overflow-hidden">
+        {heroSrc ? (
           <img
             src={heroSrc}
             alt={firstSpecies || 'Outing'}
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        </div>
-      )}
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Bird size={32} className="text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
 
       <div className="p-4 space-y-3">
         <div className="space-y-2">
@@ -235,7 +242,7 @@ function OutingDetail({
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>

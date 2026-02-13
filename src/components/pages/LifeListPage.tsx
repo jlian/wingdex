@@ -83,10 +83,11 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filteredList.map(entry => (
+        {filteredList.map((entry, i) => (
           <SpeciesCard
             key={entry.speciesName}
             entry={entry}
+            index={i}
             onClick={() => onSelectSpecies(entry.speciesName)}
           />
         ))}
@@ -105,9 +106,11 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
 
 function SpeciesCard({
   entry,
+  index = 0,
   onClick,
 }: {
   entry: LifeListEntry
+  index?: number
   onClick: () => void
 }) {
   const displayName = entry.speciesName.split('(')[0].trim()
@@ -116,23 +119,25 @@ function SpeciesCard({
 
   return (
     <Card
-      className="flex gap-3 p-3 hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] group"
+      className={`overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] animate-card-in stagger-${Math.min(index + 1, 18)}`}
       onClick={onClick}
     >
-      {wikiImage ? (
-        <img
-          src={wikiImage}
-          alt={displayName}
-          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded bg-muted flex-shrink-0 group-hover:scale-105 transition-transform duration-200"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
-          <Bird size={24} className="text-muted-foreground/40" />
-        </div>
-      )}
+      <div className="aspect-[4/3] bg-muted overflow-hidden">
+        {wikiImage ? (
+          <img
+            src={wikiImage}
+            alt={displayName}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Bird size={32} className="text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
 
-      <div className="flex-1 min-w-0 space-y-1">
+      <div className="p-3 space-y-1.5">
         <h3 className="font-serif font-semibold text-foreground text-sm truncate">
           {displayName}
         </h3>
@@ -188,7 +193,7 @@ function SpeciesDetail({
   const ebirdUrl = `https://ebird.org/explore?q=${encodeURIComponent(displayName)}`
 
   return (
-    <div className="max-w-4xl mx-auto pb-8">
+    <div className="max-w-4xl mx-auto pb-8 animate-fade-in">
       {/* Header */}
       <div className="px-4 sm:px-6 py-4">
         <Button variant="ghost" size="sm" onClick={onBack} className="mb-3 -ml-2">

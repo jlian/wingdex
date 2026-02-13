@@ -185,6 +185,8 @@ function AppContent({ user }: { user: UserInfo }) {
             <HomePage
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
+              onSelectOuting={(id) => navigate('outings', id)}
+              onSelectSpecies={(name) => navigate('lifelist', name)}
             />
           </TabsContent>
 

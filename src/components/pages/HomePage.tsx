@@ -11,9 +11,11 @@ import type { useBirdDexData } from '@/hooks/use-birddex-data'
 interface HomePageProps {
   data: ReturnType<typeof useBirdDexData>
   onAddPhotos: () => void
+  onSelectOuting: (id: string) => void
+  onSelectSpecies: (name: string) => void
 }
 
-export default function HomePage({ data, onAddPhotos }: HomePageProps) {
+export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSpecies }: HomePageProps) {
   const { outings, lifeList } = data
 
   const recentOutings = outings.slice(0, 3)
@@ -128,7 +130,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
       {/* ── Recent Species ─────────────────────────────── */}
       <div className="px-4 sm:px-6 space-y-8 pt-6">
         {recentSpecies.length > 0 && (
-          <section className="space-y-4">
+          <section className="space-y-4 animate-slide-up">
             <h3 className="font-serif text-xl font-semibold text-foreground">
               Recent Species
             </h3>
@@ -138,6 +140,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
                   key={entry.speciesName}
                   speciesName={entry.speciesName}
                   date={entry.addedDate || entry.firstSeenDate}
+                  onClick={() => onSelectSpecies(entry.speciesName)}
                 />
               ))}
             </div>
@@ -146,7 +149,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
 
         {/* ── Recent Outings ─────────────────────────────── */}
         {recentOutings.length > 0 && (
-          <section className="space-y-4">
+          <section className="space-y-4 animate-slide-up stagger-4">
             <h3 className="font-serif text-xl font-semibold text-foreground">
               Recent Outings
             </h3>
@@ -158,7 +161,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
                 )
 
                 return (
-                  <Card key={outing.id} className="p-4 space-y-3 hover:shadow-md transition-shadow">
+                  <Card key={outing.id} className="p-4 space-y-3 hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]" onClick={() => onSelectOuting(outing.id)}>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarBlank size={15} />
@@ -205,18 +208,18 @@ function StatCard({ value, label, accent }: { value: number; label: string; acce
   )
 }
 
-function SpeciesCard({ speciesName, date }: { speciesName: string; date: string }) {
+function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date: string; onClick: () => void }) {
   const displayName = speciesName.split('(')[0].trim()
   const wikiImage = useBirdImage(speciesName)
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow group">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]" onClick={onClick}>
       <div className="aspect-square bg-muted overflow-hidden">
         {wikiImage ? (
           <img
             src={wikiImage}
             alt={displayName}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
         ) : (

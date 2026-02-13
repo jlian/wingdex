@@ -143,6 +143,24 @@ export function useBirdDexData(userId: number) {
     })
   }
 
+  const clearAllData = () => {
+    setPhotos([])
+    setOutings([])
+    setObservations([])
+    setLifeList([])
+    setSavedSpots([])
+  }
+
+  const loadSeedData = (
+    seedOutings: Outing[],
+    seedObservations: Observation[],
+    seedLifeList: LifeListEntry[],
+  ) => {
+    setOutings(seedOutings)
+    setObservations(seedObservations)
+    setLifeList(seedLifeList)
+  }
+
   return {
     photos: photos || [],
     outings: outings || [],
@@ -161,6 +179,8 @@ export function useBirdDexData(userId: number) {
     getOutingObservations,
     getOutingPhotos,
     getLifeListEntry,
-    importLifeListEntries
+    importLifeListEntries,
+    clearAllData,
+    loadSeedData,
   }
 }
