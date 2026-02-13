@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 
 /**
- * Drop-in replacement for @github/spark's useKV hook.
- * Tries Spark KV first (works at birddex--jlian.github.app), falls back to
- * localStorage when Spark KV is unavailable (e.g. regular codespaces).
+ * Runtime split:
+ * - Spark-hosted (*.github.app): Spark KV only
+ * - Non-Spark (local/codespaces): localStorage only
  */
 
 type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
@@ -99,17 +99,6 @@ async function sparkKvDelete(key: string): Promise<boolean> {
   return ok
 }
 
-async function tryRefreshSparkKv(ref: { current: boolean }): Promise<boolean> {
-  try {
-    const available = await probeSparkKv()
-    ref.current = available
-    return available
-  } catch {
-    ref.current = false
-    return false
-  }
-}
-
 function getLocalStorage<T>(key: string, fallback: T): T {
   try {
     const stored = localStorage.getItem(LS_PREFIX + key)
@@ -125,11 +114,19 @@ function setLocalStorage<T>(key: string, value: T): void {
 }
 
 export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void] {
-  const [value, setValue] = useState<T>(() => getLocalStorage(key, initialValue))
+  const sparkRuntime = isSparkHostedRuntime()
+  const [value, setValue] = useState<T>(() => (
+    sparkRuntime ? initialValue : getLocalStorage(key, initialValue)
+  ))
   const useSparkKv = useRef(false)
 
-  // On mount: probe Spark KV, load from it if available
+  // Spark runtime: load from Spark KV only.
   useEffect(() => {
+    if (!sparkRuntime) {
+      useSparkKv.current = false
+      return
+    }
+
     let cancelled = false
     ;(async () => {
       const available = await probeSparkKv()
@@ -140,18 +137,21 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
         if (cancelled) return
         if (stored !== undefined) {
           setValue(stored)
-          setLocalStorage(key, stored) // sync to localStorage as backup
         } else {
-          // Key doesn't exist in Spark KV yet — seed it
-          await sparkKvSet(key, getLocalStorage(key, initialValue))
+          await sparkKvSet(key, initialValue)
+          setValue(initialValue)
         }
+      } else {
+        console.warn(`[useKV] Spark KV unavailable in Spark runtime for key "${key}".`)
       }
     })()
     return () => { cancelled = true }
-  }, [key, initialValue])
+  }, [key, initialValue, sparkRuntime])
 
-  // Sync across tabs via storage event (localStorage only)
+  // Non-Spark runtime: sync localStorage across tabs.
   useEffect(() => {
+    if (sparkRuntime) return
+
     const handler = (e: StorageEvent) => {
       if (e.key !== LS_PREFIX + key) return
       if (e.newValue === null) {
@@ -162,40 +162,36 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
-  }, [key, initialValue])
+  }, [key, initialValue, sparkRuntime])
 
   const userSetValue: SetValue<T> = useCallback((newValue) => {
     setValue((currentValue) => {
       const nextValue = typeof newValue === 'function'
         ? (newValue as (prev: T) => T)(currentValue)
         : newValue
-      setLocalStorage(key, nextValue)
-      if (useSparkKv.current) {
-        void sparkKvSet(key, nextValue)
+
+      if (sparkRuntime) {
+        if (useSparkKv.current) {
+          void sparkKvSet(key, nextValue)
+        }
       } else {
-        void tryRefreshSparkKv(useSparkKv).then((available) => {
-          if (available) {
-            void sparkKvSet(key, nextValue)
-          }
-        })
+        setLocalStorage(key, nextValue)
       }
+
       return nextValue
     })
-  }, [key])
+  }, [key, sparkRuntime])
 
   const deleteValue = useCallback(() => {
     setValue(initialValue)
-    try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
-    if (useSparkKv.current) {
-      void sparkKvDelete(key)
+    if (sparkRuntime) {
+      if (useSparkKv.current) {
+        void sparkKvDelete(key)
+      }
     } else {
-      void tryRefreshSparkKv(useSparkKv).then((available) => {
-        if (available) {
-          void sparkKvDelete(key)
-        }
-      })
+      try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
     }
-  }, [key, initialValue])
+  }, [key, initialValue, sparkRuntime])
 
   return [value, userSetValue, deleteValue]
 }
