@@ -20,6 +20,11 @@ interface UserInfo {
   isOwner: boolean
 }
 
+function isSparkHostedRuntime(): boolean {
+  const host = window.location.hostname.toLowerCase()
+  return host === 'github.app' || host.endsWith('.github.app')
+}
+
 function getFallbackUser(): UserInfo {
   return {
     login: 'dev-user',
@@ -78,21 +83,35 @@ function useHashRouter() {
 
 function App() {
   const [user, setUser] = useState<UserInfo | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
   const [showApp, setShowApp] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
+      const canUseDevFallback = !isSparkHostedRuntime()
+
       try {
         const userInfo = await window.spark.user()
         if (userInfo && typeof userInfo.login === 'string' && typeof userInfo.id === 'number') {
+          setAuthError(null)
           setUser(userInfo)
-        } else {
+        } else if (canUseDevFallback) {
           console.warn('Spark user API returned invalid data, using fallback:', userInfo)
+          setAuthError(null)
           setUser(getFallbackUser())
+        } else {
+          console.error('Spark user API returned invalid data in hosted runtime:', userInfo)
+          setAuthError('Unable to verify your user session. Refresh the page and try again.')
         }
       } catch (error) {
-        console.warn('Spark user API unavailable, using fallback:', error)
-        setUser(getFallbackUser())
+        if (canUseDevFallback) {
+          console.warn('Spark user API unavailable, using fallback:', error)
+          setAuthError(null)
+          setUser(getFallbackUser())
+        } else {
+          console.error('Spark user API unavailable in hosted runtime:', error)
+          setAuthError('Unable to verify your user session. Refresh the page and try again.')
+        }
       }
     }
     fetchUser()
@@ -110,6 +129,10 @@ function App() {
 
     return () => window.clearTimeout(timer)
   }, [user])
+
+  if (authError) {
+    return <AuthErrorShell message={authError} />
+  }
 
   if (!user) {
     return <BootShell />
@@ -153,6 +176,19 @@ function BootShell() {
           <div className="h-16 rounded-lg bg-muted animate-pulse" />
         </div>
       </main>
+    </div>
+  )
+}
+
+function AuthErrorShell({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-background px-4">
+      <div className="mx-auto max-w-md py-16">
+        <div className="rounded-lg border border-border bg-card p-6">
+          <h1 className="text-lg font-semibold text-foreground">Sign-in required</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+        </div>
+      </div>
     </div>
   )
 }

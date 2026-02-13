@@ -77,6 +77,14 @@ npm run dev
 | `npm run lint` | Lint with ESLint |
 | `npm run preview` | Preview production build |
 
+## Security notes
+
+- BirdDex is designed for **low-sensitivity personal birding data** (outings, observations, notes).
+- Data separation is implemented with **user-scoped storage keys** (for example `u123_photos`) and app-level runtime checks.
+- In hosted Spark runtime, BirdDex requires a valid Spark user session and does not fall back to a shared dev identity.
+- In local/dev runtime, storage uses browser localStorage and should be treated as development-only data storage.
+- If you need strong tenant isolation for sensitive data, use a backend that enforces per-user access server-side.
+
 ## License
 
 [MIT](LICENSE)

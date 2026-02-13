@@ -12,6 +12,14 @@ const LS_PREFIX = 'birddex_kv_'
 const KV_BASE = '/_spark/kv'
 const SPARK_KV_PROBE_TTL_MS = 30_000
 const SPARK_KV_WRITE_RETRIES = 2
+const USER_SCOPED_KEY_PATTERN = /^u\d+_[a-zA-Z][a-zA-Z0-9_]*$/
+
+function assertUserScopedKey(key: string): void {
+  if (USER_SCOPED_KEY_PATTERN.test(key)) return
+  throw new Error(
+    `[useKV] Invalid key "${key}". Keys must be user-scoped (e.g. u123_photos).`
+  )
+}
 
 function isSparkHostedRuntime(): boolean {
   if (typeof window === 'undefined') return false
@@ -114,6 +122,8 @@ function setLocalStorage<T>(key: string, value: T): void {
 }
 
 export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void] {
+  assertUserScopedKey(key)
+
   const sparkRuntime = isSparkHostedRuntime()
   const initialValueRef = useRef(initialValue)
   const [value, setValue] = useState<T>(() => (
