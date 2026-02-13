@@ -24,7 +24,13 @@ jobs:
         run: npx tsc -b --noCheck
 
       - name: Unit tests
-        run: npm test
+        run: npm run test:unit
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke tests
+        run: npm run test:smoke
 
       - name: Build
         run: npm run build
