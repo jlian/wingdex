@@ -115,10 +115,17 @@ function setLocalStorage<T>(key: string, value: T): void {
 
 export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void] {
   const sparkRuntime = isSparkHostedRuntime()
+  const initialValueRef = useRef(initialValue)
   const [value, setValue] = useState<T>(() => (
     sparkRuntime ? initialValue : getLocalStorage(key, initialValue)
   ))
   const useSparkKv = useRef(false)
+
+  // Keep the latest fallback value without making network effects depend on
+  // reference-unstable literals like [] passed from callers.
+  useEffect(() => {
+    initialValueRef.current = initialValue
+  }, [key, initialValue])
 
   // Spark runtime: load from Spark KV only.
   useEffect(() => {
@@ -138,15 +145,15 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
         if (stored !== undefined) {
           setValue(stored)
         } else {
-          await sparkKvSet(key, initialValue)
-          setValue(initialValue)
+          await sparkKvSet(key, initialValueRef.current)
+          setValue(initialValueRef.current)
         }
       } else {
         console.warn(`[useKV] Spark KV unavailable in Spark runtime for key "${key}".`)
       }
     })()
     return () => { cancelled = true }
-  }, [key, initialValue, sparkRuntime])
+  }, [key, sparkRuntime])
 
   // Non-Spark runtime: sync localStorage across tabs.
   useEffect(() => {
@@ -155,14 +162,14 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     const handler = (e: StorageEvent) => {
       if (e.key !== LS_PREFIX + key) return
       if (e.newValue === null) {
-        setValue(initialValue)
+        setValue(initialValueRef.current)
         return
       }
       try { setValue(JSON.parse(e.newValue)) } catch { /* ignore */ }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
-  }, [key, initialValue, sparkRuntime])
+  }, [key, sparkRuntime])
 
   const userSetValue: SetValue<T> = useCallback((newValue) => {
     setValue((currentValue) => {
@@ -183,7 +190,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   }, [key, sparkRuntime])
 
   const deleteValue = useCallback(() => {
-    setValue(initialValue)
+    setValue(initialValueRef.current)
     if (sparkRuntime) {
       if (useSparkKv.current) {
         void sparkKvDelete(key)
@@ -191,7 +198,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     } else {
       try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
     }
-  }, [key, initialValue, sparkRuntime])
+  }, [key, sparkRuntime])
 
   return [value, userSetValue, deleteValue]
 }
