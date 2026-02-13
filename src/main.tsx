@@ -8,7 +8,7 @@ import { ErrorFallback } from './ErrorFallback.tsx'
 
 import "./main.css"
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('spark-app')!).render(
   <ErrorBoundary FallbackComponent={ErrorFallback}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <App />
