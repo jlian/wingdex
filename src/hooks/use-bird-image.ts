@@ -12,12 +12,43 @@ export function useBirdImage(speciesName: string | undefined): string | undefine
   useEffect(() => {
     if (!speciesName) return
     let cancelled = false
+    let objectUrl: string | undefined
 
-    getWikimediaImage(speciesName).then(url => {
-      if (!cancelled) setImageUrl(url)
+    const isIOS = typeof navigator !== 'undefined'
+      && /iPad|iPhone|iPod/.test(navigator.userAgent)
+
+    getWikimediaImage(speciesName).then(async (url) => {
+      if (cancelled) return
+      if (!url) {
+        setImageUrl(undefined)
+        return
+      }
+
+      const shouldUseBlob = isIOS && url.includes('/thumb/')
+      if (!shouldUseBlob) {
+        setImageUrl(url)
+        return
+      }
+
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          setImageUrl(undefined)
+          return
+        }
+        const blob = await response.blob()
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(blob)
+        setImageUrl(objectUrl)
+      } catch {
+        if (!cancelled) setImageUrl(undefined)
+      }
     })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
   }, [speciesName])
 
   return imageUrl
