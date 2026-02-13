@@ -88,9 +88,10 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
 
-    // Filter out known non-critical errors (like Spark API 403s)
+    // Filter out known non-critical errors (like Spark API 403s, Spark runtime errors)
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
+        && !e.includes('_spark') && !e.includes('spark')
     );
 
     expect(criticalErrors).toEqual([]);

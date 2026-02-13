@@ -37,26 +37,31 @@ A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.
 
 ```
 src/
-  App.tsx                          - Main app shell, auth, tab navigation
+  App.tsx                          - Main app shell, auth, hash routing, tab navigation
   components/
     flows/
       AddPhotosFlow.tsx            - Upload, outing review, per-photo ID flow
       OutingReview.tsx             - Outing metadata + location review
     pages/
       HomePage.tsx                 - Dashboard with stats + recent outings
-      OutingsPage.tsx              - Outing history
-      LifeListPage.tsx             - Species life list
-      SettingsPage.tsx             - Import/export, API test, about
-    ui/                            - Radix-based UI components
+      OutingsPage.tsx              - Outing list + detail view
+      LifeListPage.tsx             - Species list + detail view
+      SettingsPage.tsx             - Import/export, saved locations, data management
+    ui/
+      bird-row.tsx                 - Shared species row component
+      stat-card.tsx                - Shared stat card component
+      empty-state.tsx              - Shared empty state component
+      ...                          - Radix-based UI primitives
   hooks/
     use-birddex-data.ts            - Per-user KV data layer
+    use-kv.ts                      - Spark KV with localStorage fallback
   lib/
     ai-inference.ts                - Vision AI: crop detection, species ID
     clustering.ts                  - Time+distance outing clustering
     ebird.ts                       - eBird CSV import/export
     photo-utils.ts                 - EXIF parser, thumbnails, hashing
     types.ts                       - TypeScript interfaces
-    utils.ts                       - Tailwind merge helpers
+    utils.ts                       - Tailwind merge + species name helpers
   styles/
     theme.css                      - Design tokens
 ```

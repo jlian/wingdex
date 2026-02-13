@@ -98,20 +98,19 @@ A mobile-first web application for **reverse birders** — people who take photo
 | #3 Outing Clustering | ✅ Done | 8hr/10km thresholds, merge with existing outings |
 | #4 AI Species ID + Crop | ✅ Done | Single GPT-4.1 call returns candidates + bounding box |
 | #5 Observation Confirmation | ✅ Done | Confirm/Possible/Skip during wizard + post-save delete + manual species entry |
-| #6 Life List | ⚠️ Partial | Display + search + Wikimedia images; no species detail/timeline view |
+| #6 Life List | ✅ Done | Display + search + sort + Wikimedia images + species detail with hero, stat cards, sighting history, Wikipedia/eBird/AllAboutBirds links |
 | #7 eBird Import | ⚠️ Basic | Parses CSV into life list entries; doesn't create outings |
 | #8 eBird Export | ✅ Done | Life list CSV export + per-outing eBird CSV export from outing detail |
-| #9 Saved Locations | ✅ Done | Add/delete spots with name, lat/lon, geolocation in Settings |
+| #9 Saved Locations | ✅ Done | Add/delete spots with name, lat/lon, geolocation, Google Maps links, outing count in Settings |
 | #10 Outing Detail | ✅ Done | Tappable cards → species list, Wikimedia images, notes editing, manual add, per-outing export, delete |
 | #11 Cloud Storage | ✅ Done | Photo blobs stripped before KV persist; only metadata stored |
 | Animations | ❌ Not built | Only spinner pulse; no staggered/spring/confetti |
 
 ## Upcoming Priorities
 
-1. **Species detail / timeline view** — Tap a life list species to see all sightings, dates, locations
-2. **eBird import → outings** — Create outing records from imported eBird CSV checklists
-3. **Autocomplete for manual species entry** — eBird taxonomy or local search
-4. **Animations** — Staggered card reveals, new-species celebration, spring transitions
+1. **eBird import → outings** — Create outing records from imported eBird CSV checklists (currently imports to life list only)
+2. **Autocomplete for manual species entry** — eBird taxonomy or local search
+3. **Animations** — Staggered card reveals, new-species celebration, spring transitions
 
 ## Edge Case Handling
 
