@@ -58,19 +58,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
           >
             <Camera size={20} className="mr-2" weight="bold" />
-            Upload &amp; Identify
+            Select Images
           </Button>
-          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <ImageIcon size={16} /> Photos never kept
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Bird size={16} /> Batch upload
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Binoculars size={16} /> Outings ↔ Dex
-            </span>
-          </div>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <ImageIcon size={14} /> Photos never stored
+          </p>
         </div>
       </div>
     )
