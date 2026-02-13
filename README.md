@@ -13,7 +13,7 @@ BirdDex is for **reverse birders**: people who take photos first and identify sp
 ### Features
 
 - **AI species identification** - A single GPT-4.1 vision call per photo returns ranked species candidates with confidence scores and a bounding box around the bird, using GPS coordinates and season as context. Species names are grounded against a bundled eBird taxonomy (~11,000 species)
-- **Smart outing clustering** - Photos are automatically grouped into outings by time and GPS proximity (8hr / 10km thresholds), with merging into existing outings when sessions overlap. Duplicate photos are detected via SHA-256 hash
+- **Smart outing clustering** - Photos are automatically grouped into outings by time and GPS proximity (5hr / 6km thresholds), with merging into existing outings when sessions overlap. Duplicate photos are detected via SHA-256 hash
 - **EXIF extraction** - GPS coordinates, timestamps, and thumbnails are parsed client-side from photo metadata
 - **BirdDex life list** - Every confirmed species is tracked with first/last seen dates, total sightings, and Wikipedia reference imagery. Searchable and sortable by name, date, or sighting count
 - **Species detail view** - Hero image, Wikipedia summary, sighting history across all outings, and external links to eBird, Wikipedia, and All About Birds

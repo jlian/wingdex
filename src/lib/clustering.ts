@@ -8,8 +8,8 @@ interface PhotoCluster {
   centerLon?: number
 }
 
-const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000
-const MAX_DISTANCE_KM = 10
+const TIME_THRESHOLD_MS = 5 * 60 * 60 * 1000
+const MAX_DISTANCE_KM = 6
 
 function haversineDistance(
   lat1: number,
@@ -50,7 +50,7 @@ export function clusterPhotosIntoOutings(photos: Photo[]): PhotoCluster[] {
     const lastTime = lastPhoto.exifTime ? new Date(lastPhoto.exifTime).getTime() : null
     const timeDiff = photoTime !== null && lastTime !== null ? photoTime - lastTime : 0
     
-    let shouldCluster = timeDiff <= EIGHT_HOURS_MS
+    let shouldCluster = timeDiff <= TIME_THRESHOLD_MS
     
     if (shouldCluster && photo.gps && lastPhoto.gps) {
       const distance = haversineDistance(
@@ -109,9 +109,9 @@ function createClusterFromPhotos(photos: Photo[]): PhotoCluster {
  * Try to match a photo cluster to an existing outing.
  * Returns the outing ID if there's a time+location overlap, otherwise undefined.
  * 
- * Match criteria (generous):
- * - Cluster time overlaps the outing window ±8 hours
- * - If both have GPS, distance is within 10km
+ * Match criteria:
+ * - Cluster time overlaps the outing window ±5 hours
+ * - If both have GPS, distance is within 6km
  */
 export function findMatchingOuting(
   cluster: PhotoCluster,
@@ -123,10 +123,10 @@ export function findMatchingOuting(
     const clusterStart = cluster.startTime.getTime()
     const clusterEnd = cluster.endTime.getTime()
 
-    // Check time overlap: cluster within ±8 hours of outing window
+    // Check time overlap: cluster within ±5 hours of outing window
     const timeOverlap =
-      clusterStart <= outingEnd + EIGHT_HOURS_MS &&
-      clusterEnd >= outingStart - EIGHT_HOURS_MS
+      clusterStart <= outingEnd + TIME_THRESHOLD_MS &&
+      clusterEnd >= outingStart - TIME_THRESHOLD_MS
 
     if (!timeOverlap) continue
 
