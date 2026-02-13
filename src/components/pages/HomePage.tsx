@@ -48,7 +48,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               Got bird pics?
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-              Upload your photos, let AI identify the species, and build your
+              Upload your pics, ID the birds, and build your
               life list. <em>Reverse birding</em> at its finest.
             </p>
           </div>
@@ -88,7 +88,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                   Got bird pics?
                 </h2>
                 <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                  Upload your photos, let AI identify the species, and build your
+                  Upload your pics, ID the birds, and build your
                   life list. <em>Reverse birding</em> at its finest.
                 </p>
               </div>
