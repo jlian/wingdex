@@ -8,7 +8,6 @@ import {
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
-import { StatCard } from '@/components/ui/stat-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -170,82 +169,81 @@ function SpeciesDetail({
   return (
     <div className="max-w-3xl mx-auto pb-8">
       {/* Back button */}
-      <div className="px-4 sm:px-6 py-4">
+      <div className="px-4 sm:px-6 pt-4 pb-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft size={18} className="mr-1" />
           BirdDex
         </Button>
       </div>
 
-      {/* Hero image */}
-      {summaryLoading ? (
-        <div className="w-full h-48 sm:h-64 lg:h-80 bg-muted animate-pulse" />
-      ) : heroImage ? (
-        <div className="relative w-full h-48 sm:h-64 lg:h-80 bg-muted overflow-hidden">
-          <img
-            src={heroImage}
-            alt={displayName}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-6 pb-4">
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-white drop-shadow-lg">
-              {displayName}
-            </h2>
-            {scientificName && (
-              <p className="text-sm sm:text-base text-white/80 italic drop-shadow-md">
-                {scientificName}
-              </p>
+      <div className="px-4 sm:px-6 space-y-6">
+        {/* Hero: image + name + stats */}
+        <div className="flex gap-5 sm:gap-6">
+          {/* Square image */}
+          {summaryLoading ? (
+            <Skeleton className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl flex-shrink-0" />
+          ) : heroImage ? (
+            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm">
+              <img
+                src={heroImage}
+                alt={displayName}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center">
+              <Bird size={32} className="text-muted-foreground/40" />
+            </div>
+          )}
+
+          {/* Name + inline stats */}
+          <div className="min-w-0 flex-1 flex flex-col justify-center">
+            {summaryLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-7 w-40" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-44 mt-2" />
+              </div>
+            ) : (
+              <>
+                <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground leading-tight">
+                  {displayName}
+                </h2>
+                {scientificName && (
+                  <p className="text-sm text-muted-foreground italic mt-1">
+                    {scientificName}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3.5 text-sm text-muted-foreground">
+                  <span>
+                    <span className="font-semibold text-foreground">{entry.totalCount}</span> seen
+                  </span>
+                  <span className="text-border">·</span>
+                  <span>
+                    <span className="font-semibold text-foreground">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}
+                  </span>
+                  <span className="text-border">·</span>
+                  <span>
+                    First <span className="font-semibold text-foreground">{new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </span>
+                </div>
+              </>
             )}
           </div>
-        </div>
-      ) : null}
-
-      <div className="px-4 sm:px-6 space-y-5 mt-4">
-        {/* Name — only show if no hero image */}
-        {!heroImage && !summaryLoading && (
-          <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground">
-              {displayName}
-            </h2>
-            {scientificName && (
-              <p className="text-base text-muted-foreground italic mt-1">
-                {scientificName}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard value={entry.totalCount} label="Total Seen" accent="text-primary" />
-          <StatCard value={entry.totalOutings} label={entry.totalOutings === 1 ? 'Outing' : 'Outings'} accent="text-secondary" />
-          <StatCard
-            value={new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            label="First Seen"
-            accent="text-accent"
-          />
         </div>
 
         {/* About */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">About</h3>
-          {summaryLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-4/6" />
-            </div>
-          ) : summary?.extract ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {summary.extract}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No description available
-            </p>
-          )}
-        </div>
+        {summaryLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-4/6" />
+          </div>
+        ) : summary?.extract ? (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {summary.extract}
+          </p>
+        ) : null}
 
         {/* External links */}
         <div className="flex flex-wrap gap-2">
@@ -276,28 +274,26 @@ function SpeciesDetail({
 
         {/* Sighting history */}
         {sightings.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-foreground">
-              Sighting History ({sightings.length})
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Sightings ({sightings.length})
             </h3>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border -mx-1">
               {sightings.map(({ observation, outing }) => (
                 <button
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                  className="flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
                   onClick={() => onSelectOuting(outing.id)}
                 >
+                  <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="md:flex md:items-baseline md:gap-2">
-                      <p className="font-serif font-semibold text-sm text-foreground truncate">
-                        {outing.locationName || 'Unknown location'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(outing.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                        {observation.count > 1 && ` · x${observation.count}`}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {outing.locationName || 'Unknown location'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(outing.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      {observation.count > 1 && ` · x${observation.count}`}
+                      {' · '}
                       {observation.certainty.charAt(0).toUpperCase() + observation.certainty.slice(1)}
                     </p>
                   </div>
@@ -309,8 +305,8 @@ function SpeciesDetail({
 
         {/* Notes */}
         {entry.notes && (
-          <div className="space-y-2">
-            <h3 className="font-semibold text-foreground">Notes</h3>
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h3>
             <p className="text-sm text-muted-foreground italic">{entry.notes}</p>
           </div>
         )}
