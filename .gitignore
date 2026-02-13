@@ -37,3 +37,4 @@ pids
 test-results/
 playwright-report/
 screenshots/
+wiki-validation-report.txt

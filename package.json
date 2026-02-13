@@ -27,7 +27,9 @@
         "test": "vitest run",
         "test:unit": "vitest run src/__tests__",
         "test:e2e": "npx playwright test",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "taxonomy:ebird": "node scripts/fetch-ebird-codes.mjs",
+        "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs"
     },
     "dependencies": {
         "@github/spark": "0.44.19",

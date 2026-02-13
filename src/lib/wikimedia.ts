@@ -8,6 +8,18 @@ import { getDisplayName, getScientificName } from './utils'
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
 
+/**
+ * Manual overrides for species whose eBird common name doesn't match any Wikipedia article.
+ * These are typically recent taxonomic splits where Wikipedia still uses the pre-split name.
+ */
+const WIKI_OVERRIDES: Record<string, string> = {
+  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
+  'Black-hooded Antthrush': 'Black-faced antthrush',
+  'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
+  'Rose-bellied Chat': 'Rose-breasted chat',
+  'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
+}
+
 export interface WikiSummary {
   title: string
   extract: string
@@ -63,9 +75,16 @@ export async function getWikimediaImage(
     return imageCache.get(cacheKey) ?? undefined
   }
 
-  // Strategy 1: Try common name directly
-  let data = await fetchSummary(common)
+  // Strategy 0: Check manual overrides for known mismatches
+  const override = WIKI_OVERRIDES[common]
+  let data = override ? await fetchSummary(override) : null
   let imageUrl = data ? extractImageUrl(data, size) : undefined
+
+  // Strategy 1: Try common name directly
+  if (!imageUrl) {
+    data = await fetchSummary(common)
+    imageUrl = data ? extractImageUrl(data, size) : undefined
+  }
 
   // Strategy 2: Try scientific name if common name had no image
   if (!imageUrl && scientific) {
@@ -76,6 +95,22 @@ export async function getWikimediaImage(
   // Strategy 3: Try common name + " bird" (disambiguates e.g. "Robin")
   if (!imageUrl) {
     data = await fetchSummary(`${common} bird`)
+    imageUrl = data ? extractImageUrl(data, size) : undefined
+  }
+
+  // Strategy 4: Try Gray↔Grey swap (eBird uses "Gray", Wikipedia often has "Grey")
+  if (!imageUrl && /gray|grey/i.test(common)) {
+    const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
+      === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
+      : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
+    data = await fetchSummary(swapped)
+    imageUrl = data ? extractImageUrl(data, size) : undefined
+  }
+
+  // Strategy 5: Try dehyphenated (eBird: "Storm-Petrel", Wikipedia: "storm petrel")
+  if (!imageUrl && common.includes('-')) {
+    const dehyphenated = common.replace(/-/g, ' ')
+    data = await fetchSummary(dehyphenated)
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
@@ -97,8 +132,19 @@ export async function getWikimediaSummary(
     return summaryCache.get(cacheKey) ?? undefined
   }
 
-  // Try common name → scientific name → common name + " bird"
-  const candidates = [common, scientific, `${common} bird`].filter(Boolean) as string[]
+  // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
+  const override = WIKI_OVERRIDES[common]
+  const candidates = [override, common, scientific, `${common} bird`].filter(Boolean) as string[]
+  if (/gray|grey/i.test(common)) {
+    const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
+      === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
+      : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
+    candidates.push(swapped)
+  }
+  // eBird uses hyphens (Storm-Petrel, Fish-Owl) but Wikipedia often doesn't
+  if (common.includes('-')) {
+    candidates.push(common.replace(/-/g, ' '))
+  }
 
   for (const candidate of candidates) {
     const data = await fetchSummary(candidate)
