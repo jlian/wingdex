@@ -13,6 +13,7 @@
         "test": "vitest run",
         "test:unit": "vitest run src/__tests__/image-crop-dialog.test.ts src/__tests__/exif-extraction.test.ts",
         "test:integration": "vitest run src/__tests__/bird-id-integration.test.ts",
+        "test:e2e": "npx playwright test",
         "test:watch": "vitest"
     },
     "dependencies": {
@@ -70,6 +71,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.21.0",
+        "@playwright/test": "^1.58.2",
         "@tailwindcss/postcss": "^4.1.8",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
