@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Crop, Check, X } from '@phosphor-icons/react'
+import { computeRenderedImageRect, computePointerPosition } from '@/lib/crop-math'
 
 interface ImageCropDialogProps {
   imageUrl: string
@@ -22,13 +23,8 @@ function getRenderedImageRect(img: HTMLImageElement, container: HTMLDivElement) 
   const iH = img.naturalHeight
   if (!iW || !iH || !cW || !cH) return null
 
-  const scale = Math.min(cW / iW, cH / iH)
-  const renderedW = iW * scale
-  const renderedH = iH * scale
-  const offsetX = (cW - renderedW) / 2
-  const offsetY = (cH - renderedH) / 2
-
-  return { offsetX, offsetY, renderedW, renderedH, scale, containerRect }
+  const info = computeRenderedImageRect(cW, cH, iW, iH)
+  return { ...info, containerRect }
 }
 
 export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, initialCropBox }: ImageCropDialogProps) {
@@ -86,16 +82,12 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
   /** Convert screen coords to image-space coords, accounting for object-contain letterboxing */
   const getPointerPosition = (clientX: number, clientY: number) => {
     if (!imageRef.current || !containerRef.current) return null
-    const info = getRenderedImageRect(imageRef.current, containerRef.current)
-    if (!info) return null
+    const rect = containerRef.current.getBoundingClientRect()
+    const natW = imageRef.current.naturalWidth
+    const natH = imageRef.current.naturalHeight
+    if (!natW || !natH || !rect.width || !rect.height) return null
 
-    const relX = clientX - info.containerRect.left - info.offsetX
-    const relY = clientY - info.containerRect.top - info.offsetY
-
-    return {
-      x: relX / info.scale,
-      y: relY / info.scale,
-    }
+    return computePointerPosition(clientX, clientY, rect, natW, natH)
   }
 
   const startDrag = (clientX: number, clientY: number) => {

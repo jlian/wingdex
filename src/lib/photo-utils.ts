@@ -20,7 +20,7 @@ export async function extractEXIF(file: File): Promise<{
   })
 }
 
-function parseEXIF(view: DataView): {
+export function parseEXIF(view: DataView): {
   timestamp?: string
   gps?: { lat: number; lon: number }
 } {
