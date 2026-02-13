@@ -256,8 +256,13 @@ export function useBirdDexData(userId: number) {
   /** Import outings, observations, and update dex in one shot (for eBird CSV import) */
   const importFromEBird = (
     newOutings: Outing[],
-    newObservations: Observation[]
+    newObservations: Observation[],
+    newSavedSpots?: SavedSpot[]
   ): { newSpeciesCount: number } => {
+    // Add any extracted saved spots
+    if (newSavedSpots && newSavedSpots.length > 0) {
+      setSavedSpots(current => [...(current || []), ...newSavedSpots])
+    }
     // Add outings
     setOutings(current => [...newOutings, ...(current || [])])
     // Add observations

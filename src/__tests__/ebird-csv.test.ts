@@ -5,8 +5,9 @@ import {
   exportOutingToEBirdCSV,
   groupPreviewsIntoOutings,
   detectImportConflicts,
+  extractSavedSpotsFromPreviews,
 } from '@/lib/ebird'
-import type { DexEntry, Outing, Observation } from '@/lib/types'
+import type { DexEntry, Outing, Observation, SavedSpot } from '@/lib/types'
 
 /* ------------------------------------------------------------------ */
 /*  Real eBird "Download My Data" header                               */
@@ -620,6 +621,75 @@ describe('eBird CSV utilities', () => {
         const fields = parseCSVLineForTest(line)
         expect(fields).toHaveLength(19)
       }
+    })
+  })
+
+  /* ---------- extractSavedSpotsFromPreviews ---------- */
+
+  describe('extractSavedSpotsFromPreviews', () => {
+    it('extracts unique locations with coordinates from previews', () => {
+      const previews = parseEBirdCSV(ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,,Union Bay,47.654268,-122.295243,2025-11-08,09:46 AM,eBird - Casual Observation,,0,,,1',
+        'S2,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-WA,King,,The Arboretum,47.642651,-122.288885,2025-06-01,10:24 AM,eBird - Casual Observation,,0,,,1',
+        'S3,Northern Shoveler,Spatula clypeata,501,X,US-WA,King,,Union Bay,47.654268,-122.295243,2025-11-08,09:48 AM,eBird - Casual Observation,,0,,,1',
+      ]))
+
+      const spots = extractSavedSpotsFromPreviews(previews)
+      expect(spots).toHaveLength(2)
+      const names = spots.map(s => s.name).sort()
+      expect(names).toEqual(['The Arboretum', 'Union Bay'])
+      const unionBay = spots.find(s => s.name === 'Union Bay')!
+      expect(unionBay.lat).toBeCloseTo(47.654268, 4)
+      expect(unionBay.lon).toBeCloseTo(-122.295243, 4)
+    })
+
+    it('skips locations already saved by name (case-insensitive)', () => {
+      const previews = parseEBirdCSV(ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,,Home,47.64,-122.40,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1',
+        'S2,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-WA,King,,New Spot,47.65,-122.29,2025-06-01,10:24 AM,eBird - Casual Observation,,0,,,1',
+      ]))
+
+      const existing: SavedSpot[] = [{
+        id: 'spot_1', name: 'home', lat: 47.64, lon: -122.40, createdAt: '2025-01-01T00:00:00.000Z',
+      }]
+
+      const spots = extractSavedSpotsFromPreviews(previews, existing)
+      expect(spots).toHaveLength(1)
+      expect(spots[0].name).toBe('New Spot')
+    })
+
+    it('skips locations already saved by proximity (~500m)', () => {
+      const previews = parseEBirdCSV(ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,,Near Home,47.6401,-122.4001,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1',
+      ]))
+
+      const existing: SavedSpot[] = [{
+        id: 'spot_1', name: 'My Home', lat: 47.64, lon: -122.40, createdAt: '2025-01-01T00:00:00.000Z',
+      }]
+
+      const spots = extractSavedSpotsFromPreviews(previews, existing)
+      expect(spots).toHaveLength(0)
+    })
+
+    it('includes locations without coordinates (lat/lon default to 0)', () => {
+      const previews = [
+        { speciesName: 'Mallard', date: '2024-05-01T10:00:00.000Z', location: 'Mystery Spot', count: 1 },
+      ]
+
+      const spots = extractSavedSpotsFromPreviews(previews)
+      expect(spots).toHaveLength(1)
+      expect(spots[0].name).toBe('Mystery Spot')
+      expect(spots[0].lat).toBe(0)
+      expect(spots[0].lon).toBe(0)
+    })
+
+    it('skips "Unknown" locations', () => {
+      const previews = [
+        { speciesName: 'Mallard', date: '2024-05-01T10:00:00.000Z', location: 'Unknown', count: 1 },
+      ]
+
+      const spots = extractSavedSpotsFromPreviews(previews)
+      expect(spots).toHaveLength(0)
     })
   })
 })
