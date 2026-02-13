@@ -24,7 +24,7 @@ jobs:
         run: npx tsc -b --noCheck
 
       - name: Unit tests
-        run: npm run test:unit
+        run: npm test
 
       - name: Build
         run: npm run build
