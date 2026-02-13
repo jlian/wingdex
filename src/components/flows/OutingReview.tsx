@@ -183,7 +183,7 @@ export default function OutingReview({
             Matches existing outing
           </div>
           <p className="text-xs text-muted-foreground">
-            {matchingOuting.locationName} — {new Date(matchingOuting.startTime).toLocaleDateString()}
+            {matchingOuting.locationName} · {new Date(matchingOuting.startTime).toLocaleDateString()}
           </p>
           <div className="flex gap-2">
             <Button

@@ -137,12 +137,15 @@ function AppContent({ user }: { user: UserInfo }) {
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo */}
-              <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('home')}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
                 <Bird size={28} weight="duotone" className="text-primary" />
                 <h1 className="font-serif text-xl font-semibold text-foreground">
                   BirdDex
                 </h1>
-              </div>
+              </button>
 
               {/* Desktop nav — hidden on mobile */}
               <TabsList className="hidden md:flex bg-transparent gap-1 h-auto p-0">

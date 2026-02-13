@@ -185,7 +185,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
             <strong>Your photos are never stored.</strong> Photos are processed
-            locally for AI identification and then discarded — they never leave
+            locally for AI identification and then discarded. They never leave
             your device or get uploaded to any server.
           </p>
           <p>
@@ -213,7 +213,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             className="w-full justify-start"
             onClick={() => {
               data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST)
-              toast.success('Demo data loaded — 5 outings, 17 species')
+              toast.success('Demo data loaded: 5 outings, 17 species')
             }}
           >
             <Database size={20} className="mr-2" />

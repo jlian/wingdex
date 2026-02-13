@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
-  MapPin, CalendarBlank, Camera, ArrowLeft, Download,
+  MapPin, CalendarBlank, ArrowLeft, Download,
   Trash, PencilSimple, Check, Plus, X, Bird
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
@@ -56,7 +56,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5">
+    <div className="px-4 sm:px-6 py-4 space-y-3">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Your Outings
@@ -66,14 +66,14 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
         </p>
       </div>
       
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="divide-y divide-border">
         {outings.map((outing, i) => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
 
           return (
-            <OutingCard
+            <OutingRow
               key={outing.id}
               outing={outing}
               photos={photos}
@@ -88,9 +88,9 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
   )
 }
 
-// ─── Outing Card (list view) ──────────────────────────────
+// ─── Outing Row (compact list item) ───────────────────────
 
-function OutingCard({
+function OutingRow({
   outing,
   photos,
   confirmed,
@@ -108,65 +108,38 @@ function OutingCard({
   const heroSrc = (photos[0]?.thumbnail || wikiImage) as string | undefined
 
   return (
-    <Card
-      className={`overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] animate-card-in stagger-${Math.min(index + 1, 18)}`}
+    <button
+      className={`flex items-center gap-3 py-3 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted animate-card-in stagger-${Math.min(index + 1, 18)}`}
       onClick={onClick}
     >
-      <div className="aspect-[4/3] bg-muted overflow-hidden">
-        {heroSrc ? (
-          <img
-            src={heroSrc}
-            alt={firstSpecies || 'Outing'}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Bird size={32} className="text-muted-foreground/40" />
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 space-y-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarBlank size={16} />
-            {new Date(outing.startTime).toLocaleDateString()} at{' '}
-            {new Date(outing.startTime).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </div>
-          {outing.locationName && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin size={16} weight="fill" className="text-primary" />
-              {outing.locationName}
-            </div>
-          )}
-          {photos.length > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Camera size={16} />
-              {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
-            </div>
-          )}
+      {heroSrc ? (
+        <img
+          src={heroSrc}
+          alt={firstSpecies || 'Outing'}
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <Bird size={20} className="text-muted-foreground/40" />
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          {confirmed.map((obs) => (
-            <Badge key={obs.id} variant="secondary">
-              {obs.speciesName.split('(')[0].trim()}
-              {obs.count > 1 && ` (×${obs.count})`}
-            </Badge>
-          ))}
-        </div>
-
-        {outing.notes && (
-          <p className="text-sm text-muted-foreground italic line-clamp-2">
-            {outing.notes}
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-serif font-semibold text-sm text-foreground truncate">
+          {outing.locationName || 'Outing'}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {new Date(outing.startTime).toLocaleDateString()} · {confirmed.length} {confirmed.length === 1 ? 'species' : 'species'}
+          {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
+        </p>
+        {confirmed.length > 0 && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {confirmed.slice(0, 4).map(obs => obs.speciesName.split('(')[0].trim()).join(', ')}
+            {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
           </p>
         )}
       </div>
-    </Card>
+    </button>
   )
 }
 
@@ -242,7 +215,7 @@ function OutingDetail({
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-4xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-4 space-y-4 max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>

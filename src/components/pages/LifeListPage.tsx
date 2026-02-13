@@ -12,6 +12,8 @@ import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 import type { LifeListEntry, Observation } from '@/lib/types'
 
+type SortKey = 'name' | 'recent' | 'count'
+
 interface LifeListPageProps {
   data: ReturnType<typeof useBirdDexData>
   selectedSpecies: string | null
@@ -21,8 +23,18 @@ interface LifeListPageProps {
 export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }: LifeListPageProps) {
   const { lifeList } = data
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<SortKey>('recent')
 
-  const filteredList = lifeList.filter(entry =>
+  const sortedList = [...lifeList].sort((a, b) => {
+    if (sortBy === 'name') return a.speciesName.localeCompare(b.speciesName)
+    if (sortBy === 'count') return b.totalCount - a.totalCount
+    // recent
+    const aDate = a.addedDate || a.firstSeenDate
+    const bDate = b.addedDate || b.firstSeenDate
+    return new Date(bDate).getTime() - new Date(aDate).getTime()
+  })
+
+  const filteredList = sortedList.filter(entry =>
     entry.speciesName.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -57,34 +69,54 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
     )
   }
 
+  const sortOptions: { key: SortKey; label: string }[] = [
+    { key: 'recent', label: 'Recent' },
+    { key: 'name', label: 'A-Z' },
+    { key: 'count', label: 'Most seen' },
+  ]
+
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="font-serif text-2xl font-semibold text-foreground">
-            Life List
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {lifeList.length} species observed
-          </p>
-        </div>
-        <div className="relative w-full sm:w-72">
+    <div className="px-4 sm:px-6 py-4 space-y-3">
+      <div className="space-y-1">
+        <h2 className="font-serif text-2xl font-semibold text-foreground">
+          Life List
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {lifeList.length} species observed
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
           <MagnifyingGlass
-            size={18}
+            size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <Input
             placeholder="Search species..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 text-sm"
           />
+        </div>
+        <div className="flex items-center gap-1">
+          {sortOptions.map(opt => (
+            <Button
+              key={opt.key}
+              variant={sortBy === opt.key ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs h-9 px-2.5"
+              onClick={() => setSortBy(opt.key)}
+            >
+              {opt.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="divide-y divide-border">
         {filteredList.map((entry, i) => (
-          <SpeciesCard
+          <SpeciesRow
             key={entry.speciesName}
             entry={entry}
             index={i}
@@ -102,9 +134,9 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
   )
 }
 
-// ─── Species Card (grid item) ─────────────────────────────
+// ─── Species Row (compact list item) ──────────────────────
 
-function SpeciesCard({
+function SpeciesRow({
   entry,
   index = 0,
   onClick,
@@ -116,46 +148,39 @@ function SpeciesCard({
   const displayName = entry.speciesName.split('(')[0].trim()
   const scientificName = entry.speciesName.match(/\(([^)]+)\)/)?.[1]
   const wikiImage = useBirdImage(entry.speciesName)
+  const dateStr = entry.addedDate || entry.firstSeenDate
 
   return (
-    <Card
-      className={`overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] animate-card-in stagger-${Math.min(index + 1, 18)}`}
+    <button
+      className={`flex items-center gap-3 py-2.5 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted animate-card-in stagger-${Math.min(index + 1, 18)}`}
       onClick={onClick}
     >
-      <div className="aspect-[4/3] bg-muted overflow-hidden">
-        {wikiImage ? (
-          <img
-            src={wikiImage}
-            alt={displayName}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Bird size={32} className="text-muted-foreground/40" />
-          </div>
-        )}
-      </div>
-
-      <div className="p-3 space-y-1.5">
-        <h3 className="font-serif font-semibold text-foreground text-sm truncate">
+      <div className="flex-1 min-w-0">
+        <p className="font-serif font-semibold text-sm text-foreground truncate">
           {displayName}
-        </h3>
+        </p>
         {scientificName && (
           <p className="text-xs text-muted-foreground italic truncate">
             {scientificName}
           </p>
         )}
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="secondary" className="text-[10px] px-1.5">
-            {entry.totalOutings} {entry.totalOutings === 1 ? 'outing' : 'outings'}
-          </Badge>
-          <Badge variant="secondary" className="text-[10px] px-1.5">
-            {entry.totalCount} seen
-          </Badge>
-        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {entry.totalOutings} {entry.totalOutings === 1 ? 'outing' : 'outings'} · {entry.totalCount} seen · {new Date(dateStr).toLocaleDateString()}
+        </p>
       </div>
-    </Card>
+      {wikiImage ? (
+        <img
+          src={wikiImage}
+          alt={displayName}
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <Bird size={20} className="text-muted-foreground/40" />
+        </div>
+      )}
+    </button>
   )
 }
 
@@ -215,7 +240,7 @@ function SpeciesDetail({
         </div>
       ) : null}
 
-      <div className="px-4 sm:px-6 space-y-6 mt-5">
+      <div className="px-4 sm:px-6 space-y-4 mt-4">
         {/* Name + badges */}
         <div className="space-y-2">
           <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground">
