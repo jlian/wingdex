@@ -66,7 +66,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         (newSpeciesCount > 0 ? ` (${newSpeciesCount} new!)` : '')
       )
     } catch (error) {
-      toast.error('Failed to import eBird data')
+      const detail = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to import eBird data: ${detail}`)
       console.error(error)
     }
 
@@ -309,10 +310,10 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
           Photo-first bird identification for reverse birders.
-          Upload photos, let AI identify the species, build your life list.
+          Made by <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">John Lian</a>.
         </p>
         <p className="text-xs text-muted-foreground">
-          Version 1.0.0
+          Version 0.9.0
         </p>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 {
     "name": "birddex",
     "private": true,
-    "version": "0.0.0",
+    "version": "0.9.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
@@ -12,7 +12,6 @@
         "preview": "vite preview",
         "test": "vitest run",
         "test:unit": "vitest run src/__tests__/image-crop-dialog.test.ts src/__tests__/exif-extraction.test.ts src/__tests__/taxonomy.test.ts src/__tests__/add-photos-flow.test.ts src/__tests__/ai-inference.test.ts",
-        "test:integration": "vitest run src/__tests__/bird-id-integration.test.ts",
         "test:e2e": "npx playwright test",
         "test:watch": "vitest"
     },
