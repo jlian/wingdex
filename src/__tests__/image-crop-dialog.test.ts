@@ -6,19 +6,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * since the component uses the same logic for both mouse and touch.
  */
 
-// Replicate the coordinate calculation logic from the component
-function getPointerPosition(
-  clientX: number,
-  clientY: number,
-  rect: { left: number; top: number; width: number; height: number },
+// Replicate the letterbox-aware coordinate calculation from the component
+function getRenderedImageRect(
+  containerRect: { left: number; top: number; width: number; height: number },
   naturalWidth: number,
   naturalHeight: number
 ) {
-  const scaleX = naturalWidth / rect.width
-  const scaleY = naturalHeight / rect.height
+  const scale = Math.min(containerRect.width / naturalWidth, containerRect.height / naturalHeight)
+  const renderedW = naturalWidth * scale
+  const renderedH = naturalHeight * scale
+  const offsetX = (containerRect.width - renderedW) / 2
+  const offsetY = (containerRect.height - renderedH) / 2
+  return { offsetX, offsetY, renderedW, renderedH, scale }
+}
+
+function getPointerPosition(
+  clientX: number,
+  clientY: number,
+  containerRect: { left: number; top: number; width: number; height: number },
+  naturalWidth: number,
+  naturalHeight: number
+) {
+  const info = getRenderedImageRect(containerRect, naturalWidth, naturalHeight)
+  const relX = clientX - containerRect.left - info.offsetX
+  const relY = clientY - containerRect.top - info.offsetY
   return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY,
+    x: relX / info.scale,
+    y: relY / info.scale,
   }
 }
 
@@ -113,6 +127,35 @@ describe('ImageCropDialog pointer math', () => {
       
       expect(touchPos.x).toBe(mousePos.x)
       expect(touchPos.y).toBe(mousePos.y)
+    })
+  })
+
+  describe('letterboxed image coordinate mapping', () => {
+    // A wide image in a square container → horizontal letterboxing (bars top/bottom)
+    const squareRect = { left: 0, top: 0, width: 400, height: 400 }
+    const wideNatW = 4000
+    const wideNatH = 2000 // 2:1 aspect ratio
+    // scale = min(400/4000, 400/2000) = min(0.1, 0.2) = 0.1
+    // renderedW = 400, renderedH = 200, offsetX = 0, offsetY = 100
+
+    it('correctly maps center of a letterboxed image', () => {
+      // Center of rendered image = (200, 300) in screen coords (offsetY=100, so 100+100=200 center)
+      const pos = getPointerPosition(200, 200, squareRect, wideNatW, wideNatH)
+      expect(pos.x).toBe(2000) // center of 4000
+      expect(pos.y).toBe(1000) // center of 2000
+    })
+
+    it('maps top-left of rendered image (not container)', () => {
+      // The image starts at (0, 100) in the container
+      const pos = getPointerPosition(0, 100, squareRect, wideNatW, wideNatH)
+      expect(pos.x).toBeCloseTo(0, 5)
+      expect(pos.y).toBeCloseTo(0, 5)
+    })
+
+    it('returns negative coords when clicking in letterbox area', () => {
+      // Clicking at (200, 50) is above the rendered image (offsetY=100)
+      const pos = getPointerPosition(200, 50, squareRect, wideNatW, wideNatH)
+      expect(pos.y).toBeLessThan(0)
     })
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
@@ -13,64 +13,93 @@ interface ImageCropDialogProps {
   initialCropBox?: { x: number; y: number; width: number; height: number }
 }
 
+/** Compute the rendered image rect inside a container using object-contain logic */
+function getRenderedImageRect(img: HTMLImageElement, container: HTMLDivElement) {
+  const containerRect = container.getBoundingClientRect()
+  const cW = containerRect.width
+  const cH = containerRect.height
+  const iW = img.naturalWidth
+  const iH = img.naturalHeight
+  if (!iW || !iH || !cW || !cH) return null
+
+  const scale = Math.min(cW / iW, cH / iH)
+  const renderedW = iW * scale
+  const renderedH = iH * scale
+  const offsetX = (cW - renderedW) / 2
+  const offsetY = (cH - renderedH) / 2
+
+  return { offsetX, offsetY, renderedW, renderedH, scale, containerRect }
+}
+
 export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, initialCropBox }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0, width: 100, height: 100 })
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [scale, setScale] = useState(1)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (open && imageRef.current) {
-      const img = imageRef.current
-      if (initialCropBox) {
-        // Initialize from AI-suggested crop (percentage coords → pixel coords)
-        const pad = 0.1 // 10% extra padding
-        const rawX = (initialCropBox.x / 100) * img.naturalWidth
-        const rawY = (initialCropBox.y / 100) * img.naturalHeight
-        const rawW = (initialCropBox.width / 100) * img.naturalWidth
-        const rawH = (initialCropBox.height / 100) * img.naturalHeight
-        const padX = rawW * pad
-        const padY = rawH * pad
-        const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
-        const centerX = rawX + rawW / 2
-        const centerY = rawY + rawH / 2
-        setCrop({
-          x: Math.max(0, Math.min(centerX - cropSize / 2, img.naturalWidth - cropSize)),
-          y: Math.max(0, Math.min(centerY - cropSize / 2, img.naturalHeight - cropSize)),
-          width: Math.min(cropSize, img.naturalWidth),
-          height: Math.min(cropSize, img.naturalHeight),
-        })
-      } else {
-        const minDim = Math.min(img.naturalWidth, img.naturalHeight)
-        const cropSize = minDim * 0.6
-        setCrop({
-          x: (img.naturalWidth - cropSize) / 2,
-          y: (img.naturalHeight - cropSize) / 2,
-          width: cropSize,
-          height: cropSize
-        })
-      }
+  const initCrop = useCallback(() => {
+    const img = imageRef.current
+    if (!img || !img.naturalWidth) return
+    if (initialCropBox) {
+      const pad = 0.1
+      const rawX = (initialCropBox.x / 100) * img.naturalWidth
+      const rawY = (initialCropBox.y / 100) * img.naturalHeight
+      const rawW = (initialCropBox.width / 100) * img.naturalWidth
+      const rawH = (initialCropBox.height / 100) * img.naturalHeight
+      const padX = rawW * pad
+      const padY = rawH * pad
+      const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
+      const centerX = rawX + rawW / 2
+      const centerY = rawY + rawH / 2
+      setCrop({
+        x: Math.max(0, Math.min(centerX - cropSize / 2, img.naturalWidth - cropSize)),
+        y: Math.max(0, Math.min(centerY - cropSize / 2, img.naturalHeight - cropSize)),
+        width: Math.min(cropSize, img.naturalWidth),
+        height: Math.min(cropSize, img.naturalHeight),
+      })
+    } else {
+      const minDim = Math.min(img.naturalWidth, img.naturalHeight)
+      const cropSize = minDim * 0.6
+      setCrop({
+        x: (img.naturalWidth - cropSize) / 2,
+        y: (img.naturalHeight - cropSize) / 2,
+        width: cropSize,
+        height: cropSize
+      })
     }
-  }, [open, imageUrl, initialCropBox])
+  }, [initialCropBox])
 
-  const getPointerPosition = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
-    if (!imageRef.current) return null
-    const rect = currentTarget.getBoundingClientRect()
-    const scaleX = imageRef.current.naturalWidth / rect.width
-    const scaleY = imageRef.current.naturalHeight / rect.height
+  useEffect(() => {
+    if (open) {
+      setImageLoaded(false)
+    }
+  }, [open, imageUrl])
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true)
+    initCrop()
+  }, [initCrop])
+
+  /** Convert screen coords to image-space coords, accounting for object-contain letterboxing */
+  const getPointerPosition = (clientX: number, clientY: number) => {
+    if (!imageRef.current || !containerRef.current) return null
+    const info = getRenderedImageRect(imageRef.current, containerRef.current)
+    if (!info) return null
+
+    const relX = clientX - info.containerRect.left - info.offsetX
+    const relY = clientY - info.containerRect.top - info.offsetY
+
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
-      scaleX,
-      scaleY
+      x: relX / info.scale,
+      y: relY / info.scale,
     }
   }
 
-  const startDrag = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
-    const pos = getPointerPosition(clientX, clientY, currentTarget)
+  const startDrag = (clientX: number, clientY: number) => {
+    const pos = getPointerPosition(clientX, clientY)
     if (!pos) return
     if (
       pos.x >= crop.x &&
@@ -83,9 +112,9 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
     }
   }
 
-  const moveDrag = (clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
+  const moveDrag = (clientX: number, clientY: number) => {
     if (!isDragging || !dragStart || !imageRef.current) return
-    const pos = getPointerPosition(clientX, clientY, currentTarget)
+    const pos = getPointerPosition(clientX, clientY)
     if (!pos) return
     const x = Math.max(0, Math.min(pos.x - dragStart.x, imageRef.current.naturalWidth - crop.width))
     const y = Math.max(0, Math.min(pos.y - dragStart.y, imageRef.current.naturalHeight - crop.height))
@@ -98,11 +127,11 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
   }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    startDrag(e.clientX, e.clientY, e.currentTarget)
+    startDrag(e.clientX, e.clientY)
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    moveDrag(e.clientX, e.clientY, e.currentTarget)
+    moveDrag(e.clientX, e.clientY)
   }
 
   const handleMouseUp = () => {
@@ -112,15 +141,14 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 1) return
     const touch = e.touches[0]
-    startDrag(touch.clientX, touch.clientY, e.currentTarget)
+    startDrag(touch.clientX, touch.clientY)
   }
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 1) return
-    // Prevent scroll while dragging
     if (isDragging) e.preventDefault()
     const touch = e.touches[0]
-    moveDrag(touch.clientX, touch.clientY, e.currentTarget)
+    moveDrag(touch.clientX, touch.clientY)
   }
 
   const handleTouchEnd = () => {
@@ -176,7 +204,7 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-[200px]">
           <div
             ref={containerRef}
             className="relative w-full h-full cursor-move touch-none"
@@ -195,25 +223,33 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
               alt="Crop preview"
               className="w-full h-full object-contain"
               draggable={false}
+              onLoad={handleImageLoad}
             />
-            {imageRef.current && containerRef.current && (
-              <div
-                className="absolute border-2 border-accent shadow-lg pointer-events-none"
-                style={{
-                  left: `${(crop.x / imageRef.current.naturalWidth) * 100}%`,
-                  top: `${(crop.y / imageRef.current.naturalHeight) * 100}%`,
-                  width: `${(crop.width / imageRef.current.naturalWidth) * 100}%`,
-                  height: `${(crop.height / imageRef.current.naturalHeight) * 100}%`,
-                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
-                }}
-              >
-                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="border border-accent/30" />
-                  ))}
+            {imageLoaded && imageRef.current && containerRef.current && (() => {
+              const info = getRenderedImageRect(imageRef.current!, containerRef.current!)
+              if (!info) return null
+              const { offsetX, offsetY, renderedW, renderedH } = info
+              const natW = imageRef.current!.naturalWidth
+              const natH = imageRef.current!.naturalHeight
+              return (
+                <div
+                  className="absolute border-2 border-accent shadow-lg pointer-events-none"
+                  style={{
+                    left: `${offsetX + (crop.x / natW) * renderedW}px`,
+                    top: `${offsetY + (crop.y / natH) * renderedH}px`,
+                    width: `${(crop.width / natW) * renderedW}px`,
+                    height: `${(crop.height / natH) * renderedH}px`,
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
+                  }}
+                >
+                  <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <div key={i} className="border border-accent/30" />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
         </div>
 

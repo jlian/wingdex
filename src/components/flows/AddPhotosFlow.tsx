@@ -5,9 +5,11 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
-  X, CloudArrowUp, MapPin, CheckCircle, Question,
-  Crop, ArrowRight, SkipForward
+  CloudArrowUp, MapPin, CheckCircle, Question,
+  Crop, ArrowRight, ArrowLeft, SkipForward
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
@@ -217,7 +219,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     } else {
       toast.success(`All done! ${confirmed.length} species saved.`)
       setStep('complete')
-      setTimeout(onClose, 1500)
+      setTimeout(onClose, 3500)
     }
   }
 
@@ -352,14 +354,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl">{getTitle()}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4"
-              onClick={onClose}
-            >
-              <X size={20} />
-            </Button>
           </DialogHeader>
 
           {/* Upload */}
@@ -389,17 +383,16 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 />
               </div>
 
-              <div
-                className="flex items-center justify-center gap-2 cursor-pointer select-none"
-                onClick={() => setUseGeoContext(prev => !prev)}
-              >
-                <div className={`w-9 h-5 rounded-full relative transition-colors ${useGeoContext ? 'bg-primary' : 'bg-muted'}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${useGeoContext ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </div>
-                <MapPin size={16} className="text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-2">
+                <Switch
+                  id="geo-context"
+                  checked={useGeoContext}
+                  onCheckedChange={setUseGeoContext}
+                />
+                <Label htmlFor="geo-context" className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
+                  <MapPin size={16} />
                   Use GPS &amp; date for better species ID
-                </span>
+                </Label>
               </div>
             </div>
           )}
@@ -468,6 +461,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               totalPhotos={clusterPhotos.length}
               onConfirm={confirmCurrentPhoto}
               onSkip={advanceToNextPhoto}
+              onBack={currentPhotoIndex > 0 ? () => {
+                // Remove the last result (for the previous photo) and go back
+                setPhotoResults(prev => prev.slice(0, -1))
+                setCurrentCandidates([])
+                runSpeciesId(currentPhotoIndex - 1)
+              } : undefined}
               onRecrop={() => setStep('photo-manual-crop')}
               aiCropBox={fullCurrentPhoto.aiCropBox}
             />
@@ -491,7 +490,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         <ImageCropDialog
           imageUrl={fullCurrentPhoto.dataUrl}
           onCrop={handleManualCrop}
-          onCancel={() => advanceToNextPhoto()}
+          onCancel={() => {
+            // Go back to confirm screen (showing no-results) rather than silently skipping
+            setCurrentCandidates([])
+            setStep('photo-confirm')
+          }}
           open={true}
           initialCropBox={fullCurrentPhoto.aiCropBox}
         />
@@ -516,6 +519,7 @@ interface PerPhotoConfirmProps {
     count: number
   ) => void
   onSkip: () => void
+  onBack?: () => void
   onRecrop: () => void
   aiCropBox?: { x: number; y: number; width: number; height: number }
 }
@@ -527,6 +531,7 @@ function PerPhotoConfirm({
   totalPhotos,
   onConfirm,
   onSkip,
+  onBack,
   onRecrop,
   aiCropBox
 }: PerPhotoConfirmProps) {
@@ -595,7 +600,7 @@ function PerPhotoConfirm({
             <div style={{
               position: 'relative',
               width: '100%',
-              paddingBottom: `${(aiCropBox.height / aiCropBox.width) * 100}%`,
+              paddingBottom: `${Math.min((aiCropBox.height / aiCropBox.width) * 100, 150)}%`,
               overflow: 'hidden',
             }}>
               <img
@@ -763,6 +768,12 @@ function PerPhotoConfirm({
 
       {/* Bottom actions */}
       <div className="flex gap-2">
+        {onBack && (
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft size={16} className="mr-1" />
+            Back
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={onRecrop} className="flex-1">
           <Crop size={16} className="mr-1" weight="bold" />
           Re-crop

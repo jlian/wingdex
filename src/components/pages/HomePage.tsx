@@ -87,7 +87,7 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
                       )}
                     </div>
                     <Badge variant="secondary">
-                      {confirmed.length} {confirmed.length === 1 ? 'species' : 'species'}
+                      {confirmed.length} species
                     </Badge>
                   </div>
                 </Card>

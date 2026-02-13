@@ -69,9 +69,10 @@ function App() {
               Your Personal Bird Life List & Sighting Tracker
             </p>
           </div>
-          <Button size="lg" className="bg-primary text-primary-foreground">
-            Sign in with GitHub
-          </Button>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Loading...</span>
+          </div>
         </div>
       </div>
     )
