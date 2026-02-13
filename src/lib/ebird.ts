@@ -1,4 +1,4 @@
-import type { Outing, Observation, ImportPreview, DexEntry } from './types'
+import type { Outing, Observation, ImportPreview, DexEntry, SavedSpot } from './types'
 import { getDisplayName, getScientificName } from './utils'
 
 function csvEscape(value: string): string {
@@ -378,6 +378,63 @@ export function exportDexToCSV(dex: DexEntry[]): string {
   ].join('\n')
   
   return csv
+}
+
+/**
+ * Extract unique saved spots from eBird import previews.
+ * Groups by location name and takes the first available coordinates.
+ * Skips locations without coordinates and deduplicates against existing spots
+ * by name (case-insensitive) or coordinate proximity (~500m).
+ */
+export function extractSavedSpotsFromPreviews(
+  previews: ImportPreview[],
+  existingSpots: SavedSpot[] = []
+): SavedSpot[] {
+  // Collect unique locations with their best coordinates
+  const locationMap = new Map<string, { lat?: number; lon?: number }>()
+  for (const p of previews) {
+    const name = p.location.trim()
+    if (!name || name === 'Unknown') continue
+    if (!locationMap.has(name)) {
+      locationMap.set(name, { lat: p.lat, lon: p.lon })
+    } else if (p.lat != null && p.lon != null) {
+      // Fill in coordinates if the first occurrence lacked them
+      const existing = locationMap.get(name)!
+      if (existing.lat == null || existing.lon == null) {
+        existing.lat = p.lat
+        existing.lon = p.lon
+      }
+    }
+  }
+
+  // Build set of existing names (lowercase) and coordinates for dedup
+  const existingNames = new Set(existingSpots.map(s => s.name.toLowerCase()))
+
+  const isNearExisting = (lat: number, lon: number): boolean => {
+    return existingSpots.some(s => {
+      const dlat = Math.abs(s.lat - lat)
+      const dlon = Math.abs(s.lon - lon)
+      return dlat < 0.005 && dlon < 0.005 // ~500m
+    })
+  }
+
+  const spots: SavedSpot[] = []
+  for (const [name, coords] of locationMap) {
+    // Skip if already saved by name
+    if (existingNames.has(name.toLowerCase())) continue
+    // Skip if already saved by proximity (when we have coordinates)
+    if (coords.lat != null && coords.lon != null && isNearExisting(coords.lat, coords.lon)) continue
+
+    spots.push({
+      id: `spot_ebird_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      lat: coords.lat ?? 0,
+      lon: coords.lon ?? 0,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return spots
 }
 
 /** Format an ISO date string as YYYY-MM-DD for stable CSV output */
