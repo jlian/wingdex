@@ -59,6 +59,9 @@ export interface ImportPreview {
   date: string
   location: string
   count: number
+  lat?: number
+  lon?: number
+  time?: string
   conflict?: 'duplicate' | 'update_dates' | 'new'
   existingEntry?: LifeListEntry
 }

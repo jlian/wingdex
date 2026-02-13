@@ -1,6 +1,76 @@
 import type { Outing, Observation, ImportPreview, LifeListEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
 
+/**
+ * Groups parsed import previews into outing-shaped data.
+ * Records sharing the same date + location become one outing.
+ */
+export function groupPreviewsIntoOutings(
+  previews: ImportPreview[],
+  userId: string
+): { outings: Outing[]; observations: Observation[] } {
+  // Key by date (YYYY-MM-DD) + location
+  const groups = new Map<string, ImportPreview[]>()
+  for (const p of previews) {
+    const dateKey = new Date(p.date).toISOString().split('T')[0]
+    const key = `${dateKey}||${p.location}`
+    const existing = groups.get(key)
+    if (existing) {
+      existing.push(p)
+    } else {
+      groups.set(key, [p])
+    }
+  }
+
+  const outings: Outing[] = []
+  const observations: Observation[] = []
+
+  for (const [, group] of groups) {
+    const outingId = `outing_import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const first = group[0]
+    const startTime = first.date
+    // Use latest record time or +1h as endTime
+    const dates = group.map(p => new Date(p.date).getTime())
+    const endTime = new Date(Math.max(...dates) + 3600000).toISOString()
+
+    outings.push({
+      id: outingId,
+      userId,
+      startTime,
+      endTime,
+      locationName: first.location,
+      lat: first.lat,
+      lon: first.lon,
+      notes: 'Imported from eBird',
+      createdAt: new Date().toISOString(),
+    })
+
+    // Deduplicate species within the group
+    const speciesMap = new Map<string, { count: number }>()
+    for (const p of group) {
+      const existing = speciesMap.get(p.speciesName)
+      if (existing) {
+        existing.count += p.count
+      } else {
+        speciesMap.set(p.speciesName, { count: p.count })
+      }
+    }
+
+    for (const [species, info] of speciesMap) {
+      observations.push({
+        id: `obs_import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        outingId,
+        speciesName: species,
+        count: info.count,
+        certainty: 'confirmed',
+        notes: '',
+      })
+    }
+  }
+
+  return { outings, observations }
+}
+
 export function exportOutingToEBirdCSV(
   outing: Outing,
   observations: Observation[]
@@ -73,6 +143,9 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
     const date = row['date'] || row['observation date'] || row['obs date']
     const location = row['location'] || row['location name'] || row['locality']
     const count = parseInt(row['count'] || row['number'] || '1', 10)
+    const lat = parseFloat(row['latitude'] || row['lat'] || '')
+    const lon = parseFloat(row['longitude'] || row['lon'] || row['lng'] || '')
+    const time = row['time'] || row['start time'] || ''
     
     if (speciesName && date) {
       const fullName = scientificName && !speciesName.includes('(')
@@ -83,7 +156,10 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
         speciesName: fullName,
         date: normalizeDate(date),
         location: location || 'Unknown',
-        count: isNaN(count) ? 1 : count
+        count: isNaN(count) ? 1 : count,
+        lat: isNaN(lat) ? undefined : lat,
+        lon: isNaN(lon) ? undefined : lon,
+        time: time || undefined,
       })
     }
   }

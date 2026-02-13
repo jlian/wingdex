@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck } from '@phosphor-icons/react'
+import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck, CaretDown } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
-import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
+import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST } from '@/lib/seed-data'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
@@ -28,6 +29,8 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
+  const [showEBirdHelp, setShowEBirdHelp] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const handleImportEBird = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -42,28 +45,25 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         return
       }
 
-      const existingMap = new Map(
-        data.lifeList.map(entry => [entry.speciesName, entry])
+      // Group into outings + observations
+      const { outings, observations } = groupPreviewsIntoOutings(
+        previews,
+        `u${user.login}`
       )
 
-      const withConflicts = detectImportConflicts(previews, existingMap)
+      // Import outings, observations, and update life list
+      const { newSpeciesCount } = data.importFromEBird(outings, observations)
 
-      const entriesToImport = withConflicts
-        .filter(p => p.conflict === 'new' || p.conflict === 'update_dates')
-        .map(preview => ({
-          speciesName: preview.speciesName,
-          firstSeenDate: preview.date,
-          lastSeenDate: preview.date,
-          totalOutings: 1,
-          totalCount: preview.count,
-          notes: preview.location,
-          bestPhotoId: undefined
-        }))
+      const speciesCount = new Set(previews.map(p => p.speciesName)).size
 
-      data.importLifeListEntries(entriesToImport)
+      if (newSpeciesCount > 0) {
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3500)
+      }
 
       toast.success(
-        `Imported ${entriesToImport.length} species from eBird`
+        `Imported ${speciesCount} species across ${outings.length} outings` +
+        (newSpeciesCount > 0 ? ` (${newSpeciesCount} new!)` : '')
       )
     } catch (error) {
       toast.error('Failed to import eBird data')
@@ -88,6 +88,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   }
 
   return (
+    <>
+    <Confetti active={showConfetti} />
     <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto">
       <div className="space-y-2">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
@@ -133,6 +135,52 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             className="hidden"
             onChange={handleImportEBird}
           />
+
+          <button
+            onClick={() => setShowEBirdHelp(!showEBirdHelp)}
+            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer w-full"
+          >
+            <Info size={16} />
+            <span>How to export from eBird</span>
+            <CaretDown
+              size={14}
+              className={`transition-transform ${showEBirdHelp ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showEBirdHelp && (
+            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3 text-sm text-muted-foreground animate-fade-in">
+              <p className="font-medium text-foreground">
+                Export your eBird data in 3 steps:
+              </p>
+              <ol className="list-decimal list-inside space-y-2">
+                <li>
+                  Go to{' '}
+                  <a
+                    href="https://ebird.org/downloadMyData"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    ebird.org/downloadMyData
+                  </a>{' '}
+                  and sign in
+                </li>
+                <li>
+                  Click <strong className="text-foreground">Submit</strong> to
+                  request your data download
+                </li>
+                <li>
+                  You will receive an email with a download link for your CSV file.
+                  Upload that file here.
+                </li>
+              </ol>
+              <p className="text-xs">
+                BirdDex will create outings grouped by date and location, with all your
+                species as confirmed observations.
+              </p>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -268,6 +316,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </p>
       </Card>
     </div>
+    </>
   )
 }
 

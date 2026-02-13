@@ -145,6 +145,64 @@ export function useBirdDexData(userId: number) {
     })
   }
 
+  /** Import outings, observations, and update life list in one shot (for eBird CSV import) */
+  const importFromEBird = (
+    newOutings: Outing[],
+    newObservations: Observation[]
+  ): { newSpeciesCount: number } => {
+    // Add outings
+    setOutings(current => [...newOutings, ...(current || [])])
+    // Add observations
+    setObservations(current => [...(current || []), ...newObservations])
+
+    // Update life list
+    let newSpeciesCount = 0
+    setLifeList(current => {
+      const updated = new Map((current || []).map(entry => [entry.speciesName, entry]))
+
+      for (const outing of newOutings) {
+        const outingObs = newObservations.filter(
+          obs => obs.outingId === outing.id && obs.certainty === 'confirmed'
+        )
+        for (const obs of outingObs) {
+          const existing = updated.get(obs.speciesName)
+          const outingDate = new Date(outing.startTime)
+
+          if (existing) {
+            const firstDate = new Date(existing.firstSeenDate)
+            const lastDate = new Date(existing.lastSeenDate)
+            updated.set(obs.speciesName, {
+              ...existing,
+              firstSeenDate:
+                outingDate < firstDate ? outing.startTime : existing.firstSeenDate,
+              lastSeenDate:
+                outingDate > lastDate ? outing.startTime : existing.lastSeenDate,
+              totalOutings: existing.totalOutings + 1,
+              totalCount: existing.totalCount + obs.count,
+            })
+          } else {
+            newSpeciesCount++
+            updated.set(obs.speciesName, {
+              speciesName: obs.speciesName,
+              firstSeenDate: outing.startTime,
+              lastSeenDate: outing.startTime,
+              addedDate: new Date().toISOString(),
+              totalOutings: 1,
+              totalCount: obs.count,
+              notes: '',
+            })
+          }
+        }
+      }
+
+      return Array.from(updated.values()).sort((a, b) =>
+        a.speciesName.localeCompare(b.speciesName)
+      )
+    })
+
+    return { newSpeciesCount }
+  }
+
   const clearAllData = () => {
     setPhotos([])
     setOutings([])
@@ -182,6 +240,7 @@ export function useBirdDexData(userId: number) {
     getOutingPhotos,
     getLifeListEntry,
     importLifeListEntries,
+    importFromEBird,
     clearAllData,
     loadSeedData,
   }

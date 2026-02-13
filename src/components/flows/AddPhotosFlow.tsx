@@ -19,6 +19,7 @@ import type { BirdIdResult } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
+import { Confetti } from '@/components/ui/confetti'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 
@@ -74,6 +75,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     )
     return sorted[0]?.locationName || ''
   })
+
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const clusters = photos.length > 0 ? clusterPhotosIntoOutings(photos) : []
   const clusterPhotos = clusters[currentClusterIndex]?.photos ?? []
@@ -205,9 +208,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         return !existing || existing.totalOutings === 1
       })
       if (newSpecies.length > 0) {
+        setShowConfetti(true)
         toast.success(
           `🎉 ${newSpecies.length} new species added to your life list!`
         )
+        setTimeout(() => setShowConfetti(false), 3500)
       }
     }
 
@@ -511,6 +516,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           initialCropBox={fullCurrentPhoto.aiCropBox}
         />
       )}
+
+      <Confetti active={showConfetti} />
     </>
   )
 }
