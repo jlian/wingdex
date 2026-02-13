@@ -5,6 +5,7 @@ import ChevronRightIcon from "lucide-react/dist/esm/icons/chevron-right"
 import CircleIcon from "lucide-react/dist/esm/icons/circle"
 
 import { cn } from "@/lib/utils"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function Menubar({
   className,
@@ -35,9 +36,16 @@ function MenubarGroup({
 }
 
 function MenubarPortal({
+  container,
   ...props
 }: ComponentProps<typeof MenubarPrimitive.Portal>) {
-  return <MenubarPrimitive.Portal data-slot="menubar-portal" {...props} />
+  return (
+    <MenubarPrimitive.Portal
+      data-slot="menubar-portal"
+      container={container ?? getDefaultPortalContainer()}
+      {...props}
+    />
+  )
 }
 
 function MenubarRadioGroup({

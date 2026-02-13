@@ -7,6 +7,7 @@ import ChevronRightIcon from "lucide-react/dist/esm/icons/chevron-right"
 import CircleIcon from "lucide-react/dist/esm/icons/circle"
 
 import { cn } from "@/lib/utils"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function DropdownMenu({
   ...props
@@ -15,10 +16,15 @@ function DropdownMenu({
 }
 
 function DropdownMenuPortal({
+  container,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
   return (
-    <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
+    <DropdownMenuPrimitive.Portal
+      data-slot="dropdown-menu-portal"
+      container={container ?? getDefaultPortalContainer()}
+      {...props}
+    />
   )
 }
 
@@ -39,7 +45,7 @@ function DropdownMenuContent({
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPortal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
@@ -49,7 +55,7 @@ function DropdownMenuContent({
         )}
         {...props}
       />
-    </DropdownMenuPrimitive.Portal>
+    </DropdownMenuPortal>
   )
 }
 

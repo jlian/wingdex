@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import XIcon from "lucide-react/dist/esm/icons/x"
 
 import { cn } from "@/lib/utils"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function Dialog({
   ...props
@@ -20,14 +21,10 @@ function DialogPortal({
   container,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Portal>) {
-  const defaultContainer = typeof document !== 'undefined'
-    ? document.getElementById('spark-app')
-    : undefined
-
   return (
     <DialogPrimitive.Portal
       data-slot="dialog-portal"
-      container={container ?? defaultContainer ?? undefined}
+      container={container ?? getDefaultPortalContainer()}
       {...props}
     />
   )

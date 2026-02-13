@@ -5,6 +5,7 @@ import ChevronDownIcon from "lucide-react/dist/esm/icons/chevron-down"
 import ChevronUpIcon from "lucide-react/dist/esm/icons/chevron-up"
 
 import { cn } from "@/lib/utils"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function Select({
   ...props
@@ -57,7 +58,7 @@ function SelectContent({
   ...props
 }: ComponentProps<typeof SelectPrimitive.Content>) {
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={getDefaultPortalContainer()}>
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(

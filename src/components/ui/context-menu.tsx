@@ -7,6 +7,7 @@ import ChevronRightIcon from "lucide-react/dist/esm/icons/chevron-right"
 import CircleIcon from "lucide-react/dist/esm/icons/circle"
 
 import { cn } from "@/lib/utils"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function ContextMenu({
   ...props
@@ -31,10 +32,15 @@ function ContextMenuGroup({
 }
 
 function ContextMenuPortal({
+  container,
   ...props
 }: ComponentProps<typeof ContextMenuPrimitive.Portal>) {
   return (
-    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
+    <ContextMenuPrimitive.Portal
+      data-slot="context-menu-portal"
+      container={container ?? getDefaultPortalContainer()}
+      {...props}
+    />
   )
 }
 
@@ -100,7 +106,7 @@ function ContextMenuContent({
   ...props
 }: ComponentProps<typeof ContextMenuPrimitive.Content>) {
   return (
-    <ContextMenuPrimitive.Portal>
+    <ContextMenuPortal>
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
         className={cn(
@@ -109,7 +115,7 @@ function ContextMenuContent({
         )}
         {...props}
       />
-    </ContextMenuPrimitive.Portal>
+    </ContextMenuPortal>
   )
 }
 

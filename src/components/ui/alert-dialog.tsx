@@ -5,6 +5,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { getDefaultPortalContainer } from "@/components/ui/portal-container"
 
 function AlertDialog({
   ...props
@@ -24,14 +25,10 @@ function AlertDialogPortal({
   container,
   ...props
 }: ComponentProps<typeof AlertDialogPrimitive.Portal>) {
-  const defaultContainer = typeof document !== 'undefined'
-    ? document.getElementById('spark-app')
-    : undefined
-
   return (
     <AlertDialogPrimitive.Portal
       data-slot="alert-dialog-portal"
-      container={container ?? defaultContainer ?? undefined}
+      container={container ?? getDefaultPortalContainer()}
       {...props}
     />
   )
