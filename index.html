@@ -8,6 +8,23 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content="Upload bird photos, let AI identify the species, build your BirdDex." />
     <meta name="theme-color" content="#2d5a27" />
+        <script>
+            (() => {
+                try {
+                    const stored = localStorage.getItem('theme')
+                    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+                    const theme = stored === 'dark' || stored === 'light'
+                        ? stored
+                        : (systemDark ? 'dark' : 'light')
+
+                    document.documentElement.classList.remove('light', 'dark')
+                    document.documentElement.classList.add(theme)
+                    document.documentElement.style.colorScheme = theme
+                } catch {
+                    // no-op: fall back to default rendering
+                }
+            })()
+        </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:wght@400;600;700&display=swap" rel="stylesheet">
