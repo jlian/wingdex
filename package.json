@@ -1,7 +1,7 @@
 {
     "name": "birddex",
     "private": true,
-    "version": "0.9.0",
+    "version": "1.0.0",
     "description": "Photo-first bird identification and BirdDex tracker, built on GitHub Spark",
     "repository": {
         "type": "git",

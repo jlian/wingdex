@@ -47,7 +47,7 @@ test.describe('App smoke tests', () => {
 
     // Navigate back to Home
     await page.getByRole('tab', { name: 'Home' }).first().click();
-    await expect(page.getByRole('button', { name: 'Add Photos' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 });
   });
 
   test('add photos button opens flow on mobile', async ({ page }) => {
@@ -55,8 +55,8 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // The header Add Photos button should be visible
-    const addBtn = page.getByRole('button', { name: 'Add Photos' });
+    // The home page Upload & Identify button should be visible
+    const addBtn = page.getByRole('button', { name: 'Upload & Identify' });
     await expect(addBtn).toBeVisible();
 
     // Click it to open the add photos dialog
@@ -68,8 +68,8 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Open dialog via header button
-    await page.getByRole('button', { name: 'Add Photos' }).click();
+    // Open dialog via Upload & Identify button
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Close via the X button
@@ -114,7 +114,7 @@ test.describe('App smoke tests', () => {
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Open the wizard
-    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Should start on the upload step with "Choose Photos" button
@@ -142,7 +142,7 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Upload multiple test images
@@ -164,7 +164,7 @@ test.describe('App smoke tests', () => {
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Open add photos dialog
-    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Upload a file to move past the initial 'upload' step
@@ -195,7 +195,7 @@ test.describe('App smoke tests', () => {
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Open and advance the wizard
-    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     const fileInput = page.locator('input[type="file"]');

@@ -58,7 +58,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
           >
             <Camera size={20} className="mr-2" weight="bold" />
-            Select Photos
+            Upload & Identify
           </Button>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <ImageIcon size={14} /> Photos never stored
@@ -83,7 +83,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               onClick={onAddPhotos}
             >
               <Camera size={16} className="mr-1.5" weight="bold" />
-              Select Photos
+              Upload & Identify
             </Button>
           </div>
 

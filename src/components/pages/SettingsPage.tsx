@@ -140,7 +140,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Import & Export</h3>
           <p className="text-sm text-muted-foreground">
-            Sync your data with eBird
+            Import your eBird life list or export your BirdDex data
           </p>
         </div>
 
@@ -230,22 +230,20 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </h3>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
-            <strong>Your photos are not stored by BirdDex.</strong> During AI
-            identification, compressed photo data is sent to GitHub Spark&apos;s
-            `/_spark/llm` proxy (GitHub Models), then discarded from app state
-            after processing.
+            <strong>Your photos are never stored.</strong> During identification,
+            compressed images are sent to GitHub Models for AI processing, then
+            immediately discarded.
           </p>
           <p>
-            Your birding records (outings, species, sightings) are stored on
-            GitHub&apos;s infrastructure, scoped entirely to your GitHub
-            account. <strong>BirdDex does not run a separate backend service</strong>
-            — app data lives in GitHub&apos;s key-value store tied to your login.
+            Your birding records (outings, species, and sightings) are saved
+            to GitHub&apos;s key-value store, scoped to your GitHub account.
+            There is no separate backend; all data stays within GitHub&apos;s
+            infrastructure.
           </p>
           <p>
-            If you choose GPS location lookup during outing review, approximate
-            coordinates are sent to OpenStreetMap Nominatim to suggest a place
-            name. Species images are loaded on-demand from Wikimedia Commons
-            and Wikipedia.
+            Location lookups use OpenStreetMap Nominatim to resolve GPS
+            coordinates into place names. Species images are loaded on-demand
+            from Wikimedia Commons.
           </p>
         </div>
       </Card>
@@ -313,7 +311,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             <h3 className="font-semibold text-foreground">Vision API Test</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Test if the AI bird identification is working properly
+            Verify that AI-powered bird identification is available
           </p>
         </div>
         
@@ -338,7 +336,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           
           <Alert>
             <AlertDescription className="text-xs">
-              If the test fails, bird identification will not work. Check browser console for detailed errors.
+              If the test fails, photo identification won&apos;t work. Check the browser console for details.
             </AlertDescription>
           </Alert>
         </div>
@@ -347,11 +345,11 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
-          Photo-first bird identification for reverse birders.
-          Made by <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">John Lian</a>.
+          Upload your bird photos, let AI do the identifying.
+          Built by <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">John Lian</a>.
         </p>
         <p className="text-xs text-muted-foreground">
-          Version 0.9.0
+          Version 1.0.0
         </p>
       </Card>
     </div>

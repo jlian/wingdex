@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { House, List, Bird, Gear, Plus } from '@phosphor-icons/react'
+import { House, List, Bird, Gear } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
@@ -207,16 +206,8 @@ function AppContent({ user }: { user: UserInfo }) {
                 ))}
               </TabsList>
 
-              {/* Right side: upload + avatar */}
+              {/* Right side: avatar */}
               <div className="flex items-center gap-3">
-                <Button
-                  size="sm"
-                  onClick={() => setShowAddPhotos(true)}
-                  className="flex bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  <Plus size={16} className="mr-1" weight="bold" />
-                  Add Photos
-                </Button>
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatarUrl} alt={user.login} />
                   <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
