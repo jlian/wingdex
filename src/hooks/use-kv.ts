@@ -1,31 +1,17 @@
-import { useState, useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 /**
- * KV hook for BirdDex.
- *
- * • Production (*.github.app) — uses Spark KV exclusively.
- * • Dev / Codespaces          — falls back to localStorage. A banner can be
- *   shown via `useIsLocalStorageMode()`.
- *
- * localStorage is **never** read or written when Spark KV is available.
+ * Drop-in replacement for @github/spark's useKV hook.
+ * Tries Spark KV first (works at birddex--jlian.github.app), falls back to
+ * localStorage when Spark KV is unavailable (e.g. regular codespaces).
  */
 
 type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 
 const LS_PREFIX = 'birddex_kv_'
 const KV_BASE = '/_spark/kv'
+const SPARK_KV_PROBE_TTL_MS = 30_000
 const SPARK_KV_WRITE_RETRIES = 2
-
-// ── Probe (singleton promise — runs at most once) ───────────────────────
-
-let _probePromise: Promise<boolean> | null = null
-let _sparkKvAvailable: boolean | null = null
-
-/** Listeners for the external store that tracks localStorage-mode. */
-const _modeListeners = new Set<() => void>()
-function notifyModeListeners() {
-  _modeListeners.forEach((l) => l())
-}
 
 function isSparkHostedRuntime(): boolean {
   if (typeof window === 'undefined') return false
@@ -33,54 +19,32 @@ function isSparkHostedRuntime(): boolean {
   return host === 'github.app' || host.endsWith('.github.app')
 }
 
-function probeSparkKv(): Promise<boolean> {
-  if (_probePromise) return _probePromise
+// Cached after first probe so we only check once
+let _sparkKvAvailable: boolean | null = null
+let _sparkKvCheckedAt = 0
 
+async function probeSparkKv(): Promise<boolean> {
   if (!isSparkHostedRuntime()) {
     _sparkKvAvailable = false
-    _probePromise = Promise.resolve(false)
-    notifyModeListeners()
-    return _probePromise
+    _sparkKvCheckedAt = Date.now()
+    return false
   }
 
-  _probePromise = (async () => {
-    try {
-      // GET a key that will never exist. 404 ⇒ KV is reachable.
-      const res = await fetch(`${KV_BASE}/__probe__`, { method: 'GET' })
-      _sparkKvAvailable = res.ok || res.status === 404
-    } catch {
-      _sparkKvAvailable = false
-    }
-    notifyModeListeners()
-    return _sparkKvAvailable
-  })()
-
-  return _probePromise
+  const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
+  if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
+  try {
+    // Probe by GETting a specific key. The listing endpoint (/_spark/kv)
+    // isn't supported by the production runtime. A 404 on a single key
+    // means "key not found" which still proves KV is reachable.
+    const res = await fetch(`${KV_BASE}/__probe__`, { method: 'GET' })
+    _sparkKvAvailable = res.ok || res.status === 404
+    _sparkKvCheckedAt = Date.now()
+  } catch {
+    _sparkKvAvailable = false
+    _sparkKvCheckedAt = Date.now()
+  }
+  return _sparkKvAvailable
 }
-
-// ── Hook: surface whether we're in localStorage-only mode ───────────────
-
-/**
- * Returns `true` when the app is running in localStorage-only (dev) mode.
- * Returns `null` while the probe is still in-flight.
- */
-export function useIsLocalStorageMode(): boolean | null {
-  const mode = useSyncExternalStore(
-    (cb) => {
-      _modeListeners.add(cb)
-      // Kick off the probe if it hasn't started yet
-      void probeSparkKv()
-      return () => { _modeListeners.delete(cb) }
-    },
-    () => _sparkKvAvailable,   // client snapshot
-    () => null,                // server snapshot
-  )
-  // invert: _sparkKvAvailable === true → NOT localStorage mode
-  if (mode === null) return null
-  return !mode
-}
-
-// ── Spark KV helpers ────────────────────────────────────────────────────
 
 async function sparkKvGet<T>(key: string): Promise<T | undefined> {
   try {
@@ -94,6 +58,7 @@ async function sparkKvGet<T>(key: string): Promise<T | undefined> {
 }
 
 async function sparkKvSet<T>(key: string, value: T): Promise<boolean> {
+  let ok = false
   for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
     try {
       const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
@@ -101,108 +66,134 @@ async function sparkKvSet<T>(key: string, value: T): Promise<boolean> {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(value),
       })
-      if (res.ok) return true
-    } catch { /* retry */ }
+      if (res.ok) {
+        ok = true
+        break
+      }
+    } catch { /* ignore and retry */ }
   }
-  console.warn(`[useKV] Failed to persist "${key}" to Spark KV after retries.`)
-  return false
+
+  if (!ok) {
+    console.warn(`[useKV] Failed to persist key "${key}" to Spark KV after retries; localStorage remains source of truth for this session.`)
+  }
+
+  return ok
 }
 
 async function sparkKvDelete(key: string): Promise<boolean> {
+  let ok = false
   for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
     try {
       const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, { method: 'DELETE' })
-      if (res.ok) return true
-    } catch { /* retry */ }
+      if (res.ok) {
+        ok = true
+        break
+      }
+    } catch { /* ignore and retry */ }
   }
-  console.warn(`[useKV] Failed to delete "${key}" from Spark KV after retries.`)
-  return false
+
+  if (!ok) {
+    console.warn(`[useKV] Failed to delete key "${key}" from Spark KV after retries.`)
+  }
+
+  return ok
 }
 
-// ── localStorage helpers (dev mode only) ────────────────────────────────
-
-function lsGet<T>(key: string, fallback: T): T {
+async function tryRefreshSparkKv(ref: { current: boolean }): Promise<boolean> {
   try {
-    const raw = localStorage.getItem(LS_PREFIX + key)
-    if (raw !== null) return JSON.parse(raw)
+    const available = await probeSparkKv()
+    ref.current = available
+    return available
+  } catch {
+    ref.current = false
+    return false
+  }
+}
+
+function getLocalStorage<T>(key: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(LS_PREFIX + key)
+    if (stored !== null) return JSON.parse(stored)
   } catch { /* ignore */ }
   return fallback
 }
 
-function lsSet<T>(key: string, value: T): void {
-  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(value)) } catch { /* ignore */ }
+function setLocalStorage<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify(value))
+  } catch { /* ignore */ }
 }
-
-function lsRemove(key: string): void {
-  try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
-}
-
-// ── Main hook ───────────────────────────────────────────────────────────
 
 export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void] {
-  const [value, setValue] = useState<T>(initialValue)
-  const [ready, setReady] = useState(false)
+  const [value, setValue] = useState<T>(() => getLocalStorage(key, initialValue))
+  const useSparkKv = useRef(false)
 
-  // On mount: determine backend, load value from the right place
+  // On mount: probe Spark KV, load from it if available
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const kvAvailable = await probeSparkKv()
+      const available = await probeSparkKv()
       if (cancelled) return
-
-      if (kvAvailable) {
-        // ── Production: Spark KV is the sole source of truth ──
+      useSparkKv.current = available
+      if (available) {
         const stored = await sparkKvGet<T>(key)
         if (cancelled) return
         if (stored !== undefined) {
           setValue(stored)
+          setLocalStorage(key, stored) // sync to localStorage as backup
         } else {
-          // Key doesn't exist yet — seed it with initialValue
-          await sparkKvSet(key, initialValue)
-          setValue(initialValue)
+          // Key doesn't exist in Spark KV yet — seed it
+          await sparkKvSet(key, getLocalStorage(key, initialValue))
         }
-      } else {
-        // ── Dev mode: localStorage fallback ──
-        setValue(lsGet(key, initialValue))
       }
-      setReady(true)
     })()
     return () => { cancelled = true }
   }, [key, initialValue])
 
-  // Cross-tab sync (dev mode only — localStorage)
+  // Sync across tabs via storage event (localStorage only)
   useEffect(() => {
-    if (_sparkKvAvailable) return // KV mode — no localStorage sync
     const handler = (e: StorageEvent) => {
       if (e.key !== LS_PREFIX + key) return
-      if (e.newValue === null) { setValue(initialValue); return }
+      if (e.newValue === null) {
+        setValue(initialValue)
+        return
+      }
       try { setValue(JSON.parse(e.newValue)) } catch { /* ignore */ }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
-  }, [key, initialValue, ready])
+  }, [key, initialValue])
 
   const userSetValue: SetValue<T> = useCallback((newValue) => {
-    setValue((current) => {
-      const next = typeof newValue === 'function'
-        ? (newValue as (prev: T) => T)(current)
+    setValue((currentValue) => {
+      const nextValue = typeof newValue === 'function'
+        ? (newValue as (prev: T) => T)(currentValue)
         : newValue
-
-      if (_sparkKvAvailable) {
-        void sparkKvSet(key, next)
+      setLocalStorage(key, nextValue)
+      if (useSparkKv.current) {
+        void sparkKvSet(key, nextValue)
       } else {
-        lsSet(key, next)
+        void tryRefreshSparkKv(useSparkKv).then((available) => {
+          if (available) {
+            void sparkKvSet(key, nextValue)
+          }
+        })
       }
-      return next
+      return nextValue
     })
   }, [key])
 
   const deleteValue = useCallback(() => {
     setValue(initialValue)
-    if (_sparkKvAvailable) {
+    try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
+    if (useSparkKv.current) {
       void sparkKvDelete(key)
     } else {
-      lsRemove(key)
+      void tryRefreshSparkKv(useSparkKv).then((available) => {
+        if (available) {
+          void sparkKvDelete(key)
+        }
+      })
     }
   }, [key, initialValue])
 

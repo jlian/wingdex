@@ -2,10 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { House, List, Bird, Gear, Database } from '@phosphor-icons/react'
+import { House, List, Bird, Gear } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
-import { useIsLocalStorageMode } from '@/hooks/use-kv'
 
 import HomePage from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
@@ -162,7 +161,6 @@ function AppContent({ user }: { user: UserInfo }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData(user.id)
-  const isLocalStorageMode = useIsLocalStorageMode()
 
   const navItems = [
     { value: 'home', label: 'Home', icon: House },
@@ -174,13 +172,6 @@ function AppContent({ user }: { user: UserInfo }) {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
-
-      {isLocalStorageMode && (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 text-center text-xs text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1.5">
-          <Database size={14} weight="bold" />
-          Dev mode — data stored in localStorage only
-        </div>
-      )}
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
         {/* ── Top header + desktop nav ──────────────────────── */}
