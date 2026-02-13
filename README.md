@@ -73,7 +73,6 @@ npm run dev
 | `npm run test` | Run all tests (Vitest) |
 | `npm run test:unit` | Run unit tests only |
 | `npm run test:e2e` | Run end-to-end tests (Playwright) |
-| `npm run test:smoke` | Run smoke tests only |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run lint` | Lint with ESLint |
 | `npm run preview` | Preview production build |
