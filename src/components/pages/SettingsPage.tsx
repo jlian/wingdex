@@ -349,7 +349,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           Built by <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">John Lian</a>.
         </p>
         <p className="text-xs text-muted-foreground">
-          Version 1.0.0
+          Version {APP_VERSION}
         </p>
       </Card>
     </div>
