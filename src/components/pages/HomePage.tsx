@@ -62,13 +62,13 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </Button>
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <ImageIcon size={16} /> AI-powered ID
+              <ImageIcon size={16} /> Photos never stored
             </span>
             <span className="flex items-center gap-1.5">
-              <Bird size={16} /> Auto BirdDex
+              <Bird size={16} /> Batch upload wizard
             </span>
             <span className="flex items-center gap-1.5">
-              <Binoculars size={16} /> eBird export
+              <Binoculars size={16} /> Outings ↔ BirdDex
             </span>
           </div>
         </div>

@@ -19,9 +19,8 @@
         "optimize": "vite optimize",
         "preview": "vite preview",
         "test": "vitest run",
-        "test:unit": "vitest run src/__tests__ --exclude src/__tests__/*.integration.test.ts",
+        "test:unit": "vitest run src/__tests__",
         "test:e2e": "npx playwright test",
-        "test:smoke": "npx playwright test e2e/smoke.spec.ts",
         "test:watch": "vitest"
     },
     "dependencies": {

@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +27,12 @@ import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import { Confetti } from '@/components/ui/confetti'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
+import {
+  needsCloseConfirmation,
+  resolvePhotoResults,
+  filterConfirmedResults,
+} from '@/lib/add-photos-helpers'
+import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 
 interface AddPhotosFlowProps {
   data: BirdDexDataStore
@@ -29,27 +40,10 @@ interface AddPhotosFlowProps {
   userId: number
 }
 
-type FlowStep =
-  | 'upload'
-  | 'extracting'
-  | 'review'
-  | 'photo-manual-crop'
-  | 'photo-processing'
-  | 'photo-confirm'
-  | 'complete'
-
 interface PhotoWithCrop extends Photo {
   croppedDataUrl?: string
   aiCropped?: boolean
   aiCropBox?: { x: number; y: number; width: number; height: number }
-}
-
-interface PhotoResult {
-  photoId: string
-  species: string
-  confidence: number
-  status: ObservationStatus
-  count: number
 }
 
 export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
@@ -77,6 +71,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   })
 
   const [showConfetti, setShowConfetti] = useState(false)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open && needsCloseConfirmation(step)) {
+      setShowCloseConfirm(true)
+    } else {
+      onClose()
+    }
+  }
 
   const clusters = photos.length > 0 ? clusterPhotosIntoOutings(photos) : []
   const clusterPhotos = clusters[currentClusterIndex]?.photos ?? []
@@ -141,8 +144,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   // ─── Advance to next photo or finish ─────────────────────
   const advanceToNextPhoto = (results?: PhotoResult[]) => {
-    // Guard against being called as an onClick handler with a MouseEvent
-    const finalResults = Array.isArray(results) ? results : photoResults
+    const finalResults = resolvePhotoResults(results, photoResults)
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
@@ -169,9 +171,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   // ─── Save all observations and finish ────────────────────
   const saveOuting = (allResults: PhotoResult[]) => {
-    const confirmed = allResults.filter(
-      r => r.status === 'confirmed' || r.status === 'possible'
-    )
+    const confirmed = filterConfirmedResults(allResults)
 
     const speciesMap = new Map<
       string,
@@ -366,7 +366,22 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   return (
     <>
-      <Dialog open={step !== 'photo-manual-crop'} onOpenChange={onClose}>
+      <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard progress?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your upload is still in progress. If you close now, any unsaved changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue uploading</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onClose}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={step !== 'photo-manual-crop'} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl">{getTitle()}</DialogTitle>

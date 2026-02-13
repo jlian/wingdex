@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 
 test.describe('App smoke tests', () => {
   test('loads without crashing and shows header', async ({ page }) => {
@@ -106,5 +107,113 @@ test.describe('App smoke tests', () => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     const viewportWidth = await page.evaluate(() => window.innerWidth);
     expect(bodyWidth).toBeLessThanOrEqual(viewportWidth);
+  });
+
+  test('upload flow processes photos and reaches review outing step', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    // Open the wizard
+    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+    // Should start on the upload step with "Choose Photos" button
+    await expect(page.getByRole('button', { name: 'Choose Photos' })).toBeVisible();
+
+    // Upload a test image
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+
+    // Should show the extracting step with progress
+    await expect(
+      page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Should eventually reach the review outing step
+    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 15_000 });
+
+    // Review step should show outing details and a continue button
+    await expect(
+      page.getByRole('button', { name: /continue to species/i })
+    ).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('upload flow handles multiple photos', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+    // Upload multiple test images
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles([
+      path.resolve('src/assets/images/bird-test.jpeg'),
+      path.resolve('src/assets/images/stellers-jay.jpg'),
+    ]);
+
+    // Should reach the review outing step
+    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 15_000 });
+
+    // Should show the photo count somewhere in the review
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('closing upload wizard mid-flow shows confirmation dialog', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    // Open add photos dialog
+    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+    // Upload a file to move past the initial 'upload' step
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+
+    // Wait for the wizard to advance past the upload step
+    await expect(
+      page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Try to close via the X button — should show confirmation
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+
+    // Confirmation alert dialog should appear
+    await expect(page.getByText('Discard progress?')).toBeVisible({ timeout: 5_000 });
+
+    // Click "Continue uploading" to dismiss confirmation
+    await page.getByRole('button', { name: 'Continue uploading' }).click();
+    await expect(page.getByText('Discard progress?')).not.toBeVisible();
+
+    // The wizard should still be open
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('confirmation dialog discards wizard when clicking Discard', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    // Open and advance the wizard
+    await page.getByRole('button', { name: 'Add Photos' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+
+    await expect(
+      page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Try to close
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByText('Discard progress?')).toBeVisible({ timeout: 5_000 });
+
+    // Click "Discard" to close the wizard
+    await page.getByRole('button', { name: 'Discard' }).click();
+
+    // Both the confirmation and the wizard should be gone
+    await expect(page.getByText('Discard progress?')).not.toBeVisible();
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
   });
 });
