@@ -174,7 +174,7 @@ export default function OutingReview({
             <CheckCircle size={18} weight="fill" className="text-green-500" />
             <span className="text-green-600 dark:text-green-400 font-medium">GPS detected</span>
             <span className="text-muted-foreground">
-              ({cluster.centerLat.toFixed(4)}, {cluster.centerLon.toFixed(4)})
+              ({cluster.centerLat?.toFixed(4)}, {cluster.centerLon?.toFixed(4)})
             </span>
           </div>
         ) : (

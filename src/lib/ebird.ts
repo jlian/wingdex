@@ -51,17 +51,22 @@ function splitScientificName(scientificName: string): { genus: string; species: 
 
 /**
  * Groups parsed import previews into outing-shaped data.
- * Records sharing the same date + location become one outing.
+ * When submissionId is available (eBird download), records sharing the same
+ * submissionId become one outing. Otherwise falls back to date + location grouping.
  */
 export function groupPreviewsIntoOutings(
   previews: ImportPreview[],
   userId: string
 ): { outings: Outing[]; observations: Observation[] } {
-  // Key by date (YYYY-MM-DD) + location
   const groups = new Map<string, ImportPreview[]>()
   for (const p of previews) {
-    const dateKey = new Date(p.date).toISOString().split('T')[0]
-    const key = `${dateKey}||${p.location}`
+    let key: string
+    if (p.submissionId) {
+      key = p.submissionId
+    } else {
+      const dateKey = new Date(p.date).toISOString().split('T')[0]
+      key = `${dateKey}||${p.location}`
+    }
     const existing = groups.get(key)
     if (existing) {
       existing.push(p)
@@ -81,6 +86,11 @@ export function groupPreviewsIntoOutings(
     const dates = group.map(p => new Date(p.date).getTime())
     const endTime = new Date(Math.max(...dates) + 3600000).toISOString()
 
+    const checklistNotes = first.checklistNotes || ''
+    const outingNotes = checklistNotes
+      ? `Imported from eBird – ${checklistNotes}`
+      : 'Imported from eBird'
+
     outings.push({
       id: outingId,
       userId,
@@ -90,18 +100,23 @@ export function groupPreviewsIntoOutings(
       defaultLocationName: first.location,
       lat: first.lat,
       lon: first.lon,
-      notes: 'Imported from eBird',
+      notes: outingNotes,
       createdAt: new Date().toISOString(),
     })
 
     // Deduplicate species within the group
-    const speciesMap = new Map<string, { count: number }>()
+    const speciesMap = new Map<string, { count: number; notes: string }>()
     for (const p of group) {
       const existing = speciesMap.get(p.speciesName)
       if (existing) {
         existing.count += p.count
+        if (p.observationNotes && !existing.notes.includes(p.observationNotes)) {
+          existing.notes = existing.notes
+            ? `${existing.notes}; ${p.observationNotes}`
+            : p.observationNotes
+        }
       } else {
-        speciesMap.set(p.speciesName, { count: p.count })
+        speciesMap.set(p.speciesName, { count: p.count, notes: p.observationNotes || '' })
       }
     }
 
@@ -112,7 +127,7 @@ export function groupPreviewsIntoOutings(
         speciesName: species,
         count: info.count,
         certainty: 'confirmed',
-        notes: '',
+        notes: info.notes,
       })
     }
   }
@@ -144,7 +159,7 @@ export function exportOutingToEBirdCSV(
         commonName,
         genus,
         species,
-        obs.count > 0 ? String(obs.count) : 'X',
+        obs.count > 0 ? String(obs.count) : 'X', // eBird convention: X = present
         speciesComments,
         sanitizeForEBird(outing.locationName),
         outing.lat?.toFixed(6) || '',
@@ -190,14 +205,21 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
     const scientificName = row['scientific name'] || row['species']
     const date = row['date'] || row['observation date'] || row['obs date']
     const location = row['location'] || row['location name'] || row['locality']
-    const count = parseInt(row['count'] || row['number'] || '1', 10)
+    const rawCount = (row['count'] || row['number'] || '').trim()
     const lat = parseFloat(row['latitude'] || row['lat'] || '')
     const lon = parseFloat(row['longitude'] || row['lon'] || row['lng'] || '')
     const time = row['time'] || row['start time'] || ''
+    const submissionId = row['submission id'] || ''
+    const stateProvince = row['state/province'] || row['state'] || ''
+    const observationNotes = row['observation details'] || row['species comments'] || ''
+    const checklistNotes = row['checklist comments'] || row['submission comments'] || ''
     
     if (speciesName && date) {
-      const normalizedDate = normalizeDate(date)
+      const normalizedDate = normalizeDate(date, time)
       if (!normalizedDate) continue
+
+      // "X" means species present but not counted — treat as 1
+      const count = rawCount.toUpperCase() === 'X' ? 1 : parseInt(rawCount || '1', 10)
 
       const fullName = scientificName && !speciesName.includes('(')
         ? `${speciesName} (${scientificName})`
@@ -211,6 +233,10 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
         lat: isNaN(lat) ? undefined : lat,
         lon: isNaN(lon) ? undefined : lon,
         time: time || undefined,
+        submissionId: submissionId || undefined,
+        stateProvince: stateProvince || undefined,
+        observationNotes: observationNotes || undefined,
+        checklistNotes: checklistNotes || undefined,
       })
     }
   }
@@ -246,15 +272,51 @@ function parseCSVLine(line: string): string[] {
   return values
 }
 
-function normalizeDate(dateStr: string): string | null {
+function normalizeDate(dateStr: string, timeStr?: string): string | null {
   try {
+    // Parse the date portion first
     const date = new Date(dateStr)
-    if (!isNaN(date.getTime())) {
-      return date.toISOString()
+    if (isNaN(date.getTime())) return null
+
+    // Combine with time if available (handles "08:15 AM", "01:09 PM", "14:30")
+    if (timeStr) {
+      const parsed = parseTimeString(timeStr)
+      if (parsed) {
+        date.setHours(parsed.hours, parsed.minutes, 0, 0)
+      }
     }
+
+    return date.toISOString()
   } catch {
     
   }
+  return null
+}
+
+/**
+ * Parse time strings in 12-hour ("08:15 AM") or 24-hour ("14:30") format.
+ */
+function parseTimeString(timeStr: string): { hours: number; minutes: number } | null {
+  const trimmed = timeStr.trim()
+  if (!trimmed) return null
+
+  // 12-hour format: "08:15 AM", "1:09 PM"
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (match12) {
+    let hours = parseInt(match12[1], 10)
+    const minutes = parseInt(match12[2], 10)
+    const period = match12[3].toUpperCase()
+    if (period === 'AM' && hours === 12) hours = 0
+    if (period === 'PM' && hours !== 12) hours += 12
+    return { hours, minutes }
+  }
+
+  // 24-hour format: "14:30", "08:15"
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/)
+  if (match24) {
+    return { hours: parseInt(match24[1], 10), minutes: parseInt(match24[2], 10) }
+  }
+
   return null
 }
 
@@ -287,7 +349,8 @@ export function detectImportConflicts(
 
 export function exportDexToCSV(dex: DexEntry[]): string {
   const headers = [
-    'Species Name',
+    'Common Name',
+    'Scientific Name',
     'First Seen Date',
     'Last Seen Date',
     'Total Outings',
@@ -295,19 +358,35 @@ export function exportDexToCSV(dex: DexEntry[]): string {
     'Notes'
   ]
   
-  const rows = dex.map(entry => [
-    entry.speciesName,
-    new Date(entry.firstSeenDate).toLocaleDateString(),
-    new Date(entry.lastSeenDate).toLocaleDateString(),
-    entry.totalOutings.toString(),
-    entry.totalCount.toString(),
-    entry.notes || ''
-  ])
+  const rows = dex.map(entry => {
+    const commonName = getDisplayName(entry.speciesName)
+    const scientificName = getScientificName(entry.speciesName) || ''
+    return [
+      commonName,
+      scientificName,
+      formatISODate(entry.firstSeenDate),
+      formatISODate(entry.lastSeenDate),
+      entry.totalOutings.toString(),
+      entry.totalCount.toString(),
+      entry.notes || ''
+    ]
+  })
   
   const csv = [
-    headers.join(','),
+    headers.map(h => csvEscape(h)).join(','),
     ...rows.map(row => row.map(cell => csvEscape(cell)).join(','))
   ].join('\n')
   
   return csv
+}
+
+/** Format an ISO date string as YYYY-MM-DD for stable CSV output */
+function formatISODate(isoString: string): string {
+  try {
+    const d = new Date(isoString)
+    if (isNaN(d.getTime())) return isoString
+    return d.toISOString().split('T')[0]
+  } catch {
+    return isoString
+  }
 }
