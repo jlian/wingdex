@@ -454,6 +454,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               data={data}
               userId={userId}
               defaultLocationName={lastLocationName}
+              autoLookupGps={useGeoContext}
               onConfirm={handleOutingConfirmed}
             />
           )}

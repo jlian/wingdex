@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { MapPin, CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
 import { findMatchingOuting } from '@/lib/clustering'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
@@ -22,6 +22,8 @@ interface OutingReviewProps {
   userId: number
   /** Pre-fill location from a previous outing (user can override) */
   defaultLocationName?: string
+  /** Automatically look up location name from GPS when available */
+  autoLookupGps?: boolean
   onConfirm: (
     outingId: string,
     locationName: string,
@@ -35,21 +37,26 @@ export default function OutingReview({
   data,
   userId,
   defaultLocationName = '',
+  autoLookupGps = false,
   onConfirm
 }: OutingReviewProps) {
   const hasGps = cluster.centerLat !== undefined && cluster.centerLon !== undefined
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
-  const [hasRequestedLookup, setHasRequestedLookup] = useState(false)
 
   // Check if these photos match an existing outing
   const matchingOuting = findMatchingOuting(cluster, data.outings)
   const [useExistingOuting, setUseExistingOuting] = useState(!!matchingOuting)
 
+  // Automatically look up location name from GPS when enabled
   useEffect(() => {
-    setHasRequestedLookup(false)
-  }, [cluster.startTime, cluster.endTime])
+    if (autoLookupGps && hasGps && !matchingOuting) {
+      const roundedLat = Number(cluster.centerLat!.toFixed(3))
+      const roundedLon = Number(cluster.centerLon!.toFixed(3))
+      void fetchLocationName(roundedLat, roundedLon)
+    }
+  }, [cluster.startTime, cluster.endTime]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
@@ -146,13 +153,6 @@ export default function OutingReview({
 
   const handleConfirm = () => doConfirm(locationName)
 
-  const handleLookupLocation = () => {
-    if (!hasGps) return
-    setHasRequestedLookup(true)
-    const roundedLat = Number(cluster.centerLat!.toFixed(3))
-    const roundedLon = Number(cluster.centerLon!.toFixed(3))
-    void fetchLocationName(roundedLat, roundedLon)
-  }
 
   return (
     <div className="space-y-4">
@@ -220,17 +220,7 @@ export default function OutingReview({
           {!useExistingOuting && (
           <div className="space-y-2">
             <Label htmlFor="location-name">Location Name</Label>
-            {hasGps && !hasRequestedLookup && !isLoadingLocation && (
-              <div className="rounded-md border border-border bg-muted/40 p-2 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Use GPS to suggest a location name. Approximate coordinates are sent to OpenStreetMap Nominatim.
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={handleLookupLocation}>
-                  <MapPin size={14} className="mr-1" />
-                  Use GPS to Suggest Name
-                </Button>
-              </div>
-            )}
+
             {isLoadingLocation ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
