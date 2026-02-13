@@ -255,7 +255,7 @@ No bird: {"candidates":[],"cropBox":null}`
       if (error.message.includes('413') || error.message.includes('too large'))
         throw new Error('Image too large for API.')
       if (error.message.includes('429') || error.message.includes('rate'))
-        throw new Error('Rate limited. Wait a moment and try again.')
+        throw new Error('AI rate limit reached. Please wait a minute before trying again.')
     }
     throw error
   }

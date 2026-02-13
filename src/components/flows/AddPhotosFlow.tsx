@@ -132,7 +132,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       }
     } catch (error) {
       console.error('Species ID failed:', error)
-      toast.error('Species identification failed')
+      const msg = error instanceof Error ? error.message : 'Species identification failed'
+      toast.error(msg)
       setCurrentCandidates([])
       setStep('photo-confirm')
     }
@@ -140,12 +141,14 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   // ─── Advance to next photo or finish ─────────────────────
   const advanceToNextPhoto = (results?: PhotoResult[]) => {
+    // Guard against being called as an onClick handler with a MouseEvent
+    const finalResults = Array.isArray(results) ? results : photoResults
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
       setTimeout(() => runSpeciesId(nextIdx), 300)
     } else {
-      saveOuting(results ?? photoResults)
+      saveOuting(finalResults)
     }
   }
 
