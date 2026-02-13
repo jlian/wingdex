@@ -17,12 +17,13 @@ import { clusterPhotosIntoOutings } from '@/lib/clustering'
 import { identifyBirdInPhoto } from '@/lib/ai-inference'
 import type { BirdIdResult } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
+import { getDisplayName, getScientificName } from '@/lib/utils'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 
 interface AddPhotosFlowProps {
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   onClose: () => void
   userId: number
 }
@@ -654,7 +655,7 @@ function PerPhotoConfirm({
   }
 
   const confidencePct = Math.round(selectedConfidence * 100)
-  const displayName = selectedSpecies.split('(')[0].trim()
+  const displayName = getDisplayName(selectedSpecies)
   const scientificMatch = selectedSpecies.match(/\(([^)]+)\)/)
   const scientificName = scientificMatch ? scientificMatch[1] : ''
 
@@ -789,7 +790,7 @@ function PerPhotoConfirm({
                   Other possibilities
                 </p>
                 {candidates.slice(1).map(c => {
-                  const altName = c.species.split('(')[0].trim()
+                  const altName = getDisplayName(c.species)
                   const altPct = Math.round(c.confidence * 100)
                   const isSelected = c.species === selectedSpecies
                   return (

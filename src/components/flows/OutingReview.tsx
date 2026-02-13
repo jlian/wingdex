@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MapPin, CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
 import { findMatchingOuting } from '@/lib/clustering'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 
 interface PhotoCluster {
   photos: any[]
@@ -17,7 +17,7 @@ interface PhotoCluster {
 
 interface OutingReviewProps {
   cluster: PhotoCluster
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   userId: number
   /** Pre-fill location from a previous outing (user can override) */
   defaultLocationName?: string

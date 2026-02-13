@@ -9,13 +9,15 @@ import {
   Bird, MapPin, Eye, Binoculars
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import { EmptyState } from '@/components/ui/empty-state'
+import { getDisplayName, getScientificName } from '@/lib/utils'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { LifeListEntry, Observation } from '@/lib/types'
 
 type SortKey = 'name' | 'recent' | 'count'
 
 interface LifeListPageProps {
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
 }
@@ -40,17 +42,11 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
 
   if (lifeList.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-3xl mx-auto">
-        <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bird size={32} className="text-primary" weight="duotone" />
-          </div>
-        </div>
-        <p className="text-lg text-muted-foreground">Your life list is empty</p>
-        <p className="text-sm text-muted-foreground">
-          Upload photos and confirm species to start building your list
-        </p>
-      </div>
+      <EmptyState
+        icon={Bird}
+        title="Your life list is empty"
+        description="Upload photos and confirm species to start building your list"
+      />
     )
   }
 
@@ -142,8 +138,8 @@ function SpeciesRow({
   entry: LifeListEntry
   onClick: () => void
 }) {
-  const displayName = entry.speciesName.split('(')[0].trim()
-  const scientificName = entry.speciesName.match(/\(([^)]+)\)/)?.[1]
+  const displayName = getDisplayName(entry.speciesName)
+  const scientificName = getScientificName(entry.speciesName)
   const wikiImage = useBirdImage(entry.speciesName)
   const dateStr = entry.addedDate || entry.firstSeenDate
 
@@ -191,11 +187,11 @@ function SpeciesDetail({
   onBack,
 }: {
   entry: LifeListEntry
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   onBack: () => void
 }) {
-  const displayName = entry.speciesName.split('(')[0].trim()
-  const scientificName = entry.speciesName.match(/\(([^)]+)\)/)?.[1]
+  const displayName = getDisplayName(entry.speciesName)
+  const scientificName = getScientificName(entry.speciesName)
   const wikiImage = useBirdImage(entry.speciesName)
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
 

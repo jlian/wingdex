@@ -10,14 +10,16 @@ import {
   Trash, PencilSimple, Check, Plus, X, Bird, CaretRight, Clock,
   ListChecks, CheckCircle, HashStraight
 } from '@phosphor-icons/react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
+import { getDisplayName, getScientificName } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Outing, Observation } from '@/lib/types'
 
 interface OutingsPageProps {
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   selectedOutingId: string | null
   onSelectOuting: (id: string | null) => void
   onSelectSpecies: (name: string) => void
@@ -28,17 +30,11 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
 
   if (outings.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-3xl mx-auto">
-        <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bird size={32} className="text-primary" weight="duotone" />
-          </div>
-        </div>
-        <p className="text-lg text-muted-foreground">No outings yet</p>
-        <p className="text-sm text-muted-foreground">
-          Upload photos to create your first outing
-        </p>
-      </div>
+      <EmptyState
+        icon={Bird}
+        title="No outings yet"
+        description="Upload photos to create your first outing"
+      />
     )
   }
 
@@ -136,7 +132,7 @@ function OutingRow({
         </div>
         {confirmed.length > 0 && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {confirmed.slice(0, 4).map(obs => obs.speciesName.split('(')[0].trim()).join(', ')}
+            {confirmed.slice(0, 4).map(obs => getDisplayName(obs.speciesName)).join(', ')}
             {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
           </p>
         )}
@@ -154,7 +150,7 @@ function OutingDetail({
   onSelectSpecies,
 }: {
   outing: Outing
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   onBack: () => void
   onSelectSpecies: (name: string) => void
 }) {
@@ -194,7 +190,7 @@ function OutingDetail({
   }
 
   const handleDeleteObservation = (obsId: string, speciesName: string) => {
-    if (confirm(`Remove ${speciesName.split('(')[0].trim()} from this outing?`)) {
+    if (confirm(`Remove ${getDisplayName(speciesName)} from this outing?`)) {
       data.updateObservation(obsId, { certainty: 'rejected' })
       toast.success('Observation removed')
     }
@@ -215,7 +211,7 @@ function OutingDetail({
     setNewSpeciesName('')
     setNewSpeciesCount(1)
     setAddingSpecies(false)
-    toast.success(`${newSpeciesName.split('(')[0].trim()} added`)
+    toast.success(`${getDisplayName(newSpeciesName)} added`)
   }
 
   const outingDate = new Date(outing.startTime)
@@ -451,8 +447,8 @@ function ObservationRow({
   onClick: () => void
   onDelete: () => void
 }) {
-  const displayName = obs.speciesName.split('(')[0].trim()
-  const scientificName = obs.speciesName.match(/\(([^)]+)\)/)?.[1]
+  const displayName = getDisplayName(obs.speciesName)
+  const scientificName = getScientificName(obs.speciesName)
   const wikiImage = useBirdImage(obs.speciesName)
 
   return (

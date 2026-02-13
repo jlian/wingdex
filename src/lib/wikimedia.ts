@@ -3,6 +3,7 @@
  * Tries multiple search strategies: common name → scientific name → common name + " bird".
  * No API key required; rate-limited by User-Agent convention.
  */
+import { getDisplayName, getScientificName } from './utils'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
@@ -44,9 +45,7 @@ function extractImageUrl(data: NonNullable<Awaited<ReturnType<typeof fetchSummar
  * Parse common and scientific names from a species string like "Northern Cardinal (Cardinalis cardinalis)"
  */
 function parseSpeciesName(speciesName: string): { common: string; scientific?: string } {
-  const common = speciesName.split('(')[0].trim()
-  const scientific = speciesName.match(/\(([^)]+)\)/)?.[1]?.trim()
-  return { common, scientific }
+  return { common: getDisplayName(speciesName), scientific: getScientificName(speciesName) }
 }
 
 /**

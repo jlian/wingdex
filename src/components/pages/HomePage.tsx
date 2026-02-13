@@ -5,10 +5,11 @@ import {
   Binoculars, Image as ImageIcon, ArrowRight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import { getDisplayName } from '@/lib/utils'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 
 interface HomePageProps {
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   onAddPhotos: () => void
   onSelectOuting: (id: string) => void
   onSelectSpecies: (name: string) => void
@@ -197,7 +198,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                       </p>
                       {confirmed.length > 0 && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {confirmed.slice(0, 3).map(obs => obs.speciesName.split('(')[0].trim()).join(', ')}
+                          {confirmed.slice(0, 3).map(obs => getDisplayName(obs.speciesName)).join(', ')}
                           {confirmed.length > 3 && ` +${confirmed.length - 3}`}
                         </p>
                       )}
@@ -236,7 +237,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                       >
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
                         <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                          {mostSeen.speciesName.split('(')[0].trim()}
+                          {getDisplayName(mostSeen.speciesName)}
                         </p>
                         <p className="text-xs text-muted-foreground">{mostSeen.totalCount} total</p>
                       </button>
@@ -248,7 +249,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                       >
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
                         <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                          {firstSeen.speciesName.split('(')[0].trim()}
+                          {getDisplayName(firstSeen.speciesName)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(firstSeen.addedDate || firstSeen.firstSeenDate).toLocaleDateString()}
@@ -297,7 +298,7 @@ function StatCard({ value, label, accent }: { value: number; label: string; acce
 }
 
 function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date: string; onClick: () => void }) {
-  const displayName = speciesName.split('(')[0].trim()
+  const displayName = getDisplayName(speciesName)
   const wikiImage = useBirdImage(speciesName)
 
   return (

@@ -14,11 +14,11 @@ import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST } from '@/lib/seed-data'
-import type { useBirdDexData } from '@/hooks/use-birddex-data'
+import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
 
 interface SettingsPageProps {
-  data: ReturnType<typeof useBirdDexData>
+  data: BirdDexDataStore
   user: {
     login: string
     avatarUrl: string
@@ -273,7 +273,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
 // ─── Saved Locations ──────────────────────────────────────
 
-function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexData> }) {
+function SavedLocationsSection({ data }: { data: BirdDexDataStore }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [lat, setLat] = useState('')

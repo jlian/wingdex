@@ -1,4 +1,5 @@
 import type { Outing, Observation, ImportPreview, LifeListEntry } from './types'
+import { getDisplayName, getScientificName } from './utils'
 
 export function exportOutingToEBirdCSV(
   outing: Outing,
@@ -20,12 +21,8 @@ export function exportOutingToEBirdCSV(
   const rows = observations
     .filter(obs => obs.certainty === 'confirmed')
     .map(obs => {
-      const species = obs.speciesName.includes('(') 
-        ? obs.speciesName.split('(')[0].trim()
-        : obs.speciesName
-      const scientific = obs.speciesName.includes('(')
-        ? obs.speciesName.match(/\(([^)]+)\)/)?.[1] || ''
-        : ''
+      const species = getDisplayName(obs.speciesName)
+      const scientific = getScientificName(obs.speciesName) || ''
       
       const date = new Date(outing.startTime).toLocaleDateString('en-US')
       const time = new Date(outing.startTime).toLocaleTimeString('en-US', { 
