@@ -37,4 +37,3 @@ pids
 test-results/
 playwright-report/
 screenshots/
-package-lock.json
