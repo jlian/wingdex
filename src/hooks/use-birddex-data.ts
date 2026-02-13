@@ -3,7 +3,7 @@ import type { Photo, Outing, Observation, DexEntry, SavedSpot } from '@/lib/type
 
 export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
 
-function buildDexFromState(
+export function buildDexFromState(
   allOutings: Outing[],
   allObservations: Observation[],
   existingDex: DexEntry[]

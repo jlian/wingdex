@@ -39,7 +39,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-function safeParseJSON(text: string): any {
+export function safeParseJSON(text: string): any {
   try { return JSON.parse(text) } catch {}
   const m1 = text.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (m1) { try { return JSON.parse(m1[1].trim()) } catch {} }
