@@ -1,4 +1,4 @@
-import type { Outing, Observation, ImportPreview, LifeListEntry } from './types'
+import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
 
 /**
@@ -203,10 +203,10 @@ function normalizeDate(dateStr: string): string {
 
 export function detectImportConflicts(
   previews: ImportPreview[],
-  existingLifeList: Map<string, LifeListEntry>
+  existingDex: Map<string, DexEntry>
 ): ImportPreview[] {
   return previews.map(preview => {
-    const existing = existingLifeList.get(preview.speciesName)
+    const existing = existingDex.get(preview.speciesName)
     
     if (!existing) {
       return { ...preview, conflict: 'new' }
@@ -231,7 +231,7 @@ export function detectImportConflicts(
   })
 }
 
-export function exportLifeListToCSV(lifeList: LifeListEntry[]): string {
+export function exportDexToCSV(dex: DexEntry[]): string {
   const headers = [
     'Species Name',
     'First Seen Date',
@@ -241,7 +241,7 @@ export function exportLifeListToCSV(lifeList: LifeListEntry[]): string {
     'Notes'
   ]
   
-  const rows = lifeList.map(entry => [
+  const rows = dex.map(entry => [
     entry.speciesName,
     new Date(entry.firstSeenDate).toLocaleDateString(),
     new Date(entry.lastSeenDate).toLocaleDateString(),

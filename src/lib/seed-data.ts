@@ -1,4 +1,4 @@
-import type { Outing, Observation, LifeListEntry } from './types'
+import type { Outing, Observation, DexEntry } from './types'
 
 // ─── Seed Data ──────────────────────────────────────────
 // Realistic demo data for development and testing.
@@ -109,9 +109,9 @@ export const SEED_OBSERVATIONS: Observation[] = speciesData.flatMap(sp =>
   }))
 )
 
-// Build life list from observations
-function buildLifeList(): LifeListEntry[] {
-  const map = new Map<string, LifeListEntry>()
+// Build dex from observations
+function buildDex(): DexEntry[] {
+  const map = new Map<string, DexEntry>()
 
   for (const obs of SEED_OBSERVATIONS) {
     if (obs.certainty !== 'confirmed') continue
@@ -145,4 +145,4 @@ function buildLifeList(): LifeListEntry[] {
   return Array.from(map.values()).sort((a, b) => a.speciesName.localeCompare(b.speciesName))
 }
 
-export const SEED_LIFE_LIST: LifeListEntry[] = buildLifeList()
+export const SEED_DEX: DexEntry[] = buildDex()

@@ -14,22 +14,22 @@ import { StatCard } from '@/components/ui/stat-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
-import type { LifeListEntry, Observation } from '@/lib/types'
+import type { DexEntry, Observation } from '@/lib/types'
 
 type SortKey = 'name' | 'recent' | 'count'
 
-interface LifeListPageProps {
+interface BirdDexPageProps {
   data: BirdDexDataStore
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
 }
 
-export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }: LifeListPageProps) {
-  const { lifeList } = data
+export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies }: BirdDexPageProps) {
+  const { dex } = data
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('recent')
 
-  const sortedList = [...lifeList].sort((a, b) => {
+  const sortedList = [...dex].sort((a, b) => {
     if (sortBy === 'name') return a.speciesName.localeCompare(b.speciesName)
     if (sortBy === 'count') return b.totalCount - a.totalCount
     // recent
@@ -42,18 +42,18 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
     entry.speciesName.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  if (lifeList.length === 0) {
+  if (dex.length === 0) {
     return (
       <EmptyState
         icon={Bird}
-        title="Your life list is empty"
-        description="Upload photos and confirm species to start building your list"
+        title="Your BirdDex is empty"
+        description="Upload photos and confirm species to start building your BirdDex"
       />
     )
   }
 
   if (selectedSpecies) {
-    const entry = lifeList.find(e => e.speciesName === selectedSpecies)
+    const entry = dex.find(e => e.speciesName === selectedSpecies)
     if (!entry) {
       // Don't call onSelectSpecies during render — return null gracefully
       return null
@@ -77,10 +77,10 @@ export default function LifeListPage({ data, selectedSpecies, onSelectSpecies }:
     <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
-          Life List
+          BirdDex
         </h2>
         <p className="text-sm text-muted-foreground">
-          {lifeList.length} species observed
+          {dex.length} species observed
         </p>
       </div>
 
@@ -142,7 +142,7 @@ function SpeciesDetail({
   data,
   onBack,
 }: {
-  entry: LifeListEntry
+  entry: DexEntry
   data: BirdDexDataStore
   onBack: () => void
 }) {
@@ -171,7 +171,7 @@ function SpeciesDetail({
       <div className="px-4 sm:px-6 py-4">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft size={18} className="mr-1" />
-          Life List
+          BirdDex
         </Button>
       </div>
 

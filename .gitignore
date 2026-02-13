@@ -36,3 +36,4 @@ pids
 # Playwright
 test-results/
 playwright-report/
+screenshots/

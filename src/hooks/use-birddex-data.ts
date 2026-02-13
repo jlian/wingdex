@@ -1,5 +1,5 @@
 import { useKV } from '@/hooks/use-kv'
-import type { Photo, Outing, Observation, LifeListEntry, SavedSpot } from '@/lib/types'
+import type { Photo, Outing, Observation, DexEntry, SavedSpot } from '@/lib/types'
 
 export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
 
@@ -8,7 +8,7 @@ export function useBirdDexData(userId: number) {
   const [photos, setPhotos] = useKV<Photo[]>(`${prefix}photos`, [])
   const [outings, setOutings] = useKV<Outing[]>(`${prefix}outings`, [])
   const [observations, setObservations] = useKV<Observation[]>(`${prefix}observations`, [])
-  const [lifeList, setLifeList] = useKV<LifeListEntry[]>(`${prefix}lifeList`, [])
+  const [dex, setDex] = useKV<DexEntry[]>(`${prefix}dex`, [])
   const [savedSpots, setSavedSpots] = useKV<SavedSpot[]>(`${prefix}savedSpots`, [])
 
   const addPhotos = (newPhotos: Photo[]) => {
@@ -41,11 +41,11 @@ export function useBirdDexData(userId: number) {
     )
   }
 
-  const updateLifeList = (outingId: string, confirmedObservations: Observation[]) => {
+  const updateDex = (outingId: string, confirmedObservations: Observation[]) => {
     const outing = (outings || []).find(o => o.id === outingId)
     if (!outing) return
 
-    setLifeList(current => {
+    setDex(current => {
       const updated = new Map((current || []).map(entry => [entry.speciesName, entry]))
 
       confirmedObservations
@@ -106,12 +106,12 @@ export function useBirdDexData(userId: number) {
     return (photos || []).filter(p => p.outingId === outingId)
   }
 
-  const getLifeListEntry = (speciesName: string) => {
-    return (lifeList || []).find(entry => entry.speciesName === speciesName)
+  const getDexEntry = (speciesName: string) => {
+    return (dex || []).find(entry => entry.speciesName === speciesName)
   }
 
-  const importLifeListEntries = (entries: LifeListEntry[]) => {
-    setLifeList(current => {
+  const importDexEntries = (entries: DexEntry[]) => {
+    setDex(current => {
       const updated = new Map((current || []).map(entry => [entry.speciesName, entry]))
 
       entries.forEach(entry => {
@@ -145,7 +145,7 @@ export function useBirdDexData(userId: number) {
     })
   }
 
-  /** Import outings, observations, and update life list in one shot (for eBird CSV import) */
+  /** Import outings, observations, and update dex in one shot (for eBird CSV import) */
   const importFromEBird = (
     newOutings: Outing[],
     newObservations: Observation[]
@@ -155,9 +155,9 @@ export function useBirdDexData(userId: number) {
     // Add observations
     setObservations(current => [...(current || []), ...newObservations])
 
-    // Update life list
+    // Update dex
     let newSpeciesCount = 0
-    setLifeList(current => {
+    setDex(current => {
       const updated = new Map((current || []).map(entry => [entry.speciesName, entry]))
 
       for (const outing of newOutings) {
@@ -207,25 +207,25 @@ export function useBirdDexData(userId: number) {
     setPhotos([])
     setOutings([])
     setObservations([])
-    setLifeList([])
+    setDex([])
     setSavedSpots([])
   }
 
   const loadSeedData = (
     seedOutings: Outing[],
     seedObservations: Observation[],
-    seedLifeList: LifeListEntry[],
+    seedDex: DexEntry[],
   ) => {
     setOutings(seedOutings)
     setObservations(seedObservations)
-    setLifeList(seedLifeList)
+    setDex(seedDex)
   }
 
   return {
     photos: photos || [],
     outings: outings || [],
     observations: observations || [],
-    lifeList: lifeList || [],
+    dex: dex || [],
     savedSpots: savedSpots || [],
     addPhotos,
     addOuting,
@@ -233,13 +233,13 @@ export function useBirdDexData(userId: number) {
     deleteOuting,
     addObservations,
     updateObservation,
-    updateLifeList,
+    updateDex,
     addSavedSpot,
     deleteSavedSpot,
     getOutingObservations,
     getOutingPhotos,
-    getLifeListEntry,
-    importLifeListEntries,
+    getDexEntry,
+    importDexEntries,
     importFromEBird,
     clearAllData,
     loadSeedData,

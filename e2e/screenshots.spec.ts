@@ -51,15 +51,15 @@ function buildSeedLocalStorage(): Record<string, string> {
     }))
   )
 
-  // Build life list
-  const lifeMap = new Map<string, any>()
+  // Build dex
+  const dexMap = new Map<string, any>()
   for (const obs of observations) {
     if (obs.certainty !== 'confirmed') continue
     const outing = outings.find(o => o.id === obs.outingId)!
-    const existing = lifeMap.get(obs.speciesName)
+    const existing = dexMap.get(obs.speciesName)
     const outingDate = new Date(outing.startTime)
     if (existing) {
-      lifeMap.set(obs.speciesName, {
+      dexMap.set(obs.speciesName, {
         ...existing,
         firstSeenDate: outingDate < new Date(existing.firstSeenDate) ? outing.startTime : existing.firstSeenDate,
         lastSeenDate: outingDate > new Date(existing.lastSeenDate) ? outing.startTime : existing.lastSeenDate,
@@ -67,7 +67,7 @@ function buildSeedLocalStorage(): Record<string, string> {
         totalCount: existing.totalCount + obs.count,
       })
     } else {
-      lifeMap.set(obs.speciesName, {
+      dexMap.set(obs.speciesName, {
         speciesName: obs.speciesName,
         firstSeenDate: outing.startTime,
         lastSeenDate: outing.startTime,
@@ -78,12 +78,12 @@ function buildSeedLocalStorage(): Record<string, string> {
       })
     }
   }
-  const lifeList = Array.from(lifeMap.values()).sort((a: any, b: any) => a.speciesName.localeCompare(b.speciesName))
+  const dex = Array.from(dexMap.values()).sort((a: any, b: any) => a.speciesName.localeCompare(b.speciesName))
 
   return {
     [`${prefix}outings`]: JSON.stringify(outings),
     [`${prefix}observations`]: JSON.stringify(observations),
-    [`${prefix}lifeList`]: JSON.stringify(lifeList),
+    [`${prefix}dex`]: JSON.stringify(dex),
     [`${prefix}photos`]: JSON.stringify([]),
     [`${prefix}savedSpots`]: JSON.stringify([]),
   }
@@ -123,13 +123,13 @@ test.describe('Visual screenshots', () => {
     await ctx.close()
   })
 
-  test('desktop - life list', async ({ browser }) => {
+  test('desktop - birddex', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await injectSeedData(page)
-    await page.goto(`${BASE}#lifelist`)
+    await page.goto(`${BASE}#birddex`)
     await page.waitForTimeout(3000)
-    await page.screenshot({ path: 'screenshots/desktop-lifelist.png', fullPage: true })
+    await page.screenshot({ path: 'screenshots/desktop-birddex.png', fullPage: true })
     await ctx.close()
   })
 
@@ -160,9 +160,9 @@ test.describe('Visual screenshots', () => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await injectSeedData(page)
-    await page.goto(`${BASE}#lifelist`)
+    await page.goto(`${BASE}#birddex`)
     await page.waitForTimeout(2000)
-    const firstRow = page.locator('button:has-text("outing")').first()
+    const firstRow = page.locator('main button:has-text("outing")').first()
     await firstRow.click()
     await page.waitForTimeout(3000)
     await page.screenshot({ path: 'screenshots/desktop-species-detail.png', fullPage: true })
@@ -189,13 +189,13 @@ test.describe('Visual screenshots', () => {
     await ctx.close()
   })
 
-  test('mobile - life list', async ({ browser }) => {
+  test('mobile - birddex', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const page = await ctx.newPage()
     await injectSeedData(page)
-    await page.goto(`${BASE}#lifelist`)
+    await page.goto(`${BASE}#birddex`)
     await page.waitForTimeout(3000)
-    await page.screenshot({ path: 'screenshots/mobile-lifelist.png', fullPage: true })
+    await page.screenshot({ path: 'screenshots/mobile-birddex.png', fullPage: true })
     await ctx.close()
   })
 
@@ -226,9 +226,9 @@ test.describe('Visual screenshots', () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const page = await ctx.newPage()
     await injectSeedData(page)
-    await page.goto(`${BASE}#lifelist`)
+    await page.goto(`${BASE}#birddex`)
     await page.waitForTimeout(2000)
-    const firstRow = page.locator('button:has-text("outing")').first()
+    const firstRow = page.locator('main button:has-text("outing")').first()
     await firstRow.click()
     await page.waitForTimeout(3000)
     await page.screenshot({ path: 'screenshots/mobile-species-detail.png', fullPage: true })

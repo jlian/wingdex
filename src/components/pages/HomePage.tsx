@@ -17,24 +17,24 @@ interface HomePageProps {
 }
 
 export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
-  const { outings, lifeList } = data
+  const { outings, dex } = data
 
   const recentOutings = outings.slice(0, 5)
-  const recentSpecies = lifeList
+  const recentSpecies = dex
     .slice()
     .sort((a, b) => new Date(b.addedDate || b.firstSeenDate).getTime() - new Date(a.addedDate || a.firstSeenDate).getTime())
     .slice(0, 6)
 
   const thisMonth = new Date()
   const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)
-  const newThisMonth = lifeList.filter(entry => {
+  const newThisMonth = dex.filter(entry => {
     const dateStr = entry.addedDate || entry.firstSeenDate
     return new Date(dateStr) >= thisMonthStart
   }).length
 
   const totalPhotos = data.photos.length
 
-  if (lifeList.length === 0) {
+  if (dex.length === 0) {
     return (
       <div className="px-4 sm:px-6 py-16 sm:py-24">
         <div className="max-w-md mx-auto text-center space-y-6">
@@ -49,7 +49,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
               Upload your pics, ID the birds, and build your
-              life list. <em>Reverse birding</em> at its finest.
+              BirdDex. <em>Reverse birding</em> at its finest.
             </p>
           </div>
           <Button
@@ -65,7 +65,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               <ImageIcon size={16} /> AI-powered ID
             </span>
             <span className="flex items-center gap-1.5">
-              <Bird size={16} /> Auto life list
+              <Bird size={16} /> Auto BirdDex
             </span>
             <span className="flex items-center gap-1.5">
               <Binoculars size={16} /> eBird export
@@ -89,7 +89,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 </h2>
                 <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
                   Upload your pics, ID the birds, and build your
-                  life list. <em>Reverse birding</em> at its finest.
+                  BirdDex. <em>Reverse birding</em> at its finest.
                 </p>
               </div>
               <Button
@@ -104,7 +104,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
 
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <StatCard
-                value={lifeList.length}
+                value={dex.length}
                 label="Species"
                 accent="text-primary"
               />
@@ -136,12 +136,12 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Recent Species
               </h3>
-              {lifeList.length > 6 && (
+              {dex.length > 6 && (
                 <button
-                  onClick={() => onNavigate('lifelist')}
+                  onClick={() => onNavigate('birddex')}
                   className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                 >
-                  View all {lifeList.length}
+                  View all {dex.length}
                   <ArrowRight size={12} />
                 </button>
               )}
@@ -219,8 +219,8 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {(() => {
-                const mostSeen = lifeList.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
-                const firstSeen = lifeList.slice().sort((a, b) =>
+                const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
+                const firstSeen = dex.slice().sort((a, b) =>
                   new Date(a.addedDate || a.firstSeenDate).getTime() - new Date(b.addedDate || b.firstSeenDate).getTime()
                 )[0]
                 const bestOuting = outings.reduce<{ name: string; count: number } | null>((best, o) => {

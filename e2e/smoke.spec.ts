@@ -5,29 +5,28 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
 
     // Wait for the app to load past the splash screen
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
-
-    // Header should have the bird icon and title
     const header = page.locator('header');
-    await expect(header).toBeVisible();
-    await expect(header.locator('text=BirdDex')).toBeVisible();
+    await expect(header).toBeVisible({ timeout: 10_000 });
+
+    // Header should have the BirdDex tab in nav
+    await expect(header.getByText('BirdDex')).toBeVisible();
   });
 
   test('renders all four nav tabs', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // On desktop (default viewport), nav tabs are in the header
     const header = page.locator('header');
     await expect(header.getByText('Home')).toBeVisible();
     await expect(header.getByText('Outings')).toBeVisible();
-    await expect(header.getByText('Life List')).toBeVisible();
+    await expect(header.getByText('BirdDex')).toBeVisible();
     await expect(header.getByText('Settings')).toBeVisible();
   });
 
   test('can navigate between tabs', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Click Outings tab
     await page.getByRole('tab', { name: 'Outings' }).first().click();
@@ -35,10 +34,10 @@ test.describe('App smoke tests', () => {
       page.getByText('Your Outings').or(page.getByText('No outings yet'))
     ).toBeVisible({ timeout: 5_000 });
 
-    // Click Life List tab
-    await page.getByRole('tab', { name: 'Life List' }).first().click();
+    // Click BirdDex tab
+    await page.getByRole('tab', { name: 'BirdDex' }).first().click();
     await expect(
-      page.getByText('Your life list is empty').or(page.getByRole('heading', { name: 'Life List' }))
+      page.getByText('Your BirdDex is empty').or(page.getByRole('heading', { name: 'BirdDex' }))
     ).toBeVisible({ timeout: 5_000 });
 
     // Click Settings tab
@@ -53,7 +52,7 @@ test.describe('App smoke tests', () => {
   test('add photos button opens flow on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // The header Add Photos button should be visible
     const addBtn = page.getByRole('button', { name: 'Add Photos' });
@@ -66,7 +65,7 @@ test.describe('App smoke tests', () => {
 
   test('add photos dialog can be closed', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Open dialog via header button
     await page.getByRole('button', { name: 'Add Photos' }).click();
@@ -86,7 +85,7 @@ test.describe('App smoke tests', () => {
     });
 
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Filter out known non-critical errors (like Spark API 403s, Spark runtime errors)
     const criticalErrors = errors.filter(
@@ -101,7 +100,7 @@ test.describe('App smoke tests', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
-    await expect(page.locator('h1:has-text("BirdDex")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Check no horizontal scrollbar
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);

@@ -1,6 +1,6 @@
 # BirdDex
 
-A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.com/projects/github-spark). Upload photos, let AI identify the species, and build your life list.
+A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.com/projects/github-spark). Upload photos, let AI identify the species, and build your BirdDex.
 
 **Live app:** [birddex--jlian.github.app](https://birddex--jlian.github.app)
 
@@ -9,9 +9,9 @@ A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.
 - **Photo upload with EXIF extraction** - GPS coordinates, timestamps, and automatic outing clustering
 - **AI bird detection and species ID** - Powered by GPT-4.1 vision via GitHub Models. Auto-crops to the bird, identifies species with confidence scores
 - **Per-photo confirmation flow** - Review each photo: high-confidence IDs are auto-selected, low-confidence shows alternatives, no bird detected offers manual crop or skip
-- **Life list** - Tracks every confirmed species with first/last seen dates, total sightings, and best photo. Species detail view with sighting history
-- **eBird import/export** - Import your eBird CSV data as full outings (grouped by date and location) or export your life list. In-app instructions for downloading from eBird
-- **Confetti celebration** - Canvas-based confetti animation when new species are added to your life list
+- **BirdDex** - Tracks every confirmed species with first/last seen dates, total sightings, and best photo. Species detail view with sighting history
+- **eBird import/export** - Import your eBird CSV data as full outings (grouped by date and location) or export your BirdDex. In-app instructions for downloading from eBird
+- **Confetti celebration** - Canvas-based confetti animation when new species are added to your BirdDex
 - **Per-user data isolation** - All data is scoped to your GitHub account via Spark's KV store
 
 ## Tech Stack
@@ -32,7 +32,7 @@ A mobile-first bird sighting tracker built on [GitHub Spark](https://githubnext.
    - If no bird found, you can manually crop or skip
    - Cropped image is sent for species identification with GPS/season context
    - You confirm, mark as "possible," pick an alternative, or skip
-5. **Observations saved** to your life list with species, count, and confidence
+5. **Observations saved** to your BirdDex with species, count, and confidence
 
 ## Project Structure
 
@@ -46,7 +46,7 @@ src/
     pages/
       HomePage.tsx                 - Dashboard with stats, recent species/outings, highlights
       OutingsPage.tsx              - Outing list + detail view with stats and species
-      LifeListPage.tsx             - Species list + detail view with sighting history
+      BirdDexPage.tsx              - Species list + detail view with sighting history
       SettingsPage.tsx             - Import/export, eBird instructions, saved locations
     ui/
       bird-row.tsx                 - Shared species row component
@@ -78,7 +78,7 @@ This is a GitHub Spark app. To develop:
 
 ### Running locally
 
-You can clone and run `npm run dev`, but **AI features will not work** outside of Spark. The `/_spark/llm` endpoint is only available in the Spark runtime. Everything else (photo upload, EXIF parsing, outing management, life list) works normally.
+You can clone and run `npm run dev`, but **AI features will not work** outside of Spark. The `/_spark/llm` endpoint is only available in the Spark runtime. Everything else (photo upload, EXIF parsing, outing management, BirdDex) works normally.
 
 ## License
 

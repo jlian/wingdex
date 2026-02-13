@@ -209,7 +209,7 @@ function OutingDetail({
       notes: 'Manually added',
     }
     data.addObservations([obs])
-    data.updateLifeList(outing.id, [obs])
+    data.updateDex(outing.id, [obs])
     setNewSpeciesName('')
     setNewSpeciesCount(1)
     setAddingSpecies(false)

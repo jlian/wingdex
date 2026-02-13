@@ -13,8 +13,8 @@ import {
 import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck, CaretDown } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
-import { parseEBirdCSV, detectImportConflicts, exportLifeListToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
-import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST } from '@/lib/seed-data'
+import { parseEBirdCSV, detectImportConflicts, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
+import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
 
@@ -51,7 +51,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         `u${user.login}`
       )
 
-      // Import outings, observations, and update life list
+      // Import outings, observations, and update dex
       const { newSpeciesCount } = data.importFromEBird(outings, observations)
 
       const speciesCount = new Set(previews.map(p => p.speciesName)).size
@@ -76,16 +76,16 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     }
   }
 
-  const handleExportLifeList = () => {
-    const csv = exportLifeListToCSV(data.lifeList)
+  const handleExportDex = () => {
+    const csv = exportDexToCSV(data.dex)
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `birddex-lifelist-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `birddex-export-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('Life list exported')
+    toast.success('BirdDex exported')
   }
 
   return (
@@ -122,11 +122,11 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={handleExportLifeList}
-            disabled={data.lifeList.length === 0}
+            onClick={handleExportDex}
+            disabled={data.dex.length === 0}
           >
             <Download size={20} className="mr-2" />
-            Export Life List
+            Export BirdDex
           </Button>
 
           <input
@@ -206,7 +206,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             all data lives in GitHub&apos;s key-value store tied to your login.
           </p>
           <p>
-            Species images in the life list are loaded on-demand from Wikimedia
+            Species images in the BirdDex are loaded on-demand from Wikimedia
             Commons and Wikipedia. No images are cached or stored.
           </p>
         </div>
@@ -223,7 +223,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             variant="outline"
             className="w-full justify-start"
             onClick={() => {
-              data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_LIFE_LIST)
+              data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX)
               toast.success('Demo data loaded: 5 outings, 17 species')
             }}
           >
@@ -246,7 +246,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <AlertDialogTitle>Delete all data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will permanently delete all your outings, observations,
-                  life list entries, and saved locations. This action cannot be
+                  BirdDex entries, and saved locations. This action cannot be
                   undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>

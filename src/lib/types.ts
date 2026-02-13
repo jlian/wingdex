@@ -34,7 +34,7 @@ export interface Observation {
   notes: string
 }
 
-export interface LifeListEntry {
+export interface DexEntry {
   speciesName: string
   firstSeenDate: string
   lastSeenDate: string
@@ -63,5 +63,5 @@ export interface ImportPreview {
   lon?: number
   time?: string
   conflict?: 'duplicate' | 'update_dates' | 'new'
-  existingEntry?: LifeListEntry
+  existingEntry?: DexEntry
 }

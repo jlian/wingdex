@@ -8,7 +8,7 @@ import { useBirdDexData } from '@/hooks/use-birddex-data'
 
 import HomePage from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
-import LifeListPage from '@/components/pages/LifeListPage'
+import BirdDexPage from '@/components/pages/BirdDexPage'
 import SettingsPage from '@/components/pages/SettingsPage'
 import AddPhotosFlow from '@/components/flows/AddPhotosFlow'
 
@@ -27,7 +27,7 @@ function parseHash(): { tab: string; subId?: string } {
   if (!hash) return { tab: 'home' }
   const [segment, ...rest] = hash.split('/')
   const subId = rest.length > 0 ? decodeURIComponent(rest.join('/')) : undefined
-  if (['home', 'outings', 'lifelist', 'settings'].includes(segment)) {
+  if (['home', 'outings', 'birddex', 'settings'].includes(segment)) {
     return { tab: segment, subId }
   }
   return { tab: 'home' }
@@ -134,7 +134,7 @@ function AppContent({ user }: { user: UserInfo }) {
   const navItems = [
     { value: 'home', label: 'Home', icon: House },
     { value: 'outings', label: 'Outings', icon: List },
-    { value: 'lifelist', label: 'Life List', icon: Bird },
+    { value: 'birddex', label: 'BirdDex', icon: Bird },
     { value: 'settings', label: 'Settings', icon: Gear },
   ]
 
@@ -153,9 +153,6 @@ function AppContent({ user }: { user: UserInfo }) {
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <Bird size={28} weight="duotone" className="text-primary" />
-                <h1 className="font-serif text-xl font-semibold text-foreground">
-                  BirdDex
-                </h1>
               </button>
 
               {/* Desktop nav — hidden on mobile */}
@@ -204,7 +201,7 @@ function AppContent({ user }: { user: UserInfo }) {
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
               onSelectOuting={(id) => navigate('outings', id)}
-              onSelectSpecies={(name) => navigate('lifelist', name)}
+              onSelectSpecies={(name) => navigate('birddex', name)}
               onNavigate={(tab) => navigate(tab)}
             />
           </TabsContent>
@@ -214,15 +211,15 @@ function AppContent({ user }: { user: UserInfo }) {
               data={data}
               selectedOutingId={tab === 'outings' ? (subId ?? null) : null}
               onSelectOuting={(id) => navigate('outings', id ?? undefined)}
-              onSelectSpecies={(name) => navigate('lifelist', name)}
+              onSelectSpecies={(name) => navigate('birddex', name)}
             />
           </TabsContent>
 
-          <TabsContent value="lifelist" className="mt-0">
-            <LifeListPage
+          <TabsContent value="birddex" className="mt-0">
+            <BirdDexPage
               data={data}
-              selectedSpecies={tab === 'lifelist' ? (subId ?? null) : null}
-              onSelectSpecies={(name) => navigate('lifelist', name ?? undefined)}
+              selectedSpecies={tab === 'birddex' ? (subId ?? null) : null}
+              onSelectSpecies={(name) => navigate('birddex', name ?? undefined)}
             />
           </TabsContent>
 
