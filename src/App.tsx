@@ -20,6 +20,41 @@ interface UserInfo {
   isOwner: boolean
 }
 
+const DEV_USER_ID_KEY = 'birddex_dev_user_id'
+
+function getStableDevUserId(): number {
+  try {
+    const stored = window.localStorage.getItem(DEV_USER_ID_KEY)
+    const parsed = stored ? Number.parseInt(stored, 10) : Number.NaN
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed
+    }
+
+    const seed = `${window.location.hostname}:${window.location.pathname}`
+    let hash = 0
+    for (let index = 0; index < seed.length; index++) {
+      hash = (hash * 31 + seed.charCodeAt(index)) | 0
+    }
+
+    const randomPart = Math.floor(Math.random() * 1_000_000)
+    const generated = (Math.abs(hash * 31 + randomPart) % 900_000_000) + 100_000_000
+    window.localStorage.setItem(DEV_USER_ID_KEY, String(generated))
+    return generated
+  } catch {
+    return Math.floor(Math.random() * 900_000_000) + 100_000_000
+  }
+}
+
+function getFallbackUser(): UserInfo {
+  return {
+    login: 'dev-user',
+    avatarUrl: '',
+    email: 'dev@localhost',
+    id: getStableDevUserId(),
+    isOwner: true,
+  }
+}
+
 // ─── URL Hash Router ──────────────────────────────────────
 
 function parseHash(): { tab: string; subId?: string } {
@@ -77,23 +112,11 @@ function App() {
           setUser(userInfo)
         } else {
           console.warn('Spark user API returned invalid data, using fallback:', userInfo)
-          setUser({
-            login: 'dev-user',
-            avatarUrl: '',
-            email: 'dev@localhost',
-            id: 1,
-            isOwner: true,
-          })
+          setUser(getFallbackUser())
         }
       } catch (error) {
         console.warn('Spark user API unavailable, using fallback:', error)
-        setUser({
-          login: 'dev-user',
-          avatarUrl: '',
-          email: 'dev@localhost',
-          id: 1,
-          isOwner: true,
-        })
+        setUser(getFallbackUser())
       }
     }
     fetchUser()
