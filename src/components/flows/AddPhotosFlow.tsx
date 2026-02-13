@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -504,6 +504,65 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 }
 
 // ────────────────────────────────────────────────────────────
+//  AI Zoomed preview — renders the crop box region onto a canvas
+// ────────────────────────────────────────────────────────────
+
+function AiZoomedPreview({
+  imageUrl,
+  cropBox,
+}: {
+  imageUrl: string
+  cropBox: { x: number; y: number; width: number; height: number }
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      // cropBox is percentage coords (0-100) — convert to pixels with padding
+      const pad = 0.15
+      const rawX = (cropBox.x / 100) * img.naturalWidth
+      const rawY = (cropBox.y / 100) * img.naturalHeight
+      const rawW = (cropBox.width / 100) * img.naturalWidth
+      const rawH = (cropBox.height / 100) * img.naturalHeight
+      const padX = rawW * pad
+      const padY = rawH * pad
+
+      const sx = Math.max(0, rawX - padX)
+      const sy = Math.max(0, rawY - padY)
+      const sw = Math.min(rawW + padX * 2, img.naturalWidth - sx)
+      const sh = Math.min(rawH + padY * 2, img.naturalHeight - sy)
+
+      // Size canvas to fit the crop aspect ratio, max 320px wide
+      const maxW = 320
+      const scale = Math.min(maxW / sw, 224 / sh, 1) // also cap height at 224px
+      canvas.width = Math.round(sw * scale)
+      canvas.height = Math.round(sh * scale)
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
+    }
+    img.src = imageUrl
+  }, [imageUrl, cropBox])
+
+  return (
+    <div className="relative inline-block">
+      <canvas
+        ref={canvasRef}
+        className="rounded-lg border-2 border-accent max-h-56"
+      />
+      <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium shadow">
+        🔍 AI Zoomed
+      </div>
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────
 //  Per-photo species confirmation
 // ────────────────────────────────────────────────────────────
 
@@ -593,33 +652,10 @@ function PerPhotoConfirm({
       {/* Photo — zoomed to bird if AI crop box available */}
       <div className="flex justify-center relative">
         {aiCropBox && !photo.croppedDataUrl ? (
-          <div
-            className="relative max-h-56 rounded-lg overflow-hidden border-2 border-accent"
-            style={{ width: '100%', maxWidth: '320px' }}
-          >
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              paddingBottom: `${Math.min((aiCropBox.height / aiCropBox.width) * 100, 150)}%`,
-              overflow: 'hidden',
-            }}>
-              <img
-                src={photo.dataUrl || photo.thumbnail}
-                alt="Bird"
-                draggable={false}
-                style={{
-                  position: 'absolute',
-                  left: `${-(aiCropBox.x / aiCropBox.width) * 100}%`,
-                  top: `${-(aiCropBox.y / aiCropBox.height) * 100}%`,
-                  width: `${(100 / aiCropBox.width) * 100}%`,
-                  height: 'auto',
-                }}
-              />
-            </div>
-            <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium shadow">
-              🔍 AI Zoomed
-            </div>
-          </div>
+          <AiZoomedPreview
+            imageUrl={photo.dataUrl || photo.thumbnail}
+            cropBox={aiCropBox}
+          />
         ) : (
           <img
             src={displayImage}
