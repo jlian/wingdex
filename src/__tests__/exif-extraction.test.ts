@@ -1,114 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { parseEXIF } from '@/lib/photo-utils'
 
 /**
  * Unit test for EXIF extraction.
- * Verifies that GPS and timestamp are correctly parsed from bird-test.jpeg.
- * Uses a pure-Node reimplementation of the EXIF parser to avoid DOM dependencies.
+ * Verifies that GPS and timestamp are correctly parsed from bird photos.
+ * Imports the actual parseEXIF function from photo-utils.ts.
  */
 
-function parseEXIF(buffer: Buffer): {
-  timestamp?: string
-  gps?: { lat: number; lon: number }
-} {
-  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-  if (view.getUint16(0) !== 0xffd8) return {}
-
-  let offset = 2
-  const result: { timestamp?: string; gps?: { lat: number; lon: number } } = {}
-
-  while (offset < view.byteLength) {
-    const marker = view.getUint16(offset)
-    if (marker === 0xffe1) {
-      const exifStart = offset + 4
-      if (view.getUint32(exifStart) === 0x45786966) {
-        const tiffOffset = exifStart + 6
-        const littleEndian = view.getUint16(tiffOffset) === 0x4949
-
-        try {
-          const ifdOffset = view.getUint32(tiffOffset + 4, littleEndian)
-          const numEntries = view.getUint16(tiffOffset + ifdOffset, littleEndian)
-
-          for (let i = 0; i < numEntries; i++) {
-            const entryOffset = tiffOffset + ifdOffset + 2 + i * 12
-            const tag = view.getUint16(entryOffset, littleEndian)
-
-            if (tag === 0x0132 || tag === 0x9003) {
-              const valueOffset = view.getUint32(entryOffset + 8, littleEndian)
-              let dateStr = ''
-              for (let j = 0; j < 19; j++) {
-                const char = view.getUint8(tiffOffset + valueOffset + j)
-                if (char === 0) break
-                dateStr += String.fromCharCode(char)
-              }
-              if (dateStr) {
-                result.timestamp = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
-              }
-            }
-
-            if (tag === 0x8825) {
-              const gpsIfdOffset = view.getUint32(entryOffset + 8, littleEndian)
-              const gps = parseGPS(view, tiffOffset, gpsIfdOffset, littleEndian)
-              if (gps) result.gps = gps
-            }
-          }
-        } catch { /* ignore */ }
-      }
-      break
-    }
-    offset += 2 + view.getUint16(offset + 2)
-  }
-
-  return result
-}
-
-function parseGPS(
-  view: DataView,
-  tiffOffset: number,
-  gpsIfdOffset: number,
-  littleEndian: boolean
-): { lat: number; lon: number } | null {
-  try {
-    const numEntries = view.getUint16(tiffOffset + gpsIfdOffset, littleEndian)
-    let lat = 0, lon = 0, latRef = '', lonRef = ''
-
-    for (let i = 0; i < numEntries; i++) {
-      const entryOffset = tiffOffset + gpsIfdOffset + 2 + i * 12
-      const tag = view.getUint16(entryOffset, littleEndian)
-      const type = view.getUint16(entryOffset + 2, littleEndian)
-      const count = view.getUint32(entryOffset + 4, littleEndian)
-
-      const typeSize: Record<number, number> = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8 }
-      const totalBytes = (typeSize[type] || 1) * count
-      const isInline = totalBytes <= 4
-      const dataOffset = isInline
-        ? entryOffset + 8
-        : tiffOffset + view.getUint32(entryOffset + 8, littleEndian)
-
-      if (tag === 1) latRef = String.fromCharCode(view.getUint8(dataOffset))
-      else if (tag === 3) lonRef = String.fromCharCode(view.getUint8(dataOffset))
-      else if (tag === 2) {
-        const d = view.getUint32(dataOffset, littleEndian) / view.getUint32(dataOffset + 4, littleEndian)
-        const m = view.getUint32(dataOffset + 8, littleEndian) / view.getUint32(dataOffset + 12, littleEndian)
-        const s = view.getUint32(dataOffset + 16, littleEndian) / view.getUint32(dataOffset + 20, littleEndian)
-        lat = d + m / 60 + s / 3600
-      } else if (tag === 4) {
-        const d = view.getUint32(dataOffset, littleEndian) / view.getUint32(dataOffset + 4, littleEndian)
-        const m = view.getUint32(dataOffset + 8, littleEndian) / view.getUint32(dataOffset + 12, littleEndian)
-        const s = view.getUint32(dataOffset + 16, littleEndian) / view.getUint32(dataOffset + 20, littleEndian)
-        lon = d + m / 60 + s / 3600
-      }
-    }
-
-    if (lat && lon) {
-      return {
-        lat: latRef === 'S' ? -lat : lat,
-        lon: lonRef === 'W' ? -lon : lon,
-      }
-    }
-  } catch { /* ignore */ }
-  return null
+/** Helper to create a DataView from a file buffer (first 128KB, matching extractEXIF) */
+function loadExifView(filePath: string): DataView {
+  const buffer = readFileSync(filePath)
+  const slice = buffer.subarray(0, 128 * 1024)
+  return new DataView(slice.buffer, slice.byteOffset, slice.byteLength)
 }
 
 /** All test images with expected EXIF metadata */
@@ -173,9 +78,8 @@ const TEST_IMAGES: Array<{
 
 describe('EXIF extraction from bird-test.jpeg', () => {
   const imagePath = resolve(__dirname, '../assets/images/bird-test.jpeg')
-  const buffer = readFileSync(imagePath)
-  const slice = buffer.subarray(0, 128 * 1024)
-  const exif = parseEXIF(slice)
+  const view = loadExifView(imagePath)
+  const exif = parseEXIF(view)
 
   it('extracts timestamp', () => {
     expect(exif.timestamp).toBeDefined()
@@ -204,9 +108,8 @@ describe('EXIF extraction across all test images', () => {
   for (const img of TEST_IMAGES) {
     describe(img.species + ' (' + img.file + ')', () => {
       const imagePath = resolve(__dirname, '../assets/images/' + img.file)
-      const buffer = readFileSync(imagePath)
-      const slice = buffer.subarray(0, 128 * 1024)
-      const exif = parseEXIF(slice)
+      const view = loadExifView(imagePath)
+      const exif = parseEXIF(view)
 
       it('extracts timestamp containing ' + img.date, () => {
         expect(exif.timestamp).toBeDefined()

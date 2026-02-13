@@ -1,68 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  computeRenderedImageRect,
+  computePointerPosition,
+  isInsideCrop,
+  clampDragPosition,
+} from '@/lib/crop-math'
 
 /**
- * Unit tests for ImageCropDialog touch/mouse handling logic.
- * We extract and test the pointer coordinate math independently
- * since the component uses the same logic for both mouse and touch.
+ * Unit tests for ImageCropDialog pointer/crop coordinate math.
+ * Tests the actual exported functions from crop-math.ts.
  */
-
-// Replicate the letterbox-aware coordinate calculation from the component
-function getRenderedImageRect(
-  containerRect: { left: number; top: number; width: number; height: number },
-  naturalWidth: number,
-  naturalHeight: number
-) {
-  const scale = Math.min(containerRect.width / naturalWidth, containerRect.height / naturalHeight)
-  const renderedW = naturalWidth * scale
-  const renderedH = naturalHeight * scale
-  const offsetX = (containerRect.width - renderedW) / 2
-  const offsetY = (containerRect.height - renderedH) / 2
-  return { offsetX, offsetY, renderedW, renderedH, scale }
-}
-
-function getPointerPosition(
-  clientX: number,
-  clientY: number,
-  containerRect: { left: number; top: number; width: number; height: number },
-  naturalWidth: number,
-  naturalHeight: number
-) {
-  const info = getRenderedImageRect(containerRect, naturalWidth, naturalHeight)
-  const relX = clientX - containerRect.left - info.offsetX
-  const relY = clientY - containerRect.top - info.offsetY
-  return {
-    x: relX / info.scale,
-    y: relY / info.scale,
-  }
-}
-
-function isInsideCrop(
-  px: number,
-  py: number,
-  crop: { x: number; y: number; width: number; height: number }
-) {
-  return (
-    px >= crop.x &&
-    px <= crop.x + crop.width &&
-    py >= crop.y &&
-    py <= crop.y + crop.height
-  )
-}
-
-function clampDragPosition(
-  px: number,
-  py: number,
-  dragStart: { x: number; y: number },
-  cropWidth: number,
-  cropHeight: number,
-  naturalWidth: number,
-  naturalHeight: number
-) {
-  return {
-    x: Math.max(0, Math.min(px - dragStart.x, naturalWidth - cropWidth)),
-    y: Math.max(0, Math.min(py - dragStart.y, naturalHeight - cropHeight)),
-  }
-}
 
 describe('ImageCropDialog pointer math', () => {
   const rect = { left: 10, top: 20, width: 400, height: 300 }
@@ -71,13 +18,13 @@ describe('ImageCropDialog pointer math', () => {
 
   it('maps screen coordinates to image coordinates correctly', () => {
     // Center of the displayed image
-    const pos = getPointerPosition(210, 170, rect, naturalWidth, naturalHeight)
-    expect(pos.x).toBe(2000) // (210-10) * (4000/400) = 200 * 10
-    expect(pos.y).toBe(1500) // (170-20) * (3000/300) = 150 * 10
+    const pos = computePointerPosition(210, 170, rect, naturalWidth, naturalHeight)
+    expect(pos.x).toBe(2000)
+    expect(pos.y).toBe(1500)
   })
 
   it('maps top-left corner correctly', () => {
-    const pos = getPointerPosition(10, 20, rect, naturalWidth, naturalHeight)
+    const pos = computePointerPosition(10, 20, rect, naturalWidth, naturalHeight)
     expect(pos.x).toBe(0)
     expect(pos.y).toBe(0)
   })
@@ -122,8 +69,8 @@ describe('ImageCropDialog pointer math', () => {
       const clientX = 150
       const clientY = 100
       
-      const mousePos = getPointerPosition(clientX, clientY, rect, naturalWidth, naturalHeight)
-      const touchPos = getPointerPosition(clientX, clientY, rect, naturalWidth, naturalHeight)
+      const mousePos = computePointerPosition(clientX, clientY, rect, naturalWidth, naturalHeight)
+      const touchPos = computePointerPosition(clientX, clientY, rect, naturalWidth, naturalHeight)
       
       expect(touchPos.x).toBe(mousePos.x)
       expect(touchPos.y).toBe(mousePos.y)
@@ -139,28 +86,34 @@ describe('ImageCropDialog pointer math', () => {
     // renderedW = 400, renderedH = 200, offsetX = 0, offsetY = 100
 
     it('correctly maps center of a letterboxed image', () => {
-      // Center of rendered image = (200, 300) in screen coords (offsetY=100, so 100+100=200 center)
-      const pos = getPointerPosition(200, 200, squareRect, wideNatW, wideNatH)
-      expect(pos.x).toBe(2000) // center of 4000
-      expect(pos.y).toBe(1000) // center of 2000
+      const pos = computePointerPosition(200, 200, squareRect, wideNatW, wideNatH)
+      expect(pos.x).toBe(2000)
+      expect(pos.y).toBe(1000)
     })
 
     it('maps top-left of rendered image (not container)', () => {
-      // The image starts at (0, 100) in the container
-      const pos = getPointerPosition(0, 100, squareRect, wideNatW, wideNatH)
+      const pos = computePointerPosition(0, 100, squareRect, wideNatW, wideNatH)
       expect(pos.x).toBeCloseTo(0, 5)
       expect(pos.y).toBeCloseTo(0, 5)
     })
 
     it('returns negative coords when clicking in letterbox area', () => {
-      // Clicking at (200, 50) is above the rendered image (offsetY=100)
-      const pos = getPointerPosition(200, 50, squareRect, wideNatW, wideNatH)
+      const pos = computePointerPosition(200, 50, squareRect, wideNatW, wideNatH)
       expect(pos.y).toBeLessThan(0)
     })
   })
 })
 
 describe('Crop resize logic', () => {
+  it('computes rendered image rect correctly', () => {
+    const info = computeRenderedImageRect(400, 300, 4000, 3000)
+    expect(info.scale).toBeCloseTo(0.1)
+    expect(info.renderedW).toBeCloseTo(400)
+    expect(info.renderedH).toBeCloseTo(300)
+    expect(info.offsetX).toBeCloseTo(0)
+    expect(info.offsetY).toBeCloseTo(0)
+  })
+
   it('resizes crop centered and clamps to image bounds', () => {
     const naturalWidth = 4000
     const naturalHeight = 3000

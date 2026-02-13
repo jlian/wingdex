@@ -127,7 +127,7 @@ describe('error message propagation', () => {
   })
 
   it('falls back to generic message for non-Error', () => {
-    const error = 'something went wrong'
+    const error: unknown = 'something went wrong'
     const msg = error instanceof Error ? error.message : 'Species identification failed'
     expect(msg).toBe('Species identification failed')
   })

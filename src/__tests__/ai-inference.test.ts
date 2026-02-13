@@ -115,7 +115,7 @@ describe('identifyBirdInPhoto', () => {
     expect(result.cropBox).toBeUndefined()
   })
 
-  it('returns empty candidates when JSON parse fails', async () => {
+  it('throws informative error when JSON parse fails', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -124,9 +124,9 @@ describe('identifyBirdInPhoto', () => {
       text: async () => 'I cannot identify this bird.',
     })
 
-    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
-
-    expect(result.candidates).toEqual([])
+    await expect(
+      identifyBirdInPhoto('data:image/jpeg;base64,test')
+    ).rejects.toThrow('unparseable response')
   })
 
   it('rejects invalid cropBox dimensions', async () => {
