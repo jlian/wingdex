@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { SpeciesAutocomplete } from '@/components/ui/species-autocomplete'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -297,12 +298,12 @@ function OutingDetail({
           <Card className="p-3 space-y-3 border-primary/30">
             <div className="space-y-2">
               <Label htmlFor="species-name">Species Name</Label>
-              <Input
+              <SpeciesAutocomplete
                 id="species-name"
-                placeholder="e.g. Northern Cardinal"
                 value={newSpeciesName}
-                onChange={e => setNewSpeciesName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddSpecies()}
+                onChange={setNewSpeciesName}
+                onSubmit={handleAddSpecies}
+                autoFocus
               />
             </div>
             <div className="flex items-center gap-3">

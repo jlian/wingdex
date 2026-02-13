@@ -1,3 +1,5 @@
+import { findBestMatch } from './taxonomy'
+
 // GitHub Models via Spark proxy — use full owner/model format
 const VISION_MODEL = 'openai/gpt-4.1'
 const TEXT_MODEL = 'openai/gpt-4.1-mini'
@@ -221,11 +223,20 @@ No bird: {"candidates":[],"cropBox":null}`
     const parsed = safeParseJSON(response)
     if (!parsed) { console.error('❌ Parse failed'); return { candidates: [] } }
 
-    const candidates = (parsed.candidates && Array.isArray(parsed.candidates))
+    const rawCandidates = (parsed.candidates && Array.isArray(parsed.candidates))
       ? parsed.candidates
           .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
           .slice(0, 5)
       : []
+
+    // Ground candidate names against the eBird taxonomy
+    const candidates = rawCandidates.map((c: any) => {
+      const match = findBestMatch(c.species)
+      if (match && match.common.toLowerCase() !== c.species.toLowerCase()) {
+        console.log(`🔄 Grounded "${c.species}" → "${match.common}"`)
+      }
+      return { ...c, species: match ? match.common : c.species }
+    })
     console.log(`✅ ${candidates.length} candidates:`, candidates)
 
     let cropBox: BirdIdResult['cropBox'] = undefined
