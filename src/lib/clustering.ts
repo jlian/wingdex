@@ -32,10 +32,10 @@ function haversineDistance(
 
 export function clusterPhotosIntoOutings(photos: Photo[]): PhotoCluster[] {
   if (photos.length === 0) return []
-  
+
   const sortedPhotos = [...photos].sort((a, b) => {
-    const timeA = a.exifTime ? new Date(a.exifTime).getTime() : Date.now()
-    const timeB = b.exifTime ? new Date(b.exifTime).getTime() : Date.now()
+    const timeA = a.exifTime ? new Date(a.exifTime).getTime() : Number.POSITIVE_INFINITY
+    const timeB = b.exifTime ? new Date(b.exifTime).getTime() : Number.POSITIVE_INFINITY
     return timeA - timeB
   })
   
@@ -46,9 +46,9 @@ export function clusterPhotosIntoOutings(photos: Photo[]): PhotoCluster[] {
     const photo = sortedPhotos[i]
     const lastPhoto = currentCluster[currentCluster.length - 1]
     
-    const photoTime = photo.exifTime ? new Date(photo.exifTime).getTime() : Date.now()
-    const lastTime = lastPhoto.exifTime ? new Date(lastPhoto.exifTime).getTime() : Date.now()
-    const timeDiff = photoTime - lastTime
+    const photoTime = photo.exifTime ? new Date(photo.exifTime).getTime() : null
+    const lastTime = lastPhoto.exifTime ? new Date(lastPhoto.exifTime).getTime() : null
+    const timeDiff = photoTime !== null && lastTime !== null ? photoTime - lastTime : 0
     
     let shouldCluster = timeDiff <= EIGHT_HOURS_MS
     
@@ -78,9 +78,14 @@ export function clusterPhotosIntoOutings(photos: Photo[]): PhotoCluster[] {
 }
 
 function createClusterFromPhotos(photos: Photo[]): PhotoCluster {
-  const times = photos
-    .map(p => p.exifTime ? new Date(p.exifTime).getTime() : Date.now())
+  const exifTimes = photos
+    .map(photo => (photo.exifTime ? new Date(photo.exifTime).getTime() : null))
+    .filter((time): time is number => time !== null)
     .sort((a, b) => a - b)
+
+  const fallbackNow = Date.now()
+  const start = exifTimes[0] ?? fallbackNow
+  const end = exifTimes[exifTimes.length - 1] ?? fallbackNow
   
   const photosWithGps = photos.filter(p => p.gps)
   let centerLat: number | undefined
@@ -93,8 +98,8 @@ function createClusterFromPhotos(photos: Photo[]): PhotoCluster {
   
   return {
     photos,
-    startTime: new Date(times[0]),
-    endTime: new Date(times[times.length - 1]),
+    startTime: new Date(start),
+    endTime: new Date(end),
     centerLat,
     centerLon
   }
@@ -126,7 +131,12 @@ export function findMatchingOuting(
     if (!timeOverlap) continue
 
     // If both have GPS, check distance
-    if (cluster.centerLat && cluster.centerLon && outing.lat && outing.lon) {
+    if (
+      cluster.centerLat !== undefined &&
+      cluster.centerLon !== undefined &&
+      outing.lat !== undefined &&
+      outing.lon !== undefined
+    ) {
       const dist = haversineDistance(
         cluster.centerLat, cluster.centerLon,
         outing.lat, outing.lon

@@ -3,6 +3,65 @@ import type { Photo, Outing, Observation, DexEntry, SavedSpot } from '@/lib/type
 
 export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
 
+function buildDexFromState(
+  allOutings: Outing[],
+  allObservations: Observation[],
+  existingDex: DexEntry[]
+): DexEntry[] {
+  const outingsById = new Map(allOutings.map(outing => [outing.id, outing]))
+  const existingBySpecies = new Map(existingDex.map(entry => [entry.speciesName, entry]))
+  const grouped = new Map<string, Observation[]>()
+
+  for (const observation of allObservations) {
+    if (observation.certainty !== 'confirmed') continue
+    const list = grouped.get(observation.speciesName)
+    if (list) {
+      list.push(observation)
+    } else {
+      grouped.set(observation.speciesName, [observation])
+    }
+  }
+
+  const rebuilt: DexEntry[] = []
+
+  for (const [speciesName, speciesObservations] of grouped.entries()) {
+    const speciesOutings = speciesObservations
+      .map(observation => outingsById.get(observation.outingId))
+      .filter((outing): outing is Outing => !!outing)
+
+    if (speciesOutings.length === 0) continue
+
+    const firstSeen = speciesOutings.reduce((min, currentOuting) =>
+      new Date(currentOuting.startTime) < new Date(min.startTime)
+        ? currentOuting
+        : min
+    )
+    const lastSeen = speciesOutings.reduce((max, currentOuting) =>
+      new Date(currentOuting.startTime) > new Date(max.startTime)
+        ? currentOuting
+        : max
+    )
+
+    const totalCount = speciesObservations.reduce((sum, observation) => sum + observation.count, 0)
+    const totalOutings = new Set(speciesObservations.map(observation => observation.outingId)).size
+    const existing = existingBySpecies.get(speciesName)
+    const latestWithPhoto = [...speciesObservations].reverse().find(observation => observation.representativePhotoId)
+
+    rebuilt.push({
+      speciesName,
+      firstSeenDate: firstSeen.startTime,
+      lastSeenDate: lastSeen.startTime,
+      addedDate: existing?.addedDate || new Date().toISOString(),
+      totalOutings,
+      totalCount,
+      bestPhotoId: latestWithPhoto?.representativePhotoId || existing?.bestPhotoId,
+      notes: existing?.notes || '',
+    })
+  }
+
+  return rebuilt.sort((a, b) => a.speciesName.localeCompare(b.speciesName))
+}
+
 export function useBirdDexData(userId: number) {
   const prefix = `u${userId}_`
   const [photos, setPhotos] = useKV<Photo[]>(`${prefix}photos`, [])
@@ -26,8 +85,17 @@ export function useBirdDexData(userId: number) {
   }
 
   const deleteOuting = (outingId: string) => {
-    setOutings(current => (current || []).filter(o => o.id !== outingId))
-    setObservations(current => (current || []).filter(obs => obs.outingId !== outingId))
+    setOutings(currentOutings => {
+      const remainingOutings = (currentOutings || []).filter(outing => outing.id !== outingId)
+      setObservations(currentObservations => {
+        const remainingObservations = (currentObservations || []).filter(
+          observation => observation.outingId !== outingId
+        )
+        setDex(currentDex => buildDexFromState(remainingOutings, remainingObservations, currentDex || []))
+        return remainingObservations
+      })
+      return remainingOutings
+    })
     setPhotos(current => (current || []).filter(p => p.outingId !== outingId))
   }
 
@@ -36,9 +104,13 @@ export function useBirdDexData(userId: number) {
   }
 
   const updateObservation = (observationId: string, updates: Partial<Observation>) => {
-    setObservations(current =>
-      (current || []).map(obs => (obs.id === observationId ? { ...obs, ...updates } : obs))
-    )
+    setObservations(currentObservations => {
+      const updatedObservations = (currentObservations || []).map(observation =>
+        observation.id === observationId ? { ...observation, ...updates } : observation
+      )
+      setDex(currentDex => buildDexFromState(outings || [], updatedObservations, currentDex || []))
+      return updatedObservations
+    })
   }
 
   const updateDex = (

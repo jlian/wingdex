@@ -230,19 +230,22 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </h3>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
-            <strong>Your photos are never stored.</strong> Photos are processed
-            locally for AI identification and then discarded. They never leave
-            your device or get uploaded to any server.
+            <strong>Your photos are not stored by BirdDex.</strong> During AI
+            identification, compressed photo data is sent to GitHub Spark&apos;s
+            `/_spark/llm` proxy (GitHub Models), then discarded from app state
+            after processing.
           </p>
           <p>
             Your birding records (outings, species, sightings) are stored on
             GitHub&apos;s infrastructure, scoped entirely to your GitHub
-            account. <strong>We don&apos;t operate any servers or databases</strong> —
-            all data lives in GitHub&apos;s key-value store tied to your login.
+            account. <strong>BirdDex does not run a separate backend service</strong>
+            — app data lives in GitHub&apos;s key-value store tied to your login.
           </p>
           <p>
-            Species images in the BirdDex are loaded on-demand from Wikimedia
-            Commons and Wikipedia. No images are cached or stored.
+            If you choose GPS location lookup during outing review, approximate
+            coordinates are sent to OpenStreetMap Nominatim to suggest a place
+            name. Species images are loaded on-demand from Wikimedia Commons
+            and Wikipedia.
           </p>
         </div>
       </Card>

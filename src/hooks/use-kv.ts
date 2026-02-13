@@ -150,13 +150,16 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   // Sync across tabs via storage event (localStorage only)
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key === LS_PREFIX + key && e.newValue !== null) {
-        try { setValue(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      if (e.key !== LS_PREFIX + key) return
+      if (e.newValue === null) {
+        setValue(initialValue)
+        return
       }
+      try { setValue(JSON.parse(e.newValue)) } catch { /* ignore */ }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
-  }, [key])
+  }, [key, initialValue])
 
   const userSetValue: SetValue<T> = useCallback((newValue) => {
     setValue((currentValue) => {

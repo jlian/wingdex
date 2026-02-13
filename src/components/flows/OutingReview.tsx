@@ -37,20 +37,19 @@ export default function OutingReview({
   defaultLocationName = '',
   onConfirm
 }: OutingReviewProps) {
-  const hasGps = !!(cluster.centerLat && cluster.centerLon)
+  const hasGps = cluster.centerLat !== undefined && cluster.centerLon !== undefined
   const [locationName, setLocationName] = useState(defaultLocationName)
-  const [isLoadingLocation, setIsLoadingLocation] = useState(hasGps)
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
+  const [hasRequestedLookup, setHasRequestedLookup] = useState(false)
 
   // Check if these photos match an existing outing
   const matchingOuting = findMatchingOuting(cluster, data.outings)
   const [useExistingOuting, setUseExistingOuting] = useState(!!matchingOuting)
 
   useEffect(() => {
-    if (hasGps) {
-      fetchLocationName(cluster.centerLat!, cluster.centerLon!)
-    }
-  }, [cluster.centerLat, cluster.centerLon])
+    setHasRequestedLookup(false)
+  }, [cluster.startTime, cluster.endTime])
 
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
@@ -147,6 +146,14 @@ export default function OutingReview({
 
   const handleConfirm = () => doConfirm(locationName)
 
+  const handleLookupLocation = () => {
+    if (!hasGps) return
+    setHasRequestedLookup(true)
+    const roundedLat = Number(cluster.centerLat!.toFixed(3))
+    const roundedLon = Number(cluster.centerLon!.toFixed(3))
+    void fetchLocationName(roundedLat, roundedLon)
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-3">
@@ -162,7 +169,7 @@ export default function OutingReview({
         </div>
 
         {/* GPS Status Indicator */}
-        {cluster.centerLat && cluster.centerLon ? (
+        {hasGps ? (
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle size={18} weight="fill" className="text-green-500" />
             <span className="text-green-600 dark:text-green-400 font-medium">GPS detected</span>
@@ -213,6 +220,17 @@ export default function OutingReview({
           {!useExistingOuting && (
           <div className="space-y-2">
             <Label htmlFor="location-name">Location Name</Label>
+            {hasGps && !hasRequestedLookup && !isLoadingLocation && (
+              <div className="rounded-md border border-border bg-muted/40 p-2 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Use GPS to suggest a location name. Approximate coordinates are sent to OpenStreetMap Nominatim.
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={handleLookupLocation}>
+                  <MapPin size={14} className="mr-1" />
+                  Use GPS to Suggest Name
+                </Button>
+              </div>
+            )}
             {isLoadingLocation ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
