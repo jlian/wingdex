@@ -13,11 +13,23 @@ const KV_BASE = '/_spark/kv'
 const SPARK_KV_PROBE_TTL_MS = 30_000
 const SPARK_KV_WRITE_RETRIES = 2
 
+function isSparkHostedRuntime(): boolean {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname.toLowerCase()
+  return host === 'github.app' || host.endsWith('.github.app')
+}
+
 // Cached after first probe so we only check once
 let _sparkKvAvailable: boolean | null = null
 let _sparkKvCheckedAt = 0
 
 async function probeSparkKv(): Promise<boolean> {
+  if (!isSparkHostedRuntime()) {
+    _sparkKvAvailable = false
+    _sparkKvCheckedAt = Date.now()
+    return false
+  }
+
   const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
   if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
   try {
