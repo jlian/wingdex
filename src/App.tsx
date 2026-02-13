@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { House, List, Bird, Gear, CloudArrowUp, Plus } from '@phosphor-icons/react'
+import { House, List, Bird, Gear, Plus } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 
 import HomePage from '@/components/pages/HomePage'
@@ -35,6 +35,7 @@ function parseHash(): { tab: string; subId?: string } {
 
 function useHashRouter() {
   const [route, setRoute] = useState(parseHash)
+  const navigatingWithSubId = useRef(false)
 
   useEffect(() => {
     const onChange = () => setRoute(parseHash())
@@ -42,15 +43,25 @@ function useHashRouter() {
     return () => window.removeEventListener('popstate', onChange)
   }, [])
 
+  // Clear the guard after each render
+  useEffect(() => { navigatingWithSubId.current = false })
+
   const navigate = useCallback((tab: string, subId?: string) => {
     const hash = subId
       ? `#${tab}/${encodeURIComponent(subId)}`
       : tab === 'home' ? '' : `#${tab}`
     window.history.pushState(null, '', hash || window.location.pathname)
+    if (subId) navigatingWithSubId.current = true
     setRoute({ tab, subId })
   }, [])
 
-  return { tab: route.tab, subId: route.subId, navigate }
+  const handleTabChange = useCallback((val: string) => {
+    // Guard: if we just navigated with a subId, don't let onValueChange override it
+    if (navigatingWithSubId.current) return
+    navigate(val)
+  }, [navigate])
+
+  return { tab: route.tab, subId: route.subId, navigate, handleTabChange }
 }
 
 // ─── App ──────────────────────────────────────────────────
@@ -116,7 +127,7 @@ function App() {
 }
 
 function AppContent({ user }: { user: UserInfo }) {
-  const { tab, subId, navigate } = useHashRouter()
+  const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData(user.id)
 
@@ -131,7 +142,7 @@ function AppContent({ user }: { user: UserInfo }) {
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
-      <Tabs value={tab} onValueChange={(val) => navigate(val)}>
+      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
         {/* ── Top header + desktop nav ──────────────────────── */}
         <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -153,6 +164,10 @@ function AppContent({ user }: { user: UserInfo }) {
                   <TabsTrigger
                     key={item.value}
                     value={item.value}
+                    onClick={() => {
+                      // If clicking the already-active tab, clear any subId (e.g. go back to list from detail)
+                      if (item.value === tab && subId) navigate(item.value)
+                    }}
                     className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
                       data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
@@ -168,7 +183,7 @@ function AppContent({ user }: { user: UserInfo }) {
                 <Button
                   size="sm"
                   onClick={() => setShowAddPhotos(true)}
-                  className="hidden sm:flex bg-accent text-accent-foreground hover:bg-accent/90"
+                  className="flex bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                   <Plus size={16} className="mr-1" weight="bold" />
                   Add Photos
@@ -183,28 +198,30 @@ function AppContent({ user }: { user: UserInfo }) {
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="max-w-5xl mx-auto pb-20 md:pb-8">
+        <main className="w-full max-w-5xl mx-auto pb-20 md:pb-8">
           <TabsContent value="home" className="mt-0">
             <HomePage
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
               onSelectOuting={(id) => navigate('outings', id)}
               onSelectSpecies={(name) => navigate('lifelist', name)}
+              onNavigate={(tab) => navigate(tab)}
             />
           </TabsContent>
 
           <TabsContent value="outings" className="mt-0">
             <OutingsPage
               data={data}
-              selectedOutingId={subId ?? null}
+              selectedOutingId={tab === 'outings' ? (subId ?? null) : null}
               onSelectOuting={(id) => navigate('outings', id ?? undefined)}
+              onSelectSpecies={(name) => navigate('lifelist', name)}
             />
           </TabsContent>
 
           <TabsContent value="lifelist" className="mt-0">
             <LifeListPage
               data={data}
-              selectedSpecies={subId ?? null}
+              selectedSpecies={tab === 'lifelist' ? (subId ?? null) : null}
               onSelectSpecies={(name) => navigate('lifelist', name ?? undefined)}
             />
           </TabsContent>
@@ -221,6 +238,9 @@ function AppContent({ user }: { user: UserInfo }) {
               <TabsTrigger
                 key={item.value}
                 value={item.value}
+                onClick={() => {
+                  if (item.value === tab && subId) navigate(item.value)
+                }}
                 className="flex flex-col gap-1 data-[state=active]:text-primary"
               >
                 <item.icon size={22} />
@@ -239,14 +259,7 @@ function AppContent({ user }: { user: UserInfo }) {
         />
       )}
 
-      {/* Mobile FAB — hidden on desktop (desktop has header button) */}
-      <Button
-        size="lg"
-        className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg bg-accent text-accent-foreground md:hidden z-40"
-        onClick={() => setShowAddPhotos(true)}
-      >
-        <CloudArrowUp size={28} weight="bold" />
-      </Button>
+
     </div>
   )
 }

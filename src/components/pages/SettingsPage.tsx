@@ -136,44 +136,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
-      <Card className="p-4 space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Info size={20} />
-            <h3 className="font-semibold text-foreground">Vision API Test</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Test if the AI bird identification is working properly
-          </p>
-        </div>
-        
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={async () => {
-              try {
-                toast.info('Testing Vision API access...')
-                const response = await textLLM('Test message: respond with "API is working" if you receive this.')
-                toast.success('Vision API is accessible!')
-                console.log('API Test Response:', response)
-              } catch (error) {
-                toast.error(`Vision API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                console.error('API Test Error:', error)
-              }
-            }}
-          >
-            Test Vision API Connection
-          </Button>
-          
-          <Alert>
-            <AlertDescription className="text-xs">
-              If the test fails, bird identification will not work. Check browser console for detailed errors.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </Card>
-
       <SavedLocationsSection data={data} />
 
       {/* Data Storage & Privacy */}
@@ -256,6 +218,45 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
+      {/* Vision API Test — developer/debug tool */}
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Info size={20} />
+            <h3 className="font-semibold text-foreground">Vision API Test</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Test if the AI bird identification is working properly
+          </p>
+        </div>
+        
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              try {
+                toast.info('Testing Vision API access...')
+                const response = await textLLM('Test message: respond with "API is working" if you receive this.')
+                toast.success('Vision API is accessible!')
+                console.log('API Test Response:', response)
+              } catch (error) {
+                toast.error(`Vision API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                console.error('API Test Error:', error)
+              }
+            }}
+          >
+            Test Vision API Connection
+          </Button>
+          
+          <Alert>
+            <AlertDescription className="text-xs">
+              If the test fails, bird identification will not work. Check browser console for detailed errors.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </Card>
+
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-foreground">About BirdDex</h3>
         <p className="text-sm text-muted-foreground">
@@ -312,6 +313,7 @@ function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexDat
         setLat(pos.coords.latitude.toFixed(6))
         setLon(pos.coords.longitude.toFixed(6))
         setGettingLocation(false)
+        toast.success('Location detected')
       },
       (err) => {
         toast.error(`Location error: ${err.message}`)
@@ -319,6 +321,16 @@ function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexDat
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
+  }
+
+  // Count outings near each saved spot (within ~500m)
+  const getOutingsNearSpot = (spot: SavedSpot) => {
+    return data.outings.filter(o => {
+      if (!o.lat || !o.lon) return false
+      const dlat = Math.abs(o.lat - spot.lat)
+      const dlon = Math.abs(o.lon - spot.lon)
+      return dlat < 0.005 && dlon < 0.005 // ~500m
+    })
   }
 
   return (
@@ -386,7 +398,7 @@ function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexDat
               disabled={gettingLocation}
             >
               <MapPin size={14} className="mr-1" />
-              {gettingLocation ? 'Getting...' : 'Use Current Location'}
+              {gettingLocation ? 'Detecting...' : 'Use Current Location'}
             </Button>
             <Button size="sm" onClick={handleAdd} disabled={!name.trim()}>
               <Check size={14} className="mr-1" />
@@ -397,36 +409,64 @@ function SavedLocationsSection({ data }: { data: ReturnType<typeof useBirdDexDat
       )}
 
       {data.savedSpots.length === 0 && !adding ? (
-        <p className="text-sm text-muted-foreground text-center py-3">
-          No saved locations yet
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {data.savedSpots.map(spot => (
-            <div
-              key={spot.id}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
-            >
-              <MapPin size={16} className="text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{spot.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {spot.lat.toFixed(4)}°, {spot.lon.toFixed(4)}°
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-destructive flex-shrink-0"
-                onClick={() => {
-                  data.deleteSavedSpot(spot.id)
-                  toast.success(`Removed "${spot.name}"`)
-                }}
-              >
-                <Trash size={14} />
-              </Button>
+        <div className="text-center py-6 space-y-2">
+          <div className="flex justify-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <MapPin size={24} className="text-primary" weight="duotone" />
             </div>
-          ))}
+          </div>
+          <p className="text-sm text-muted-foreground">No saved locations yet</p>
+          <p className="text-xs text-muted-foreground">
+            Save your favorite birding spots for quick access when creating outings
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {data.savedSpots.map(spot => {
+            const nearbyOutings = getOutingsNearSpot(spot)
+            const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
+
+            return (
+              <div
+                key={spot.id}
+                className="flex items-center gap-3 py-2.5"
+              >
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin size={16} className="text-primary" weight="fill" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)}
+                    </a>
+                    {nearbyOutings.length > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>{nearbyOutings.length} {nearbyOutings.length === 1 ? 'outing' : 'outings'}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
+                  onClick={() => {
+                    data.deleteSavedSpot(spot.id)
+                    toast.success(`Removed "${spot.name}"`)
+                  }}
+                >
+                  <Trash size={14} />
+                </Button>
+              </div>
+            )
+          })}
         </div>
       )}
     </Card>

@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
-  Trash, PencilSimple, Check, Plus, X, Bird
+  Trash, PencilSimple, Check, Plus, X, Bird, CaretRight, Clock,
+  ListChecks, CheckCircle, HashStraight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
@@ -19,14 +20,15 @@ interface OutingsPageProps {
   data: ReturnType<typeof useBirdDexData>
   selectedOutingId: string | null
   onSelectOuting: (id: string | null) => void
+  onSelectSpecies: (name: string) => void
 }
 
-export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: OutingsPageProps) {
+export default function OutingsPage({ data, selectedOutingId, onSelectOuting, onSelectSpecies }: OutingsPageProps) {
   const { outings } = data
 
   if (outings.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 text-center space-y-3">
+      <div className="px-4 sm:px-6 py-16 text-center space-y-3 max-w-3xl mx-auto">
         <div className="flex justify-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Bird size={32} className="text-primary" weight="duotone" />
@@ -43,7 +45,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
   if (selectedOutingId) {
     const outing = outings.find(o => o.id === selectedOutingId)
     if (!outing) {
-      onSelectOuting(null)
+      // Don't call onSelectOuting during render — use effect or return null gracefully
       return null
     }
     return (
@@ -51,12 +53,13 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
         outing={outing}
         data={data}
         onBack={() => onSelectOuting(null)}
+        onSelectSpecies={onSelectSpecies}
       />
     )
   }
 
   return (
-    <div className="px-4 sm:px-6 py-4 space-y-3">
+    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Your Outings
@@ -78,7 +81,6 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting }: 
               outing={outing}
               photos={photos}
               confirmed={confirmed}
-              index={i}
               onClick={() => onSelectOuting(outing.id)}
             />
           )
@@ -94,13 +96,11 @@ function OutingRow({
   outing,
   photos,
   confirmed,
-  index = 0,
   onClick,
 }: {
   outing: Outing
   photos: any[]
   confirmed: Observation[]
-  index?: number
   onClick: () => void
 }) {
   const firstSpecies = confirmed[0]?.speciesName
@@ -109,29 +109,31 @@ function OutingRow({
 
   return (
     <button
-      className={`flex items-center gap-3 py-3 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted animate-card-in stagger-${Math.min(index + 1, 18)}`}
+      className="flex items-center gap-3 md:gap-4 py-3 w-full text-left rounded-md hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
       onClick={onClick}
     >
       {heroSrc ? (
         <img
           src={heroSrc}
           alt={firstSpecies || 'Outing'}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+          className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
           loading="lazy"
         />
       ) : (
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
           <Bird size={20} className="text-muted-foreground/40" />
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="font-serif font-semibold text-sm text-foreground truncate">
-          {outing.locationName || 'Outing'}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {new Date(outing.startTime).toLocaleDateString()} · {confirmed.length} {confirmed.length === 1 ? 'species' : 'species'}
-          {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
-        </p>
+        <div className="md:flex md:items-baseline md:gap-2">
+          <p className="font-serif font-semibold text-sm text-foreground truncate">
+            {outing.locationName || 'Outing'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {new Date(outing.startTime).toLocaleDateString()} · {confirmed.length} species
+            {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
+          </p>
+        </div>
         {confirmed.length > 0 && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">
             {confirmed.slice(0, 4).map(obs => obs.speciesName.split('(')[0].trim()).join(', ')}
@@ -149,10 +151,12 @@ function OutingDetail({
   outing,
   data,
   onBack,
+  onSelectSpecies,
 }: {
   outing: Outing
   data: ReturnType<typeof useBirdDexData>
   onBack: () => void
+  onSelectSpecies: (name: string) => void
 }) {
   const observations = data.getOutingObservations(outing.id)
   const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
@@ -214,41 +218,79 @@ function OutingDetail({
     toast.success(`${newSpeciesName.split('(')[0].trim()} added`)
   }
 
+  const outingDate = new Date(outing.startTime)
+  const endDate = outing.endTime ? new Date(outing.endTime) : null
+  const durationMs = endDate && !isNaN(endDate.getTime()) ? endDate.getTime() - outingDate.getTime() : null
+  const durationStr = durationMs && durationMs > 0
+    ? durationMs >= 3600000
+      ? `${Math.floor(durationMs / 3600000)}h ${Math.round((durationMs % 3600000) / 60000)}m`
+      : `${Math.round(durationMs / 60000)}m`
+    : null
+
   return (
-    <div className="px-4 sm:px-6 py-4 space-y-4 max-w-4xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}>
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mt-0.5">
           <ArrowLeft size={20} />
         </Button>
-        <div className="flex-1">
-          <h2 className="font-serif text-xl font-semibold text-foreground">
+        <div className="flex-1 min-w-0">
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
             {outing.locationName || 'Outing'}
           </h2>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarBlank size={14} />
-            {new Date(outing.startTime).toLocaleDateString()} at{' '}
-            {new Date(outing.startTime).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <CalendarBlank size={14} />
+              {outingDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock size={14} />
+              {outingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {durationStr && <span className="text-muted-foreground/60">({durationStr})</span>}
+            </span>
           </div>
         </div>
       </div>
 
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="p-3 text-center">
+          <ListChecks size={18} className="text-primary mx-auto mb-1" />
+          <p className="text-xl font-semibold text-foreground">{confirmed.length + possible.length}</p>
+          <p className="text-xs text-muted-foreground">Species</p>
+        </Card>
+        <Card className="p-3 text-center">
+          <CheckCircle size={18} className="text-primary mx-auto mb-1" />
+          <p className="text-xl font-semibold text-foreground">{confirmed.length}</p>
+          <p className="text-xs text-muted-foreground">Confirmed</p>
+        </Card>
+        <Card className="p-3 text-center">
+          <HashStraight size={18} className="text-primary mx-auto mb-1" />
+          <p className="text-xl font-semibold text-foreground">
+            {observations.reduce((sum, o) => sum + o.count, 0)}
+          </p>
+          <p className="text-xs text-muted-foreground">Total Count</p>
+        </Card>
+      </div>
+
       {/* Location */}
       {outing.lat && outing.lon && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin size={16} weight="fill" className="text-primary" />
-          {outing.locationName}
-          <span className="text-xs">
+        <a
+          href={`https://www.google.com/maps?q=${outing.lat},${outing.lon}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <MapPin size={16} weight="fill" className="text-primary flex-shrink-0" />
+          <span className="truncate">{outing.locationName}</span>
+          <span className="text-xs flex-shrink-0">
             ({outing.lat.toFixed(4)}°, {outing.lon.toFixed(4)}°)
           </span>
-        </div>
+        </a>
       )}
 
       {/* Species list */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground">
             Species ({confirmed.length + possible.length})
@@ -298,37 +340,44 @@ function OutingDetail({
 
         {/* Confirmed species */}
         {confirmed.length > 0 && (
-          <div className="space-y-2">
+          <Card className="divide-y divide-border overflow-hidden">
             {confirmed.map(obs => (
               <ObservationRow
                 key={obs.id}
                 obs={obs}
+                onClick={() => onSelectSpecies(obs.speciesName)}
                 onDelete={() => handleDeleteObservation(obs.id, obs.speciesName)}
               />
             ))}
-          </div>
+          </Card>
         )}
 
         {/* Possible species */}
         {possible.length > 0 && (
           <>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider pt-2">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider pt-1">
               Possible
             </p>
-            {possible.map(obs => (
-              <ObservationRow
-                key={obs.id}
-                obs={obs}
-                onDelete={() => handleDeleteObservation(obs.id, obs.speciesName)}
-              />
-            ))}
+            <Card className="divide-y divide-border overflow-hidden">
+              {possible.map(obs => (
+                <ObservationRow
+                  key={obs.id}
+                  obs={obs}
+                  onClick={() => onSelectSpecies(obs.speciesName)}
+                  onDelete={() => handleDeleteObservation(obs.id, obs.speciesName)}
+                />
+              ))}
+            </Card>
           </>
         )}
 
         {confirmed.length === 0 && possible.length === 0 && (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No species recorded yet
-          </p>
+          <Card className="p-6 text-center">
+            <Bird size={32} className="text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              No species recorded yet
+            </p>
+          </Card>
         )}
       </div>
 
@@ -369,7 +418,7 @@ function OutingDetail({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 pt-2 border-t border-border">
         <Button
           variant="outline"
           className="flex-1"
@@ -395,9 +444,11 @@ function OutingDetail({
 
 function ObservationRow({
   obs,
+  onClick,
   onDelete,
 }: {
   obs: Observation
+  onClick: () => void
   onDelete: () => void
 }) {
   const displayName = obs.speciesName.split('(')[0].trim()
@@ -405,41 +456,49 @@ function ObservationRow({
   const wikiImage = useBirdImage(obs.speciesName)
 
   return (
-    <Card className="flex items-center gap-3 p-3">
-      {wikiImage ? (
-        <img
-          src={wikiImage}
-          alt={displayName}
-          className="w-12 h-12 rounded object-cover bg-muted flex-shrink-0"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
-          <Bird size={20} className="text-muted-foreground" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="font-serif font-semibold text-sm text-foreground truncate">
-          {displayName}
-        </p>
-        {scientificName && (
-          <p className="text-xs text-muted-foreground italic truncate">{scientificName}</p>
+    <div className="flex items-center gap-3 md:gap-4 px-3 py-2.5 hover:bg-muted/50 transition-colors">
+      <button
+        className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 text-left cursor-pointer"
+        onClick={onClick}
+      >
+        {wikiImage ? (
+          <img
+            src={wikiImage}
+            alt={displayName}
+            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+            <Bird size={20} className="text-muted-foreground/40" />
+          </div>
         )}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {obs.count > 1 && <span>×{obs.count}</span>}
-          {obs.certainty === 'possible' && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0">possible</Badge>
+        <div className="flex-1 min-w-0">
+          <div className="md:flex md:items-baseline md:gap-2">
+            <p className="font-serif font-semibold text-sm text-foreground truncate">
+              {displayName}
+            </p>
+            {scientificName && (
+              <p className="text-xs text-muted-foreground italic truncate">{scientificName}</p>
+            )}
+          </div>
+          {obs.count > 1 && (
+            <p className="text-xs text-muted-foreground mt-0.5">x{obs.count}</p>
           )}
         </div>
-      </div>
+        {obs.certainty === 'possible' && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">possible</Badge>
+        )}
+        <CaretRight size={16} className="text-muted-foreground/40 flex-shrink-0" />
+      </button>
       <Button
         variant="ghost"
         size="sm"
-        className="text-muted-foreground hover:text-destructive flex-shrink-0"
+        className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
         onClick={(e) => { e.stopPropagation(); onDelete() }}
       >
         <Trash size={14} />
       </Button>
-    </Card>
+    </div>
   )
 }
