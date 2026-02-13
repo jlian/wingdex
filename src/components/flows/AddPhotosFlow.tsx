@@ -204,16 +204,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     if (observations.length > 0) {
       data.addObservations(observations)
-      data.updateDex(currentOutingId, observations)
+      const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
 
-      const newSpecies = observations.filter(obs => {
-        const existing = data.getDexEntry(obs.speciesName)
-        return !existing || existing.totalOutings === 1
-      })
-      if (newSpecies.length > 0) {
+      if (newSpeciesCount > 0) {
         setShowConfetti(true)
         toast.success(
-          `🎉 ${newSpecies.length} new species added to your BirdDex!`
+          `🎉 ${newSpeciesCount} new species added to your BirdDex!`
         )
         setTimeout(() => setShowConfetti(false), 3500)
       }

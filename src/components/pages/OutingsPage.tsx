@@ -7,6 +7,16 @@ import { SpeciesAutocomplete } from '@/components/ui/species-autocomplete'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   MapPin, CalendarBlank, ArrowLeft, Download,
   Trash, PencilSimple, Check, Plus, X, Bird, Clock
 } from '@phosphor-icons/react'
@@ -164,6 +174,11 @@ function OutingDetail({
   const [addingSpecies, setAddingSpecies] = useState(false)
   const [newSpeciesName, setNewSpeciesName] = useState('')
   const [newSpeciesCount, setNewSpeciesCount] = useState(1)
+  const [deleteOutingOpen, setDeleteOutingOpen] = useState(false)
+  const [pendingDeleteObservation, setPendingDeleteObservation] = useState<{
+    id: string
+    speciesName: string
+  } | null>(null)
 
   const handleExport = () => {
     const csv = exportOutingToEBirdCSV(outing, observations)
@@ -178,11 +193,7 @@ function OutingDetail({
   }
 
   const handleDeleteOuting = () => {
-    if (confirm('Delete this outing and all its observations?')) {
-      data.deleteOuting(outing.id)
-      toast.success('Outing deleted')
-      onBack()
-    }
+    setDeleteOutingOpen(true)
   }
 
   const handleSaveNotes = () => {
@@ -192,10 +203,7 @@ function OutingDetail({
   }
 
   const handleDeleteObservation = (obsId: string, speciesName: string) => {
-    if (confirm(`Remove ${getDisplayName(speciesName)} from this outing?`)) {
-      data.updateObservation(obsId, { certainty: 'rejected' })
-      toast.success('Observation removed')
-    }
+    setPendingDeleteObservation({ id: obsId, speciesName })
   }
 
   const handleAddSpecies = () => {
@@ -447,6 +455,63 @@ function OutingDetail({
           <Trash size={16} />
         </Button>
       </div>
+
+      <AlertDialog open={deleteOutingOpen} onOpenChange={setDeleteOutingOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this outing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this outing and all of its observations.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                data.deleteOuting(outing.id)
+                toast.success('Outing deleted')
+                onBack()
+              }}
+            >
+              Delete Outing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingDeleteObservation}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteObservation(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove species from outing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteObservation
+                ? `Remove ${getDisplayName(pendingDeleteObservation.speciesName)} from this outing?`
+                : 'Remove this species from the outing?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!pendingDeleteObservation) return
+                data.updateObservation(pendingDeleteObservation.id, { certainty: 'rejected' })
+                toast.success('Observation removed')
+                setPendingDeleteObservation(null)
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

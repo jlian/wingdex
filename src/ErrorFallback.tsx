@@ -1,9 +1,10 @@
 import { Alert, AlertTitle, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import type { FallbackProps } from "react-error-boundary";
 
 import { AlertTriangleIcon, RefreshCwIcon } from "lucide-react";
 
-export const ErrorFallback = ({ error, resetErrorBoundary }) => {
+export const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
   // Log the error in dev mode but still show the boundary instead of rethrowing
   // (rethrowing causes a cascade crash and blank screen)
   if (import.meta.env.DEV) {

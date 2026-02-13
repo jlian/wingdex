@@ -41,53 +41,89 @@ export function useBirdDexData(userId: number) {
     )
   }
 
-  const updateDex = (outingId: string, confirmedObservations: Observation[]) => {
+  const updateDex = (
+    outingId: string,
+    confirmedObservations: Observation[]
+  ): { newSpeciesCount: number } => {
     const outing = (outings || []).find(o => o.id === outingId)
-    if (!outing) return
+    if (!outing) return { newSpeciesCount: 0 }
+
+    const incomingConfirmed = confirmedObservations.filter(
+      obs => obs.certainty === 'confirmed'
+    )
+    if (incomingConfirmed.length === 0) return { newSpeciesCount: 0 }
+
+    const existingSpecies = new Set((dex || []).map(entry => entry.speciesName))
+    const incomingSpecies = new Set(incomingConfirmed.map(obs => obs.speciesName))
+    const newSpeciesCount = Array.from(incomingSpecies).filter(
+      speciesName => !existingSpecies.has(speciesName)
+    ).length
+
+    const uniqueCombined = new Map<string, Observation>()
+    for (const obs of observations || []) {
+      uniqueCombined.set(obs.id, obs)
+    }
+    for (const obs of incomingConfirmed) {
+      uniqueCombined.set(obs.id, obs)
+    }
+
+    const combinedConfirmed = Array.from(uniqueCombined.values()).filter(
+      obs => obs.certainty === 'confirmed'
+    )
+
+    const outingById = new Map((outings || []).map(o => [o.id, o]))
+    outingById.set(outing.id, outing)
 
     setDex(current => {
       const updated = new Map((current || []).map(entry => [entry.speciesName, entry]))
 
-      confirmedObservations
-        .filter(obs => obs.certainty === 'confirmed')
-        .forEach(obs => {
-          const existing = updated.get(obs.speciesName)
-          const outingDate = new Date(outing.startTime)
+      for (const speciesName of incomingSpecies) {
+        const speciesObservations = combinedConfirmed.filter(
+          obs => obs.speciesName === speciesName
+        )
+        const speciesOutings = speciesObservations
+          .map(obs => outingById.get(obs.outingId))
+          .filter((o): o is Outing => !!o)
 
-          if (existing) {
-            const firstDate = new Date(existing.firstSeenDate)
-            const lastDate = new Date(existing.lastSeenDate)
+        if (speciesOutings.length === 0) continue
 
-            updated.set(obs.speciesName, {
-              ...existing,
-              firstSeenDate:
-                outingDate < firstDate
-                  ? outing.startTime
-                  : existing.firstSeenDate,
-              lastSeenDate:
-                outingDate > lastDate ? outing.startTime : existing.lastSeenDate,
-              totalOutings: existing.totalOutings + 1,
-              totalCount: existing.totalCount + obs.count,
-              bestPhotoId: obs.representativePhotoId || existing.bestPhotoId
-            })
-          } else {
-            updated.set(obs.speciesName, {
-              speciesName: obs.speciesName,
-              firstSeenDate: outing.startTime,
-              lastSeenDate: outing.startTime,
-              addedDate: new Date().toISOString(),
-              totalOutings: 1,
-              totalCount: obs.count,
-              bestPhotoId: obs.representativePhotoId,
-              notes: ''
-            })
-          }
+        const firstSeen = speciesOutings.reduce((min, currentOuting) =>
+          new Date(currentOuting.startTime) < new Date(min.startTime)
+            ? currentOuting
+            : min
+        )
+        const lastSeen = speciesOutings.reduce((max, currentOuting) =>
+          new Date(currentOuting.startTime) > new Date(max.startTime)
+            ? currentOuting
+            : max
+        )
+
+        const totalCount = speciesObservations.reduce((sum, obs) => sum + obs.count, 0)
+        const totalOutings = new Set(speciesObservations.map(obs => obs.outingId)).size
+
+        const existing = updated.get(speciesName)
+        const latestIncomingForSpecies = incomingConfirmed.find(
+          obs => obs.speciesName === speciesName
+        )
+
+        updated.set(speciesName, {
+          speciesName,
+          firstSeenDate: firstSeen.startTime,
+          lastSeenDate: lastSeen.startTime,
+          addedDate: existing?.addedDate || new Date().toISOString(),
+          totalOutings,
+          totalCount,
+          bestPhotoId: latestIncomingForSpecies?.representativePhotoId || existing?.bestPhotoId,
+          notes: existing?.notes || '',
         })
+      }
 
       return Array.from(updated.values()).sort((a, b) =>
         a.speciesName.localeCompare(b.speciesName)
       )
     })
+
+    return { newSpeciesCount }
   }
 
   const addSavedSpot = (spot: SavedSpot) => {

@@ -1,6 +1,46 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dark mode', () => {
+  test('theme CSS variables are defined in light and dark modes', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    const lightVars = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const body = getComputedStyle(document.body);
+      return {
+        colorBackground: root.getPropertyValue('--color-background').trim(),
+        colorForeground: root.getPropertyValue('--color-foreground').trim(),
+        bodyBackground: body.backgroundColor,
+        bodyColor: body.color,
+      };
+    });
+
+    expect(lightVars.colorBackground.length).toBeGreaterThan(0);
+    expect(lightVars.colorForeground.length).toBeGreaterThan(0);
+    expect(lightVars.bodyBackground).not.toBe('rgba(0, 0, 0, 0)');
+
+    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('button', { name: 'Dark' }).click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+
+    const darkVars = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const body = getComputedStyle(document.body);
+      return {
+        colorBackground: root.getPropertyValue('--color-background').trim(),
+        colorForeground: root.getPropertyValue('--color-foreground').trim(),
+        bodyBackground: body.backgroundColor,
+        bodyColor: body.color,
+      };
+    });
+
+    expect(darkVars.colorBackground.length).toBeGreaterThan(0);
+    expect(darkVars.colorForeground.length).toBeGreaterThan(0);
+    expect(darkVars.bodyBackground).not.toBe(lightVars.bodyBackground);
+  });
+
   test('settings page shows appearance toggle with three options', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });

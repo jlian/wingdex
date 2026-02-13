@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,10 +11,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, Warning, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
+import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
-import { parseEBirdCSV, detectImportConflicts, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
+import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
@@ -22,6 +22,7 @@ import type { SavedSpot } from '@/lib/types'
 interface SettingsPageProps {
   data: BirdDexDataStore
   user: {
+    id: number
     login: string
     avatarUrl: string
     email: string
@@ -32,7 +33,12 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleImportEBird = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -50,7 +56,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       // Group into outings + observations
       const { outings, observations } = groupPreviewsIntoOutings(
         previews,
-        `u${user.login}`
+        `u${user.id}`
       )
 
       // Import outings, observations, and update dex
@@ -119,7 +125,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           ] as const).map(({ value, label, icon: Icon }) => (
             <Button
               key={value}
-              variant={theme === value ? 'default' : 'outline'}
+              variant={mounted && theme === value ? 'default' : 'outline'}
               className="flex flex-col items-center gap-1.5 h-auto py-3"
               onClick={() => setTheme(value)}
             >
