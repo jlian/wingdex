@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
   CloudArrowUp, MapPin, CheckCircle, Question,
-  Crop, ArrowRight, ArrowLeft, SkipForward
+  Crop, ArrowRight, ArrowLeft, SkipForward, Scissors
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
@@ -555,8 +555,8 @@ function AiZoomedPreview({
         ref={canvasRef}
         className="rounded-lg border-2 border-accent max-h-56"
       />
-      <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium shadow">
-        🔍 AI Zoomed
+      <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
+        <Scissors size={14} weight="bold" />
       </div>
     </div>
   )

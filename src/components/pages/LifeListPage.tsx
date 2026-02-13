@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { MagnifyingGlass, CalendarBlank } from '@phosphor-icons/react'
+import { useBirdImage } from '@/hooks/use-bird-image'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 
 interface LifeListPageProps {
@@ -66,17 +67,11 @@ export default function LifeListPage({ data }: LifeListPageProps) {
               key={entry.speciesName}
               className="flex gap-3 p-3 hover:shadow-md transition-shadow"
             >
-              {photo ? (
-                <img
-                  src={photo.thumbnail}
-                  alt={displayName}
-                  className="w-20 h-20 object-cover rounded"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
-                  <span className="text-2xl">🐦</span>
-                </div>
-              )}
+              <SpeciesImage
+                speciesName={entry.speciesName}
+                storedThumbnail={photo?.thumbnail}
+                displayName={displayName}
+              />
 
               <div className="flex-1 space-y-1">
                 <h3 className="font-serif font-semibold text-foreground">
@@ -112,6 +107,37 @@ export default function LifeListPage({ data }: LifeListPageProps) {
           No species found matching "{searchQuery}"
         </div>
       )}
+    </div>
+  )
+}
+
+function SpeciesImage({
+  speciesName,
+  storedThumbnail,
+  displayName,
+}: {
+  speciesName: string
+  storedThumbnail?: string
+  displayName: string
+}) {
+  const wikiImage = useBirdImage(speciesName)
+
+  // Prefer stored photo, fall back to Wikipedia, then emoji
+  const src = storedThumbnail || wikiImage
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={displayName}
+        className="w-20 h-20 object-cover rounded bg-muted"
+        loading="lazy"
+      />
+    )
+  }
+
+  return (
+    <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
+      <span className="text-2xl">🐦</span>
     </div>
   )
 }

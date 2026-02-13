@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { MapPin, CalendarBlank, CheckCircle, XCircle } from '@phosphor-icons/react'
+import { MapPin, CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
+import { findMatchingOuting } from '@/lib/clustering'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 
 interface PhotoCluster {
@@ -39,6 +40,10 @@ export default function OutingReview({
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(hasGps)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
+
+  // Check if these photos match an existing outing
+  const matchingOuting = findMatchingOuting(cluster, data.outings)
+  const [useExistingOuting, setUseExistingOuting] = useState(!!matchingOuting)
 
   useEffect(() => {
     if (hasGps) {
@@ -102,6 +107,24 @@ export default function OutingReview({
   }
 
   const doConfirm = (name: string) => {
+    if (useExistingOuting && matchingOuting) {
+      // Merge into existing outing — expand its time window if needed
+      const existingStart = new Date(matchingOuting.startTime).getTime()
+      const existingEnd = new Date(matchingOuting.endTime).getTime()
+      const clusterStart = cluster.startTime.getTime()
+      const clusterEnd = cluster.endTime.getTime()
+
+      if (clusterStart < existingStart || clusterEnd > existingEnd) {
+        data.updateOuting(matchingOuting.id, {
+          startTime: new Date(Math.min(existingStart, clusterStart)).toISOString(),
+          endTime: new Date(Math.max(existingEnd, clusterEnd)).toISOString(),
+        })
+      }
+
+      onConfirm(matchingOuting.id, matchingOuting.locationName, matchingOuting.lat, matchingOuting.lon)
+      return
+    }
+
     const outingId = `outing_${Date.now()}`
     const outing = {
       id: outingId,
@@ -152,7 +175,39 @@ export default function OutingReview({
         )}
       </div>
 
+      {/* Matching outing detected */}
+      {matchingOuting && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
+            <ArrowsClockwise size={16} weight="bold" />
+            Matches existing outing
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {matchingOuting.locationName} — {new Date(matchingOuting.startTime).toLocaleDateString()}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={useExistingOuting ? 'default' : 'outline'}
+              onClick={() => setUseExistingOuting(true)}
+              className="flex-1"
+            >
+              Add to this outing
+            </Button>
+            <Button
+              size="sm"
+              variant={!useExistingOuting ? 'default' : 'outline'}
+              onClick={() => setUseExistingOuting(false)}
+              className="flex-1"
+            >
+              New outing
+            </Button>
+          </div>
+        </div>
+      )}
+
       <>
+          {!useExistingOuting && (
           <div className="space-y-2">
             <Label htmlFor="location-name">Location Name</Label>
             {isLoadingLocation ? (
@@ -176,6 +231,7 @@ export default function OutingReview({
               </>
             )}
           </div>
+          )}
 
           <div className="space-y-2">
             <Label>Photos ({cluster.photos.length})</Label>

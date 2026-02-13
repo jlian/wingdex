@@ -1,11 +1,12 @@
-# BirdDex: Personal Bird Life-List & Sighting Tracker
+# BirdDex: Photo-First Bird Identification & Life List
 
-A mobile-first web application that helps birders track their sightings, maintain a life list, and stay synchronized with eBird through photo-based species identification using AI vision inference.
+A mobile-first web application for **reverse birders** — people who take photos first and identify species later. Upload your bird photos, let AI do the identification, confirm with one tap, and build your life list over time.
 
 **Experience Qualities**:
-1. **Effortless** - Upload multiple photos at once and let AI do the heavy lifting of species identification, requiring only confirmation from the user
-2. **Scientific** - Precise data tracking with EXIF metadata extraction, GPS coordinates, timestamps, and eBird CSV compatibility for serious birding records
-3. **Delightful** - Celebrate birding achievements with a Merlin-inspired life list that showcases beautiful bird photography and sighting milestones
+1. **Photo-first** – The workflow starts with photos you already took. No checklists, no planning — just upload and go
+2. **Effortless** - Upload multiple photos at once and let AI do the heavy lifting of species identification, requiring only confirmation from the user
+3. **Scientific** - Precise data tracking with EXIF metadata extraction, GPS coordinates, timestamps, and eBird CSV compatibility for serious birding records
+4. **Delightful** - Celebrate birding achievements with a Merlin-inspired life list that showcases bird photography (via Wikimedia Commons) and sighting milestones
 
 **Complexity Level**: Complex Application (advanced functionality, likely with multiple views)
 - Multi-screen workflow with photo upload, EXIF parsing, AI inference, data management, import/export, and synchronized state across multiple interconnected data models (Photos, Outings, Observations, Life List entries)
@@ -27,11 +28,11 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Success criteria**: All selected photos loaded; EXIF timestamp and GPS extracted when present; thumbnails generated at ~400px width; file hash computed for de-duplication
 
 ### 3. Intelligent Outing Clustering (Automatic)
-- **Functionality**: Automatically group uploaded photos into logical "outings" using time + distance heuristics (within 4 hours AND 5km if GPS exists, time-only if GPS missing); outing is created automatically upon photo upload
-- **Purpose**: Eliminate manual outing creation step by using EXIF data to intelligently organize photos into checklists matching real-world birding sessions
+- **Functionality**: Automatically group uploaded photos into logical "outings" using time + distance heuristics (within 8 hours AND 10km if GPS exists, time-only if GPS missing); merge new photos into existing outings when time/location overlap is detected; outing is created automatically upon photo upload
+- **Purpose**: Eliminate manual outing creation step by using EXIF data to intelligently organize photos into checklists matching real-world birding sessions. Support the common reverse-birding pattern of uploading photos from the same session multiple times
 - **Trigger**: After photos are uploaded and EXIF parsed
-- **Progression**: Photos uploaded → EXIF extracted → Clustering algorithm runs → Outing automatically created with date/time/location from EXIF → Photos linked to outing → AI identification begins immediately
-- **Success criteria**: Photos correctly grouped by temporal and spatial proximity; outing created with accurate metadata from EXIF; no manual intervention required for typical cases
+- **Progression**: Photos uploaded → EXIF extracted → Clustering algorithm runs → Match against existing outings → If match found, offer to merge or create new → Outing created/updated with date/time/location from EXIF → Photos linked to outing → AI identification begins immediately
+- **Success criteria**: Photos correctly grouped by temporal and spatial proximity; new photos from the same session merge into existing outings; outing created or updated with accurate metadata from EXIF; generous time/distance thresholds to avoid splitting natural sessions
 
 ### 4. AI Species Identification with Crop Tool (GitHub Models Vision)
 - **Functionality**: AI automatically detects and crops to bird subject in each photo, then sends to GitHub Models vision API with location + month context; receives top 5 species candidates with confidence scores; users can manually refine any crop for better identification accuracy
@@ -48,11 +49,11 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Success criteria**: All confirmed species saved to outing; representative photos linked; counts accurate; rejected species not added to life list
 
 ### 6. Life List Management (Merlin-like UX)
-- **Functionality**: Maintain per-user aggregate of all confirmed species with first seen date, last seen date, total sightings, total count, best photo
-- **Purpose**: Provide a beautiful, searchable record of birding accomplishments over time
+- **Functionality**: Maintain per-user aggregate of all confirmed species with first seen date, last seen date, total sightings, total count; display Wikimedia Commons bird images for each species as reference photos (since user photos cannot persist in KV storage)
+- **Purpose**: Provide a beautiful, searchable record of birding accomplishments over time with real bird imagery
 - **Trigger**: Navigate to "Life List" tab
-- **Progression**: Tap Life List → Scrollable/searchable species list loads → Each entry shows species name + thumbnail + stats → Tap species → Detail view with timeline of all sightings + photos
-- **Success criteria**: Life list updates in real-time as outings are saved; search filters species instantly; species detail shows complete history
+- **Progression**: Tap Life List → Scrollable/searchable species list loads → Each entry shows species name + Wikipedia bird image + stats → Tap species → Detail view with timeline of all sightings
+- **Success criteria**: Life list updates in real-time as outings are saved; search filters species instantly; Wikipedia images load for recognized species; graceful fallback when images unavailable
 
 ### 7. eBird CSV Import
 - **Functionality**: Upload eBird "My eBird Data" export CSV; parse species, date, location, count columns; show preview with conflict resolution; merge into BirdDex
@@ -83,10 +84,10 @@ A mobile-first web application that helps birders track their sightings, maintai
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
 ### 11. Cloud Data Storage
-- **Functionality**: All BirdDex data (photos, outings, observations, life list, saved spots) is automatically stored server-side via Spark's KV store, scoped per GitHub user ID
-- **Purpose**: Zero-configuration cloud persistence; data is always backed up and available across sessions
+- **Functionality**: Structured data (outings, observations, life list, saved spots) is stored via Spark's KV store, scoped per GitHub user ID; falls back to localStorage when KV is unavailable. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the life list and outing views comes from Wikimedia Commons
+- **Purpose**: Zero-configuration cloud persistence for birding records; photo storage limitations are sidestepped by using public-domain reference images
 - **Trigger**: Automatic — no user action required
-- **Success criteria**: Data persists between sessions; each user's data isolated by user ID; no manual backup steps needed
+- **Success criteria**: Outing/observation/life list data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
 
 ## Edge Case Handling
 

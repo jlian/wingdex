@@ -8,8 +8,8 @@ interface PhotoCluster {
   centerLon?: number
 }
 
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000
-const MAX_DISTANCE_KM = 5
+const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000
+const MAX_DISTANCE_KM = 10
 
 function haversineDistance(
   lat1: number,
@@ -50,7 +50,7 @@ export function clusterPhotosIntoOutings(photos: Photo[]): PhotoCluster[] {
     const lastTime = lastPhoto.exifTime ? new Date(lastPhoto.exifTime).getTime() : Date.now()
     const timeDiff = photoTime - lastTime
     
-    let shouldCluster = timeDiff <= FOUR_HOURS_MS
+    let shouldCluster = timeDiff <= EIGHT_HOURS_MS
     
     if (shouldCluster && photo.gps && lastPhoto.gps) {
       const distance = haversineDistance(
@@ -98,6 +98,45 @@ function createClusterFromPhotos(photos: Photo[]): PhotoCluster {
     centerLat,
     centerLon
   }
+}
+
+/**
+ * Try to match a photo cluster to an existing outing.
+ * Returns the outing ID if there's a time+location overlap, otherwise undefined.
+ * 
+ * Match criteria (generous):
+ * - Cluster time overlaps the outing window ±8 hours
+ * - If both have GPS, distance is within 10km
+ */
+export function findMatchingOuting(
+  cluster: PhotoCluster,
+  outings: Outing[]
+): Outing | undefined {
+  for (const outing of outings) {
+    const outingStart = new Date(outing.startTime).getTime()
+    const outingEnd = new Date(outing.endTime).getTime()
+    const clusterStart = cluster.startTime.getTime()
+    const clusterEnd = cluster.endTime.getTime()
+
+    // Check time overlap: cluster within ±8 hours of outing window
+    const timeOverlap =
+      clusterStart <= outingEnd + EIGHT_HOURS_MS &&
+      clusterEnd >= outingStart - EIGHT_HOURS_MS
+
+    if (!timeOverlap) continue
+
+    // If both have GPS, check distance
+    if (cluster.centerLat && cluster.centerLon && outing.lat && outing.lon) {
+      const dist = haversineDistance(
+        cluster.centerLat, cluster.centerLon,
+        outing.lat, outing.lon
+      )
+      if (dist > MAX_DISTANCE_KM) continue
+    }
+
+    return outing
+  }
+  return undefined
 }
 
 export function formatOutingTime(startTime: string, endTime: string): string {

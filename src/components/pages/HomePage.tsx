@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CloudArrowUp, MapPin, CalendarBlank } from '@phosphor-icons/react'
+import { CloudArrowUp, MapPin, CalendarBlank, Camera } from '@phosphor-icons/react'
 import type { useBirdDexData } from '@/hooks/use-birddex-data'
 
 interface HomePageProps {
@@ -28,18 +28,19 @@ export default function HomePage({ data, onAddPhotos }: HomePageProps) {
       <section className="space-y-4">
         <div className="text-center py-8 space-y-4">
           <h2 className="font-serif text-3xl font-semibold text-foreground">
-            Welcome to your BirdDex
+            Got bird photos?
           </h2>
           <p className="text-muted-foreground">
-            Track your sightings and build your life list
+            Upload them and let AI identify the species.<br />
+            <span className="text-xs opacity-70">Photos first, ID later — reverse birding.</span>
           </p>
           <Button
             size="lg"
             onClick={onAddPhotos}
             className="bg-accent text-accent-foreground hover:bg-accent/90"
           >
-            <CloudArrowUp size={20} className="mr-2" weight="bold" />
-            Add Photos
+            <Camera size={20} className="mr-2" weight="bold" />
+            Upload &amp; Identify
           </Button>
         </div>
       </section>

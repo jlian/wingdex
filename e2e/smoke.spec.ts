@@ -46,7 +46,7 @@ test.describe('App smoke tests', () => {
 
     // Navigate back to Home
     await page.getByRole('tab', { name: 'Home' }).click();
-    await expect(page.getByText('Add Photos')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Upload & Identify').or(page.getByText('Add Photos'))).toBeVisible({ timeout: 5_000 });
   });
 
   test('FAB button is visible and opens add photos flow', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('App smoke tests', () => {
     await fab.click();
 
     // The dialog title should appear
-    await expect(page.getByRole('dialog').getByText('Add Photos')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('dialog').getByText('Add Photos').or(page.getByRole('dialog').getByText('Upload'))).toBeVisible({ timeout: 5_000 });
   });
 
   test('add photos dialog can be closed', async ({ page }) => {
