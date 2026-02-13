@@ -58,7 +58,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
           >
             <Camera size={20} className="mr-2" weight="bold" />
-            Select Images
+            Select Photos
           </Button>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <ImageIcon size={14} /> Photos never stored
@@ -70,53 +70,49 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
 
   return (
     <div className="pb-8">
-      {/* ── Hero + Stats ───────────────────────────────── */}
+      {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
-        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto">
-          <div className="grid sm:grid-cols-2 gap-6 items-center">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground leading-tight">
-                  Got bird pics?
-                </h2>
-                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                  Upload your pics, ID the birds, and build your
-                  BirdDex. <em>Reverse birding</em> at its finest.
-                </p>
-              </div>
-              <Button
-                size="lg"
-                onClick={onAddPhotos}
-                className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
-              >
-                <Camera size={20} className="mr-2" weight="bold" />
-                Upload &amp; Identify
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <StatCard
-                value={dex.length}
-                label="Species"
-                accent="text-primary"
-              />
-              <StatCard
-                value={outings.length}
-                label="Outings"
-                accent="text-secondary"
-              />
-              <StatCard
-                value={newThisMonth}
-                label="New This Month"
-                accent="text-accent"
-              />
-              <StatCard
-                value={totalPhotos}
-                label="Photos"
-                accent="text-muted-foreground"
-              />
-            </div>
+        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground">
+              Your BirdDex
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddPhotos}
+            >
+              <Camera size={16} className="mr-1.5" weight="bold" />
+              Select Photos
+            </Button>
           </div>
+
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+            <StatCard
+              value={dex.length}
+              label="Species"
+              accent="text-primary"
+            />
+            <StatCard
+              value={outings.length}
+              label="Outings"
+              accent="text-secondary"
+            />
+            <StatCard
+              value={newThisMonth}
+              label="New This Month"
+              accent="text-accent"
+            />
+            <StatCard
+              value={totalPhotos}
+              label="Photos"
+              accent="text-muted-foreground"
+            />
+          </div>
+
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <ImageIcon size={14} /> Photos never stored
+          </p>
         </div>
       </section>
 

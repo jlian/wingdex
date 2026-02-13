@@ -389,41 +389,50 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
           {/* Upload */}
           {step === 'upload' && (
-            <div className="space-y-4 py-8">
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <CloudArrowUp size={64} className="text-primary" weight="duotone" />
+            <div className="space-y-5 py-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/40 transition-colors py-10 flex flex-col items-center gap-3 cursor-pointer"
+              >
+                <CloudArrowUp size={48} className="text-primary" weight="duotone" />
+                <div className="space-y-1 text-center">
+                  <p className="text-sm font-medium text-foreground">Select Photos</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bird photos only. Used for ID, never saved.
+                  </p>
                 </div>
-                <p className="text-muted-foreground">
-                  Select bird photos from your device
-                </p>
-                <Button
-                  size="lg"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-accent text-accent-foreground"
-                >
-                  Choose Photos
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-              </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
 
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+                <Label htmlFor="geo-context" className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
+                  <MapPin size={16} className="text-primary/70" />
+                  Use GPS &amp; date for better ID
+                </Label>
                 <Switch
                   id="geo-context"
                   checked={useGeoContext}
                   onCheckedChange={setUseGeoContext}
                 />
-                <Label htmlFor="geo-context" className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
-                  <MapPin size={16} />
-                  Use GPS &amp; date for better species ID
-                </Label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <div className="flex items-start gap-2 rounded-lg bg-muted/20 p-2.5">
+                  <span className="text-primary mt-0.5">✦</span>
+                  <span>Close-ups and side profiles ID best</span>
+                </div>
+                <div className="flex items-start gap-2 rounded-lg bg-muted/20 p-2.5">
+                  <span className="text-primary mt-0.5">✦</span>
+                  <span>One bird per photo for accuracy</span>
+                </div>
               </div>
             </div>
           )}
