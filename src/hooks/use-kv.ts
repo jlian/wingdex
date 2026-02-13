@@ -10,17 +10,23 @@ type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 
 const LS_PREFIX = 'birddex_kv_'
 const KV_BASE = '/_spark/kv'
+const SPARK_KV_PROBE_TTL_MS = 30_000
+const SPARK_KV_WRITE_RETRIES = 2
 
 // Cached after first probe so we only check once
 let _sparkKvAvailable: boolean | null = null
+let _sparkKvCheckedAt = 0
 
 async function probeSparkKv(): Promise<boolean> {
-  if (_sparkKvAvailable !== null) return _sparkKvAvailable
+  const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
+  if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
   try {
     const res = await fetch(`${KV_BASE}/keys`, { method: 'GET' })
     _sparkKvAvailable = res.ok
+    _sparkKvCheckedAt = Date.now()
   } catch {
     _sparkKvAvailable = false
+    _sparkKvCheckedAt = Date.now()
   }
   return _sparkKvAvailable
 }
@@ -36,20 +42,57 @@ async function sparkKvGet<T>(key: string): Promise<T | undefined> {
   } catch { return undefined }
 }
 
-async function sparkKvSet<T>(key: string, value: T): Promise<void> {
-  try {
-    await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(value),
-    })
-  } catch { /* ignore */ }
+async function sparkKvSet<T>(key: string, value: T): Promise<boolean> {
+  let ok = false
+  for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(value),
+      })
+      if (res.ok) {
+        ok = true
+        break
+      }
+    } catch { /* ignore and retry */ }
+  }
+
+  if (!ok) {
+    console.warn(`[useKV] Failed to persist key "${key}" to Spark KV after retries; localStorage remains source of truth for this session.`)
+  }
+
+  return ok
 }
 
-async function sparkKvDelete(key: string): Promise<void> {
+async function sparkKvDelete(key: string): Promise<boolean> {
+  let ok = false
+  for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, { method: 'DELETE' })
+      if (res.ok) {
+        ok = true
+        break
+      }
+    } catch { /* ignore and retry */ }
+  }
+
+  if (!ok) {
+    console.warn(`[useKV] Failed to delete key "${key}" from Spark KV after retries.`)
+  }
+
+  return ok
+}
+
+async function tryRefreshSparkKv(ref: { current: boolean }): Promise<boolean> {
   try {
-    await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, { method: 'DELETE' })
-  } catch { /* ignore */ }
+    const available = await probeSparkKv()
+    ref.current = available
+    return available
+  } catch {
+    ref.current = false
+    return false
+  }
 }
 
 function getLocalStorage<T>(key: string, fallback: T): T {
@@ -90,7 +133,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
       }
     })()
     return () => { cancelled = true }
-  }, [key])
+  }, [key, initialValue])
 
   // Sync across tabs via storage event (localStorage only)
   useEffect(() => {
@@ -109,7 +152,15 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
         ? (newValue as (prev: T) => T)(currentValue)
         : newValue
       setLocalStorage(key, nextValue)
-      if (useSparkKv.current) sparkKvSet(key, nextValue)
+      if (useSparkKv.current) {
+        void sparkKvSet(key, nextValue)
+      } else {
+        void tryRefreshSparkKv(useSparkKv).then((available) => {
+          if (available) {
+            void sparkKvSet(key, nextValue)
+          }
+        })
+      }
       return nextValue
     })
   }, [key])
@@ -117,7 +168,15 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   const deleteValue = useCallback(() => {
     setValue(initialValue)
     try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
-    if (useSparkKv.current) sparkKvDelete(key)
+    if (useSparkKv.current) {
+      void sparkKvDelete(key)
+    } else {
+      void tryRefreshSparkKv(useSparkKv).then((available) => {
+        if (available) {
+          void sparkKvDelete(key)
+        }
+      })
+    }
   }, [key, initialValue])
 
   return [value, userSetValue, deleteValue]
