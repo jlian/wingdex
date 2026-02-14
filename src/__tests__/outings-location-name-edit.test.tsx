@@ -31,7 +31,6 @@ function createDataStore(): BirdDexDataStore {
     outings: [baseOuting],
     observations: [],
     dex: [],
-    savedSpots: [],
     addPhotos: vi.fn(),
     addOuting: vi.fn(),
     updateOuting: vi.fn(),
@@ -39,8 +38,6 @@ function createDataStore(): BirdDexDataStore {
     addObservations: vi.fn(),
     updateObservation: vi.fn(),
     updateDex: vi.fn(() => ({ newSpeciesCount: 0 })),
-    addSavedSpot: vi.fn(),
-    deleteSavedSpot: vi.fn(),
     getOutingObservations: vi.fn(() => []),
     getOutingPhotos: vi.fn(() => []),
     getDexEntry: vi.fn(),
@@ -69,7 +66,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: '  Prospect Park  ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -94,7 +91,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: '   ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -120,7 +117,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: 'Prospect Park' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

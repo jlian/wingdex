@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { SpeciesAutocomplete } from '@/components/ui/species-autocomplete'
+import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -337,10 +338,11 @@ function OutingDetail({
         <div className="flex-1 min-w-0">
           {editingLocationName ? (
             <div className="space-y-2">
-              <Input
-                aria-label="Outing name"
+              <OutingNameAutocomplete
+                aria-label="Location name"
                 value={locationName}
-                onChange={e => setLocationName(e.target.value)}
+                onChange={setLocationName}
+                outings={data.outings}
                 placeholder="Outing name"
                 autoFocus
               />

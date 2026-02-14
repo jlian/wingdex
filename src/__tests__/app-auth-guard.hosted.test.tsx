@@ -12,7 +12,6 @@ vi.mock('@/hooks/use-birddex-data', () => ({
     outings: [],
     observations: [],
     dex: [],
-    savedSpots: [],
   }),
 }))
 

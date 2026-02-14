@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete'
 import { CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
 import { findMatchingOuting } from '@/lib/clustering'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -228,11 +228,12 @@ export default function OutingReview({
               </div>
             ) : (
               <>
-                <Input
+                <OutingNameAutocomplete
                   id="location-name"
-                  placeholder="e.g., Central Park, NYC"
                   value={locationName}
-                  onChange={e => setLocationName(e.target.value)}
+                  onChange={setLocationName}
+                  outings={data.outings}
+                  placeholder="e.g., Central Park, NYC"
                 />
                 {suggestedLocation && (
                   <p className="text-xs text-muted-foreground">
