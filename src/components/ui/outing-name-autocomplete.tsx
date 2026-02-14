@@ -34,8 +34,8 @@ export function OutingNameAutocomplete({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
-  // Get unique location names from outings
-  const getUniqueLocationNames = useCallback(() => {
+  // Get unique outing names from outings
+  const getUniqueOutingNames = useCallback(() => {
     const names = new Set<string>()
     for (const outing of outings) {
       if (outing.locationName && outing.locationName.trim()) {
@@ -46,7 +46,7 @@ export function OutingNameAutocomplete({
   }, [outings])
 
   // Debounced search
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const doSearch = useCallback((q: string) => {
     clearTimeout(searchTimeoutRef.current)
     if (!q.trim()) {
@@ -56,7 +56,7 @@ export function OutingNameAutocomplete({
     }
     searchTimeoutRef.current = setTimeout(() => {
       const query = q.toLowerCase().trim()
-      const uniqueNames = getUniqueLocationNames()
+      const uniqueNames = getUniqueOutingNames()
       const matches = uniqueNames
         .filter(name => name.toLowerCase().includes(query))
         .slice(0, 8) // Limit to 8 results
@@ -64,7 +64,7 @@ export function OutingNameAutocomplete({
       setOpen(matches.length > 0)
       setHighlightIndex(-1)
     }, 80)
-  }, [getUniqueLocationNames])
+  }, [getUniqueOutingNames])
 
   // Close on click outside
   useEffect(() => {
