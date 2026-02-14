@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,8 +37,30 @@ interface OutingsPageProps {
   onSelectSpecies: (name: string) => void
 }
 
+type OutingSortKey = 'date' | 'species'
+
+const outingSortOptions: { key: OutingSortKey; label: string }[] = [
+  { key: 'date', label: 'Date' },
+  { key: 'species', label: 'Species' },
+]
+
 export default function OutingsPage({ data, selectedOutingId, onSelectOuting, onSelectSpecies }: OutingsPageProps) {
   const { outings } = data
+  const [sortBy, setSortBy] = useState<OutingSortKey>('date')
+
+  const sortedOutings = useMemo(() => {
+    if (sortBy === 'species') {
+      return [...outings].sort((a, b) => {
+        const aCount = data.getOutingObservations(a.id).filter(obs => obs.certainty === 'confirmed').length
+        const bCount = data.getOutingObservations(b.id).filter(obs => obs.certainty === 'confirmed').length
+        return bCount - aCount
+      })
+    }
+    // date (default) — newest outing first
+    return [...outings].sort((a, b) =>
+      new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    )
+  }, [outings, sortBy, data])
 
   if (outings.length === 0) {
     return (
@@ -76,9 +98,23 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
           {outings.length} {outings.length === 1 ? 'outing' : 'outings'} recorded
         </p>
       </div>
+
+      <div className="flex items-center gap-1">
+        {outingSortOptions.map(opt => (
+          <Button
+            key={opt.key}
+            variant={sortBy === opt.key ? 'secondary' : 'ghost'}
+            size="sm"
+            className="text-xs h-9 px-2.5"
+            onClick={() => setSortBy(opt.key)}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </div>
       
       <div className="divide-y divide-border">
-        {outings.map((outing, i) => {
+        {sortedOutings.map((outing) => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
