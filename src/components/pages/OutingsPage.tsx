@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
-  Trash, PencilSimple, Check, Plus, X, Bird, Clock
+  Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass
 } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -37,16 +37,18 @@ interface OutingsPageProps {
   onSelectSpecies: (name: string) => void
 }
 
-type OutingSortKey = 'date' | 'species'
+type OutingSortKey = 'new' | 'old' | 'species'
 
 const outingSortOptions: { key: OutingSortKey; label: string }[] = [
-  { key: 'date', label: 'Date' },
+  { key: 'new', label: 'New' },
+  { key: 'old', label: 'Old' },
   { key: 'species', label: 'Species' },
 ]
 
 export default function OutingsPage({ data, selectedOutingId, onSelectOuting, onSelectSpecies }: OutingsPageProps) {
   const { outings } = data
-  const [sortBy, setSortBy] = useState<OutingSortKey>('date')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<OutingSortKey>('new')
 
   const sortedOutings = useMemo(() => {
     if (sortBy === 'species') {
@@ -56,11 +58,20 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
       }
       return [...outings].sort((a, b) => (countMap.get(b.id) ?? 0) - (countMap.get(a.id) ?? 0))
     }
-    // date (default) — newest outing first
+    if (sortBy === 'old') {
+      return [...outings].sort((a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      )
+    }
+    // new (default) — newest outing first
     return [...outings].sort((a, b) =>
       new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
     )
   }, [outings, sortBy, data])
+
+  const filteredOutings = sortedOutings.filter(outing =>
+    (outing.locationName || '').toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   if (outings.length === 0) {
     return (
@@ -99,22 +110,36 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
         </p>
       </div>
 
-      <div className="flex items-center gap-1">
-        {outingSortOptions.map(opt => (
-          <Button
-            key={opt.key}
-            variant={sortBy === opt.key ? 'secondary' : 'ghost'}
-            size="sm"
-            className="text-xs h-9 px-2.5"
-            onClick={() => setSortBy(opt.key)}
-          >
-            {opt.label}
-          </Button>
-        ))}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            placeholder="Search outings..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {outingSortOptions.map(opt => (
+            <Button
+              key={opt.key}
+              variant={sortBy === opt.key ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs h-9 px-2.5"
+              onClick={() => setSortBy(opt.key)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
       </div>
       
       <div className="divide-y divide-border">
-        {sortedOutings.map((outing) => {
+        {filteredOutings.map((outing) => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
@@ -130,6 +155,12 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
           )
         })}
       </div>
+
+      {filteredOutings.length === 0 && searchQuery && (
+        <div className="text-center py-8 text-muted-foreground">
+          No outings found matching "{searchQuery}"
+        </div>
+      )}
     </div>
   )
 }
