@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
@@ -225,6 +224,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         )
         setTimeout(() => setShowConfetti(false), 3500)
       }
+    } else {
+      toast.warning('No species were confirmed for this outing')
     }
 
     if (currentClusterIndex < clusters.length - 1) {
@@ -250,6 +251,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     setProcessingMessage('Reading photo data...')
 
     const processedPhotos: PhotoWithCrop[] = []
+    let skippedDuplicates = 0
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -269,7 +271,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           p => p.fileHash === hash && p.exifTime === exif.timestamp
         )
         if (existing) {
-          toast.error(`${file.name} already imported`)
+          skippedDuplicates++
           continue
         }
 
@@ -297,9 +299,23 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     }
 
     if (processedPhotos.length === 0) {
-      toast.error('No photos to process')
+      if (skippedDuplicates > 0) {
+        toast.warning(
+          skippedDuplicates === 1
+            ? 'This photo was already imported'
+            : `All ${skippedDuplicates} photos were already imported`
+        )
+      } else {
+        toast.error('No photos to process')
+      }
       onClose()
       return
+    }
+
+    if (skippedDuplicates > 0) {
+      toast.info(
+        `${skippedDuplicates} duplicate ${skippedDuplicates === 1 ? 'photo' : 'photos'} skipped`
+      )
     }
 
     setPhotos(processedPhotos)
@@ -577,7 +593,7 @@ function AiZoomedPreview({
       if (!canvas) return
 
       // cropBox is percentage coords (0-100) — convert to pixels with padding
-      const pad = 0.15
+      const pad = 0.25
       const rawX = (cropBox.x / 100) * img.naturalWidth
       const rawY = (cropBox.y / 100) * img.naturalHeight
       const rawW = (cropBox.width / 100) * img.naturalWidth
@@ -585,14 +601,17 @@ function AiZoomedPreview({
       const padX = rawW * pad
       const padY = rawH * pad
 
+      // Compute padded region, clamped to image bounds
       const sx = Math.max(0, rawX - padX)
       const sy = Math.max(0, rawY - padY)
-      const sw = Math.min(rawW + padX * 2, img.naturalWidth - sx)
-      const sh = Math.min(rawH + padY * 2, img.naturalHeight - sy)
+      const sx2 = Math.min(img.naturalWidth, rawX + rawW + padX)
+      const sy2 = Math.min(img.naturalHeight, rawY + rawH + padY)
+      const sw = sx2 - sx
+      const sh = sy2 - sy
 
       // Size canvas to fit the crop aspect ratio, max 320px wide
       const maxW = 320
-      const scale = Math.min(maxW / sw, 224 / sh, 1) // also cap height at 224px
+      const scale = Math.min(maxW / sw, 280 / sh, 1)
       canvas.width = Math.round(sw * scale)
       canvas.height = Math.round(sh * scale)
 
@@ -654,7 +673,6 @@ function PerPhotoConfirm({
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [selectedSpecies, setSelectedSpecies] = useState(topCandidate?.species ?? '')
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
-  const [count, setCount] = useState(1)
   const isHighConfidence = selectedConfidence >= 0.8
   
   // Fetch Wikipedia reference image for the selected species
@@ -690,7 +708,7 @@ function PerPhotoConfirm({
   }
 
   const handleConfirm = (status: ObservationStatus) => {
-    onConfirm(selectedSpecies, selectedConfidence, status, count)
+    onConfirm(selectedSpecies, selectedConfidence, status, 1)
   }
 
   const selectAlternative = (species: string, confidence: number) => {
@@ -778,17 +796,6 @@ function PerPhotoConfirm({
               <span>High confidence, auto-selected</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">Count:</label>
-              <Input
-                type="number"
-                min="1"
-                value={count}
-                onChange={e => setCount(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20"
-              />
-            </div>
-
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-accent text-accent-foreground"
@@ -828,17 +835,6 @@ function PerPhotoConfirm({
                 <Question size={16} className="mr-1" weight="bold" />
                 Possible
               </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">Count:</label>
-              <Input
-                type="number"
-                min="1"
-                value={count}
-                onChange={e => setCount(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20"
-              />
             </div>
 
             {/* Alternatives */}

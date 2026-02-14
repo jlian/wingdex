@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
-  Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass
+  Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass,
+  ArrowUp, ArrowDown
 } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -38,37 +39,43 @@ interface OutingsPageProps {
   onSelectSpecies: (name: string) => void
 }
 
-type OutingSortKey = 'new' | 'old' | 'species'
+type OutingSortField = 'date' | 'species'
+type SortDir = 'asc' | 'desc'
 
-const outingSortOptions: { key: OutingSortKey; label: string }[] = [
-  { key: 'new', label: 'New' },
-  { key: 'old', label: 'Old' },
+const outingSortOptions: { key: OutingSortField; label: string }[] = [
+  { key: 'date', label: 'Date' },
   { key: 'species', label: 'Species' },
 ]
 
 export default function OutingsPage({ data, selectedOutingId, onSelectOuting, onSelectSpecies }: OutingsPageProps) {
   const { outings } = data
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<OutingSortKey>('new')
+  const [sortField, setSortField] = useState<OutingSortField>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const toggleSort = (field: OutingSortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('desc')
+    }
+  }
 
   const sortedOutings = useMemo(() => {
-    if (sortBy === 'species') {
+    const dir = sortDir === 'asc' ? 1 : -1
+    if (sortField === 'species') {
       const countMap = new Map<string, number>()
       for (const o of outings) {
         countMap.set(o.id, data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length)
       }
-      return [...outings].sort((a, b) => (countMap.get(b.id) ?? 0) - (countMap.get(a.id) ?? 0))
+      return [...outings].sort((a, b) => dir * ((countMap.get(a.id) ?? 0) - (countMap.get(b.id) ?? 0)))
     }
-    if (sortBy === 'old') {
-      return [...outings].sort((a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-      )
-    }
-    // new (default) — newest outing first
+    // date (default)
     return [...outings].sort((a, b) =>
-      new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      dir * (new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
     )
-  }, [outings, sortBy, data])
+  }, [outings, sortField, sortDir, data])
 
   const filteredOutings = sortedOutings.filter(outing =>
     (outing.locationName || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -125,17 +132,22 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
           />
         </div>
         <div className="flex items-center gap-1">
-          {outingSortOptions.map(opt => (
-            <Button
-              key={opt.key}
-              variant={sortBy === opt.key ? 'secondary' : 'ghost'}
-              size="sm"
-              className="text-xs h-9 px-2.5"
-              onClick={() => setSortBy(opt.key)}
-            >
-              {opt.label}
-            </Button>
-          ))}
+          {outingSortOptions.map(opt => {
+            const isActive = sortField === opt.key
+            const DirIcon = sortDir === 'asc' ? ArrowUp : ArrowDown
+            return (
+              <Button
+                key={opt.key}
+                variant={isActive ? 'secondary' : 'ghost'}
+                size="sm"
+                className="text-xs h-9 px-2.5"
+                onClick={() => toggleSort(opt.key)}
+              >
+                {opt.label}
+                {isActive && <DirIcon size={12} className="ml-0.5" />}
+              </Button>
+            )
+          })}
         </div>
       </div>
       

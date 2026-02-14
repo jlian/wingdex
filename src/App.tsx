@@ -316,6 +316,25 @@ function AppContent({ user }: { user: UserInfo }) {
         />
       )}
 
+      {/* Footer */}
+      <footer className="hidden md:block border-t border-border bg-card/50 mt-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            BirdDex v{typeof APP_VERSION !== 'undefined' ? APP_VERSION : ''} · Built by{' '}
+            <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+              John Lian
+            </a>
+          </span>
+          <div className="flex items-center gap-3">
+            <a href="https://github.com/jlian/birddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+              GitHub
+            </a>
+            <a href="https://github.com/jlian/birddex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+              Report Issue
+            </a>
+          </div>
+        </div>
+      </footer>
 
     </div>
   )

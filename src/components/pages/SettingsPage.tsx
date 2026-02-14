@@ -250,17 +250,37 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           Data Management
         </h3>
         <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => {
-              data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX)
-              toast.success('Demo data loaded: 5 outings, 17 species')
-            }}
-          >
-            <Database size={20} className="mr-2" />
-            Load Demo Data
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <Database size={20} className="mr-2" />
+                Load Demo Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Load demo data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will replace all your current outings, observations,
+                  and BirdDex entries with demo data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX)
+                    toast.success('Demo data loaded: 5 outings, 17 species')
+                  }}
+                >
+                  Load Demo Data
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -336,16 +356,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
-      <Card className="p-4 space-y-2">
-        <h3 className="font-semibold text-foreground">About BirdDex</h3>
-        <p className="text-sm text-muted-foreground">
-          Upload your bird photos, let AI do the identifying.
-          Built by <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">John Lian</a>.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Version {APP_VERSION}
-        </p>
-      </Card>
+
     </div>
     </>
   )

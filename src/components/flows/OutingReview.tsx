@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete'
-import { CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, XCircle } from '@phosphor-icons/react'
+import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
@@ -63,7 +64,7 @@ export default function OutingReview({
     try {
       // Use OpenStreetMap Nominatim for reliable reverse geocoding (no auth needed)
       console.log('📍 Reverse geocoding via Nominatim...')
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=14&addressdetails=1`
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=17&addressdetails=1`
       const res = await fetch(url, {
         headers: { 'User-Agent': 'BirdDex-App/1.0' },
       })
@@ -188,30 +189,19 @@ export default function OutingReview({
       {/* Matching outing detected */}
       {matchingOuting && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-primary">
-            <ArrowsClockwise size={16} weight="bold" />
-            Matches existing outing
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {matchingOuting.locationName} · {new Date(matchingOuting.startTime).toLocaleDateString()}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={useExistingOuting ? 'default' : 'outline'}
-              onClick={() => setUseExistingOuting(true)}
-              className="flex-1"
-            >
-              Add to this outing
-            </Button>
-            <Button
-              size="sm"
-              variant={!useExistingOuting ? 'default' : 'outline'}
-              onClick={() => setUseExistingOuting(false)}
-              className="flex-1"
-            >
-              New outing
-            </Button>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                Add to existing outing?
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {matchingOuting.locationName} · {new Date(matchingOuting.startTime).toLocaleDateString()}
+              </p>
+            </div>
+            <Switch
+              checked={useExistingOuting}
+              onCheckedChange={setUseExistingOuting}
+            />
           </div>
         </div>
       )}

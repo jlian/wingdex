@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird
+  Bird, ArrowUp, ArrowDown
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -14,7 +14,8 @@ import { getEbirdUrl } from '@/lib/taxonomy'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
-type SortKey = 'new' | 'old' | 'updated' | 'frequency' | 'name'
+type SortField = 'date' | 'updated' | 'count' | 'name'
+type SortDir = 'asc' | 'desc'
 
 interface BirdDexPageProps {
   data: BirdDexDataStore
@@ -26,15 +27,25 @@ interface BirdDexPageProps {
 export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: BirdDexPageProps) {
   const { dex } = data
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<SortKey>('new')
+  const [sortField, setSortField] = useState<SortField>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir(field === 'name' ? 'asc' : 'desc')
+    }
+  }
 
   const sortedList = [...dex].sort((a, b) => {
-    if (sortBy === 'name') return a.speciesName.localeCompare(b.speciesName)
-    if (sortBy === 'frequency') return b.totalCount - a.totalCount
-    if (sortBy === 'old') return new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime()
-    if (sortBy === 'updated') return new Date(b.lastSeenDate).getTime() - new Date(a.lastSeenDate).getTime()
-    // new (default) — newest first seen at top
-    return new Date(b.firstSeenDate).getTime() - new Date(a.firstSeenDate).getTime()
+    const dir = sortDir === 'asc' ? 1 : -1
+    if (sortField === 'name') return dir * a.speciesName.localeCompare(b.speciesName)
+    if (sortField === 'count') return dir * (a.totalCount - b.totalCount)
+    if (sortField === 'updated') return dir * (new Date(a.lastSeenDate).getTime() - new Date(b.lastSeenDate).getTime())
+    // date (default) — first seen
+    return dir * (new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime())
   })
 
   const filteredList = sortedList.filter(entry =>
@@ -67,11 +78,10 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
     )
   }
 
-  const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'new', label: 'New' },
-    { key: 'old', label: 'Old' },
+  const sortOptions: { key: SortField; label: string }[] = [
+    { key: 'date', label: 'Date' },
     { key: 'updated', label: 'Updated' },
-    { key: 'frequency', label: 'Frequency' },
+    { key: 'count', label: 'Count' },
     { key: 'name', label: 'A-Z' },
   ]
 
@@ -100,17 +110,22 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
           />
         </div>
         <div className="flex items-center gap-1">
-          {sortOptions.map(opt => (
-            <Button
-              key={opt.key}
-              variant={sortBy === opt.key ? 'secondary' : 'ghost'}
-              size="sm"
-              className="text-xs h-9 px-2.5"
-              onClick={() => setSortBy(opt.key)}
-            >
-              {opt.label}
-            </Button>
-          ))}
+          {sortOptions.map(opt => {
+            const isActive = sortField === opt.key
+            const DirIcon = sortDir === 'asc' ? ArrowUp : ArrowDown
+            return (
+              <Button
+                key={opt.key}
+                variant={isActive ? 'secondary' : 'ghost'}
+                size="sm"
+                className="text-xs h-9 px-2.5"
+                onClick={() => toggleSort(opt.key)}
+              >
+                {opt.label}
+                {isActive && <DirIcon size={12} className="ml-0.5" />}
+              </Button>
+            )
+          })}
         </div>
       </div>
 
