@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -235,7 +235,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setCurrentCandidates([])
       setStep('review')
     } else {
-      toast.success(`All done! ${confirmed.length} species saved.`)
+      if (confirmed.length > 0) {
+        toast.success(`All done! ${confirmed.length} species saved.`)
+      }
       setStep('complete')
       setTimeout(onClose, 3500)
     }
@@ -584,38 +586,23 @@ function AiZoomedPreview({
   imageUrl: string
   cropBox: { x: number; y: number; width: number; height: number }
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const img = new Image()
-    img.onload = () => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-
-      // cropBox is percentage coords (0-100) — use directly, no extra padding
-      const sx = (cropBox.x / 100) * img.naturalWidth
-      const sy = (cropBox.y / 100) * img.naturalHeight
-      const sw = (cropBox.width / 100) * img.naturalWidth
-      const sh = (cropBox.height / 100) * img.naturalHeight
-
-      // Size canvas to fit, max 280px
-      const maxDim = 280
-      const scale = Math.min(maxDim / sw, maxDim / sh, 1)
-      canvas.width = Math.round(sw * scale)
-      canvas.height = Math.round(sh * scale)
-
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
-    }
-    img.src = imageUrl
-  }, [imageUrl, cropBox])
+  // Use object-position + object-fit to crop directly — no canvas needed
+  const objectPosition = `${cropBox.x + cropBox.width / 2}% ${cropBox.y + cropBox.height / 2}%`
+  const zoomScale = 100 / cropBox.width // how much to zoom in
 
   return (
-    <div className="relative inline-block">
-      <canvas
-        ref={canvasRef}
-        className="rounded-lg border-2 border-accent"
+    <div className="relative w-56 h-56 overflow-hidden rounded-lg border-2 border-accent">
+      <img
+        src={imageUrl}
+        alt="AI cropped"
+        className="absolute"
+        style={{
+          width: `${zoomScale * 100}%`,
+          height: `${zoomScale * 100}%`,
+          left: `${-cropBox.x * zoomScale}%`,
+          top: `${-cropBox.y * zoomScale}%`,
+          maxWidth: 'none',
+        }}
       />
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />

@@ -254,7 +254,6 @@ function OutingDetail({
   const [locationName, setLocationName] = useState(outing.locationName || '')
   const [addingSpecies, setAddingSpecies] = useState(false)
   const [newSpeciesName, setNewSpeciesName] = useState('')
-  const [newSpeciesCount, setNewSpeciesCount] = useState(1)
   const [deleteOutingOpen, setDeleteOutingOpen] = useState(false)
   const [pendingDeleteObservation, setPendingDeleteObservation] = useState<{
     id: string
@@ -312,14 +311,13 @@ function OutingDetail({
       id: `obs_${Date.now()}_manual`,
       outingId: outing.id,
       speciesName: newSpeciesName.trim(),
-      count: newSpeciesCount,
+      count: 1,
       certainty: 'confirmed',
       notes: 'Manually added',
     }
     data.addObservations([obs])
     data.updateDex(outing.id, [obs])
     setNewSpeciesName('')
-    setNewSpeciesCount(1)
     setAddingSpecies(false)
     toast.success(`${getDisplayName(newSpeciesName)} added`)
   }
@@ -461,17 +459,6 @@ function OutingDetail({
               />
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="species-count">Count:</Label>
-                <Input
-                  id="species-count"
-                  type="number"
-                  min="1"
-                  value={newSpeciesCount}
-                  onChange={e => setNewSpeciesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-20"
-                />
-              </div>
               <Button size="sm" onClick={handleAddSpecies} disabled={!newSpeciesName.trim()}>
                 <Check size={14} className="mr-1" />
                 Add

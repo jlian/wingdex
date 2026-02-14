@@ -167,10 +167,9 @@ export async function identifyBirdInPhoto(
     const text = `Identify bird species in this photo.${ctx}
 IMPORTANT: Only suggest species whose geographic range includes the specified location. Do not suggest species that are not found in the region. Pay close attention to species splits by region (e.g. Western vs Eastern Cattle-Egret).
 If a bird is present, return your top candidate AND 1-3 alternative species that this bird could also be, even if you are fairly sure of the top pick. The top candidate MUST be first in the "candidates" array, and all candidates MUST be ordered by descending confidence. Consider similar-looking species, seasonal plumage variants, and regional subspecies as alternatives.
-Also locate the bird and return a SQUARE bounding box as percentage coordinates (0-100). The box should be generously sized to include the whole bird with margin.
+Also return a square cropBox centered on the bird as percentage coordinates (0-100), sized to tightly fit the whole bird.
 Return JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.85},{"species":"Blue-eared Kingfisher (Alcedo meninting)","confidence":0.5},{"species":"Indigo-banded Kingfisher (Ceyx melanurus)","confidence":0.35}],"cropBox":{"x":15,"y":20,"width":50,"height":50}}
 Confidence: 0.85-1.0 definitive, 0.5-0.84 likely, 0.3-0.49 possible. Be conservative — only use 0.9+ when field marks are unambiguous.
-The cropBox MUST be square (width === height). Center it on the bird with generous padding around head, tail, feet, and wings.
 No bird: {"candidates":[],"cropBox":null}`
 
     const response = await withRetry(() =>

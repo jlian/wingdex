@@ -77,10 +77,15 @@ export default function OutingReview({
       
       if (data.address) {
         const a = data.address
-        // Build a concise location: prefer park/reserve, then suburb/city, then country
+        // Build a concise location: prefer specific POI name, then park/reserve, then suburb/city
         const parts: string[] = []
-        if (a.park || a.nature_reserve || a.leisure) {
+        // Nominatim's "name" field often has the specific POI (e.g. "Green Lake Park")
+        if (data.name && data.name !== a.city && data.name !== a.state && data.name !== a.country) {
+          parts.push(data.name)
+        } else if (a.park || a.nature_reserve || a.leisure) {
           parts.push(a.park || a.nature_reserve || a.leisure)
+        } else if (a.tourism || a.amenity || a.building) {
+          parts.push(a.tourism || a.amenity || a.building)
         }
         if (a.suburb || a.neighbourhood || a.village || a.town) {
           parts.push(a.suburb || a.neighbourhood || a.village || a.town)

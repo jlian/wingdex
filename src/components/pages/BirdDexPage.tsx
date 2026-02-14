@@ -14,7 +14,7 @@ import { getEbirdUrl } from '@/lib/taxonomy'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
-type SortField = 'date' | 'updated' | 'count' | 'name'
+type SortField = 'date' | 'count' | 'name'
 type SortDir = 'asc' | 'desc'
 
 interface BirdDexPageProps {
@@ -43,7 +43,6 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
     const dir = sortDir === 'asc' ? 1 : -1
     if (sortField === 'name') return dir * a.speciesName.localeCompare(b.speciesName)
     if (sortField === 'count') return dir * (a.totalCount - b.totalCount)
-    if (sortField === 'updated') return dir * (new Date(a.lastSeenDate).getTime() - new Date(b.lastSeenDate).getTime())
     // date (default) — first seen
     return dir * (new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime())
   })
@@ -80,7 +79,6 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
 
   const sortOptions: { key: SortField; label: string }[] = [
     { key: 'date', label: 'Date' },
-    { key: 'updated', label: 'Updated' },
     { key: 'count', label: 'Count' },
     { key: 'name', label: 'A-Z' },
   ]
