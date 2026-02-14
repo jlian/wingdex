@@ -19,7 +19,10 @@ interface HomePageProps {
 export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
 
-  const recentOutings = outings.slice(0, 5)
+  const recentOutings = outings
+    .slice()
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+    .slice(0, 5)
   const recentSpecies = dex
     .slice()
     .sort((a, b) => new Date(b.addedDate || b.firstSeenDate).getTime() - new Date(a.addedDate || a.firstSeenDate).getTime())

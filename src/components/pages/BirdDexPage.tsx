@@ -14,7 +14,7 @@ import { getEbirdUrl } from '@/lib/taxonomy'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
-type SortKey = 'name' | 'recent' | 'count'
+type SortKey = 'new' | 'old' | 'updated' | 'frequency' | 'name'
 
 interface BirdDexPageProps {
   data: BirdDexDataStore
@@ -26,15 +26,15 @@ interface BirdDexPageProps {
 export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: BirdDexPageProps) {
   const { dex } = data
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<SortKey>('recent')
+  const [sortBy, setSortBy] = useState<SortKey>('new')
 
   const sortedList = [...dex].sort((a, b) => {
     if (sortBy === 'name') return a.speciesName.localeCompare(b.speciesName)
-    if (sortBy === 'count') return b.totalCount - a.totalCount
-    // recent
-    const aDate = a.addedDate || a.firstSeenDate
-    const bDate = b.addedDate || b.firstSeenDate
-    return new Date(bDate).getTime() - new Date(aDate).getTime()
+    if (sortBy === 'frequency') return b.totalCount - a.totalCount
+    if (sortBy === 'old') return new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime()
+    if (sortBy === 'updated') return new Date(b.lastSeenDate).getTime() - new Date(a.lastSeenDate).getTime()
+    // new (default) — newest first seen at top
+    return new Date(b.firstSeenDate).getTime() - new Date(a.firstSeenDate).getTime()
   })
 
   const filteredList = sortedList.filter(entry =>
@@ -68,9 +68,11 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
   }
 
   const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'recent', label: 'Recent' },
+    { key: 'new', label: 'New' },
+    { key: 'old', label: 'Old' },
+    { key: 'updated', label: 'Updated' },
+    { key: 'frequency', label: 'Frequency' },
     { key: 'name', label: 'A-Z' },
-    { key: 'count', label: 'Most seen' },
   ]
 
   return (
@@ -114,12 +116,11 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
 
       <div className="divide-y divide-border">
         {filteredList.map((entry) => {
-          const dateStr = entry.addedDate || entry.firstSeenDate
           return (
             <BirdRow
               key={entry.speciesName}
               speciesName={entry.speciesName}
-              subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${new Date(dateStr).toLocaleDateString()}`}
+              subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${new Date(entry.firstSeenDate).toLocaleDateString()}`}
               onClick={() => onSelectSpecies(entry.speciesName)}
             />
           )
