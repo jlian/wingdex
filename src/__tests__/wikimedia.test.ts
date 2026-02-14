@@ -174,6 +174,21 @@ describe('getWikimediaSummary', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
+  it('uses WIKI_OVERRIDES to disambiguate species like Merlin', async () => {
+    mockWikiResponse(wikiData({
+      title: 'Merlin (bird)',
+      extract: 'The merlin is a small species of falcon.',
+    }))
+
+    const result = await getWikimediaSummary('Merlin (Falco columbarius)')
+    expect(result).toBeDefined()
+    expect(result!.title).toBe('Merlin (bird)')
+    expect(result!.extract).toContain('falcon')
+    // Should fetch the override title "Merlin (bird)", not bare "Merlin"
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch.mock.calls[0][0]).toContain('Merlin_(bird)')
+  })
+
   it('handles fetch errors gracefully', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
