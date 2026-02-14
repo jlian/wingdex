@@ -59,14 +59,19 @@ export function groupPreviewsIntoOutings(
   userId: string
 ): { outings: Outing[]; observations: Observation[] } {
   const groups = new Map<string, ImportPreview[]>()
+  const submissionIdCounts = new Map<string, number>()
+
   for (const p of previews) {
-    let key: string
-    if (p.submissionId) {
-      key = p.submissionId
-    } else {
-      const dateKey = new Date(p.date).toISOString().split('T')[0]
-      key = `${dateKey}||${p.location}`
-    }
+    if (!p.submissionId) continue
+    submissionIdCounts.set(p.submissionId, (submissionIdCounts.get(p.submissionId) || 0) + 1)
+  }
+
+  for (const p of previews) {
+    const dateKey = new Date(p.date).toISOString().split('T')[0]
+    const key =
+      p.submissionId && (submissionIdCounts.get(p.submissionId) || 0) > 1
+        ? p.submissionId
+        : `${dateKey}||${p.location}`
     const existing = groups.get(key)
     if (existing) {
       existing.push(p)

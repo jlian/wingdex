@@ -355,6 +355,16 @@ describe('eBird CSV utilities', () => {
       expect(outings).toHaveLength(1) // same date + location → 1 outing
     })
 
+    it('falls back to date+location when submission IDs are unique per row', () => {
+      const previews = [
+        { speciesName: 'A', date: '2024-05-01T10:00:00.000Z', location: 'Park', count: 1, submissionId: 'S1' },
+        { speciesName: 'B', date: '2024-05-01T11:00:00.000Z', location: 'Park', count: 2, submissionId: 'S2' },
+      ]
+
+      const { outings } = groupPreviewsIntoOutings(previews, 'u1')
+      expect(outings).toHaveLength(1)
+    })
+
     it('carries checklist comments into outing notes', () => {
       const previews = [
         {
