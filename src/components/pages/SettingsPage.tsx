@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Confetti } from '@/components/ui/confetti'
 import {
@@ -11,13 +9,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
-import type { SavedSpot } from '@/lib/types'
 
 interface SettingsPageProps {
   data: BirdDexDataStore
@@ -220,8 +217,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
-      <SavedLocationsSection data={data} />
-
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -282,8 +277,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <AlertDialogTitle>Delete all data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will permanently delete all your outings, observations,
-                  BirdDex entries, and saved locations. This action cannot be
-                  undone.
+                  and BirdDex entries. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -354,207 +348,5 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       </Card>
     </div>
     </>
-  )
-}
-
-// ─── Saved Locations ──────────────────────────────────────
-
-function SavedLocationsSection({ data }: { data: BirdDexDataStore }) {
-  const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [lat, setLat] = useState('')
-  const [lon, setLon] = useState('')
-  const [gettingLocation, setGettingLocation] = useState(false)
-
-  const handleAdd = () => {
-    const parsedLat = parseFloat(lat)
-    const parsedLon = parseFloat(lon)
-    if (!name.trim() || isNaN(parsedLat) || isNaN(parsedLon)) {
-      toast.error('Please fill in all fields with valid values')
-      return
-    }
-    const spot: SavedSpot = {
-      id: `spot_${Date.now()}`,
-      name: name.trim(),
-      lat: parsedLat,
-      lon: parsedLon,
-      createdAt: new Date().toISOString(),
-    }
-    data.addSavedSpot(spot)
-    setName('')
-    setLat('')
-    setLon('')
-    setAdding(false)
-    toast.success(`Saved "${spot.name}"`)
-  }
-
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation not supported')
-      return
-    }
-    setGettingLocation(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude.toFixed(6))
-        setLon(pos.coords.longitude.toFixed(6))
-        setGettingLocation(false)
-        toast.success('Location detected')
-      },
-      (err) => {
-        toast.error(`Location error: ${err.message}`)
-        setGettingLocation(false)
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
-  }
-
-  // Count outings near each saved spot (within ~500m)
-  const getOutingsNearSpot = (spot: SavedSpot) => {
-    return data.outings.filter(o => {
-      if (!o.lat || !o.lon) return false
-      const dlat = Math.abs(o.lat - spot.lat)
-      const dlon = Math.abs(o.lon - spot.lon)
-      return dlat < 0.005 && dlon < 0.005 // ~500m
-    })
-  }
-
-  return (
-    <Card className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <MapPin size={18} weight="fill" className="text-primary" />
-            Saved Locations
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Your favorite birding spots
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setAdding(!adding)}
-        >
-          {adding ? <X size={14} className="mr-1" /> : <Plus size={14} className="mr-1" />}
-          {adding ? 'Cancel' : 'Add'}
-        </Button>
-      </div>
-
-      {adding && (
-        <div className="space-y-3 p-3 rounded-md border border-primary/30 bg-muted/30">
-          <div className="space-y-1">
-            <Label htmlFor="spot-name">Name</Label>
-            <Input
-              id="spot-name"
-              placeholder="e.g. Riverside Park"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="spot-lat">Latitude</Label>
-              <Input
-                id="spot-lat"
-                type="number"
-                step="any"
-                placeholder="43.6532"
-                value={lat}
-                onChange={e => setLat(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="spot-lon">Longitude</Label>
-              <Input
-                id="spot-lon"
-                type="number"
-                step="any"
-                placeholder="-79.3832"
-                value={lon}
-                onChange={e => setLon(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleUseCurrentLocation}
-              disabled={gettingLocation}
-            >
-              <MapPin size={14} className="mr-1" />
-              {gettingLocation ? 'Detecting...' : 'Use Current Location'}
-            </Button>
-            <Button size="sm" onClick={handleAdd} disabled={!name.trim()}>
-              <Check size={14} className="mr-1" />
-              Save
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {data.savedSpots.length === 0 && !adding ? (
-        <div className="text-center py-6 space-y-2">
-          <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <MapPin size={24} className="text-primary" weight="duotone" />
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">No saved locations yet</p>
-          <p className="text-xs text-muted-foreground">
-            Save your favorite birding spots for quick access when creating outings
-          </p>
-        </div>
-      ) : (
-        <div className="divide-y divide-border">
-          {data.savedSpots.map(spot => {
-            const nearbyOutings = getOutingsNearSpot(spot)
-            const mapsUrl = `https://www.google.com/maps?q=${spot.lat},${spot.lon}`
-
-            return (
-              <div
-                key={spot.id}
-                className="flex items-center gap-3 py-2.5"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={16} className="text-primary" weight="fill" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-foreground transition-colors"
-                    >
-                      {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)}
-                    </a>
-                    {nearbyOutings.length > 0 && (
-                      <>
-                        <span>·</span>
-                        <span>{nearbyOutings.length} {nearbyOutings.length === 1 ? 'outing' : 'outings'}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
-                  onClick={() => {
-                    data.deleteSavedSpot(spot.id)
-                    toast.success(`Removed "${spot.name}"`)
-                  }}
-                >
-                  <Trash size={14} />
-                </Button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </Card>
   )
 }

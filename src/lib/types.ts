@@ -47,14 +47,6 @@ export interface DexEntry {
   notes: string
 }
 
-export interface SavedSpot {
-  id: string
-  name: string
-  lat: number
-  lon: number
-  createdAt: string
-}
-
 export interface ImportPreview {
   speciesName: string
   date: string

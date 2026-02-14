@@ -1,5 +1,5 @@
 import { useKV } from '@/hooks/use-kv'
-import type { Photo, Outing, Observation, DexEntry, SavedSpot } from '@/lib/types'
+import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
 
 export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
@@ -68,7 +68,6 @@ export function useBirdDexData(userId: number) {
   const [outings, setOutings] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
   const [observations, setObservations] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])
   const [dex, setDex] = useKV<DexEntry[]>(getUserStorageKey(userId, 'dex'), [])
-  const [savedSpots, setSavedSpots] = useKV<SavedSpot[]>(getUserStorageKey(userId, 'savedSpots'), [])
 
   const addPhotos = (newPhotos: Photo[]) => {
     setPhotos(current => [...(current || []), ...newPhotos])
@@ -198,14 +197,6 @@ export function useBirdDexData(userId: number) {
     return { newSpeciesCount }
   }
 
-  const addSavedSpot = (spot: SavedSpot) => {
-    setSavedSpots(current => [...(current || []), spot])
-  }
-
-  const deleteSavedSpot = (spotId: string) => {
-    setSavedSpots(current => (current || []).filter(s => s.id !== spotId))
-  }
-
   const getOutingObservations = (outingId: string) => {
     return (observations || []).filter(obs => obs.outingId === outingId)
   }
@@ -316,7 +307,6 @@ export function useBirdDexData(userId: number) {
     setOutings([])
     setObservations([])
     setDex([])
-    setSavedSpots([])
   }
 
   const loadSeedData = (
@@ -334,7 +324,6 @@ export function useBirdDexData(userId: number) {
     outings: outings || [],
     observations: observations || [],
     dex: dex || [],
-    savedSpots: savedSpots || [],
     addPhotos,
     addOuting,
     updateOuting,
@@ -342,8 +331,6 @@ export function useBirdDexData(userId: number) {
     addObservations,
     updateObservation,
     updateDex,
-    addSavedSpot,
-    deleteSavedSpot,
     getOutingObservations,
     getOutingPhotos,
     getDexEntry,

@@ -3,7 +3,6 @@ export type UserScopedDataBucket =
   | 'outings'
   | 'observations'
   | 'dex'
-  | 'savedSpots'
 
 export function getUserStoragePrefix(userId: number): string {
   return `u${userId}_`
