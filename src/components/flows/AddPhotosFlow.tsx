@@ -25,6 +25,7 @@ import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import { Confetti } from '@/components/ui/confetti'
+import { useBirdImage } from '@/hooks/use-bird-image'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 import {
@@ -655,6 +656,9 @@ function PerPhotoConfirm({
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const [count, setCount] = useState(1)
   const isHighConfidence = selectedConfidence >= 0.8
+  
+  // Fetch Wikipedia reference image for the selected species
+  const wikiImage = useBirdImage(selectedSpecies)
 
   // No candidates
   if (candidates.length === 0) {
@@ -701,22 +705,46 @@ function PerPhotoConfirm({
 
   return (
     <div className="space-y-4">
-      {/* Photo — zoomed to bird if AI crop box available */}
-      <div className="flex justify-center relative">
-        {aiCropBox && !photo.croppedDataUrl ? (
-          <AiZoomedPreview
-            imageUrl={photo.dataUrl || photo.thumbnail}
-            cropBox={aiCropBox}
-          />
-        ) : (
-          <img
-            src={displayImage}
-            alt="Bird"
-            className={`max-h-56 rounded-lg object-contain border-2 ${
-              isAICropped ? 'border-accent' : 'border-border'
-            }`}
-          />
-        )}
+      {/* Side-by-side comparison: User's photo and Wikipedia reference */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* User's photo */}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground font-medium text-center">Your Photo</p>
+          <div className="flex justify-center relative">
+            {aiCropBox && !photo.croppedDataUrl ? (
+              <AiZoomedPreview
+                imageUrl={photo.dataUrl || photo.thumbnail}
+                cropBox={aiCropBox}
+              />
+            ) : (
+              <img
+                src={displayImage}
+                alt="Bird"
+                className={`max-h-56 w-full rounded-lg object-contain border-2 ${
+                  isAICropped ? 'border-accent' : 'border-border'
+                }`}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Wikipedia reference image */}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground font-medium text-center">Reference</p>
+          <div className="flex justify-center items-center relative min-h-[14rem]">
+            {wikiImage ? (
+              <img
+                src={wikiImage}
+                alt={`${displayName} reference`}
+                className="max-h-56 w-full rounded-lg object-contain border-2 border-border"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-56 w-full rounded-lg border-2 border-dashed border-border bg-muted/20 text-muted-foreground text-xs text-center p-4">
+                <span>Loading reference image...</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Species result card */}
