@@ -209,9 +209,11 @@ No bird: {"candidates":[],"cropBox":null}`
     if (parsed.cropBox && typeof parsed.cropBox.x === 'number') {
       const { x, y, width, height } = parsed.cropBox
       if (x >= 0 && y >= 0 && width > 5 && height > 5 && x + width <= 101 && y + height <= 101) {
-        // Enforce square crop: use the larger dimension
+        // Enforce square crop: use the larger dimension, then clamp within [0, 100]
         const side = Math.max(width, height)
-        cropBox = { x, y, width: side, height: side }
+        const clampedX = x + side > 100 ? Math.max(0, 100 - side) : x
+        const clampedY = y + side > 100 ? Math.max(0, 100 - side) : y
+        cropBox = { x: clampedX, y: clampedY, width: side, height: side }
         console.log('✅ AI crop box:', cropBox)
       }
     }
