@@ -682,7 +682,6 @@ function PerPhotoConfirm({
   const selectAlternative = (species: string, confidence: number) => {
     setSelectedSpecies(species)
     setSelectedConfidence(confidence)
-    setShowAlternatives(false)
   }
 
   const confidencePct = Math.round(selectedConfidence * 100)
