@@ -50,11 +50,11 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
 
   const sortedOutings = useMemo(() => {
     if (sortBy === 'species') {
-      return [...outings].sort((a, b) => {
-        const aCount = data.getOutingObservations(a.id).filter(obs => obs.certainty === 'confirmed').length
-        const bCount = data.getOutingObservations(b.id).filter(obs => obs.certainty === 'confirmed').length
-        return bCount - aCount
-      })
+      const countMap = new Map<string, number>()
+      for (const o of outings) {
+        countMap.set(o.id, data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length)
+      }
+      return [...outings].sort((a, b) => (countMap.get(b.id) ?? 0) - (countMap.get(a.id) ?? 0))
     }
     // date (default) — newest outing first
     return [...outings].sort((a, b) =>
