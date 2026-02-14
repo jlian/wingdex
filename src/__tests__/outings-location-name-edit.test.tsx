@@ -66,7 +66,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: '  Prospect Park  ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -91,7 +91,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: '   ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -117,7 +117,7 @@ describe('OutingsPage location name editing', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit outing name' }))
-    fireEvent.change(screen.getByLabelText('Outing name'), {
+    fireEvent.change(screen.getByLabelText('Location name'), {
       target: { value: 'Prospect Park' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

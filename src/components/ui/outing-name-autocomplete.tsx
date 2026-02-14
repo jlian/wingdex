@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Outing } from '@/lib/types'
@@ -34,8 +34,8 @@ export function OutingNameAutocomplete({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
-  // Get unique outing names from outings
-  const getUniqueOutingNames = useCallback(() => {
+  // Get unique outing names from outings - memoized to avoid repeated sorting
+  const uniqueOutingNames = useMemo(() => {
     const names = new Set<string>()
     for (const outing of outings) {
       if (outing.locationName && outing.locationName.trim()) {
@@ -56,15 +56,14 @@ export function OutingNameAutocomplete({
     }
     searchTimeoutRef.current = setTimeout(() => {
       const query = q.toLowerCase().trim()
-      const uniqueNames = getUniqueOutingNames()
-      const matches = uniqueNames
+      const matches = uniqueOutingNames
         .filter(name => name.toLowerCase().includes(query))
         .slice(0, 8) // Limit to 8 results
       setResults(matches)
       setOpen(matches.length > 0)
       setHighlightIndex(-1)
     }, 80)
-  }, [getUniqueOutingNames])
+  }, [uniqueOutingNames])
 
   // Close on click outside
   useEffect(() => {
@@ -106,14 +105,19 @@ export function OutingNameAutocomplete({
         e.preventDefault()
         setHighlightIndex(i => (i <= 0 ? results.length - 1 : i - 1))
         break
-      case 'Enter':
-        e.preventDefault()
+      case 'Enter': {
+        let selectedName: string | null = null
         if (highlightIndex >= 0 && highlightIndex < results.length) {
-          selectName(results[highlightIndex])
+          selectedName = results[highlightIndex]
         } else if (results.length === 1) {
-          selectName(results[0])
+          selectedName = results[0]
+        }
+        if (selectedName !== null) {
+          e.preventDefault()
+          selectName(selectedName)
         }
         break
+      }
       case 'Escape':
         setOpen(false)
         break

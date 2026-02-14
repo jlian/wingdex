@@ -307,6 +307,16 @@ export function useBirdDexData(userId: number) {
     setOutings([])
     setObservations([])
     setDex([])
+
+    // Also clear legacy user-scoped localStorage entries to ensure a full data wipe
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const legacySavedSpotsKey = getUserStorageKey(userId, 'savedSpots' as any)
+        window.localStorage.removeItem(legacySavedSpotsKey)
+      } catch {
+        // Ignore storage errors; primary data has already been cleared
+      }
+    }
   }
 
   const loadSeedData = (

@@ -339,7 +339,7 @@ function OutingDetail({
           {editingLocationName ? (
             <div className="space-y-2">
               <OutingNameAutocomplete
-                aria-label="Outing name"
+                aria-label="Location name"
                 value={locationName}
                 onChange={setLocationName}
                 outings={data.outings}
