@@ -8,8 +8,10 @@ Thanks for your interest in contributing! Here's how to get started.
    ```bash
    git clone https://github.com/jlian/birddex.git
    cd birddex
-   npm install
+   npm ci
    ```
+
+   Use `Node 22.16.x` and `npm 10.9.x` to avoid lockfile drift.
 
 2. **Start the dev server**
    ```bash
