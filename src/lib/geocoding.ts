@@ -25,6 +25,6 @@ export async function forwardGeocode(query: string): Promise<GeocodingResult | n
   return {
     lat: parseFloat(top.lat),
     lon: parseFloat(top.lon),
-    displayName: top.display_name ?? query,
+    displayName: top.display_name || query,
   }
 }

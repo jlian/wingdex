@@ -150,6 +150,10 @@ export default function OutingReview({
   const doConfirm = (name: string) => {
     // Determine the effective date — use edited date if user changed it
     const editedDateValue = new Date(outingDate)
+    if (isNaN(editedDateValue.getTime())) {
+      toast.error('Please enter a valid date and time')
+      return
+    }
     const dateChanged =
       editedDateValue.getTime() !== cluster.startTime.getTime()
         ? editedDateValue.toISOString()
@@ -291,7 +295,7 @@ export default function OutingReview({
                     placeholder="e.g., Central Park, NYC"
                     value={locationName}
                     onChange={e => setLocationName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !hasGps) void handleLocationSearch() }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !hasGps) { e.preventDefault(); void handleLocationSearch() } }}
                   />
                   {!hasGps && (
                     <Button
