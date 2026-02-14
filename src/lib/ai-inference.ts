@@ -199,7 +199,10 @@ No bird: {"candidates":[],"cropBox":null}`
       if (match && match.common.toLowerCase() !== c.species.toLowerCase()) {
         console.log(`🔄 Grounded "${c.species}" → "${match.common}"`)
       }
-      return { ...c, species: match ? match.common : c.species }
+      return { 
+        ...c, 
+        species: match ? `${match.common} (${match.scientific})` : c.species 
+      }
     })
     console.log(`✅ ${candidates.length} candidates:`, candidates)
 

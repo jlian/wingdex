@@ -67,10 +67,10 @@ describe('identifyBirdInPhoto', () => {
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(2)
-    // Should be grounded to canonical eBird names
-    expect(result.candidates[0].species).toBe('Northern Cardinal')
+    // Should be grounded to canonical eBird names with scientific names
+    expect(result.candidates[0].species).toBe('Northern Cardinal (Cardinalis cardinalis)')
     expect(result.candidates[0].confidence).toBe(0.92)
-    expect(result.candidates[1].species).toBe('Pyrrhuloxia')
+    expect(result.candidates[1].species).toBe('Pyrrhuloxia (Cardinalis sinuatus)')
     expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
   })
 
@@ -93,7 +93,7 @@ describe('identifyBirdInPhoto', () => {
 
     expect(result.candidates).toHaveLength(3)
     expect(result.candidates.map(c => c.confidence)).toEqual([0.89, 0.74, 0.42])
-    expect(result.candidates[0].species).toBe('Great Blue Heron')
+    expect(result.candidates[0].species).toBe('Great Blue Heron (Ardea herodias)')
   })
 
   it('grounds AI species names to canonical taxonomy', async () => {
@@ -106,8 +106,8 @@ describe('identifyBirdInPhoto', () => {
 
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
-    // "Common Kingfisher (Alcedo atthis)" should be normalized to "Common Kingfisher"
-    expect(result.candidates[0].species).toBe('Common Kingfisher')
+    // "Common Kingfisher (Alcedo atthis)" should be normalized to canonical format
+    expect(result.candidates[0].species).toBe('Common Kingfisher (Alcedo atthis)')
   })
 
   it('filters out low-confidence candidates (below 0.3)', async () => {
@@ -122,7 +122,7 @@ describe('identifyBirdInPhoto', () => {
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(1)
-    expect(result.candidates[0].species).toBe('Blue Jay')
+    expect(result.candidates[0].species).toBe('Blue Jay (Cyanocitta cristata)')
   })
 
   it('returns empty candidates when LLM finds no bird', async () => {
