@@ -3,8 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CalendarBlank, CheckCircle, XCircle, ArrowsClockwise } from '@phosphor-icons/react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { CalendarBlank, CheckCircle, XCircle, ArrowsClockwise, Clock } from '@phosphor-icons/react'
 import { findMatchingOuting } from '@/lib/clustering'
+import { format } from 'date-fns'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
 
@@ -44,6 +47,12 @@ export default function OutingReview({
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
+  
+  // Date and time editing
+  const [selectedDate, setSelectedDate] = useState<Date>(cluster.startTime)
+  const [timeString, setTimeString] = useState(
+    cluster.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  )
 
   // Check if these photos match an existing outing
   const matchingOuting = findMatchingOuting(cluster, data.outings)
@@ -133,12 +142,20 @@ export default function OutingReview({
       return
     }
 
+    // Parse user-edited time
+    const [hours, minutes] = timeString.split(':').map(Number)
+    const startTime = new Date(selectedDate)
+    startTime.setHours(hours, minutes, 0, 0)
+    
+    // Calculate end time (1 hour after start by default)
+    const endTime = new Date(startTime.getTime() + 3600000)
+
     const outingId = `outing_${Date.now()}`
     const outing = {
       id: outingId,
       userId: userId.toString(),
-      startTime: cluster.startTime.toISOString(),
-      endTime: cluster.endTime.toISOString(),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
       locationName: name || 'Unknown Location',
       defaultLocationName: name || 'Unknown Location',
       lat: cluster.centerLat,
@@ -157,15 +174,42 @@ export default function OutingReview({
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CalendarBlank size={18} />
-          <span>
-            {cluster.startTime.toLocaleDateString()} at{' '}
-            {cluster.startTime.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
+        {/* Date and Time Picker */}
+        <div className="space-y-2">
+          <Label>Date &amp; Time</Label>
+          <div className="flex gap-2">
+            {/* Date picker */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex-1 justify-start text-left font-normal"
+                >
+                  <CalendarBlank size={18} className="mr-2" />
+                  {format(selectedDate, 'PPP')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            {/* Time input */}
+            <div className="flex items-center gap-2 flex-1">
+              <Clock size={18} className="text-muted-foreground" />
+              <Input
+                type="time"
+                value={timeString}
+                onChange={(e) => setTimeString(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+          </div>
         </div>
 
         {/* GPS Status Indicator */}
