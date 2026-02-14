@@ -202,6 +202,7 @@ export default function OutingReview({
             <Switch
               checked={useExistingOuting}
               onCheckedChange={setUseExistingOuting}
+              aria-label="Add to existing outing?"
             />
           </div>
         </div>

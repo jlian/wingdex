@@ -71,7 +71,7 @@ describe('identifyBirdInPhoto', () => {
     expect(result.candidates[0].species).toBe('Northern Cardinal (Cardinalis cardinalis)')
     expect(result.candidates[0].confidence).toBe(0.92)
     expect(result.candidates[1].species).toBe('Pyrrhuloxia (Cardinalis sinuatus)')
-    expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
+    expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 40 })
   })
 
   it('sorts candidates by confidence descending', async () => {

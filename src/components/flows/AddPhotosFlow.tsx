@@ -592,26 +592,15 @@ function AiZoomedPreview({
       const canvas = canvasRef.current
       if (!canvas) return
 
-      // cropBox is percentage coords (0-100) — convert to pixels with padding
-      const pad = 0.25
-      const rawX = (cropBox.x / 100) * img.naturalWidth
-      const rawY = (cropBox.y / 100) * img.naturalHeight
-      const rawW = (cropBox.width / 100) * img.naturalWidth
-      const rawH = (cropBox.height / 100) * img.naturalHeight
-      const padX = rawW * pad
-      const padY = rawH * pad
+      // cropBox is percentage coords (0-100) — use directly, no extra padding
+      const sx = (cropBox.x / 100) * img.naturalWidth
+      const sy = (cropBox.y / 100) * img.naturalHeight
+      const sw = (cropBox.width / 100) * img.naturalWidth
+      const sh = (cropBox.height / 100) * img.naturalHeight
 
-      // Compute padded region, clamped to image bounds
-      const sx = Math.max(0, rawX - padX)
-      const sy = Math.max(0, rawY - padY)
-      const sx2 = Math.min(img.naturalWidth, rawX + rawW + padX)
-      const sy2 = Math.min(img.naturalHeight, rawY + rawH + padY)
-      const sw = sx2 - sx
-      const sh = sy2 - sy
-
-      // Size canvas to fit the crop aspect ratio, max 320px wide / 280px tall
-      const maxW = 320
-      const scale = Math.min(maxW / sw, 280 / sh, 1)
+      // Size canvas to fit, max 280px
+      const maxDim = 280
+      const scale = Math.min(maxDim / sw, maxDim / sh, 1)
       canvas.width = Math.round(sw * scale)
       canvas.height = Math.round(sh * scale)
 
@@ -626,7 +615,7 @@ function AiZoomedPreview({
     <div className="relative inline-block">
       <canvas
         ref={canvasRef}
-        className="rounded-lg border-2 border-accent max-h-56"
+        className="rounded-lg border-2 border-accent"
       />
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />

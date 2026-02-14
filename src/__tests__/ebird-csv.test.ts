@@ -282,6 +282,21 @@ describe('eBird CSV utilities', () => {
       expect(previews[0].time).toBeUndefined()
     })
 
+    it('preserves local calendar day for YYYY-MM-DD dates regardless of timezone', () => {
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,1,US-WA,King,L1,Park,47.6,-122.4,2024-01-15,,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const p = parseEBirdCSV(csv)[0]
+      const d = new Date(p.date)
+      // The parsed date should land on Jan 15 in local time, not shift to
+      // Jan 14 (which happens when "2024-01-15" is parsed as UTC midnight
+      // and the browser is behind UTC).
+      expect(d.getFullYear()).toBe(2024)
+      expect(d.getMonth()).toBe(0)  // January
+      expect(d.getDate()).toBe(15)
+    })
+
     it('captures observation details and checklist comments', () => {
       const csv = [
         EBIRD_HEADER,
