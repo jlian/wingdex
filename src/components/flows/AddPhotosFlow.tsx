@@ -659,6 +659,19 @@ function PerPhotoConfirm({
   
   // Fetch Wikipedia reference image for the selected species
   const wikiImage = useBirdImage(selectedSpecies)
+  const [imageLoadTimeout, setImageLoadTimeout] = useState(false)
+  
+  // Set timeout for image loading
+  useEffect(() => {
+    setImageLoadTimeout(false)
+    const timer = setTimeout(() => {
+      if (!wikiImage) {
+        setImageLoadTimeout(true)
+      }
+    }, 5000) // 5 second timeout
+    
+    return () => clearTimeout(timer)
+  }, [selectedSpecies, wikiImage])
 
   // No candidates
   if (candidates.length === 0) {
@@ -740,7 +753,7 @@ function PerPhotoConfirm({
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-56 w-full rounded-lg border-2 border-dashed border-border bg-muted/20 text-muted-foreground text-xs text-center p-4">
-                <span>Loading reference image...</span>
+                <span>{imageLoadTimeout ? 'No reference image available' : 'Loading reference image...'}</span>
               </div>
             )}
           </div>

@@ -142,13 +142,23 @@ export default function OutingReview({
       return
     }
 
-    // Parse user-edited time
-    const [hours, minutes] = timeString.split(':').map(Number)
+    // Parse user-edited time with validation
+    const timeParts = timeString.split(':').map(Number)
+    const hours = timeParts[0] ?? 0
+    const minutes = timeParts[1] ?? 0
+    
+    // Validate time values
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      toast.error('Invalid time format. Please use HH:MM format.')
+      return
+    }
+    
     const startTime = new Date(selectedDate)
     startTime.setHours(hours, minutes, 0, 0)
     
     // Calculate end time (1 hour after start by default)
-    const endTime = new Date(startTime.getTime() + 3600000)
+    const ONE_HOUR_MS = 60 * 60 * 1000
+    const endTime = new Date(startTime.getTime() + ONE_HOUR_MS)
 
     const outingId = `outing_${Date.now()}`
     const outing = {
