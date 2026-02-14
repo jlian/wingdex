@@ -10,14 +10,16 @@ const summaryCache = new Map<string, WikiSummary>()
 
 /**
  * Manual overrides for species whose eBird common name doesn't match any Wikipedia article.
- * These are typically recent taxonomic splits where Wikipedia still uses the pre-split name.
+ * Covers taxonomic splits (Wikipedia still uses the pre-split name) and disambiguation
+ * (e.g. "Merlin" → the bird, not the mythical figure). Sorted alphabetically by key.
  */
 const WIKI_OVERRIDES: Record<string, string> = {
-  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
+  'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
   'Black-hooded Antthrush': 'Black-faced antthrush',
   'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
+  'Merlin': 'Merlin (bird)',
+  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
   'Rose-bellied Chat': 'Rose-breasted chat',
-  'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
 }
 
 export interface WikiSummary {
