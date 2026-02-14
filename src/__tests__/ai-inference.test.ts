@@ -74,6 +74,28 @@ describe('identifyBirdInPhoto', () => {
     expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
   })
 
+  it('sorts candidates by confidence descending', async () => {
+    mockLLMResponse({
+      candidates: [
+        { species: 'Grey Heron', confidence: 0.74 },
+        { species: 'Great Blue Heron', confidence: 0.89 },
+        { species: 'Great Egret', confidence: 0.42 },
+      ],
+      cropBox: null,
+    })
+
+    const result = await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 47.6062, lon: -122.3321 },
+      6,
+      'Seattle, Washington, USA'
+    )
+
+    expect(result.candidates).toHaveLength(3)
+    expect(result.candidates.map(c => c.confidence)).toEqual([0.89, 0.74, 0.42])
+    expect(result.candidates[0].species).toBe('Great Blue Heron')
+  })
+
   it('grounds AI species names to canonical taxonomy', async () => {
     mockLLMResponse({
       candidates: [

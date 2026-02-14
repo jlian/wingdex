@@ -189,6 +189,7 @@ No bird: {"candidates":[],"cropBox":null}`
     const rawCandidates = (parsed.candidates && Array.isArray(parsed.candidates))
       ? parsed.candidates
           .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
+          .sort((a: any, b: any) => b.confidence - a.confidence)
           .slice(0, 5)
       : []
 
