@@ -14,7 +14,7 @@ import {
 import { Download, Upload, Info, MapPin, Plus, Trash, X, Check, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop } from '@phosphor-icons/react'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
-import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings, extractSavedSpotsFromPreviews } from '@/lib/ebird'
+import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { SavedSpot } from '@/lib/types'
@@ -59,11 +59,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         `u${user.id}`
       )
 
-      // Extract saved spots from import (deduped against existing)
-      const newSpots = extractSavedSpotsFromPreviews(previews, data.savedSpots)
-
-      // Import outings, observations, saved spots, and update dex
-      const { newSpeciesCount } = data.importFromEBird(outings, observations, newSpots)
+      // Import outings + observations, and update dex
+      const { newSpeciesCount } = data.importFromEBird(outings, observations)
 
       const speciesCount = new Set(previews.map(p => p.speciesName)).size
 
@@ -72,9 +69,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         setTimeout(() => setShowConfetti(false), 3500)
       }
 
-      const spotMsg = newSpots.length > 0 ? ` and ${newSpots.length} saved locations` : ''
       toast.success(
-        `Imported ${speciesCount} species across ${outings.length} outings${spotMsg}` +
+        `Imported ${speciesCount} species across ${outings.length} outings` +
         (newSpeciesCount > 0 ? ` (${newSpeciesCount} new!)` : '')
       )
     } catch (error) {
