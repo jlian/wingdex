@@ -656,6 +656,9 @@ function PerPhotoConfirm({
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const [count, setCount] = useState(1)
   const isHighConfidence = selectedConfidence >= 0.8
+  
+  // Fetch Wikipedia reference image for the selected species
+  const wikiImage = useBirdImage(selectedSpecies)
 
   // No candidates
   if (candidates.length === 0) {
@@ -699,9 +702,6 @@ function PerPhotoConfirm({
   const displayName = getDisplayName(selectedSpecies)
   const scientificMatch = selectedSpecies.match(/\(([^)]+)\)/)
   const scientificName = scientificMatch ? scientificMatch[1] : ''
-  
-  // Fetch Wikipedia reference image for the selected species
-  const wikiImage = useBirdImage(selectedSpecies)
 
   return (
     <div className="space-y-4">
