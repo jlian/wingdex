@@ -297,7 +297,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   // ─── Outing confirmed → start per-photo loop ────────────
   const handleOutingConfirmed = async (
     outingId: string,
-    locationName: string
+    locationName: string,
+    lat?: number,
+    lon?: number,
+    editedDate?: string
   ) => {
     if (locationName && locationName !== 'Unknown Location') {
       setLastLocationName(locationName)
@@ -307,7 +310,16 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const cluster = clusters[currentClusterIndex]
     const updatedPhotos = cluster.photos.map((p: any) => {
       const fullPhoto = photos.find(fp => fp.id === p.id)
-      return { ...fullPhoto, outingId }
+      const updated = { ...fullPhoto, outingId }
+      // If the photo has no GPS and the user provided coordinates, use them
+      if (!updated.gps && lat !== undefined && lon !== undefined) {
+        updated.gps = { lat, lon }
+      }
+      // If the photo has no EXIF time and the user edited the date, use it
+      if (!updated.exifTime && editedDate) {
+        updated.exifTime = editedDate
+      }
+      return updated
     })
     // Persist only metadata — strip large base64 blobs to avoid KV/localStorage overflow
     const photosForStorage = updatedPhotos.map((p: any) => ({
