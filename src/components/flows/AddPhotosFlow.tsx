@@ -609,7 +609,7 @@ function AiZoomedPreview({
       const sw = sx2 - sx
       const sh = sy2 - sy
 
-      // Size canvas to fit the crop aspect ratio, max 320px wide
+      // Size canvas to fit the crop aspect ratio, max 320px wide / 280px tall
       const maxW = 320
       const scale = Math.min(maxW / sw, 280 / sh, 1)
       canvas.width = Math.round(sw * scale)

@@ -63,6 +63,7 @@ export default function OutingReview({
     setIsLoadingLocation(true)
     try {
       // Use OpenStreetMap Nominatim for reliable reverse geocoding (no auth needed)
+      // zoom=17 resolves to POI level (parks, buildings) instead of neighborhoods
       console.log('📍 Reverse geocoding via Nominatim...')
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=17&addressdetails=1`
       const res = await fetch(url, {
