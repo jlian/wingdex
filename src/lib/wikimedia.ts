@@ -13,6 +13,7 @@ const summaryCache = new Map<string, WikiSummary>()
  * These are typically recent taxonomic splits where Wikipedia still uses the pre-split name.
  */
 const WIKI_OVERRIDES: Record<string, string> = {
+  'Merlin': 'Merlin (bird)',
   'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
   'Black-hooded Antthrush': 'Black-faced antthrush',
   'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
