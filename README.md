@@ -58,9 +58,11 @@ This is a GitHub Spark app. The recommended way to develop is inside Spark's Cod
 ```bash
 git clone https://github.com/jlian/birddex.git
 cd birddex
-npm install
+npm ci
 npm run dev
 ```
+
+For reproducible installs and stable lockfile output, use `Node 22.16.x` and `npm 10.9.x`.
 
 > **Note:** AI features (bird detection, species ID) require the `/_spark/llm` proxy and will not work outside of the Spark runtime. Everything else (photo upload, EXIF parsing, outing management, BirdDex browsing) works normally.
 
