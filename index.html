@@ -7,8 +7,8 @@
     <title>BirdDex</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content="Upload bird photos, let AI identify the species, build your BirdDex." />
-    <meta name="theme-color" content="#e1d6c2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0a140e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f8f5ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131d17" media="(prefers-color-scheme: dark)" />
         <script>
             (() => {
                 try {
@@ -24,7 +24,7 @@
 
                     // Sync theme-color meta tags when user has a stored preference
                     if (stored === 'dark' || stored === 'light') {
-                        const color = stored === 'dark' ? '#0a140e' : '#e1d6c2'
+                        const color = stored === 'dark' ? '#131d17' : '#f8f5ee'
                         document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
                             meta.setAttribute('content', color)
                         })

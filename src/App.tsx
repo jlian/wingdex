@@ -133,7 +133,8 @@ function App() {
 
   const { resolvedTheme } = useTheme()
   useEffect(() => {
-    const color = resolvedTheme === 'dark' ? '#0a140e' : '#e1d6c2'
+    if (resolvedTheme !== 'dark' && resolvedTheme !== 'light') return
+    const color = resolvedTheme === 'dark' ? '#131d17' : '#f8f5ee'
     document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
       meta.setAttribute('content', color)
     })
