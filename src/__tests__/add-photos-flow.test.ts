@@ -4,6 +4,8 @@ import {
   resolvePhotoResults,
   filterConfirmedResults,
   friendlyErrorMessage,
+  normalizeLocationName,
+  resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 
@@ -103,5 +105,37 @@ describe('needsCloseConfirmation', () => {
     'photo-confirm',
   ] as FlowStep[])('returns true for mid-flow step "%s"', (step) => {
     expect(needsCloseConfirmation(step)).toBe(true)
+  })
+})
+
+// ── location context helpers ───────────────────────────────
+
+describe('normalizeLocationName', () => {
+  it('returns trimmed location names', () => {
+    expect(normalizeLocationName('  Seattle, WA  ')).toBe('Seattle, WA')
+  })
+
+  it('returns empty string for unknown location', () => {
+    expect(normalizeLocationName('Unknown Location')).toBe('')
+    expect(normalizeLocationName('   ')).toBe('')
+  })
+})
+
+describe('resolveInferenceLocationName', () => {
+  it('returns undefined when geo context is disabled', () => {
+    expect(resolveInferenceLocationName(false, 'Seattle, WA')).toBeUndefined()
+    expect(resolveInferenceLocationName(false, 'Seattle, WA', 'Portland, OR')).toBeUndefined()
+  })
+
+  it('prefers per-call override when provided', () => {
+    expect(resolveInferenceLocationName(true, 'Seattle, WA', 'Portland, OR')).toBe('Portland, OR')
+  })
+
+  it('falls back to last location name', () => {
+    expect(resolveInferenceLocationName(true, 'Seattle, WA')).toBe('Seattle, WA')
+  })
+
+  it('returns undefined when no location is available', () => {
+    expect(resolveInferenceLocationName(true, '')).toBeUndefined()
   })
 })

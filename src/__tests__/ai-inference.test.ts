@@ -74,6 +74,28 @@ describe('identifyBirdInPhoto', () => {
     expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
   })
 
+  it('sorts candidates by confidence descending', async () => {
+    mockLLMResponse({
+      candidates: [
+        { species: 'Grey Heron', confidence: 0.74 },
+        { species: 'Great Blue Heron', confidence: 0.89 },
+        { species: 'Great Egret', confidence: 0.42 },
+      ],
+      cropBox: null,
+    })
+
+    const result = await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 47.6062, lon: -122.3321 },
+      6,
+      'Seattle, Washington, USA'
+    )
+
+    expect(result.candidates).toHaveLength(3)
+    expect(result.candidates.map(c => c.confidence)).toEqual([0.89, 0.74, 0.42])
+    expect(result.candidates[0].species).toBe('Great Blue Heron')
+  })
+
   it('grounds AI species names to canonical taxonomy', async () => {
     mockLLMResponse({
       candidates: [
@@ -200,5 +222,29 @@ describe('identifyBirdInPhoto', () => {
       : userContent
     expect(textPart).toContain('40.7128')
     expect(textPart).toContain('Jun')
+  })
+
+  it('passes location name context to the LLM prompt', async () => {
+    mockLLMResponse({
+      candidates: [{ species: 'Eastern Cattle-Egret', confidence: 0.9 }],
+      cropBox: null,
+    })
+
+    await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 25.0306, lon: 121.5354 },
+      11, // December
+      "Da'an District, Taipei, Taiwan"
+    )
+
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const userContent = callBody.messages[1].content
+    const textPart = Array.isArray(userContent)
+      ? userContent.find((p: any) => p.type === 'text')?.text
+      : userContent
+    expect(textPart).toContain("Da'an District, Taipei, Taiwan")
+    expect(textPart).toContain('25.0306')
+    expect(textPart).toContain('Dec')
+    expect(textPart).toContain('geographic range')
   })
 })

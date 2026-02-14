@@ -147,7 +147,8 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
 export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
-  month?: number
+  month?: number,
+  locationName?: string
 ): Promise<BirdIdResult> {
   try {
     console.log('🐦 Starting bird ID...')
@@ -156,6 +157,7 @@ export async function identifyBirdInPhoto(
     console.log(`📐 ID: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
 
     let ctx = ''
+    if (locationName) ctx += ` Location: ${locationName}.`
     if (location) ctx += ` GPS: ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`
     if (month !== undefined) {
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -163,6 +165,7 @@ export async function identifyBirdInPhoto(
     }
 
     const text = `Identify bird species in this photo.${ctx}
+IMPORTANT: Only suggest species whose geographic range includes the specified location. Do not suggest species that are not found in the region. Pay close attention to species splits by region (e.g. Western vs Eastern Cattle-Egret).
 If a bird is present, return your top candidate AND 1-3 alternative species that this bird could also be, even if you are fairly sure of the top pick. The top candidate MUST be first in the "candidates" array, and all candidates MUST be ordered by descending confidence. Consider similar-looking species, seasonal plumage variants, and regional subspecies as alternatives.
 Also locate the bird and return a bounding box as percentage coordinates (0-100).
 Return JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.85},{"species":"Blue-eared Kingfisher (Alcedo meninting)","confidence":0.5},{"species":"Indigo-banded Kingfisher (Ceyx melanurus)","confidence":0.35}],"cropBox":{"x":20,"y":25,"width":50,"height":45}}
@@ -186,6 +189,7 @@ No bird: {"candidates":[],"cropBox":null}`
     const rawCandidates = (parsed.candidates && Array.isArray(parsed.candidates))
       ? parsed.candidates
           .filter((c: any) => c.species && typeof c.confidence === 'number' && c.confidence >= 0.3)
+          .sort((a: any, b: any) => b.confidence - a.confidence)
           .slice(0, 5)
       : []
 
