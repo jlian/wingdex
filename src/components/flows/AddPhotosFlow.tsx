@@ -35,6 +35,7 @@ import {
   resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
+import { useBirdImage } from '@/hooks/use-bird-image'
 
 interface AddPhotosFlowProps {
   data: BirdDexDataStore
@@ -698,24 +699,41 @@ function PerPhotoConfirm({
   const displayName = getDisplayName(selectedSpecies)
   const scientificMatch = selectedSpecies.match(/\(([^)]+)\)/)
   const scientificName = scientificMatch ? scientificMatch[1] : ''
+  
+  // Fetch Wikipedia reference image for the selected species
+  const wikiImage = useBirdImage(selectedSpecies)
 
   return (
     <div className="space-y-4">
       {/* Photo — zoomed to bird if AI crop box available */}
-      <div className="flex justify-center relative">
-        {aiCropBox && !photo.croppedDataUrl ? (
-          <AiZoomedPreview
-            imageUrl={photo.dataUrl || photo.thumbnail}
-            cropBox={aiCropBox}
-          />
-        ) : (
-          <img
-            src={displayImage}
-            alt="Bird"
-            className={`max-h-56 rounded-lg object-contain border-2 ${
-              isAICropped ? 'border-accent' : 'border-border'
-            }`}
-          />
+      <div className="flex justify-center gap-3 relative">
+        <div className="flex-1 flex justify-center">
+          {aiCropBox && !photo.croppedDataUrl ? (
+            <AiZoomedPreview
+              imageUrl={photo.dataUrl || photo.thumbnail}
+              cropBox={aiCropBox}
+            />
+          ) : (
+            <img
+              src={displayImage}
+              alt="Your photo"
+              className={`max-h-56 rounded-lg object-contain border-2 ${
+                isAICropped ? 'border-accent' : 'border-border'
+              }`}
+            />
+          )}
+        </div>
+        
+        {/* Wikipedia reference image */}
+        {wikiImage && (
+          <div className="flex-1 flex flex-col items-center gap-2">
+            <img
+              src={wikiImage}
+              alt={`${displayName} reference`}
+              className="max-h-56 rounded-lg object-contain border-2 border-muted"
+            />
+            <p className="text-xs text-muted-foreground">Wikipedia reference</p>
+          </div>
         )}
       </div>
 
