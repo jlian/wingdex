@@ -201,4 +201,28 @@ describe('identifyBirdInPhoto', () => {
     expect(textPart).toContain('40.7128')
     expect(textPart).toContain('Jun')
   })
+
+  it('passes location name context to the LLM prompt', async () => {
+    mockLLMResponse({
+      candidates: [{ species: 'Eastern Cattle-Egret', confidence: 0.9 }],
+      cropBox: null,
+    })
+
+    await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 25.0306, lon: 121.5354 },
+      11, // December
+      "Da'an District, Taipei, Taiwan"
+    )
+
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const userContent = callBody.messages[1].content
+    const textPart = Array.isArray(userContent)
+      ? userContent.find((p: any) => p.type === 'text')?.text
+      : userContent
+    expect(textPart).toContain("Da'an District, Taipei, Taiwan")
+    expect(textPart).toContain('25.0306')
+    expect(textPart).toContain('Dec')
+    expect(textPart).toContain('geographic range')
+  })
 })

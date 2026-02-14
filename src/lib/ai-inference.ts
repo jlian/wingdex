@@ -147,7 +147,8 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
 export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
-  month?: number
+  month?: number,
+  locationName?: string
 ): Promise<BirdIdResult> {
   try {
     console.log('🐦 Starting bird ID...')
@@ -156,6 +157,7 @@ export async function identifyBirdInPhoto(
     console.log(`📐 ID: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
 
     let ctx = ''
+    if (locationName) ctx += ` Location: ${locationName}.`
     if (location) ctx += ` GPS: ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`
     if (month !== undefined) {
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -163,6 +165,7 @@ export async function identifyBirdInPhoto(
     }
 
     const text = `Identify bird species in this photo.${ctx}
+IMPORTANT: Only suggest species whose geographic range includes the specified location. Do not suggest species that are not found in the region. Pay close attention to species splits by region (e.g. Western vs Eastern Cattle-Egret).
 Also locate the bird and return a bounding box as percentage coordinates (0-100).
 Return JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.95}],"cropBox":{"x":20,"y":25,"width":50,"height":45}}
 Confidence: 0.8-1.0 definitive, 0.5-0.79 likely, 0.3-0.49 possible.

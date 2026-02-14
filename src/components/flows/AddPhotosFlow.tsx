@@ -112,7 +112,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         useGeoContext ? photo.gps : undefined,
         useGeoContext && photo.exifTime
           ? new Date(photo.exifTime).getMonth()
-          : undefined
+          : undefined,
+        useGeoContext ? lastLocationName : undefined
       )
       console.log(`✅ Found ${result.candidates.length} candidates`)
 
