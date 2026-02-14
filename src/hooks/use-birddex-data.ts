@@ -311,7 +311,7 @@ export function useBirdDexData(userId: number) {
     // Also clear legacy user-scoped localStorage entries to ensure a full data wipe
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        const legacySavedSpotsKey = getUserStorageKey(userId, 'savedSpots' as any)
+        const legacySavedSpotsKey = getUserStorageKey(userId, 'savedSpots')
         window.localStorage.removeItem(legacySavedSpotsKey)
       } catch {
         // Ignore storage errors; primary data has already been cleared
