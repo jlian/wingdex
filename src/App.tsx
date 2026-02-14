@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
@@ -129,6 +130,14 @@ function App() {
 
     return () => window.clearTimeout(timer)
   }, [user])
+
+  const { resolvedTheme } = useTheme()
+  useEffect(() => {
+    const color = resolvedTheme === 'dark' ? '#0a140e' : '#e1d6c2'
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+      meta.setAttribute('content', color)
+    })
+  }, [resolvedTheme])
 
   if (authError) {
     return <AuthErrorShell message={authError} />
