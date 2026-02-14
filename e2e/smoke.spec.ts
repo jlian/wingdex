@@ -50,6 +50,36 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 });
   });
 
+  test('settings page renders without errors', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+
+    // Navigate to Settings
+    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
+
+    // Settings page should show expected sections
+    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Import & Export' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Data Storage & Privacy' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Data Management' })).toBeVisible();
+
+    // Filter out known non-critical errors
+    const criticalErrors = errors.filter(
+      e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
+        && !e.includes('_spark') && !e.includes('spark') && !e.includes('undefined')
+    );
+
+    expect(criticalErrors).toEqual([]);
+  });
+
   test('add photos button opens flow on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
