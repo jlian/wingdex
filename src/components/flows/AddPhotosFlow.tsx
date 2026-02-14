@@ -640,11 +640,11 @@ function PerPhotoConfirm({
   const displayImage = photo.croppedDataUrl || photo.thumbnail
   const isAICropped = !!photo.aiCropped
   const topCandidate = candidates[0]
-  const isHighConfidence = topCandidate && topCandidate.confidence >= 0.8
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [selectedSpecies, setSelectedSpecies] = useState(topCandidate?.species ?? '')
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const [count, setCount] = useState(1)
+  const isHighConfidence = selectedConfidence >= 0.8
 
   // No candidates
   if (candidates.length === 0) {
@@ -682,7 +682,6 @@ function PerPhotoConfirm({
   const selectAlternative = (species: string, confidence: number) => {
     setSelectedSpecies(species)
     setSelectedConfidence(confidence)
-    setShowAlternatives(false)
   }
 
   const confidencePct = Math.round(selectedConfidence * 100)
@@ -818,9 +817,9 @@ function PerPhotoConfirm({
             {candidates.length > 1 && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Other possibilities
+                  All possibilities
                 </p>
-                {candidates.slice(1).map(c => {
+                {candidates.map(c => {
                   const altName = getDisplayName(c.species)
                   const altPct = Math.round(c.confidence * 100)
                   const isSelected = c.species === selectedSpecies
