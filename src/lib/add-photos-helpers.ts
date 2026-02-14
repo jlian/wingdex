@@ -64,3 +64,29 @@ export function friendlyErrorMessage(error: unknown): string {
   }
   return msg
 }
+
+/**
+ * Normalize reverse-geocoded location text for prompt context.
+ */
+export function normalizeLocationName(locationName: string): string {
+  const trimmed = locationName.trim()
+  if (!trimmed || trimmed === 'Unknown Location') {
+    return ''
+  }
+  return trimmed
+}
+
+/**
+ * Resolve which location name should be passed to AI for this inference call.
+ */
+export function resolveInferenceLocationName(
+  useGeoContext: boolean,
+  lastLocationName: string,
+  locationNameOverride?: string,
+): string | undefined {
+  if (!useGeoContext) {
+    return undefined
+  }
+  const resolved = locationNameOverride ?? lastLocationName
+  return resolved || undefined
+}

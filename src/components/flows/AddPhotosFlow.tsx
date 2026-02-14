@@ -31,8 +31,11 @@ import {
   needsCloseConfirmation,
   resolvePhotoResults,
   filterConfirmedResults,
+  normalizeLocationName,
+  resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
+import { useBirdImage } from '@/hooks/use-bird-image'
 
 interface AddPhotosFlowProps {
   data: BirdDexDataStore
@@ -94,7 +97,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const fullCurrentPhoto = getFullPhoto(currentPhotoIndex)
 
   // ─── Step 1: Send full image directly to species ID ─────
-  const runSpeciesId = async (photoIdx: number, imageUrl?: string) => {
+  const runSpeciesId = async (
+    photoIdx: number,
+    imageUrl?: string,
+    locationNameOverride?: string,
+  ) => {
     const photo = getFullPhoto(photoIdx)
     if (!photo) return
 
@@ -112,7 +119,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         useGeoContext ? photo.gps : undefined,
         useGeoContext && photo.exifTime
           ? new Date(photo.exifTime).getMonth()
-          : undefined
+          : undefined,
+        resolveInferenceLocationName(
+          useGeoContext,
+          lastLocationName,
+          locationNameOverride,
+        )
       )
       console.log(`✅ Found ${result.candidates.length} candidates`)
 
@@ -299,9 +311,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     outingId: string,
     locationName: string
   ) => {
-    if (locationName && locationName !== 'Unknown Location') {
-      setLastLocationName(locationName)
-    }
+    const normalizedLocationName = normalizeLocationName(locationName)
+    setLastLocationName(normalizedLocationName)
     setCurrentOutingId(outingId)
 
     const cluster = clusters[currentClusterIndex]
@@ -330,7 +341,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     setPhotoResults([])
     setCurrentCandidates([])
-    runSpeciesId(0)
+    runSpeciesId(0, undefined, normalizedLocationName)
   }
 
   // ─── Manual crop callback ───────────────────────────────
@@ -645,6 +656,9 @@ function PerPhotoConfirm({
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const [count, setCount] = useState(1)
   const isHighConfidence = selectedConfidence >= 0.8
+  
+  // Fetch Wikipedia reference image for the selected species
+  const wikiImage = useBirdImage(selectedSpecies)
 
   // No candidates
   if (candidates.length === 0) {
@@ -692,20 +706,34 @@ function PerPhotoConfirm({
   return (
     <div className="space-y-4">
       {/* Photo — zoomed to bird if AI crop box available */}
-      <div className="flex justify-center relative">
-        {aiCropBox && !photo.croppedDataUrl ? (
-          <AiZoomedPreview
-            imageUrl={photo.dataUrl || photo.thumbnail}
-            cropBox={aiCropBox}
-          />
-        ) : (
-          <img
-            src={displayImage}
-            alt="Bird"
-            className={`max-h-56 rounded-lg object-contain border-2 ${
-              isAICropped ? 'border-accent' : 'border-border'
-            }`}
-          />
+      <div className="flex justify-center gap-3 relative">
+        <div className="flex-1 flex justify-center">
+          {aiCropBox && !photo.croppedDataUrl ? (
+            <AiZoomedPreview
+              imageUrl={photo.dataUrl || photo.thumbnail}
+              cropBox={aiCropBox}
+            />
+          ) : (
+            <img
+              src={displayImage}
+              alt="Your photo"
+              className={`max-h-56 rounded-lg object-contain border-2 ${
+                isAICropped ? 'border-accent' : 'border-border'
+              }`}
+            />
+          )}
+        </div>
+        
+        {/* Wikipedia reference image */}
+        {wikiImage && (
+          <div className="flex-1 flex flex-col items-center gap-2">
+            <img
+              src={wikiImage}
+              alt={`${displayName} reference`}
+              className="max-h-56 rounded-lg object-contain border-2 border-muted"
+            />
+            <p className="text-xs text-muted-foreground">Wikipedia reference</p>
+          </div>
         )}
       </div>
 

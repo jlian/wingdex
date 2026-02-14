@@ -67,11 +67,33 @@ describe('identifyBirdInPhoto', () => {
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(2)
-    // Should be grounded to canonical eBird names
-    expect(result.candidates[0].species).toBe('Northern Cardinal')
+    // Should be grounded to canonical eBird names with scientific names
+    expect(result.candidates[0].species).toBe('Northern Cardinal (Cardinalis cardinalis)')
     expect(result.candidates[0].confidence).toBe(0.92)
-    expect(result.candidates[1].species).toBe('Pyrrhuloxia')
+    expect(result.candidates[1].species).toBe('Pyrrhuloxia (Cardinalis sinuatus)')
     expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
+  })
+
+  it('sorts candidates by confidence descending', async () => {
+    mockLLMResponse({
+      candidates: [
+        { species: 'Grey Heron', confidence: 0.74 },
+        { species: 'Great Blue Heron', confidence: 0.89 },
+        { species: 'Great Egret', confidence: 0.42 },
+      ],
+      cropBox: null,
+    })
+
+    const result = await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 47.6062, lon: -122.3321 },
+      6,
+      'Seattle, Washington, USA'
+    )
+
+    expect(result.candidates).toHaveLength(3)
+    expect(result.candidates.map(c => c.confidence)).toEqual([0.89, 0.74, 0.42])
+    expect(result.candidates[0].species).toBe('Great Blue Heron (Ardea herodias)')
   })
 
   it('grounds AI species names to canonical taxonomy', async () => {
@@ -84,8 +106,8 @@ describe('identifyBirdInPhoto', () => {
 
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
-    // "Common Kingfisher (Alcedo atthis)" should be normalized to "Common Kingfisher"
-    expect(result.candidates[0].species).toBe('Common Kingfisher')
+    // "Common Kingfisher (Alcedo atthis)" should be normalized to canonical format with scientific name
+    expect(result.candidates[0].species).toBe('Common Kingfisher (Alcedo atthis)')
   })
 
   it('filters out low-confidence candidates (below 0.3)', async () => {
@@ -100,7 +122,7 @@ describe('identifyBirdInPhoto', () => {
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(1)
-    expect(result.candidates[0].species).toBe('Blue Jay')
+    expect(result.candidates[0].species).toBe('Blue Jay (Cyanocitta cristata)')
   })
 
   it('returns empty candidates when LLM finds no bird', async () => {
@@ -200,5 +222,29 @@ describe('identifyBirdInPhoto', () => {
       : userContent
     expect(textPart).toContain('40.7128')
     expect(textPart).toContain('Jun')
+  })
+
+  it('passes location name context to the LLM prompt', async () => {
+    mockLLMResponse({
+      candidates: [{ species: 'Eastern Cattle-Egret', confidence: 0.9 }],
+      cropBox: null,
+    })
+
+    await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      { lat: 25.0306, lon: 121.5354 },
+      11, // December
+      "Da'an District, Taipei, Taiwan"
+    )
+
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const userContent = callBody.messages[1].content
+    const textPart = Array.isArray(userContent)
+      ? userContent.find((p: any) => p.type === 'text')?.text
+      : userContent
+    expect(textPart).toContain("Da'an District, Taipei, Taiwan")
+    expect(textPart).toContain('25.0306')
+    expect(textPart).toContain('Dec')
+    expect(textPart).toContain('geographic range')
   })
 })
