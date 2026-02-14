@@ -17,6 +17,11 @@
         "github-spark"
     ],
     "type": "module",
+    "packageManager": "npm@10.9.2",
+    "engines": {
+        "node": "22.16.x",
+        "npm": "10.9.x"
+    },
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
