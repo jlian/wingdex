@@ -71,6 +71,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto border-b border-border/40">
+        <div className="flex items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-baseline gap-3">
               <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
@@ -97,17 +98,19 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 </>
               )}
             </p>
-            <button
-              onClick={onAddPhotos}
-              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg
-                bg-primary text-primary-foreground text-sm font-medium
-                shadow-sm hover:bg-primary/90 active:scale-[0.97]
-                transition-all duration-150 cursor-pointer"
-            >
-              <Camera size={18} weight="bold" />
-              Upload & Identify
-            </button>
           </div>
+          <button
+            onClick={onAddPhotos}
+            className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5
+              w-24 h-24 sm:w-28 sm:h-28 rounded-2xl
+              bg-primary text-primary-foreground
+              shadow-sm hover:bg-primary/90 active:scale-[0.97]
+              transition-all duration-150 cursor-pointer"
+          >
+            <Camera size={28} weight="bold" />
+            <span className="text-xs font-medium leading-tight text-center">Upload &<br/>Identify</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Recent Species ─────────────────────────────── */}
