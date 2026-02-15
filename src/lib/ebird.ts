@@ -279,8 +279,21 @@ function parseCSVLine(line: string): string[] {
 
 function normalizeDate(dateStr: string, timeStr?: string): string | null {
   try {
-    // Parse the date portion first
-    const date = new Date(dateStr)
+    // Parse date components to construct a local-time Date.
+    // new Date("2024-01-15") treats the string as UTC, but eBird dates are
+    // local, so we must parse them as local to avoid timezone shifts (#52).
+    const parts = dateStr.trim().match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    let date: Date
+    if (parts) {
+      date = new Date(
+        parseInt(parts[1], 10),
+        parseInt(parts[2], 10) - 1,
+        parseInt(parts[3], 10)
+      )
+    } else {
+      // Fallback for other formats (e.g. "Jan 15, 2024")
+      date = new Date(dateStr)
+    }
     if (isNaN(date.getTime())) return null
 
     // Combine with time if available (handles "08:15 AM", "01:09 PM", "14:30")

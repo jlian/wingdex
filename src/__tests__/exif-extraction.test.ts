@@ -36,7 +36,7 @@ const TEST_IMAGES: Array<{
     toleranceKm: 5,
   },
   {
-    file: 'belted-kingfisher.jpg',
+    file: 'Belted_kingfisher_above_Puget_Sound_Carkeek_Park.jpg',
     species: 'Belted Kingfisher',
     date: '2024-08-10',
     lat: 47.6646, lon: -122.3974,
@@ -44,7 +44,7 @@ const TEST_IMAGES: Array<{
     toleranceKm: 5,
   },
   {
-    file: 'stellers-jay.jpg',
+    file: 'Stellers_Jay_eating_cherries_Seattle_backyard.jpg',
     species: "Steller's Jay",
     date: '2025-06-17',
     lat: 47.6399, lon: -122.4039,
@@ -52,7 +52,7 @@ const TEST_IMAGES: Array<{
     toleranceKm: 5,
   },
   {
-    file: 'great-blue-heron.jpg',
+    file: 'Great_blue_heron_roosting_at_Carkeek_Park.jpg',
     species: 'Great Blue Heron',
     date: '2024-08-10',
     lat: 47.7117, lon: -122.3771,
@@ -60,7 +60,7 @@ const TEST_IMAGES: Array<{
     toleranceKm: 5,
   },
   {
-    file: 'chukar-partridge.jpg',
+    file: 'Chukar_partridge_near_Haleakala_summit_Maui.jpg',
     species: 'Chukar Partridge',
     date: '2024-12-18',
     lat: 20.7148, lon: -156.2502,
@@ -68,7 +68,7 @@ const TEST_IMAGES: Array<{
     toleranceKm: 10,
   },
   {
-    file: 'tufted-puffin.jpg',
+    file: 'Tufted_puffin_near_Smith_Island_Washington.jpg',
     species: 'Tufted Puffin',
     date: '2025-08-16',
     lat: 48.3252, lon: -122.8434,

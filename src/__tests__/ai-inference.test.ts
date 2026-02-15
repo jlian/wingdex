@@ -61,7 +61,7 @@ describe('identifyBirdInPhoto', () => {
         { species: 'Northern Cardinal (Cardinalis cardinalis)', confidence: 0.92 },
         { species: 'Pyrrhuloxia (Cardinalis sinuatus)', confidence: 0.45 },
       ],
-      cropBox: { x: 20, y: 30, width: 40, height: 35 },
+      birdCenter: [40, 48],
     })
 
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
@@ -71,7 +71,25 @@ describe('identifyBirdInPhoto', () => {
     expect(result.candidates[0].species).toBe('Northern Cardinal (Cardinalis cardinalis)')
     expect(result.candidates[0].confidence).toBe(0.92)
     expect(result.candidates[1].species).toBe('Pyrrhuloxia (Cardinalis sinuatus)')
-    expect(result.cropBox).toEqual({ x: 20, y: 30, width: 40, height: 35 })
+    // Center (40,48) → 40% crop → x=20, y=28, w=40, h=40
+    expect(result.cropBox).toEqual({ x: 20, y: 28, width: 40, height: 40 })
+    expect(result.multipleBirds).toBe(false)
+  })
+
+  it('reports multipleBirds when LLM flags it', async () => {
+    mockLLMResponse({
+      candidates: [
+        { species: 'Glaucous-winged Gull', confidence: 0.85 },
+        { species: 'Common Goldeneye', confidence: 0.55 },
+      ],
+      birdCenter: [50, 50],
+      multipleBirds: true,
+    })
+
+    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    expect(result.multipleBirds).toBe(true)
+    expect(result.candidates.length).toBeGreaterThan(0)
   })
 
   it('sorts candidates by confidence descending', async () => {
@@ -151,16 +169,72 @@ describe('identifyBirdInPhoto', () => {
     ).rejects.toThrow('unparseable response')
   })
 
-  it('rejects invalid cropBox dimensions', async () => {
+  it('rejects missing birdCenter', async () => {
     mockLLMResponse({
       candidates: [{ species: 'Bald Eagle', confidence: 0.9 }],
-      cropBox: { x: 10, y: 10, width: 3, height: 3 }, // too small (< 5)
+      birdCenter: null,
     })
 
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(1)
     expect(result.cropBox).toBeUndefined()
+  })
+
+  it('clamps crop box when bird center is near edge', async () => {
+    mockLLMResponse({
+      candidates: [{ species: 'Great Cormorant', confidence: 0.9 }],
+      birdCenter: [95, 90],
+    })
+
+    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    // center (95,90) → x=min(60, 75)=60, y=min(60, 70)=60
+    expect(result.cropBox).toEqual({ x: 60, y: 60, width: 40, height: 40 })
+  })
+
+  it('produces square pixel crop for landscape images', async () => {
+    // Override Image mock to simulate a 3:2 landscape photo
+    const OrigImage = globalThis.Image
+    globalThis.Image = class {
+      width = 300; height = 200
+      onload: (() => void) | null = null
+      onerror: ((e: any) => void) | null = null
+      set src(_: string) { setTimeout(() => this.onload?.(), 0) }
+    } as any
+
+    mockLLMResponse({
+      candidates: [{ species: 'Great Cormorant', confidence: 0.9 }],
+      birdCenter: [30, 40],
+    })
+
+    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    // shortSide=200, cropPx=80
+    // wPct = (80/300)*100 = 26.7 → 27, hPct = (80/200)*100 = 40
+    // x = max(0, min(73, 30-13.3)) = 17, y = max(0, min(60, 40-20)) = 20
+    expect(result.cropBox).toBeDefined()
+    // Verify square in pixel space
+    const pxW = (result.cropBox!.width / 100) * 300
+    const pxH = (result.cropBox!.height / 100) * 200
+    expect(Math.abs(pxW - pxH)).toBeLessThanOrEqual(3) // within rounding
+
+    globalThis.Image = OrigImage
+  })
+
+  it('scales crop box based on birdSize', async () => {
+    // "large" bird on 100x100 mock image → 75% crop
+    mockLLMResponse({
+      candidates: [{ species: 'Chukar', confidence: 0.9 }],
+      birdCenter: [50, 55],
+      birdSize: 'large',
+    })
+
+    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    // 75% of shortSide(100)=75 → wPct=75, hPct=75
+    // x=max(0, min(25, 50-37.5))=13, y=max(0, min(25, 55-37.5))=18
+    expect(result.cropBox).toEqual({ x: 13, y: 18, width: 75, height: 75 })
   })
 
   it('limits to 5 candidates max', async () => {
@@ -245,6 +319,6 @@ describe('identifyBirdInPhoto', () => {
     expect(textPart).toContain("Da'an District, Taipei, Taiwan")
     expect(textPart).toContain('25.0306')
     expect(textPart).toContain('Dec')
-    expect(textPart).toContain('geographic range')
+    expect(textPart).toContain('location/time')
   })
 })
