@@ -187,7 +187,7 @@ function SpeciesDetail({
       <div className="px-4 sm:px-6 pt-4 pb-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft size={20} />
-          BirdDex
+          Your BirdDex
         </Button>
       </div>
 
@@ -298,11 +298,11 @@ function SpeciesDetail({
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Sightings ({sightings.length})
             </h3>
-            <div className="divide-y divide-border -mx-1">
+            <div className="divide-y divide-border">
               {sightings.map(({ observation, outing }) => (
                 <button
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                  className="flex w-full items-center gap-3 px-2 py-2.5 rounded-lg text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
                   onClick={() => onSelectOuting(outing.id)}
                 >
                   <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />

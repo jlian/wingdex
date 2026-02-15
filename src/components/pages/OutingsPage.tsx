@@ -199,7 +199,7 @@ function OutingRow({
 
   return (
     <button
-      className="flex items-center gap-3 md:gap-4 py-3 w-full text-left rounded-md hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+      className="flex items-center gap-3 md:gap-4 px-2 py-3 w-full text-left rounded-lg hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
       onClick={onClick}
     >
       {heroSrc ? (
@@ -250,6 +250,36 @@ function OutingDetail({
   const observations = data.getOutingObservations(outing.id)
   const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
   const possible = observations.filter(obs => obs.certainty === 'possible')
+
+  // Group observations by species to deduplicate
+  const groupedConfirmed = useMemo(() => {
+    const map = new Map<string, { speciesName: string; totalCount: number; obsIds: string[] }>()
+    for (const obs of confirmed) {
+      const existing = map.get(obs.speciesName)
+      if (existing) {
+        existing.totalCount += obs.count
+        existing.obsIds.push(obs.id)
+      } else {
+        map.set(obs.speciesName, { speciesName: obs.speciesName, totalCount: obs.count, obsIds: [obs.id] })
+      }
+    }
+    return Array.from(map.values())
+  }, [confirmed])
+
+  const groupedPossible = useMemo(() => {
+    const map = new Map<string, { speciesName: string; totalCount: number; obsIds: string[] }>()
+    for (const obs of possible) {
+      const existing = map.get(obs.speciesName)
+      if (existing) {
+        existing.totalCount += obs.count
+        existing.obsIds.push(obs.id)
+      } else {
+        map.set(obs.speciesName, { speciesName: obs.speciesName, totalCount: obs.count, obsIds: [obs.id] })
+      }
+    }
+    return Array.from(map.values())
+  }, [possible])
+
   const [editingNotes, setEditingNotes] = useState(false)
   const [notes, setNotes] = useState(outing.notes || '')
   const [editingLocationName, setEditingLocationName] = useState(false)
@@ -258,7 +288,7 @@ function OutingDetail({
   const [newSpeciesName, setNewSpeciesName] = useState('')
   const [deleteOutingOpen, setDeleteOutingOpen] = useState(false)
   const [pendingDeleteObservation, setPendingDeleteObservation] = useState<{
-    id: string
+    ids: string[]
     speciesName: string
   } | null>(null)
 
@@ -303,8 +333,8 @@ function OutingDetail({
     toast.success('Outing name saved')
   }
 
-  const handleDeleteObservation = (obsId: string, speciesName: string) => {
-    setPendingDeleteObservation({ id: obsId, speciesName })
+  const handleDeleteObservation = (obsIds: string[], speciesName: string) => {
+    setPendingDeleteObservation({ ids: obsIds, speciesName })
   }
 
   const handleAddSpecies = () => {
@@ -348,12 +378,12 @@ function OutingDetail({
   return (
     <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mt-0.5">
+      <div>
+        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mb-2">
           <ArrowLeft size={20} />
+          Outings
         </Button>
-        <div className="flex-1 min-w-0">
-          {editingLocationName ? (
+        {editingLocationName ? (
             <div className="space-y-2">
               <OutingNameAutocomplete
                 aria-label="Location name"
@@ -406,13 +436,12 @@ function OutingDetail({
               {durationStr && <span className="text-muted-foreground/60">({durationStr})</span>}
             </span>
           </div>
-        </div>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard value={confirmed.length + possible.length} label="Species" accent="text-primary" />
-        <StatCard value={confirmed.length} label="Confirmed" accent="text-secondary" />
+        <StatCard value={groupedConfirmed.length + groupedPossible.length} label="Species" accent="text-primary" />
+        <StatCard value={groupedConfirmed.length} label="Confirmed" accent="text-secondary" />
         <StatCard
           value={observations.reduce((sum, o) => sum + o.count, 0)}
           label="Total Count"
@@ -440,7 +469,7 @@ function OutingDetail({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground">
-            Species ({confirmed.length + possible.length})
+            Species ({groupedConfirmed.length + groupedPossible.length})
           </h3>
           <Button
             variant="outline"
@@ -475,20 +504,20 @@ function OutingDetail({
         )}
 
         {/* Confirmed species */}
-        {confirmed.length > 0 && (
+        {groupedConfirmed.length > 0 && (
           <div className="divide-y divide-border">
-            {confirmed.map(obs => (
+            {groupedConfirmed.map(group => (
               <BirdRow
-                key={obs.id}
-                speciesName={obs.speciesName}
-                subtitle={obs.count > 1 ? `x${obs.count}` : undefined}
-                onClick={() => onSelectSpecies(obs.speciesName)}
+                key={group.speciesName}
+                speciesName={group.speciesName}
+                subtitle={group.totalCount > 1 ? `x${group.totalCount}` : undefined}
+                onClick={() => onSelectSpecies(group.speciesName)}
                 actions={
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
-                    onClick={(e) => { e.stopPropagation(); handleDeleteObservation(obs.id, obs.speciesName) }}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteObservation(group.obsIds, group.speciesName) }}
                   >
                     <Trash size={14} />
                   </Button>
@@ -499,18 +528,18 @@ function OutingDetail({
         )}
 
         {/* Possible species */}
-        {possible.length > 0 && (
+        {groupedPossible.length > 0 && (
           <>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider pt-1">
               Possible
             </p>
             <div className="divide-y divide-border">
-              {possible.map(obs => (
+              {groupedPossible.map(group => (
                 <BirdRow
-                  key={obs.id}
-                  speciesName={obs.speciesName}
-                  subtitle={obs.count > 1 ? `x${obs.count}` : undefined}
-                  onClick={() => onSelectSpecies(obs.speciesName)}
+                  key={group.speciesName}
+                  speciesName={group.speciesName}
+                  subtitle={group.totalCount > 1 ? `x${group.totalCount}` : undefined}
+                  onClick={() => onSelectSpecies(group.speciesName)}
                   actions={
                     <>
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">possible</Badge>
@@ -518,7 +547,7 @@ function OutingDetail({
                         variant="ghost"
                         size="sm"
                         className="text-muted-foreground hover:text-destructive flex-shrink-0 h-8 w-8 p-0"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteObservation(obs.id, obs.speciesName) }}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteObservation(group.obsIds, group.speciesName) }}
                       >
                         <Trash size={14} />
                       </Button>
@@ -530,7 +559,7 @@ function OutingDetail({
           </>
         )}
 
-        {confirmed.length === 0 && possible.length === 0 && (
+        {groupedConfirmed.length === 0 && groupedPossible.length === 0 && (
           <div className="py-8 text-center">
             <Bird size={32} className="text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -642,7 +671,9 @@ function OutingDetail({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (!pendingDeleteObservation) return
-                data.updateObservation(pendingDeleteObservation.id, { certainty: 'rejected' })
+                for (const id of pendingDeleteObservation.ids) {
+                  data.updateObservation(id, { certainty: 'rejected' })
+                }
                 toast.success('Observation removed')
                 setPendingDeleteObservation(null)
               }}

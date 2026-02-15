@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { House, List, Bird, Gear } from '@phosphor-icons/react'
+import { List, Bird } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
@@ -154,10 +154,8 @@ function BootShell() {
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
             <div className="flex gap-2">
+              <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
               <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="hidden md:block h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="hidden md:block h-8 w-20 rounded-md bg-muted animate-pulse" />
             </div>
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
@@ -208,14 +206,9 @@ function AppContent({ user }: { user: UserInfo }) {
   }, [resolvedTheme])
 
   const navItems = [
-    { value: 'home', label: 'Home', icon: House },
-    { value: 'birddex', label: 'BirdDex', icon: Bird },
+    { value: 'birddex', label: 'Your BirdDex', icon: Bird },
     { value: 'outings', label: 'Outings', icon: List },
-    { value: 'settings', label: 'Settings', icon: Gear },
   ]
-
-  // Mobile nav only shows BirdDex + Outings (Home via logo, Settings via avatar)
-  const mobileNavItems = navItems.filter(i => i.value === 'birddex' || i.value === 'outings')
 
   return (
     <div className="min-h-screen bg-background">
@@ -234,17 +227,16 @@ function AppContent({ user }: { user: UserInfo }) {
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
 
-              {/* Desktop nav — hidden on mobile */}
-              <TabsList className="hidden md:flex bg-transparent gap-1 h-auto p-0">
+              {/* Nav tabs — BirdDex + Outings (Home via logo, Settings via avatar) */}
+              <TabsList className="flex bg-transparent gap-1 h-auto p-0">
                 {navItems.map(item => (
                   <TabsTrigger
                     key={item.value}
                     value={item.value}
                     onClick={() => {
-                      // If clicking the already-active tab, clear any subId (e.g. go back to list from detail)
                       if (item.value === tab && subId) navigate(item.value)
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
+                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
                       data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -254,40 +246,17 @@ function AppContent({ user }: { user: UserInfo }) {
                 ))}
               </TabsList>
 
-              {/* Mobile nav — BirdDex + Outings tabs, visible only on mobile */}
-              <TabsList className="flex md:hidden bg-transparent gap-1 h-auto p-0">
-                {mobileNavItems.map(item => (
-                  <TabsTrigger
-                    key={item.value}
-                    value={item.value}
-                    onClick={() => {
-                      if (item.value === tab && subId) navigate(item.value)
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
-                      data-[state=active]:bg-primary/10 data-[state=active]:text-primary
-                      data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <item.icon size={16} />
-                    {item.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {/* Right side: avatar — navigates to Settings on mobile */}
+              {/* Right side: avatar — navigates to Settings */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('settings')}
-                  className="md:hidden hover:opacity-80 active:scale-[0.97] transition-all"
+                  className="hover:opacity-80 active:scale-[0.97] transition-all"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatarUrl} alt={user.login} />
                     <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </button>
-                <Avatar className="h-8 w-8 hidden md:flex">
-                  <AvatarImage src={user.avatarUrl} alt={user.login} />
-                  <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
               </div>
             </div>
           </div>
@@ -338,7 +307,7 @@ function AppContent({ user }: { user: UserInfo }) {
       )}
 
       {/* Footer */}
-      <div className="hidden md:flex justify-center py-6 text-xs text-muted-foreground/60">
+      <div className="flex justify-center py-6 text-xs text-muted-foreground/60">
         <span>
           BirdDex{typeof APP_VERSION !== 'undefined' ? ` v${APP_VERSION}` : ''} · Built by{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
