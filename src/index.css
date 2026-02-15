@@ -103,6 +103,10 @@
   --font-serif: 'Newsreader', Georgia, serif;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-sans);
 }
@@ -113,61 +117,11 @@ h1, h2, .font-serif {
 
 /* ─── Animations ──────────────────────────────────────── */
 
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-card-in {
-  animation: card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out both;
+  animation: fade-in 0.15s ease-out both;
 }
-
-.animate-slide-up {
-  animation: slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Staggered delay utility — applied via style="animation-delay" on each card */
-.stagger-1  { animation-delay: 30ms; }
-.stagger-2  { animation-delay: 60ms; }
-.stagger-3  { animation-delay: 90ms; }
-.stagger-4  { animation-delay: 120ms; }
-.stagger-5  { animation-delay: 150ms; }
-.stagger-6  { animation-delay: 180ms; }
-.stagger-7  { animation-delay: 210ms; }
-.stagger-8  { animation-delay: 240ms; }
-.stagger-9  { animation-delay: 270ms; }
-.stagger-10 { animation-delay: 300ms; }
-.stagger-11 { animation-delay: 330ms; }
-.stagger-12 { animation-delay: 360ms; }
-.stagger-13 { animation-delay: 390ms; }
-.stagger-14 { animation-delay: 420ms; }
-.stagger-15 { animation-delay: 450ms; }
-.stagger-16 { animation-delay: 480ms; }
-.stagger-17 { animation-delay: 510ms; }
-.stagger-18 { animation-delay: 540ms; }
