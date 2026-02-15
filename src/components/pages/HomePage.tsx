@@ -71,39 +71,39 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8">
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
-        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-4">
-          {/* Typographic header */}
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl sm:text-5xl font-bold font-serif text-primary">{dex.length}</span>
-            <span className="text-base sm:text-lg text-muted-foreground">species observed</span>
-          </div>
+        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
+          {/* Stats line */}
           <p className="text-sm text-muted-foreground">
+            <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
+              <span className="font-semibold text-foreground">{dex.length}</span> species
+            </button>
+            <span className="mx-1.5">·</span>
             <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
-              {outings.length} outings
+              <span className="font-semibold text-foreground">{outings.length}</span> outings
             </button>
             {newThisMonth > 0 && (
               <>
                 <span className="mx-1.5">·</span>
-                <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
-                  {newThisMonth} new this month
-                </button>
+                <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
               </>
             )}
             {totalPhotos > 0 && (
               <>
                 <span className="mx-1.5">·</span>
-                <span>{totalPhotos} photos</span>
+                <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
               </>
             )}
           </p>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onAddPhotos}
-          >
-            <Camera size={16} className="mr-1.5" weight="bold" />
-            Upload & Identify
-          </Button>
+          <div className="flex justify-center py-2">
+            <Button
+              size="lg"
+              onClick={onAddPhotos}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm px-8"
+            >
+              <Camera size={20} className="mr-2" weight="bold" />
+              Upload & Identify
+            </Button>
+          </div>
         </div>
       </section>
 

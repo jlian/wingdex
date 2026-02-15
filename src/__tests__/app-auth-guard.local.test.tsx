@@ -32,6 +32,7 @@ vi.mock('@phosphor-icons/react', () => ({
   List: () => <span>List</span>,
   Bird: () => <span>Bird</span>,
   Gear: () => <span>Gear</span>,
+  MapPin: () => <span>MapPin</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({
