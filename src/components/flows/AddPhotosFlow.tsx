@@ -433,10 +433,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
             <AlertDialogTitle>Duplicate photos found</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingNewPhotos.length > 0
-                ? `${pendingDuplicatePhotos.length} of ${pendingDuplicatePhotos.length + pendingNewPhotos.length} ${pendingDuplicatePhotos.length + pendingNewPhotos.length === 1 ? 'photo has' : 'photos have'} already been imported. Would you like to re-import ${pendingDuplicatePhotos.length === 1 ? 'it' : 'them'}?`
+                ? `${pendingDuplicatePhotos.length} of ${pendingDuplicatePhotos.length + pendingNewPhotos.length} ${pendingDuplicatePhotos.length + pendingNewPhotos.length === 1 ? 'photo has' : 'photos have'} already been imported. Re-importing will add duplicate sightings and increase species counts.`
                 : pendingDuplicatePhotos.length === 1
-                  ? 'This photo has already been imported. Would you like to re-import it?'
-                  : `All ${pendingDuplicatePhotos.length} photos have already been imported. Would you like to re-import them?`}
+                  ? 'This photo has already been imported. Re-importing it will add a duplicate sighting and increase species counts.'
+                  : `All ${pendingDuplicatePhotos.length} photos have already been imported. Re-importing them will add duplicate sightings and increase species counts.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
