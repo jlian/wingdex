@@ -103,6 +103,10 @@
   --font-serif: 'Newsreader', Georgia, serif;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   font-family: var(--font-sans);
 }
@@ -128,7 +132,7 @@ h1, h2, .font-serif {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.1s ease-out both;
+  animation: fade-in 0.2s ease-out both;
 }
 
 /* Crossfade wrapper: children stack and transition opacity */
