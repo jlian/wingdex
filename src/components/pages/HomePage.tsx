@@ -71,8 +71,8 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto border-b border-border/40">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-4">
+        <div className="flex items-center justify-between gap-6">
+          <div className="space-y-3">
             <div className="flex items-baseline gap-3">
               <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
                 {dex.length}
@@ -101,17 +101,17 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </div>
           <button
             onClick={onAddPhotos}
-            className="group relative flex-shrink-0 h-16 w-16 rounded-2xl cursor-pointer
-              bg-gradient-to-b from-primary/90 to-primary
-              shadow-[0_2px_8px_rgba(0,0,0,0.12),0_6px_20px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.15)]
-              hover:shadow-[0_4px_12px_rgba(0,0,0,0.15),0_8px_28px_rgba(0,0,0,0.10),inset_0_1px_1px_rgba(255,255,255,0.2)]
-              hover:scale-[1.04] active:scale-[0.97]
-              transition-all duration-200 ease-out"
+            className="group relative flex-shrink-0 h-18 w-18 sm:h-20 sm:w-20 rounded-full
+              bg-gradient-to-br from-primary to-primary/80
+              shadow-lg shadow-primary/20
+              hover:shadow-xl hover:shadow-primary/30 hover:scale-105
+              active:scale-[0.97]
+              transition-all duration-200 ease-out
+              cursor-pointer flex items-center justify-center"
             aria-label="Upload & Identify"
           >
-            <span className="absolute inset-0 flex items-center justify-center text-primary-foreground">
-              <Camera size={26} weight="bold" />
-            </span>
+            <Camera size={28} weight="bold" className="text-primary-foreground sm:hidden" />
+            <Camera size={32} weight="bold" className="text-primary-foreground hidden sm:block" />
           </button>
         </div>
       </div>
