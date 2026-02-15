@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { List, Bird } from '@phosphor-icons/react'
+import { MapPin, Bird } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
@@ -206,8 +206,8 @@ function AppContent({ user }: { user: UserInfo }) {
   }, [resolvedTheme])
 
   const navItems = [
-    { value: 'birddex', label: 'Your BirdDex', icon: Bird },
-    { value: 'outings', label: 'Outings', icon: List },
+    { value: 'birddex', label: 'BirdDex', icon: Bird },
+    { value: 'outings', label: 'Outings', icon: MapPin },
   ]
 
   return (
