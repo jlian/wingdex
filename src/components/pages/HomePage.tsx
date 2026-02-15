@@ -69,43 +69,42 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
 
   return (
     <div className="pb-8 animate-fade-in">
-      {/* ── Dashboard Header ──────────────────────────── */}
-      <section className="border-b border-border/40">
-        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          {/* Stats line */}
-          <p className="text-sm text-muted-foreground">
-            <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
-              <span className="font-semibold text-foreground">{dex.length}</span> species
-            </button>
-            <span className="mx-1.5">·</span>
+      {/* ── CTA Card ──────────────────────────────────── */}
+      <div className="px-4 sm:px-6 pt-6 max-w-3xl mx-auto">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
+          <div className="space-y-1">
+            <p className="font-serif text-4xl sm:text-5xl font-semibold text-foreground">
+              {dex.length}
+            </p>
+            <p className="text-sm text-muted-foreground">species observed</p>
+          </div>
+          <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
             <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
               <span className="font-semibold text-foreground">{outings.length}</span> outings
             </button>
-            {newThisMonth > 0 && (
-              <>
-                <span className="mx-1.5">·</span>
-                <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
-              </>
-            )}
             {totalPhotos > 0 && (
               <>
-                <span className="mx-1.5">·</span>
+                <span>·</span>
                 <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
               </>
             )}
-          </p>
-          <div className="flex justify-center py-2">
-            <Button
-              size="lg"
-              onClick={onAddPhotos}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm px-8"
-            >
-              <Camera size={20} className="mr-2" weight="bold" />
-              Upload & Identify
-            </Button>
+            {newThisMonth > 0 && (
+              <>
+                <span>·</span>
+                <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
+              </>
+            )}
           </div>
+          <Button
+            size="lg"
+            onClick={onAddPhotos}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm px-8"
+          >
+            <Camera size={20} className="mr-2" weight="bold" />
+            Upload & Identify
+          </Button>
         </div>
-      </section>
+      </div>
 
       {/* ── Recent Species ─────────────────────────────── */}
       <div className="px-4 sm:px-6 space-y-6 pt-5 max-w-3xl mx-auto">
