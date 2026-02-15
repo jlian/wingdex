@@ -586,24 +586,20 @@ function AiZoomedPreview({
   imageUrl: string
   cropBox: { x: number; y: number; width: number; height: number }
 }) {
-  // Use object-position + object-fit to crop directly — no canvas needed
-  const objectPosition = `${cropBox.x + cropBox.width / 2}% ${cropBox.y + cropBox.height / 2}%`
-  const zoomScale = 100 / cropBox.width // how much to zoom in
+  // Simple CSS crop: use background-image to show just the crop region
+  const bgSize = `${100 / cropBox.width * 100}% ${100 / cropBox.height * 100}%`
+  const bgPos = `${cropBox.x / (100 - cropBox.width) * 100}% ${cropBox.y / (100 - cropBox.height) * 100}%`
 
   return (
-    <div className="relative w-56 h-56 overflow-hidden rounded-lg border-2 border-accent">
-      <img
-        src={imageUrl}
-        alt="AI cropped"
-        className="absolute"
-        style={{
-          width: `${zoomScale * 100}%`,
-          height: `${zoomScale * 100}%`,
-          left: `${-cropBox.x * zoomScale}%`,
-          top: `${-cropBox.y * zoomScale}%`,
-          maxWidth: 'none',
-        }}
-      />
+    <div className="relative max-h-56 overflow-hidden rounded-lg border-2 border-accent"
+      style={{
+        aspectRatio: `${cropBox.width} / ${cropBox.height}`,
+        width: '14rem',
+        backgroundImage: `url(${imageUrl})`,
+        backgroundSize: bgSize,
+        backgroundPosition: bgPos,
+      }}
+    >
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />
       </div>
