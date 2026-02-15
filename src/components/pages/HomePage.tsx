@@ -70,40 +70,41 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
   return (
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto space-y-4 border-b border-border/40">
-        <div className="flex items-baseline gap-3">
-          <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
-            {dex.length}
-          </p>
-          <p className="font-serif text-lg sm:text-xl text-muted-foreground italic">
-            species observed
-          </p>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
-            <span className="font-semibold text-foreground">{outings.length}</span> outings
-          </button>
-          {totalPhotos > 0 && (
-            <>
-              <span className="mx-1.5 text-border">·</span>
-              <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
-            </>
-          )}
-          {newThisMonth > 0 && (
-            <>
-              <span className="mx-1.5 text-border">·</span>
-              <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
-            </>
-          )}
-        </p>
-        <div className="pt-1">
+      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto border-b border-border/40">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-4">
+            <div className="flex items-baseline gap-3">
+              <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
+                {dex.length}
+              </p>
+              <p className="font-serif text-lg sm:text-xl text-muted-foreground">
+                species observed
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
+                <span className="font-semibold text-foreground">{outings.length}</span> outings
+              </button>
+              {totalPhotos > 0 && (
+                <>
+                  <span className="mx-1.5 text-border">·</span>
+                  <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
+                </>
+              )}
+              {newThisMonth > 0 && (
+                <>
+                  <span className="mx-1.5 text-border">·</span>
+                  <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
+                </>
+              )}
+            </p>
+          </div>
           <Button
-            size="lg"
             onClick={onAddPhotos}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm px-8"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm h-14 w-14 p-0 rounded-xl flex-shrink-0"
+            aria-label="Upload & Identify"
           >
-            <Camera size={20} className="mr-2" weight="bold" />
-            Upload & Identify
+            <Camera size={24} weight="bold" />
           </Button>
         </div>
       </div>
