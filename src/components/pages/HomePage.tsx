@@ -223,11 +223,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 return (
                   <button
                     key={outing.id}
-                    className="flex items-center gap-3 px-2 py-0.5 mx-1 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
+                    className="flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
                     onClick={() => onSelectOuting(outing.id)}
                   >
                     <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 py-2">
+                    <div className="flex-1 min-w-0 border-b border-border py-3">
                       <p className="font-serif font-semibold text-sm text-foreground truncate">
                         {outing.locationName || 'Outing'}
                       </p>

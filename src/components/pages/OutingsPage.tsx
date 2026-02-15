@@ -25,7 +25,6 @@ import {
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
-import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
 import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
@@ -156,14 +155,12 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
       <div>
         {filteredOutings.map((outing) => {
           const observations = data.getOutingObservations(outing.id)
-          const photos = data.getOutingPhotos(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
 
           return (
             <OutingRow
               key={outing.id}
               outing={outing}
-              photos={photos}
               confirmed={confirmed}
               onClick={() => onSelectOuting(outing.id)}
             />
@@ -184,48 +181,23 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
 
 function OutingRow({
   outing,
-  photos,
   confirmed,
   onClick,
 }: {
   outing: Outing
-  photos: any[]
   confirmed: Observation[]
   onClick: () => void
 }) {
-  const firstSpecies = confirmed[0]?.speciesName
-  const wikiImage = useBirdImage(firstSpecies)
-  const heroSrc = (photos[0]?.thumbnail || wikiImage) as string | undefined
-
   return (
-    <div className="flex items-center gap-3 px-2 py-0.5 mx-1 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
-      {/* Thumbnail */}
-      <button className="flex-shrink-0" onClick={onClick} tabIndex={-1}>
-        {heroSrc ? (
-          <img
-            src={heroSrc}
-            alt={firstSpecies || 'Outing'}
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-muted flex-shrink-0"
-          />
-        ) : (
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-            <Bird size={20} className="text-muted-foreground/40" />
-          </div>
-        )}
-      </button>
-      {/* Text */}
-      <div
-        className="flex-1 min-w-0 text-left py-2.5"
-      >
-        <div className="md:flex md:items-baseline md:gap-2">
-          <p className="font-serif font-semibold text-sm text-foreground truncate">
-            {outing.locationName || 'Outing'}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatStoredDate(outing.startTime)} · {confirmed.length} species
-            {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
-          </p>
-        </div>
+    <button className="flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors" onClick={onClick}>
+      <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
+      <div className="flex-1 min-w-0 border-b border-border py-3">
+        <p className="font-serif font-semibold text-sm text-foreground truncate">
+          {outing.locationName || 'Outing'}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatStoredDate(outing.startTime)} · {confirmed.length} species
+        </p>
         {confirmed.length > 0 && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">
             {confirmed.slice(0, 4).map(obs => getDisplayName(obs.speciesName)).join(', ')}
@@ -233,7 +205,7 @@ function OutingRow({
           </p>
         )}
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -384,7 +356,6 @@ function OutingDetail({
       <div>
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mb-2">
           <ArrowLeft size={20} />
-          Outings
         </Button>
         {editingLocationName ? (
             <div className="space-y-2">
