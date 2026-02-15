@@ -72,82 +72,52 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
         <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          {/* Inline stats */}
-          <p className="text-sm text-muted-foreground">
-            <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
-              <span className="font-semibold text-foreground">{dex.length}</span> species
-            </button>
-            <span className="mx-1.5">·</span>
-            <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
-              <span className="font-semibold text-foreground">{outings.length}</span> outings
-            </button>
-            {newThisMonth > 0 && (
-              <>
-                <span className="mx-1.5">·</span>
-                <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
-                  <span className="font-semibold text-foreground">{newThisMonth}</span> new this month
-                </button>
-              </>
-            )}
-            {totalPhotos > 0 && (
-              <>
-                <span className="mx-1.5">·</span>
-                <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
-              </>
-            )}
-          </p>
-
-          {/* Highlights */}
+          {/* Enriched stat cards */}
           {(() => {
             const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
-            const firstSeen = dex.slice().sort((a, b) =>
-              new Date(a.addedDate || a.firstSeenDate).getTime() - new Date(b.addedDate || b.firstSeenDate).getTime()
-            )[0]
             const bestOuting = outings.reduce<{ name: string; count: number; id: string } | null>((best, o) => {
               const count = data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length
               if (!best || count > best.count) return { name: o.locationName || 'Outing', count, id: o.id }
               return best
             }, null)
             return (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                {mostSeen && (
-                  <button
-                    onClick={() => onSelectSpecies(mostSeen.speciesName)}
-                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
-                  >
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
-                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                      {getDisplayName(mostSeen.speciesName)}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <button
+                  onClick={() => onNavigate('birddex')}
+                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+                >
+                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{dex.length}</div>
+                  <div className="text-[11px] sm:text-xs text-muted-foreground">Species</div>
+                  {mostSeen && (
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5 truncate">
+                      Top: {getDisplayName(mostSeen.speciesName)}
                     </p>
-                    <p className="text-xs text-muted-foreground">{mostSeen.totalCount} total</p>
-                  </button>
-                )}
-                {firstSeen && (
-                  <button
-                    onClick={() => onSelectSpecies(firstSeen.speciesName)}
-                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
-                  >
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
-                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                      {getDisplayName(firstSeen.speciesName)}
+                  )}
+                </button>
+                <button
+                  onClick={() => onNavigate('outings')}
+                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+                >
+                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{outings.length}</div>
+                  <div className="text-[11px] sm:text-xs text-muted-foreground">Outings</div>
+                  {bestOuting && (
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5 truncate">
+                      Best: {bestOuting.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(firstSeen.addedDate || firstSeen.firstSeenDate).toLocaleDateString()}
+                  )}
+                </button>
+                <button
+                  onClick={() => onNavigate('birddex')}
+                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+                >
+                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{newThisMonth}</div>
+                  <div className="text-[11px] sm:text-xs text-muted-foreground">New This Month</div>
+                  {totalPhotos > 0 && (
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5">
+                      {totalPhotos} photos
                     </p>
-                  </button>
-                )}
-                {bestOuting && (
-                  <button
-                    onClick={() => onSelectOuting(bestOuting.id)}
-                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
-                  >
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
-                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                      {bestOuting.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{bestOuting.count} species</p>
-                  </button>
-                )}
+                  )}
+                </button>
               </div>
             )
           })()}
