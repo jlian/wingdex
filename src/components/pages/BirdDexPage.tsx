@@ -194,19 +194,19 @@ function SpeciesDetail({
       <div className="px-4 sm:px-6 space-y-6">
         {/* Hero: image + name + stats */}
         <div className="flex gap-5 sm:gap-6">
-          {/* Square image — skeleton while loading, then fade in */}
-          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm flex items-center justify-center">
-            {summaryLoading ? (
-              <div className="w-full h-full animate-pulse bg-accent rounded-xl" />
-            ) : heroImage ? (
+          {/* Square image — placeholder bg, image crossfades in */}
+          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm relative">
+            {heroImage ? (
               <img
                 src={heroImage}
                 alt={displayName}
-                className="w-full h-full object-cover animate-fade-in"
+                className="absolute inset-0 w-full h-full object-cover animate-fade-in"
               />
-            ) : (
-              <Bird size={32} className="text-muted-foreground/40" />
-            )}
+            ) : !summaryLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Bird size={32} className="text-muted-foreground/40" />
+              </div>
+            ) : null}
           </div>
 
           {/* Name + inline stats — always visible (data from dex entry) */}
@@ -235,7 +235,7 @@ function SpeciesDetail({
           </div>
         </div>
 
-        {/* About */}
+        {/* About — fades in when loaded */}
         {summaryLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-4 w-full" />
