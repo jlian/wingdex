@@ -194,56 +194,44 @@ function SpeciesDetail({
       <div className="px-4 sm:px-6 space-y-6">
         {/* Hero: image + name + stats */}
         <div className="flex gap-5 sm:gap-6">
-          {/* Square image */}
-          {summaryLoading ? (
-            <Skeleton className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl flex-shrink-0" />
-          ) : heroImage ? (
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm">
+          {/* Square image — skeleton while loading, then fade in */}
+          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm flex items-center justify-center">
+            {summaryLoading ? (
+              <div className="w-full h-full animate-pulse bg-accent rounded-xl" />
+            ) : heroImage ? (
               <img
                 src={heroImage}
                 alt={displayName}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover animate-fade-in"
               />
-            </div>
-          ) : (
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center">
-              <Bird size={32} className="text-muted-foreground/40" />
-            </div>
-          )}
-
-          {/* Name + inline stats */}
-          <div className="min-w-0 flex-1 flex flex-col justify-center">
-            {summaryLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-7 w-40" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-44 mt-2" />
-              </div>
             ) : (
-              <>
-                <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground leading-tight">
-                  {displayName}
-                </h2>
-                {scientificName && (
-                  <p className="text-sm text-muted-foreground italic mt-1">
-                    {scientificName}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3.5 text-sm text-muted-foreground">
-                  <span>
-                    <span className="font-semibold text-foreground">{entry.totalCount}</span> seen
-                  </span>
-                  <span className="text-border">·</span>
-                  <span>
-                    <span className="font-semibold text-foreground">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}
-                  </span>
-                  <span className="text-border">·</span>
-                  <span>
-                    First <span className="font-semibold text-foreground">{new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  </span>
-                </div>
-              </>
+              <Bird size={32} className="text-muted-foreground/40" />
             )}
+          </div>
+
+          {/* Name + inline stats — always visible (data from dex entry) */}
+          <div className="min-w-0 flex-1 flex flex-col justify-center">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground leading-tight">
+              {displayName}
+            </h2>
+            {scientificName && (
+              <p className="text-sm text-muted-foreground italic mt-1">
+                {scientificName}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3.5 text-sm text-muted-foreground">
+              <span>
+                <span className="font-semibold text-foreground">{entry.totalCount}</span> seen
+              </span>
+              <span className="text-border">·</span>
+              <span>
+                <span className="font-semibold text-foreground">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}
+              </span>
+              <span className="text-border">·</span>
+              <span>
+                First <span className="font-semibold text-foreground">{new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </span>
+            </div>
           </div>
         </div>
 
