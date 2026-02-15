@@ -83,8 +83,8 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           <button
             onClick={onAddPhotos}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-              bg-gradient-to-r from-primary/90 to-primary
-              text-primary-foreground text-sm font-semibold
+              bg-gradient-to-r from-emerald-600 to-teal-500
+              text-white text-sm font-semibold
               shadow-sm hover:brightness-105 active:scale-[0.97]
               transition-all duration-150 cursor-pointer flex-shrink-0"
           >
