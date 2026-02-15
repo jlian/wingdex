@@ -27,6 +27,7 @@ import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
+import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -307,10 +308,15 @@ function OutingDetail({
 
   const handleAddSpecies = () => {
     if (!newSpeciesName.trim()) return
+    // Normalize to "Common Name (Scientific Name)" format to match AI/CSV import
+    const match = findBestMatch(newSpeciesName.trim())
+    const normalizedName = match
+      ? `${match.common} (${match.scientific})`
+      : newSpeciesName.trim()
     const obs: Observation = {
       id: `obs_${Date.now()}_manual`,
       outingId: outing.id,
-      speciesName: newSpeciesName.trim(),
+      speciesName: normalizedName,
       count: 1,
       certainty: 'confirmed',
       notes: 'Manually added',
@@ -319,7 +325,7 @@ function OutingDetail({
     data.updateDex(outing.id, [obs])
     setNewSpeciesName('')
     setAddingSpecies(false)
-    toast.success(`${getDisplayName(newSpeciesName)} added`)
+    toast.success(`${getDisplayName(normalizedName)} added`)
   }
 
   const outingDate = new Date(outing.startTime)

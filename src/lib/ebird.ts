@@ -342,8 +342,15 @@ export function detectImportConflicts(
   previews: ImportPreview[],
   existingDex: Map<string, DexEntry>
 ): ImportPreview[] {
+  // Build a secondary index by display (common) name for fuzzy matching
+  const byDisplayName = new Map<string, DexEntry>()
+  for (const entry of existingDex.values()) {
+    byDisplayName.set(getDisplayName(entry.speciesName).toLowerCase(), entry)
+  }
+
   return previews.map(preview => {
     const existing = existingDex.get(preview.speciesName)
+      ?? byDisplayName.get(getDisplayName(preview.speciesName).toLowerCase())
     
     if (!existing) {
       return { ...preview, conflict: 'new' }
