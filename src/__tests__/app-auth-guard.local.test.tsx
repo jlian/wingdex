@@ -33,6 +33,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Bird: () => <span>Bird</span>,
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
+  GithubLogo: () => <span>GithubLogo</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({

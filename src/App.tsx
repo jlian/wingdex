@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { MapPin, Bird } from '@phosphor-icons/react'
+import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
@@ -308,21 +308,20 @@ function AppContent({ user }: { user: UserInfo }) {
       )}
 
       {/* Footer */}
-      <div className="flex justify-center py-6 text-xs text-muted-foreground/60">
+      <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
         <span>
-          BirdDex{typeof APP_VERSION !== 'undefined' ? ` v${APP_VERSION}` : ''} · Built by{' '}
+          BirdDex v1.1.0 by{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
             John Lian
           </a>
-          {' · '}
-          <a href="https://github.com/jlian/birddex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            GitHub
-          </a>
-          {' · '}
-          <a href="https://github.com/jlian/birddex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            Report Issue
-          </a>
         </span>
+        <span>·</span>
+        <a href="https://github.com/jlian/birddex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
+          <GithubLogo size={14} />
+        </a>
+        <a href="https://github.com/jlian/birddex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+          Report Issues
+        </a>
       </div>
 
     </div>
