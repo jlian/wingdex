@@ -71,57 +71,31 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8">
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
-        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          {/* Enriched stat cards */}
-          {(() => {
-            const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
-            const bestOuting = outings.reduce<{ name: string; count: number; id: string } | null>((best, o) => {
-              const count = data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length
-              if (!best || count > best.count) return { name: o.locationName || 'Outing', count, id: o.id }
-              return best
-            }, null)
-            return (
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <button
-                  onClick={() => onNavigate('birddex')}
-                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-                >
-                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{dex.length}</div>
-                  <div className="text-[11px] sm:text-xs text-muted-foreground">Species</div>
-                  {mostSeen && (
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5 truncate">
-                      Top: {getDisplayName(mostSeen.speciesName)}
-                    </p>
-                  )}
+        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-4">
+          {/* Typographic header */}
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl sm:text-5xl font-bold font-serif text-primary">{dex.length}</span>
+            <span className="text-base sm:text-lg text-muted-foreground">species observed</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
+              {outings.length} outings
+            </button>
+            {newThisMonth > 0 && (
+              <>
+                <span className="mx-1.5">·</span>
+                <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
+                  {newThisMonth} new this month
                 </button>
-                <button
-                  onClick={() => onNavigate('outings')}
-                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-                >
-                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{outings.length}</div>
-                  <div className="text-[11px] sm:text-xs text-muted-foreground">Outings</div>
-                  {bestOuting && (
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5 truncate">
-                      Best: {bestOuting.name}
-                    </p>
-                  )}
-                </button>
-                <button
-                  onClick={() => onNavigate('birddex')}
-                  className="p-3 sm:p-4 rounded-xl bg-card border border-border text-center cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-                >
-                  <div className="text-xl sm:text-2xl font-bold font-serif text-primary">{newThisMonth}</div>
-                  <div className="text-[11px] sm:text-xs text-muted-foreground">New This Month</div>
-                  {totalPhotos > 0 && (
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1.5">
-                      {totalPhotos} photos
-                    </p>
-                  )}
-                </button>
-              </div>
-            )
-          })()}
-
+              </>
+            )}
+            {totalPhotos > 0 && (
+              <>
+                <span className="mx-1.5">·</span>
+                <span>{totalPhotos} photos</span>
+              </>
+            )}
+          </p>
           <Button
             variant="outline"
             className="w-full"
