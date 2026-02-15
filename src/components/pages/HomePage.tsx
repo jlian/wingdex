@@ -99,17 +99,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             />
           </div>
 
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              onClick={onAddPhotos}
-            >
-              <Camera size={16} className="mr-1.5" weight="bold" />
-              Upload & Identify
-            </Button>
-          </div>
-
-          {/* Highlights row */}
+          {/* Highlights */}
           {(() => {
             const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
             const firstSeen = dex.slice().sort((a, b) =>
@@ -121,13 +111,13 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               return best
             }, null)
             return (
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="space-y-1">
                 {mostSeen && (
                   <button
                     onClick={() => onSelectSpecies(mostSeen.speciesName)}
-                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
                   >
-                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
                       {getDisplayName(mostSeen.speciesName)}
                     </p>
@@ -137,9 +127,9 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 {firstSeen && (
                   <button
                     onClick={() => onSelectSpecies(firstSeen.speciesName)}
-                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
                   >
-                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
                       {getDisplayName(firstSeen.speciesName)}
                     </p>
@@ -151,9 +141,9 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 {bestOuting && (
                   <button
                     onClick={() => onSelectOuting(bestOuting.id)}
-                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
                   >
-                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
                       {bestOuting.name}
                     </p>
@@ -163,6 +153,15 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               </div>
             )
           })()}
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onAddPhotos}
+          >
+            <Camera size={16} className="mr-1.5" weight="bold" />
+            Upload & Identify
+          </Button>
         </div>
       </section>
 

@@ -222,7 +222,7 @@ function AppContent({ user }: { user: UserInfo }) {
               {/* Logo — navigates to Home */}
               <button
                 onClick={() => navigate('home')}
-                className="flex items-center gap-2 hover:opacity-80 active:scale-[0.97] transition-all"
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
               >
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
@@ -251,7 +251,7 @@ function AppContent({ user }: { user: UserInfo }) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('settings')}
-                  className="hover:opacity-80 active:scale-[0.97] transition-all"
+                  className="cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatarUrl} alt={user.login} />

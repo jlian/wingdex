@@ -302,7 +302,7 @@ function SpeciesDetail({
               {sightings.map(({ observation, outing }) => (
                 <button
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-2 text-left cursor-pointer"
+                  className="flex w-full items-center gap-3 px-2 text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
                   onClick={() => onSelectOuting(outing.id)}
                 >
                   <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />

@@ -29,7 +29,7 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   )
 
   return (
-    <div className="flex items-center gap-3 md:gap-4 px-2">
+    <div className="flex items-center gap-3 md:gap-4 px-2 hover:bg-muted/30 active:bg-muted transition-colors">
       {/* Thumbnail — outside the inset separator */}
       <button className="flex-shrink-0 cursor-pointer" onClick={onClick} tabIndex={-1}>
         {image}
