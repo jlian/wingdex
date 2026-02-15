@@ -74,6 +74,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const [showConfetti, setShowConfetti] = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
+  const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
+  const [pendingDuplicatePhotos, setPendingDuplicatePhotos] = useState<PhotoWithCrop[]>([])
 
   const handleOpenChange = (open: boolean) => {
     if (!open && needsCloseConfirmation(step)) {
@@ -252,8 +255,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     setProgress(0)
     setProcessingMessage('Reading photo data...')
 
-    const processedPhotos: PhotoWithCrop[] = []
-    let skippedDuplicates = 0
+    const newPhotos: PhotoWithCrop[] = []
+    const duplicatePhotos: PhotoWithCrop[] = []
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -269,21 +272,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         const thumbnail = await generateThumbnail(file)
         const hash = await computeFileHash(file)
 
-        const existing = data.photos.find(
-          p => p.fileHash === hash && p.exifTime === exif.timestamp
-        )
-        if (existing) {
-          skippedDuplicates++
-          continue
-        }
-
         const reader = new FileReader()
         const dataUrl = await new Promise<string>(resolve => {
           reader.onload = () => resolve(reader.result as string)
           reader.readAsDataURL(file)
         })
 
-        processedPhotos.push({
+        const photo: PhotoWithCrop = {
           id: `photo_${Date.now()}_${i}`,
           outingId: '',
           dataUrl,
@@ -292,7 +287,16 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           gps: exif.gps,
           fileHash: hash,
           fileName: file.name
-        })
+        }
+
+        const existing = data.photos.find(
+          p => p.fileHash === hash && p.exifTime === exif.timestamp
+        )
+        if (existing) {
+          duplicatePhotos.push(photo)
+        } else {
+          newPhotos.push(photo)
+        }
       } catch (error) {
         console.error(`Failed to process ${file.name}:`, error)
         toast.error(`Failed to process ${file.name}`)
@@ -300,27 +304,49 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setProgress(((i + 1) / files.length) * 100)
     }
 
-    if (processedPhotos.length === 0) {
-      if (skippedDuplicates > 0) {
-        toast.warning(
-          skippedDuplicates === 1
-            ? 'This photo was already imported'
-            : `All ${skippedDuplicates} photos were already imported`
-        )
-      } else {
-        toast.error('No photos to process')
-      }
+    if (newPhotos.length === 0 && duplicatePhotos.length === 0) {
+      toast.error('No photos to process')
       onClose()
       return
     }
 
-    if (skippedDuplicates > 0) {
+    if (duplicatePhotos.length > 0) {
+      setPendingNewPhotos(newPhotos)
+      setPendingDuplicatePhotos(duplicatePhotos)
+      setShowDuplicateConfirm(true)
+      return
+    }
+
+    setPhotos(newPhotos)
+    setStep('review')
+  }
+
+  const handleDuplicateChoice = (reimport: boolean) => {
+    setShowDuplicateConfirm(false)
+    const finalPhotos = reimport
+      ? [...pendingNewPhotos, ...pendingDuplicatePhotos]
+      : pendingNewPhotos
+
+    setPendingNewPhotos([])
+    setPendingDuplicatePhotos([])
+
+    if (finalPhotos.length === 0) {
+      toast.warning(
+        pendingDuplicatePhotos.length === 1
+          ? 'This photo was already imported'
+          : `All ${pendingDuplicatePhotos.length} photos were already imported`
+      )
+      onClose()
+      return
+    }
+
+    if (!reimport && pendingDuplicatePhotos.length > 0) {
       toast.info(
-        `${skippedDuplicates} duplicate ${skippedDuplicates === 1 ? 'photo' : 'photos'} skipped`
+        `${pendingDuplicatePhotos.length} duplicate ${pendingDuplicatePhotos.length === 1 ? 'photo' : 'photos'} skipped`
       )
     }
 
-    setPhotos(processedPhotos)
+    setPhotos(finalPhotos)
     setStep('review')
   }
 
@@ -395,6 +421,29 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   return (
     <>
+      <AlertDialog open={showDuplicateConfirm} onOpenChange={setShowDuplicateConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate photos found</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingNewPhotos.length > 0
+                ? `${pendingDuplicatePhotos.length} of ${pendingDuplicatePhotos.length + pendingNewPhotos.length} ${pendingDuplicatePhotos.length + pendingNewPhotos.length === 1 ? 'photo has' : 'photos have'} already been imported. Would you like to re-import ${pendingDuplicatePhotos.length === 1 ? 'it' : 'them'}?`
+                : pendingDuplicatePhotos.length === 1
+                  ? 'This photo has already been imported. Would you like to re-import it?'
+                  : `All ${pendingDuplicatePhotos.length} photos have already been imported. Would you like to re-import them?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleDuplicateChoice(false)}>
+              {pendingNewPhotos.length > 0 ? 'Skip duplicates' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleDuplicateChoice(true)}>
+              Re-import
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -587,37 +636,36 @@ function AiZoomedPreview({
   cropBox: { x: number; y: number; width: number; height: number }
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [size, setSize] = useState({ w: 224, h: 224 })
 
   useEffect(() => {
     const img = new Image()
     img.onload = () => {
-      const sx = (cropBox.x / 100) * img.naturalWidth
-      const sy = (cropBox.y / 100) * img.naturalHeight
-      const sw = (cropBox.width / 100) * img.naturalWidth
-      const sh = (cropBox.height / 100) * img.naturalHeight
-      // Scale to fit within 224px box
-      const scale = Math.min(224 / sw, 224 / sh, 1)
-      const cw = Math.round(sw * scale)
-      const ch = Math.round(sh * scale)
-      setSize({ w: cw, h: ch })
       const canvas = canvasRef.current
       if (!canvas) return
-      canvas.width = cw
-      canvas.height = ch
+      const rawSx = (cropBox.x / 100) * img.naturalWidth
+      const rawSy = (cropBox.y / 100) * img.naturalHeight
+      const rawSw = (cropBox.width / 100) * img.naturalWidth
+      const rawSh = (cropBox.height / 100) * img.naturalHeight
+      // Defensive clamp in case AI crop values are slightly out of range
+      const sx = Math.max(0, Math.min(rawSx, img.naturalWidth - 1))
+      const sy = Math.max(0, Math.min(rawSy, img.naturalHeight - 1))
+      const sw = Math.max(1, Math.min(rawSw, img.naturalWidth - sx))
+      const sh = Math.max(1, Math.min(rawSh, img.naturalHeight - sy))
+      // Render at cropped pixel dimensions (CSS handles display size)
+      canvas.width = Math.max(1, Math.round(sw))
+      canvas.height = Math.max(1, Math.round(sh))
       const ctx = canvas.getContext('2d')
-      if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cw, ch)
+      if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
     }
     img.src = imageUrl
   }, [imageUrl, cropBox])
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block max-w-full">
       <canvas
         ref={canvasRef}
-        width={size.w}
-        height={size.h}
-        className="rounded-lg border-2 border-accent"
+        className="rounded-lg border-2 border-accent w-full h-auto max-h-48"
+        style={{ objectFit: 'contain' }}
       />
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />
@@ -715,8 +763,8 @@ function PerPhotoConfirm({
   return (
     <div className="space-y-4">
       {/* Photo — zoomed to bird if AI crop box available */}
-      <div className="flex justify-center gap-3 relative">
-        <div className="flex-1 flex justify-center">
+      <div className="flex justify-center gap-3 items-start">
+        <div className="flex justify-center" style={{ flex: '1 1 0', minWidth: 0, maxWidth: wikiImage ? '50%' : '100%' }}>
           {aiCropBox && !photo.croppedDataUrl ? (
             <AiZoomedPreview
               imageUrl={photo.dataUrl || photo.thumbnail}
@@ -726,7 +774,7 @@ function PerPhotoConfirm({
             <img
               src={displayImage}
               alt="Your photo"
-              className={`max-h-56 rounded-lg object-contain border-2 ${
+              className={`max-h-48 max-w-full rounded-lg object-contain border-2 ${
                 isAICropped ? 'border-accent' : 'border-border'
               }`}
             />
@@ -735,11 +783,11 @@ function PerPhotoConfirm({
         
         {/* Wikipedia reference image */}
         {wikiImage && (
-          <div className="flex-1 flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
             <img
               src={wikiImage}
               alt={`${displayName} reference`}
-              className="max-h-56 rounded-lg object-contain border-2 border-muted"
+              className="max-h-48 max-w-full rounded-lg object-contain border-2 border-muted"
             />
             <p className="text-xs text-muted-foreground">Wikipedia reference</p>
           </div>
