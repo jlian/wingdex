@@ -236,9 +236,9 @@ function AppContent({ user }: { user: UserInfo }) {
                     onClick={() => {
                       if (item.value === tab && subId) navigate(item.value)
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium
+                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium cursor-pointer
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
-                      data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
+                      data-[state=inactive]:text-muted-foreground hover:text-foreground active:scale-[0.97] transition-all"
                   >
                     <item.icon size={18} />
                     {item.label}
