@@ -3,7 +3,6 @@ import {
   MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
-import { StatCard } from '@/components/ui/stat-card'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -73,31 +72,30 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
         <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
-            <StatCard
-              value={dex.length}
-              label="Species"
-              accent="text-primary"
-              onClick={() => onNavigate('birddex')}
-            />
-            <StatCard
-              value={outings.length}
-              label="Outings"
-              accent="text-secondary"
-              onClick={() => onNavigate('outings')}
-            />
-            <StatCard
-              value={newThisMonth}
-              label="New This Month"
-              accent="text-primary"
-              onClick={() => onNavigate('birddex')}
-            />
-            <StatCard
-              value={totalPhotos}
-              label="Photos"
-              accent="text-muted-foreground"
-            />
-          </div>
+          {/* Inline stats */}
+          <p className="text-sm text-muted-foreground">
+            <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
+              <span className="font-semibold text-foreground">{dex.length}</span> species
+            </button>
+            <span className="mx-1.5">·</span>
+            <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
+              <span className="font-semibold text-foreground">{outings.length}</span> outings
+            </button>
+            {newThisMonth > 0 && (
+              <>
+                <span className="mx-1.5">·</span>
+                <button onClick={() => onNavigate('birddex')} className="hover:text-foreground transition-colors cursor-pointer">
+                  <span className="font-semibold text-foreground">{newThisMonth}</span> new this month
+                </button>
+              </>
+            )}
+            {totalPhotos > 0 && (
+              <>
+                <span className="mx-1.5">·</span>
+                <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
+              </>
+            )}
+          </p>
 
           {/* Highlights */}
           {(() => {
