@@ -235,23 +235,24 @@ function SpeciesDetail({
           </div>
         </div>
 
-        {/* About — fades in when loaded */}
-        {summaryLoading ? (
-          <div className="space-y-2">
+        {/* About — crossfade from skeleton to content */}
+        <div className="crossfade">
+          <div className={`space-y-2 ${summaryLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-4 w-4/6" />
           </div>
-        ) : summary?.extract ? (
-          <div className="space-y-1">
+          {summary?.extract && (
+            <div className={`space-y-1 ${summaryLoading ? 'opacity-0' : 'opacity-100'}`}>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {summary.extract}
             </p>
             <p className="text-xs text-muted-foreground/60">
               Source: <a href={summary.pageUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground">Wikipedia</a>. Text and images available under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground">CC BY-SA 4.0</a>.
             </p>
-          </div>
-        ) : null}
+            </div>
+          )}
+        </div>
 
         {/* External links */}
         <div className="flex flex-wrap gap-2">
