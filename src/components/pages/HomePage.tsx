@@ -71,11 +71,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto space-y-4 border-b border-border/40">
-        <div>
+        <div className="flex items-baseline gap-3">
           <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
             {dex.length}
           </p>
-          <p className="font-serif text-lg sm:text-xl text-muted-foreground italic mt-1">
+          <p className="font-serif text-lg sm:text-xl text-muted-foreground italic">
             species observed
           </p>
         </div>
