@@ -198,24 +198,24 @@ function OutingRow({
   const heroSrc = (photos[0]?.thumbnail || wikiImage) as string | undefined
 
   return (
-    <div className="flex items-center gap-3 md:gap-4 px-2 hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
-      {/* Thumbnail — outside the inset separator */}
+    <div className="flex items-center gap-3 px-2 py-0.5 mx-1 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
+      {/* Thumbnail */}
       <button className="flex-shrink-0" onClick={onClick} tabIndex={-1}>
         {heroSrc ? (
           <img
             src={heroSrc}
             alt={firstSpecies || 'Outing'}
-            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-muted flex-shrink-0"
           />
         ) : (
-          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
             <Bird size={20} className="text-muted-foreground/40" />
           </div>
         )}
       </button>
-      {/* Text — with inset bottom border */}
+      {/* Text */}
       <div
-        className="flex-1 min-w-0 text-left border-b border-border py-3"
+        className="flex-1 min-w-0 text-left py-2.5"
       >
         <div className="md:flex md:items-baseline md:gap-2">
           <p className="font-serif font-semibold text-sm text-foreground truncate">

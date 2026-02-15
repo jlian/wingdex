@@ -111,11 +111,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               return best
             }, null)
             return (
-              <div className="space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 {mostSeen && (
                   <button
                     onClick={() => onSelectSpecies(mostSeen.speciesName)}
-                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
+                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
                   >
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
@@ -127,7 +127,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 {firstSeen && (
                   <button
                     onClick={() => onSelectSpecies(firstSeen.speciesName)}
-                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
+                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
                   >
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
@@ -141,7 +141,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 {bestOuting && (
                   <button
                     onClick={() => onSelectOuting(bestOuting.id)}
-                    className="w-full p-3 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors text-left cursor-pointer"
+                    className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted transition-colors text-left cursor-pointer active:scale-[0.98]"
                   >
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
                     <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
@@ -223,11 +223,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 return (
                   <button
                     key={outing.id}
-                    className="flex items-center gap-3 px-2 w-full text-left cursor-pointer"
+                    className="flex items-center gap-3 px-2 py-0.5 mx-1 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
                     onClick={() => onSelectOuting(outing.id)}
                   >
                     <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 border-b border-border py-2.5">
+                    <div className="flex-1 min-w-0 py-2">
                       <p className="font-serif font-semibold text-sm text-foreground truncate">
                         {outing.locationName || 'Outing'}
                       </p>
