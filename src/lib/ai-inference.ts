@@ -192,14 +192,19 @@ export async function identifyBirdInPhoto(
   - 0.30-0.49 possible
 
   Output JSON only:
-  - Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87}],"birdCenter":[35,60],"multipleBirds":false}
-  - No bird: {"candidates":[],"birdCenter":null,"multipleBirds":false}
+  - Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87}],"birdCenter":[35,60],"birdSize":"medium","multipleBirds":false}
+  - No bird: {"candidates":[],"birdCenter":null,"birdSize":null,"multipleBirds":false}
 
   multipleBirds: true if more than one bird species is visible in the image.
 
   birdCenter: [x, y] percentage position of the focal bird's center.
   - Values 0-100 (percentage of image width and height)
-  - integers only`
+  - integers only
+
+  birdSize: how much of the image the bird fills.
+  - "small" = bird is <20% of image area
+  - "medium" = bird is 20-50%
+  - "large" = bird is >50%`
 
     const response = await withRetry(() =>
       sparkVisionLLM(text, compressed, VISION_MODEL, {
@@ -234,7 +239,7 @@ export async function identifyBirdInPhoto(
     console.log(`✅ ${candidates.length} candidates:`, candidates)
 
     let cropBox: BirdIdResult['cropBox'] = undefined
-    // LLM returns birdCenter: [x%, y%] — build a generous crop box around it
+    // LLM returns birdCenter: [x%, y%] + birdSize — build a crop box around it
     const center = parsed.birdCenter
     if (Array.isArray(center) && center.length >= 2) {
       const cx = Number(center[0])
@@ -242,11 +247,14 @@ export async function identifyBirdInPhoto(
       if (Number.isFinite(cx) && Number.isFinite(cy)) {
         const clampedCx = Math.max(0, Math.min(100, cx))
         const clampedCy = Math.max(0, Math.min(100, cy))
-        // Build a square crop in pixel space using 40% of the shorter side
+        // Scale crop based on bird size: small=40%, medium=55%, large=75%
+        const sizePct = parsed.birdSize === 'large' ? 0.75
+          : parsed.birdSize === 'medium' ? 0.55
+          : 0.4
         const shortSide = Math.min(img.width, img.height)
-        const cropPx = shortSide * 0.4
-        const wPct = (cropPx / img.width) * 100   // ≤ 40 for landscape
-        const hPct = (cropPx / img.height) * 100   // ≤ 40 for portrait
+        const cropPx = shortSide * sizePct
+        const wPct = (cropPx / img.width) * 100
+        const hPct = (cropPx / img.height) * 100
         const x = Math.max(0, Math.min(100 - wPct, clampedCx - wPct / 2))
         const y = Math.max(0, Math.min(100 - hPct, clampedCy - hPct / 2))
         cropBox = {
@@ -255,7 +263,7 @@ export async function identifyBirdInPhoto(
           width: Math.round(wPct),
           height: Math.round(hPct),
         }
-        console.log(`✅ AI bird center: (${cx}, ${cy}) → crop`, cropBox)
+        console.log(`✅ AI bird center: (${cx}, ${cy}) size=${parsed.birdSize} → crop`, cropBox)
       }
     }
 

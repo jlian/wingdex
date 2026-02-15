@@ -222,6 +222,21 @@ describe('identifyBirdInPhoto', () => {
     globalThis.Image = OrigImage
   })
 
+  it('scales crop box based on birdSize', async () => {
+    // "large" bird on 100x100 mock image → 75% crop
+    mockLLMResponse({
+      candidates: [{ species: 'Chukar', confidence: 0.9 }],
+      birdCenter: [50, 55],
+      birdSize: 'large',
+    })
+
+    const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    // 75% of shortSide(100)=75 → wPct=75, hPct=75
+    // x=max(0, min(25, 50-37.5))=13, y=max(0, min(25, 55-37.5))=18
+    expect(result.cropBox).toEqual({ x: 13, y: 18, width: 75, height: 75 })
+  })
+
   it('limits to 5 candidates max', async () => {
     mockLLMResponse({
       candidates: [
