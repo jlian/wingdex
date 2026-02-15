@@ -103,18 +103,16 @@
   --font-serif: 'Newsreader', Georgia, serif;
 }
 
-html {
-  scrollbar-gutter: stable;
-}
-
 body {
   font-family: var(--font-sans);
 }
 
-/* react-remove-scroll-bar adds margin-right to body[data-scroll-locked]
-   to compensate for the scrollbar it removes. With scrollbar-gutter: stable
-   the gutter is always reserved, so no compensation is needed. */
-html body[data-scroll-locked] {
+/* react-remove-scroll-bar sets overflow:hidden + margin-right on body
+   to compensate for the removed scrollbar. Instead, keep the scrollbar
+   visible so there's no layout shift. The JS event handlers in
+   react-remove-scroll still prevent actual background scrolling. */
+body[data-scroll-locked] {
+  overflow-y: scroll !important;
   margin-right: 0 !important;
 }
 
