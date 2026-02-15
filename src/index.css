@@ -109,7 +109,13 @@ html {
 
 body {
   font-family: var(--font-sans);
-  scrollbar-gutter: stable;
+}
+
+/* react-remove-scroll-bar adds margin-right to body[data-scroll-locked]
+   to compensate for the scrollbar it removes. With scrollbar-gutter: stable
+   the gutter is always reserved, so no compensation is needed. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
 }
 
 h1, h2, .font-serif {
