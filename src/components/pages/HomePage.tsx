@@ -71,7 +71,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto border-b border-border/40">
-        <div className="flex items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-baseline gap-3">
               <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
@@ -98,20 +97,17 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 </>
               )}
             </p>
+            <button
+              onClick={onAddPhotos}
+              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg
+                bg-primary text-primary-foreground text-sm font-medium
+                shadow-sm hover:bg-primary/90 active:scale-[0.97]
+                transition-all duration-150 cursor-pointer"
+            >
+              <Camera size={18} weight="bold" />
+              Upload & Identify
+            </button>
           </div>
-          <button
-            onClick={onAddPhotos}
-            className="flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-2xl
-              bg-gradient-to-b from-primary to-primary/85
-              text-primary-foreground shadow-sm
-              hover:brightness-110 active:scale-[0.97]
-              transition-all duration-150 ease-out
-              cursor-pointer flex items-center justify-center"
-            aria-label="Upload & Identify"
-          >
-            <Camera size={26} weight="bold" />
-          </button>
-        </div>
       </div>
 
       {/* ── Recent Species ─────────────────────────────── */}
