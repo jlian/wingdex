@@ -101,17 +101,16 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </div>
           <button
             onClick={onAddPhotos}
-            className="group relative flex-shrink-0 h-18 w-18 sm:h-20 sm:w-20 rounded-full
-              bg-gradient-to-br from-primary to-primary/80
-              shadow-lg shadow-primary/20
+            className="flex-shrink-0 size-16 sm:size-20 rounded-full
+              bg-primary text-primary-foreground
+              shadow-lg shadow-primary/25
               hover:shadow-xl hover:shadow-primary/30 hover:scale-105
               active:scale-[0.97]
               transition-all duration-200 ease-out
               cursor-pointer flex items-center justify-center"
             aria-label="Upload & Identify"
           >
-            <Camera size={28} weight="bold" className="text-primary-foreground sm:hidden" />
-            <Camera size={32} weight="bold" className="text-primary-foreground hidden sm:block" />
+            <Camera size={28} weight="bold" />
           </button>
         </div>
       </div>
