@@ -1,5 +1,6 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
+import { getTimezoneFromCoords, getUtcOffsetString } from './timezone'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -220,7 +221,7 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
     const checklistNotes = row['checklist comments'] || row['submission comments'] || ''
     
     if (speciesName && date) {
-      const normalizedDate = normalizeDate(date, time)
+      const normalizedDate = normalizeDate(date, time, isNaN(lat) ? undefined : lat, isNaN(lon) ? undefined : lon)
       if (!normalizedDate) continue
 
       // "X" means species present but not counted — treat as 1
@@ -277,34 +278,51 @@ function parseCSVLine(line: string): string[] {
   return values
 }
 
-function normalizeDate(dateStr: string, timeStr?: string): string | null {
+function normalizeDate(dateStr: string, timeStr?: string, lat?: number, lon?: number): string | null {
   try {
     // Parse date components to construct a local-time Date.
     // new Date("2024-01-15") treats the string as UTC, but eBird dates are
     // local, so we must parse them as local to avoid timezone shifts (#52).
     const parts = dateStr.trim().match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
-    let date: Date
+    let year: number, month: number, day: number
     if (parts) {
-      date = new Date(
-        parseInt(parts[1], 10),
-        parseInt(parts[2], 10) - 1,
-        parseInt(parts[3], 10)
-      )
+      year = parseInt(parts[1], 10)
+      month = parseInt(parts[2], 10) - 1
+      day = parseInt(parts[3], 10)
     } else {
       // Fallback for other formats (e.g. "Jan 15, 2024")
-      date = new Date(dateStr)
+      const fallback = new Date(dateStr)
+      if (isNaN(fallback.getTime())) return null
+      year = fallback.getFullYear()
+      month = fallback.getMonth()
+      day = fallback.getDate()
     }
-    if (isNaN(date.getTime())) return null
 
-    // Combine with time if available (handles "08:15 AM", "01:09 PM", "14:30")
+    let hours = 0, minutes = 0
     if (timeStr) {
       const parsed = parseTimeString(timeStr)
       if (parsed) {
-        date.setHours(parsed.hours, parsed.minutes, 0, 0)
+        hours = parsed.hours
+        minutes = parsed.minutes
       }
     }
 
-    return date.toISOString()
+    // Build a local datetime string and attach timezone offset (#59)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const localStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`
+
+    if (lat != null && lon != null) {
+      const timezone = getTimezoneFromCoords(lat, lon)
+      const tempDate = new Date(year, month, day, hours, minutes)
+      const offset = getUtcOffsetString(timezone, tempDate)
+      return `${localStr}${offset}`
+    }
+
+    // Fallback: browser timezone
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const tempDate = new Date(year, month, day, hours, minutes)
+    const offset = getUtcOffsetString(browserTz, tempDate)
+    return `${localStr}${offset}`
   } catch {
     
   }

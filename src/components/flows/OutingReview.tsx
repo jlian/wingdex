@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete'
-import { CalendarBlank, CheckCircle, XCircle } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } from '@phosphor-icons/react'
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
+import { dateToLocalISOWithOffset, formatStoredDate } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
 
@@ -45,6 +47,30 @@ export default function OutingReview({
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
+
+  // Manual date/time editing (#13)
+  const [editingDateTime, setEditingDateTime] = useState(false)
+  const [manualDate, setManualDate] = useState(
+    cluster.startTime.toISOString().split('T')[0] // YYYY-MM-DD
+  )
+  const [manualTime, setManualTime] = useState(
+    cluster.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  )
+  const [overriddenStartTime, setOverriddenStartTime] = useState<Date | null>(null)
+
+  // Place search (#13)
+  const [placeQuery, setPlaceQuery] = useState('')
+  const [placeResults, setPlaceResults] = useState<Array<{ display_name: string; lat: string; lon: string }>>([])
+  const [isSearchingPlace, setIsSearchingPlace] = useState(false)
+  const [overriddenCoords, setOverriddenCoords] = useState<{ lat: number; lon: number } | null>(null)
+
+  // Effective coordinates (manual override or cluster GPS)
+  const effectiveLat = overriddenCoords?.lat ?? cluster.centerLat
+  const effectiveLon = overriddenCoords?.lon ?? cluster.centerLon
+  const effectiveStartTime = overriddenStartTime ?? cluster.startTime
+  const effectiveEndTime = overriddenStartTime
+    ? new Date(overriddenStartTime.getTime() + (cluster.endTime.getTime() - cluster.startTime.getTime()))
+    : cluster.endTime
 
   // Check if these photos match an existing outing
   const matchingOuting = findMatchingOuting(cluster, data.outings)
@@ -240,8 +266,14 @@ export default function OutingReview({
 
       if (clusterStart < existingStart || clusterEnd > existingEnd) {
         data.updateOuting(matchingOuting.id, {
-          startTime: new Date(Math.min(existingStart, clusterStart)).toISOString(),
-          endTime: new Date(Math.max(existingEnd, clusterEnd)).toISOString(),
+          startTime: dateToLocalISOWithOffset(
+            new Date(Math.min(existingStart, clusterStart)),
+            matchingOuting.lat, matchingOuting.lon
+          ),
+          endTime: dateToLocalISOWithOffset(
+            new Date(Math.max(existingEnd, clusterEnd)),
+            matchingOuting.lat, matchingOuting.lon
+          ),
         })
       }
 
@@ -253,36 +285,118 @@ export default function OutingReview({
     const outing = {
       id: outingId,
       userId: userId.toString(),
-      startTime: cluster.startTime.toISOString(),
-      endTime: cluster.endTime.toISOString(),
+      startTime: dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon),
+      endTime: dateToLocalISOWithOffset(effectiveEndTime, effectiveLat, effectiveLon),
       locationName: name || 'Unknown Location',
       defaultLocationName: name || 'Unknown Location',
-      lat: cluster.centerLat,
-      lon: cluster.centerLon,
+      lat: effectiveLat,
+      lon: effectiveLon,
       notes: '',
       createdAt: new Date().toISOString()
     }
 
     data.addOuting(outing)
-    onConfirm(outingId, name || 'Unknown Location', cluster.centerLat, cluster.centerLon)
+    onConfirm(outingId, name || 'Unknown Location', effectiveLat, effectiveLon)
   }
 
   const handleConfirm = () => doConfirm(locationName)
+
+  const handleApplyDateTime = () => {
+    const [year, month, day] = manualDate.split('-').map(Number)
+    const [hours, minutes] = manualTime.split(':').map(Number)
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day) && !isNaN(hours) && !isNaN(minutes)) {
+      setOverriddenStartTime(new Date(year, month - 1, day, hours, minutes))
+      setEditingDateTime(false)
+    }
+  }
+
+  const searchPlace = async () => {
+    if (!placeQuery.trim()) return
+    setIsSearchingPlace(true)
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search')
+      url.searchParams.set('format', 'jsonv2')
+      url.searchParams.set('q', placeQuery)
+      url.searchParams.set('limit', '5')
+      url.searchParams.set('accept-language', 'en')
+      const res = await fetch(url.toString(), {
+        headers: { 'User-Agent': 'BirdDex-App/1.0' },
+      })
+      if (!res.ok) throw new Error(`Nominatim ${res.status}`)
+      const results = await res.json()
+      setPlaceResults(results)
+    } catch (error) {
+      console.error('Place search failed:', error)
+      toast.error('Place search failed')
+    } finally {
+      setIsSearchingPlace(false)
+    }
+  }
+
+  const selectPlace = (place: { display_name: string; lat: string; lon: string }) => {
+    const lat = parseFloat(place.lat)
+    const lon = parseFloat(place.lon)
+    setOverriddenCoords({ lat, lon })
+    // Use the first part of the display name as location name
+    const shortName = place.display_name.split(',').slice(0, 3).join(',').trim()
+    setLocationName(shortName)
+    setSuggestedLocation(shortName)
+    setPlaceResults([])
+    setPlaceQuery('')
+  }
 
 
   return (
     <div className="space-y-4">
       <div className="space-y-3">
+        {/* Date/time display with edit capability (#13) */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <CalendarBlank size={18} />
           <span>
-            {cluster.startTime.toLocaleDateString()} at{' '}
-            {cluster.startTime.toLocaleTimeString([], {
+            {effectiveStartTime.toLocaleDateString()} at{' '}
+            {effectiveStartTime.toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit'
             })}
           </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5"
+            onClick={() => setEditingDateTime(!editingDateTime)}
+          >
+            <PencilSimple size={14} />
+          </Button>
         </div>
+
+        {/* Manual date/time editor */}
+        {editingDateTime && (
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="manual-date" className="text-xs">Date</Label>
+              <Input
+                id="manual-date"
+                type="date"
+                value={manualDate}
+                onChange={e => setManualDate(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="manual-time" className="text-xs">Time</Label>
+              <Input
+                id="manual-time"
+                type="time"
+                value={manualTime}
+                onChange={e => setManualTime(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <Button size="sm" className="h-8" onClick={handleApplyDateTime}>
+              Apply
+            </Button>
+          </div>
+        )}
 
         {/* GPS Status Indicator */}
         {hasGps ? (
@@ -310,7 +424,7 @@ export default function OutingReview({
                 Add to existing outing?
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {matchingOuting.locationName} · {new Date(matchingOuting.startTime).toLocaleDateString()}
+                {matchingOuting.locationName} · {formatStoredDate(matchingOuting.startTime)}
               </p>
             </div>
             <Switch
@@ -346,6 +460,52 @@ export default function OutingReview({
                     Suggested: {suggestedLocation}
                   </p>
                 )}
+
+                {/* Place search (#13) — search for a place by name */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search for a place..."
+                      value={placeQuery}
+                      onChange={e => setPlaceQuery(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') searchPlace() }}
+                      className="h-8 text-sm flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={searchPlace}
+                      disabled={isSearchingPlace || !placeQuery.trim()}
+                    >
+                      <MagnifyingGlass size={14} />
+                    </Button>
+                  </div>
+                  {isSearchingPlace && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      Searching...
+                    </div>
+                  )}
+                  {placeResults.length > 0 && (
+                    <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
+                      {placeResults.map((place, i) => (
+                        <button
+                          key={i}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-muted active:bg-muted/80 transition-colors"
+                          onClick={() => selectPlace(place)}
+                        >
+                          {place.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {overriddenCoords && (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      Location set: {overriddenCoords.lat.toFixed(4)}, {overriddenCoords.lon.toFixed(4)}
+                    </p>
+                  )}
+                </div>
               </>
             )}
           </div>

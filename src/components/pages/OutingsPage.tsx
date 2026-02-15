@@ -29,6 +29,7 @@ import { useBirdImage } from '@/hooks/use-bird-image'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
 import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
+import { formatStoredDate, formatStoredTime } from '@/lib/timezone'
 import { toast } from 'sonner'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Outing, Observation } from '@/lib/types'
@@ -102,7 +103,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
       <OutingDetail
         outing={outing}
         data={data}
-        onBack={() => onSelectOuting(null)}
+        onBack={() => window.history.back()}
         onSelectSpecies={onSelectSpecies}
       />
     )
@@ -218,7 +219,7 @@ function OutingRow({
             {outing.locationName || 'Outing'}
           </p>
           <p className="text-xs text-muted-foreground">
-            {new Date(outing.startTime).toLocaleDateString()} · {confirmed.length} species
+            {formatStoredDate(outing.startTime)} · {confirmed.length} species
             {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
           </p>
         </div>
@@ -345,7 +346,7 @@ function OutingDetail({
   }, [outing.id, outing.notes, outing.locationName])
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mt-0.5">
@@ -397,11 +398,11 @@ function OutingDetail({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <CalendarBlank size={14} />
-              {outingDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              {formatStoredDate(outing.startTime, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
             <span className="flex items-center gap-1.5">
               <Clock size={14} />
-              {outingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatStoredTime(outing.startTime)}
               {durationStr && <span className="text-muted-foreground/60">({durationStr})</span>}
             </span>
           </div>
@@ -415,7 +416,7 @@ function OutingDetail({
         <StatCard
           value={observations.reduce((sum, o) => sum + o.count, 0)}
           label="Total Count"
-          accent="text-accent"
+          accent="text-primary"
         />
       </div>
 

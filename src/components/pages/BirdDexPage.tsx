@@ -71,7 +71,7 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
       <SpeciesDetail
         entry={entry}
         data={data}
-        onBack={() => onSelectSpecies(null)}
+        onBack={() => window.history.back()}
         onSelectOuting={onSelectOuting}
       />
     )
@@ -182,11 +182,11 @@ function SpeciesDetail({
   const heroImage = summary?.imageUrl || wikiImage
 
   return (
-    <div className="max-w-3xl mx-auto pb-8">
+    <div className="max-w-3xl mx-auto pb-8 animate-fade-in">
       {/* Back button */}
       <div className="px-4 sm:px-6 pt-4 pb-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
-          <ArrowLeft size={18} className="mr-1" />
+          <ArrowLeft size={20} />
           BirdDex
         </Button>
       </div>
