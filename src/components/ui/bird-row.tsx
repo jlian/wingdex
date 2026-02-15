@@ -16,24 +16,30 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   const scientificName = getScientificName(speciesName)
   const wikiImage = useBirdImage(speciesName)
 
+  const image = wikiImage ? (
+    <img
+      src={wikiImage}
+      alt={displayName}
+      className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+    />
+  ) : (
+    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+      <Bird size={20} className="text-muted-foreground/40" />
+    </div>
+  )
+
   return (
-    <div className="flex items-center gap-3 md:gap-4 px-2 py-2.5 rounded-lg hover:bg-muted/50 active:bg-muted transition-colors">
-      <button
-        className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 text-left cursor-pointer"
-        onClick={onClick}
-      >
-        {wikiImage ? (
-          <img
-            src={wikiImage}
-            alt={displayName}
-            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
-          />
-        ) : (
-          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-            <Bird size={20} className="text-muted-foreground/40" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
+    <div className="flex items-center gap-3 md:gap-4 px-2">
+      {/* Thumbnail — outside the inset separator */}
+      <button className="flex-shrink-0 cursor-pointer" onClick={onClick} tabIndex={-1}>
+        {image}
+      </button>
+      {/* Text + actions — with inset bottom border */}
+      <div className="flex items-center flex-1 min-w-0 gap-2 border-b border-border py-2.5">
+        <button
+          className="flex-1 min-w-0 text-left cursor-pointer"
+          onClick={onClick}
+        >
           <div className="md:flex md:items-baseline md:gap-2">
             <p className="font-serif font-semibold text-sm text-foreground truncate">
               {displayName}
@@ -49,9 +55,9 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
               {subtitle}
             </p>
           )}
-        </div>
-      </button>
-      {actions}
+        </button>
+        {actions}
+      </div>
     </div>
   )
 }

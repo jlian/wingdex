@@ -127,7 +127,7 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
         </div>
       </div>
 
-      <div className="divide-y divide-border">
+      <div>
         {filteredList.map((entry) => {
           return (
             <BirdRow
@@ -298,15 +298,15 @@ function SpeciesDetail({
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Sightings ({sightings.length})
             </h3>
-            <div className="divide-y divide-border">
+            <div>
               {sightings.map(({ observation, outing }) => (
                 <button
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-2 py-2.5 rounded-lg text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                  className="flex w-full items-center gap-3 px-2 text-left cursor-pointer"
                   onClick={() => onSelectOuting(outing.id)}
                 >
                   <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 border-b border-border py-2.5">
                     <p className="text-sm font-medium text-foreground truncate">
                       {outing.locationName || 'Unknown location'}
                     </p>

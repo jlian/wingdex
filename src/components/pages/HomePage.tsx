@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
 import {
-  MapPin, Camera, Bird,
-  Binoculars, ArrowRight
+  MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { StatCard } from '@/components/ui/stat-card'
@@ -74,17 +73,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
         <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddPhotos}
-            >
-              <Camera size={16} className="mr-1.5" weight="bold" />
-              Upload & Identify
-            </Button>
-          </div>
-
           <div className="grid grid-cols-4 gap-2 sm:gap-3">
             <StatCard
               value={dex.length}
@@ -110,6 +98,71 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               accent="text-muted-foreground"
             />
           </div>
+
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={onAddPhotos}
+            >
+              <Camera size={16} className="mr-1.5" weight="bold" />
+              Upload & Identify
+            </Button>
+          </div>
+
+          {/* Highlights row */}
+          {(() => {
+            const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
+            const firstSeen = dex.slice().sort((a, b) =>
+              new Date(a.addedDate || a.firstSeenDate).getTime() - new Date(b.addedDate || b.firstSeenDate).getTime()
+            )[0]
+            const bestOuting = outings.reduce<{ name: string; count: number; id: string } | null>((best, o) => {
+              const count = data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length
+              if (!best || count > best.count) return { name: o.locationName || 'Outing', count, id: o.id }
+              return best
+            }, null)
+            return (
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {mostSeen && (
+                  <button
+                    onClick={() => onSelectSpecies(mostSeen.speciesName)}
+                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                  >
+                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
+                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
+                      {getDisplayName(mostSeen.speciesName)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{mostSeen.totalCount} total</p>
+                  </button>
+                )}
+                {firstSeen && (
+                  <button
+                    onClick={() => onSelectSpecies(firstSeen.speciesName)}
+                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                  >
+                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
+                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
+                      {getDisplayName(firstSeen.speciesName)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(firstSeen.addedDate || firstSeen.firstSeenDate).toLocaleDateString()}
+                    </p>
+                  </button>
+                )}
+                {bestOuting && (
+                  <button
+                    onClick={() => onSelectOuting(bestOuting.id)}
+                    className="p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-shadow text-left cursor-pointer active:scale-[0.98]"
+                  >
+                    <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
+                    <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
+                      {bestOuting.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{bestOuting.count} species</p>
+                  </button>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </section>
 
@@ -161,7 +214,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 </button>
               )}
             </div>
-            <div className="divide-y divide-border">
+            <div>
               {recentOutings.map(outing => {
                 const observations = data.getOutingObservations(outing.id)
                 const confirmed = observations.filter(
@@ -171,10 +224,11 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 return (
                   <button
                     key={outing.id}
-                    className="flex items-center gap-3 px-2 py-2.5 w-full text-left rounded-lg hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                    className="flex items-center gap-3 px-2 w-full text-left cursor-pointer"
                     onClick={() => onSelectOuting(outing.id)}
                   >
-                    <div className="flex-1 min-w-0">
+                    <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 border-b border-border py-2.5">
                       <p className="font-serif font-semibold text-sm text-foreground truncate">
                         {outing.locationName || 'Outing'}
                       </p>
@@ -188,7 +242,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                         </p>
                       )}
                     </div>
-                    <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
                   </button>
                 )
               })}
@@ -196,76 +249,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </section>
         )}
 
-        {/* ── Birding Highlights ────────────────────────── */}
-        <section className="pt-2">
-          <div className="border-t border-border/40 pt-6 space-y-3">
-            <h3 className="font-serif text-lg font-semibold text-foreground">
-              Highlights
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(() => {
-                const mostSeen = dex.slice().sort((a, b) => b.totalCount - a.totalCount)[0]
-                const firstSeen = dex.slice().sort((a, b) =>
-                  new Date(a.addedDate || a.firstSeenDate).getTime() - new Date(b.addedDate || b.firstSeenDate).getTime()
-                )[0]
-                const bestOuting = outings.reduce<{ name: string; count: number } | null>((best, o) => {
-                  const count = data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length
-                  if (!best || count > best.count) return { name: o.locationName || 'Outing', count }
-                  return best
-                }, null)
-                return (
-                  <>
-                    {mostSeen && (
-                      <button
-                        onClick={() => onSelectSpecies(mostSeen.speciesName)}
-                        className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left cursor-pointer"
-                      >
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Most Seen</p>
-                        <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                          {getDisplayName(mostSeen.speciesName)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{mostSeen.totalCount} total</p>
-                      </button>
-                    )}
-                    {firstSeen && (
-                      <button
-                        onClick={() => onSelectSpecies(firstSeen.speciesName)}
-                        className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left cursor-pointer"
-                      >
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">First Species</p>
-                        <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                          {getDisplayName(firstSeen.speciesName)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(firstSeen.addedDate || firstSeen.firstSeenDate).toLocaleDateString()}
-                        </p>
-                      </button>
-                    )}
-                    {bestOuting && (
-                      <button
-                        onClick={() => {
-                          const o = outings.reduce<{ id: string; count: number } | null>((best, outing) => {
-                            const count = data.getOutingObservations(outing.id).filter(obs => obs.certainty === 'confirmed').length
-                            if (!best || count > best.count) return { id: outing.id, count }
-                            return best
-                          }, null)
-                          if (o) onSelectOuting(o.id)
-                        }}
-                        className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left cursor-pointer"
-                      >
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Best Outing</p>
-                        <p className="font-serif font-semibold text-sm text-foreground mt-1 truncate">
-                          {bestOuting.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{bestOuting.count} species</p>
-                      </button>
-                    )}
-                  </>
-                )
-              })()}
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   )

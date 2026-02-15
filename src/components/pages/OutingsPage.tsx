@@ -153,7 +153,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
         </div>
       </div>
       
-      <div className="divide-y divide-border">
+      <div>
         {filteredOutings.map((outing) => {
           const observations = data.getOutingObservations(outing.id)
           const photos = data.getOutingPhotos(outing.id)
@@ -198,22 +198,26 @@ function OutingRow({
   const heroSrc = (photos[0]?.thumbnail || wikiImage) as string | undefined
 
   return (
-    <button
-      className="flex items-center gap-3 md:gap-4 px-2 py-3 w-full text-left rounded-lg hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
-      onClick={onClick}
-    >
-      {heroSrc ? (
-        <img
-          src={heroSrc}
-          alt={firstSpecies || 'Outing'}
-          className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
-        />
-      ) : (
-        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-          <Bird size={20} className="text-muted-foreground/40" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
+    <div className="flex items-center gap-3 md:gap-4 px-2">
+      {/* Thumbnail — outside the inset separator */}
+      <button className="flex-shrink-0 cursor-pointer" onClick={onClick} tabIndex={-1}>
+        {heroSrc ? (
+          <img
+            src={heroSrc}
+            alt={firstSpecies || 'Outing'}
+            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+            <Bird size={20} className="text-muted-foreground/40" />
+          </div>
+        )}
+      </button>
+      {/* Text — with inset bottom border */}
+      <button
+        className="flex-1 min-w-0 text-left cursor-pointer border-b border-border py-3"
+        onClick={onClick}
+      >
         <div className="md:flex md:items-baseline md:gap-2">
           <p className="font-serif font-semibold text-sm text-foreground truncate">
             {outing.locationName || 'Outing'}
@@ -229,8 +233,8 @@ function OutingRow({
             {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
           </p>
         )}
-      </div>
-    </button>
+      </button>
+    </div>
   )
 }
 
@@ -505,7 +509,7 @@ function OutingDetail({
 
         {/* Confirmed species */}
         {groupedConfirmed.length > 0 && (
-          <div className="divide-y divide-border">
+          <div>
             {groupedConfirmed.map(group => (
               <BirdRow
                 key={group.speciesName}
@@ -533,7 +537,7 @@ function OutingDetail({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider pt-1">
               Possible
             </p>
-            <div className="divide-y divide-border">
+            <div>
               {groupedPossible.map(group => (
                 <BirdRow
                   key={group.speciesName}
