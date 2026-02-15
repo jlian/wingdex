@@ -69,32 +69,30 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
 
   return (
     <div className="pb-8 animate-fade-in">
-      {/* ── CTA Card ──────────────────────────────────── */}
-      <div className="px-4 sm:px-6 pt-6 max-w-3xl mx-auto">
-        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
-          <div className="space-y-1">
-            <p className="font-serif text-4xl sm:text-5xl font-semibold text-foreground">
-              {dex.length}
-            </p>
-            <p className="text-sm text-muted-foreground">species observed</p>
-          </div>
-          <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
-            <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
-              <span className="font-semibold text-foreground">{outings.length}</span> outings
-            </button>
-            {totalPhotos > 0 && (
-              <>
-                <span>·</span>
-                <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
-              </>
-            )}
-            {newThisMonth > 0 && (
-              <>
-                <span>·</span>
-                <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
-              </>
-            )}
-          </div>
+      {/* ── Hero ─────────────────────────────────────── */}
+      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto text-center space-y-4">
+        <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight">
+          {dex.length}
+        </p>
+        <p className="text-sm text-muted-foreground -mt-2">species observed</p>
+        <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+          <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
+            <span className="font-semibold text-foreground">{outings.length}</span> outings
+          </button>
+          {totalPhotos > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
+            </>
+          )}
+          {newThisMonth > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
+            </>
+          )}
+        </div>
+        <div className="pt-2">
           <Button
             size="lg"
             onClick={onAddPhotos}
