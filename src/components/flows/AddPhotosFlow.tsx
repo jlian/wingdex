@@ -657,9 +657,11 @@ function AiZoomedPreview({
       const sy = Math.max(0, Math.min(rawSy, img.naturalHeight - 1))
       const sw = Math.max(1, Math.min(rawSw, img.naturalWidth - sx))
       const sh = Math.max(1, Math.min(rawSh, img.naturalHeight - sy))
-      // Render at cropped pixel dimensions (CSS handles display size)
-      canvas.width = Math.max(1, Math.round(sw))
-      canvas.height = Math.max(1, Math.round(sh))
+      // Scale down to fit within max display size while preserving aspect ratio
+      const MAX_DIM = 280
+      const scale = Math.min(1, MAX_DIM / sw, MAX_DIM / sh)
+      canvas.width = Math.max(1, Math.round(sw * scale))
+      canvas.height = Math.max(1, Math.round(sh * scale))
       const ctx = canvas.getContext('2d')
       if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
     }
@@ -670,8 +672,7 @@ function AiZoomedPreview({
     <div className="relative inline-block max-w-full">
       <canvas
         ref={canvasRef}
-        className="rounded-lg border-2 border-accent w-full h-auto max-h-48"
-        style={{ objectFit: 'contain' }}
+        className="rounded-lg border-2 border-accent max-w-full h-auto"
       />
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />

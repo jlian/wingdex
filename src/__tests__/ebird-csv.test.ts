@@ -189,6 +189,54 @@ describe('eBird CSV utilities', () => {
     expect(conflicts[0].conflict).toBe('duplicate')
   })
 
+  it('detects conflicts when import has scientific name but dex has only common name', () => {
+    const existing = new Map<string, DexEntry>([
+      ['Mallard', {
+        speciesName: 'Mallard',
+        firstSeenDate: '2024-01-01T00:00:00.000Z',
+        lastSeenDate: '2024-12-31T00:00:00.000Z',
+        totalOutings: 5,
+        totalCount: 50,
+        notes: '',
+      }],
+    ])
+
+    const conflicts = detectImportConflicts([
+      {
+        speciesName: 'Mallard (Anas platyrhynchos)',
+        date: '2024-06-15T00:00:00.000Z',
+        location: 'Wetland',
+        count: 3,
+      },
+    ], existing)
+
+    expect(conflicts[0].conflict).toBe('duplicate')
+  })
+
+  it('detects conflicts when dex has scientific name but import has only common name', () => {
+    const existing = new Map<string, DexEntry>([
+      ['Mallard (Anas platyrhynchos)', {
+        speciesName: 'Mallard (Anas platyrhynchos)',
+        firstSeenDate: '2024-01-01T00:00:00.000Z',
+        lastSeenDate: '2024-12-31T00:00:00.000Z',
+        totalOutings: 5,
+        totalCount: 50,
+        notes: '',
+      }],
+    ])
+
+    const conflicts = detectImportConflicts([
+      {
+        speciesName: 'Mallard',
+        date: '2024-06-15T00:00:00.000Z',
+        location: 'Wetland',
+        count: 3,
+      },
+    ], existing)
+
+    expect(conflicts[0].conflict).toBe('duplicate')
+  })
+
   /* ---------- real eBird "Download My Data" format tests ---------- */
 
   describe('real eBird CSV format', () => {
