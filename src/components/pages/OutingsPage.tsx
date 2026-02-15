@@ -198,9 +198,9 @@ function OutingRow({
   const heroSrc = (photos[0]?.thumbnail || wikiImage) as string | undefined
 
   return (
-    <div className="flex items-center gap-3 md:gap-4 px-2">
+    <div className="flex items-center gap-3 md:gap-4 px-2 hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
       {/* Thumbnail — outside the inset separator */}
-      <button className="flex-shrink-0 cursor-pointer" onClick={onClick} tabIndex={-1}>
+      <button className="flex-shrink-0" onClick={onClick} tabIndex={-1}>
         {heroSrc ? (
           <img
             src={heroSrc}
@@ -214,9 +214,8 @@ function OutingRow({
         )}
       </button>
       {/* Text — with inset bottom border */}
-      <button
-        className="flex-1 min-w-0 text-left cursor-pointer border-b border-border py-3"
-        onClick={onClick}
+      <div
+        className="flex-1 min-w-0 text-left border-b border-border py-3"
       >
         <div className="md:flex md:items-baseline md:gap-2">
           <p className="font-serif font-semibold text-sm text-foreground truncate">
@@ -233,7 +232,7 @@ function OutingRow({
             {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
           </p>
         )}
-      </button>
+      </div>
     </div>
   )
 }
