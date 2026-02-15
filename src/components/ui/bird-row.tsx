@@ -29,13 +29,13 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   )
 
   return (
-    <div className="flex items-center gap-3 px-2 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
+    <div className="flex items-center gap-3 px-2 border-b border-border rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
       {/* Thumbnail */}
       <button className="flex-shrink-0 cursor-pointer py-1.5" onClick={onClick} tabIndex={-1}>
         {image}
       </button>
-      {/* Text + actions — inset bottom border */}
-      <div className="flex items-center flex-1 min-w-0 gap-2 border-b border-border py-3">
+      {/* Text + actions */}
+      <div className="flex items-center flex-1 min-w-0 gap-2 py-3">
         <button
           className="flex-1 min-w-0 text-left cursor-pointer"
           onClick={onClick}
