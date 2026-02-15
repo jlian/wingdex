@@ -70,45 +70,25 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
   return (
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto border-b border-border/40">
-        <div className="flex items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-baseline gap-3">
-              <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
-                {dex.length}
-              </p>
-              <p className="font-serif text-lg sm:text-xl text-muted-foreground">
-                species observed
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              <button onClick={() => onNavigate('outings')} className="hover:text-foreground transition-colors cursor-pointer">
-                <span className="font-semibold text-foreground">{outings.length}</span> outings
-              </button>
-              {totalPhotos > 0 && (
-                <>
-                  <span className="mx-1.5 text-border">·</span>
-                  <span><span className="font-semibold text-foreground">{totalPhotos}</span> photos</span>
-                </>
-              )}
-              {newThisMonth > 0 && (
-                <>
-                  <span className="mx-1.5 text-border">·</span>
-                  <span><span className="font-semibold text-foreground">{newThisMonth}</span> new this month</span>
-                </>
-              )}
+      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-baseline gap-3">
+            <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
+              {dex.length}
+            </p>
+            <p className="font-serif text-lg sm:text-xl text-muted-foreground">
+              species observed
             </p>
           </div>
           <button
             onClick={onAddPhotos}
-            className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5
-              w-24 h-24 sm:w-28 sm:h-28 rounded-2xl
-              bg-primary text-primary-foreground
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg
+              bg-primary text-primary-foreground text-sm font-medium
               shadow-sm hover:bg-primary/90 active:scale-[0.97]
-              transition-all duration-150 cursor-pointer"
+              transition-all duration-150 cursor-pointer flex-shrink-0"
           >
-            <Camera size={28} weight="bold" />
-            <span className="text-xs font-medium leading-tight text-center">Upload &<br/>Identify</span>
+            <Camera size={18} weight="bold" />
+            Add
           </button>
         </div>
       </div>
