@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird,
-  Binoculars, Image as ImageIcon, ArrowRight
+  Binoculars, ArrowRight
 } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { StatCard } from '@/components/ui/stat-card'
@@ -64,9 +64,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             <Camera size={20} className="mr-2" weight="bold" />
             Upload & Identify
           </Button>
-          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ImageIcon size={14} /> Photos never stored
-          </p>
         </div>
       </div>
     )
@@ -77,10 +74,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
         <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground">
-              Your BirdDex
-            </h2>
+          <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -116,10 +110,6 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               accent="text-muted-foreground"
             />
           </div>
-
-          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ImageIcon size={14} /> Photos never stored
-          </p>
         </div>
       </section>
 
@@ -181,7 +171,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                 return (
                   <button
                     key={outing.id}
-                    className="flex items-center gap-3 py-2.5 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                    className="flex items-center gap-3 px-2 py-2.5 w-full text-left rounded-lg hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
                     onClick={() => onSelectOuting(outing.id)}
                   >
                     <div className="flex-1 min-w-0">

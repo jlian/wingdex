@@ -17,7 +17,7 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   const wikiImage = useBirdImage(speciesName)
 
   return (
-    <div className="flex items-center gap-3 md:gap-4 py-2.5 hover:bg-muted/50 active:bg-muted transition-colors">
+    <div className="flex items-center gap-3 md:gap-4 px-2 py-2.5 rounded-lg hover:bg-muted/50 active:bg-muted transition-colors">
       <button
         className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 text-left cursor-pointer"
         onClick={onClick}
