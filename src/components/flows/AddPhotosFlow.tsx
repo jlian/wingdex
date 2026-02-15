@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -586,20 +586,39 @@ function AiZoomedPreview({
   imageUrl: string
   cropBox: { x: number; y: number; width: number; height: number }
 }) {
-  // Simple CSS crop: use background-image to show just the crop region
-  const bgSize = `${100 / cropBox.width * 100}% ${100 / cropBox.height * 100}%`
-  const bgPos = `${cropBox.x / (100 - cropBox.width) * 100}% ${cropBox.y / (100 - cropBox.height) * 100}%`
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [size, setSize] = useState({ w: 224, h: 224 })
+
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      const sx = (cropBox.x / 100) * img.naturalWidth
+      const sy = (cropBox.y / 100) * img.naturalHeight
+      const sw = (cropBox.width / 100) * img.naturalWidth
+      const sh = (cropBox.height / 100) * img.naturalHeight
+      // Scale to fit within 224px box
+      const scale = Math.min(224 / sw, 224 / sh, 1)
+      const cw = Math.round(sw * scale)
+      const ch = Math.round(sh * scale)
+      setSize({ w: cw, h: ch })
+      const canvas = canvasRef.current
+      if (!canvas) return
+      canvas.width = cw
+      canvas.height = ch
+      const ctx = canvas.getContext('2d')
+      if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cw, ch)
+    }
+    img.src = imageUrl
+  }, [imageUrl, cropBox])
 
   return (
-    <div className="relative max-h-56 overflow-hidden rounded-lg border-2 border-accent"
-      style={{
-        aspectRatio: `${cropBox.width} / ${cropBox.height}`,
-        width: '14rem',
-        backgroundImage: `url(${imageUrl})`,
-        backgroundSize: bgSize,
-        backgroundPosition: bgPos,
-      }}
-    >
+    <div className="relative inline-block">
+      <canvas
+        ref={canvasRef}
+        width={size.w}
+        height={size.h}
+        className="rounded-lg border-2 border-accent"
+      />
       <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
         <Scissors size={14} weight="bold" />
       </div>
