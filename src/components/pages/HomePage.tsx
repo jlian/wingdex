@@ -68,7 +68,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
   }
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 animate-fade-in">
       {/* ── Dashboard Header ──────────────────────────── */}
       <section className="border-b border-border/40">
         <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto space-y-5">
@@ -110,7 +110,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
       {/* ── Recent Species ─────────────────────────────── */}
       <div className="px-4 sm:px-6 space-y-6 pt-5 max-w-3xl mx-auto">
         {recentSpecies.length > 0 && (
-          <section className="space-y-3 animate-slide-up">
+          <section className="space-y-3 animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Recent Species
@@ -140,7 +140,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
 
         {/* ── Recent Outings ─────────────────────────────── */}
         {recentOutings.length > 0 && (
-          <section className="space-y-3 animate-slide-up stagger-4">
+          <section className="space-y-3 animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Recent Outings
