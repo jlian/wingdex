@@ -179,7 +179,7 @@ test.describe('App smoke tests', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles([
       path.resolve('src/assets/images/bird-test.jpeg'),
-      path.resolve('src/assets/images/stellers-jay.jpg'),
+      path.resolve('src/assets/images/Stellers_Jay_eating_cherries_Seattle_backyard.jpg'),
     ]);
 
     // Should reach the review outing step
