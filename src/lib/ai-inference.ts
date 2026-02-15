@@ -1,7 +1,7 @@
 import { findBestMatch } from './taxonomy'
 
 // GitHub Models via Spark proxy — use full owner/model format
-const VISION_MODEL = 'openai/gpt-4.1'
+const VISION_MODEL = 'openai/gpt-4.1-mini'
 const TEXT_MODEL = 'openai/gpt-4.1-mini'
 
 interface VisionResult {
