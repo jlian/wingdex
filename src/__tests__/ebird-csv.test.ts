@@ -8,6 +8,20 @@ import {
 } from '@/lib/ebird'
 import type { DexEntry, Outing, Observation } from '@/lib/types'
 
+/** Extract local hours/minutes from an ISO string with offset (e.g. "2025-09-28T08:15:00-07:00") */
+function localTimeParts(iso: string) {
+  const m = iso.match(/T(\d{2}):(\d{2})/)
+  if (!m) throw new Error(`Cannot parse local time from "${iso}"`)
+  return { hours: Number(m[1]), minutes: Number(m[2]) }
+}
+
+/** Extract local date parts from an ISO string with offset */
+function localDateParts(iso: string) {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) throw new Error(`Cannot parse local date from "${iso}"`)
+  return { year: Number(m[1]), month: Number(m[2]) - 1, day: Number(m[3]) }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Real eBird "Download My Data" header                               */
 /* ------------------------------------------------------------------ */
@@ -282,9 +296,9 @@ describe('eBird CSV utilities', () => {
       ])
 
       const p = parseEBirdCSV(csv)[0]
-      const d = new Date(p.date)
-      expect(d.getHours()).toBe(8)
-      expect(d.getMinutes()).toBe(15)
+      const t = localTimeParts(p.date)
+      expect(t.hours).toBe(8)
+      expect(t.minutes).toBe(15)
     })
 
     it('combines date and PM time into ISO timestamp', () => {
@@ -293,9 +307,9 @@ describe('eBird CSV utilities', () => {
       ])
 
       const p = parseEBirdCSV(csv)[0]
-      const d = new Date(p.date)
-      expect(d.getHours()).toBe(13)
-      expect(d.getMinutes()).toBe(9)
+      const t = localTimeParts(p.date)
+      expect(t.hours).toBe(13)
+      expect(t.minutes).toBe(9)
     })
 
     it('handles 12:xx PM correctly (noon)', () => {
@@ -304,9 +318,9 @@ describe('eBird CSV utilities', () => {
       ])
 
       const p = parseEBirdCSV(csv)[0]
-      const d = new Date(p.date)
-      expect(d.getHours()).toBe(12)
-      expect(d.getMinutes()).toBe(8)
+      const t = localTimeParts(p.date)
+      expect(t.hours).toBe(12)
+      expect(t.minutes).toBe(8)
     })
 
     it('handles 12:xx AM correctly (midnight)', () => {
@@ -315,9 +329,9 @@ describe('eBird CSV utilities', () => {
       ])
 
       const p = parseEBirdCSV(csv)[0]
-      const d = new Date(p.date)
-      expect(d.getHours()).toBe(0)
-      expect(d.getMinutes()).toBe(30)
+      const t = localTimeParts(p.date)
+      expect(t.hours).toBe(0)
+      expect(t.minutes).toBe(30)
     })
 
     it('parses rows with empty time field', () => {
@@ -336,13 +350,13 @@ describe('eBird CSV utilities', () => {
       ])
 
       const p = parseEBirdCSV(csv)[0]
-      const d = new Date(p.date)
+      const d = localDateParts(p.date)
       // The parsed date should land on Jan 15 in local time, not shift to
       // Jan 14 (which happens when "2024-01-15" is parsed as UTC midnight
       // and the browser is behind UTC).
-      expect(d.getFullYear()).toBe(2024)
-      expect(d.getMonth()).toBe(0)  // January
-      expect(d.getDate()).toBe(15)
+      expect(d.year).toBe(2024)
+      expect(d.month).toBe(0)  // January
+      expect(d.day).toBe(15)
     })
 
     it('captures observation details and checklist comments', () => {

@@ -1,4 +1,5 @@
 import type { Photo, Outing } from './types'
+import { formatStoredDate, formatStoredTime } from './timezone'
 
 interface PhotoCluster {
   photos: Photo[]
@@ -150,14 +151,16 @@ export function findMatchingOuting(
 }
 
 export function formatOutingTime(startTime: string, endTime: string): string {
-  const start = new Date(startTime)
-  const end = new Date(endTime)
-  
-  const sameDay = start.toDateString() === end.toDateString()
-  
+  const startDate = formatStoredDate(startTime)
+  const endDate = formatStoredDate(endTime)
+  const startTimeStr = formatStoredTime(startTime)
+  const endTimeStr = formatStoredTime(endTime)
+
+  const sameDay = startDate === endDate
+
   if (sameDay) {
-    return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    return `${startDate} ${startTimeStr} - ${endTimeStr}`
   }
-  
-  return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleDateString()} ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+
+  return `${startDate} ${startTimeStr} - ${endDate} ${endTimeStr}`
 }

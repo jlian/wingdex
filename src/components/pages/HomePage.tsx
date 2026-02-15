@@ -6,6 +6,7 @@ import {
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { StatCard } from '@/components/ui/stat-card'
 import { getDisplayName } from '@/lib/utils'
+import { formatStoredDate } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 
 interface HomePageProps {
@@ -58,7 +59,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           <Button
             size="lg"
             onClick={onAddPhotos}
-            className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
           >
             <Camera size={20} className="mr-2" weight="bold" />
             Upload & Identify
@@ -95,16 +96,19 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               value={dex.length}
               label="Species"
               accent="text-primary"
+              onClick={() => onNavigate('birddex')}
             />
             <StatCard
               value={outings.length}
               label="Outings"
               accent="text-secondary"
+              onClick={() => onNavigate('outings')}
             />
             <StatCard
               value={newThisMonth}
               label="New This Month"
-              accent="text-accent"
+              accent="text-primary"
+              onClick={() => onNavigate('birddex')}
             />
             <StatCard
               value={totalPhotos}
@@ -185,7 +189,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
                         {outing.locationName || 'Outing'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(outing.startTime).toLocaleDateString()} · {confirmed.length} species
+                        {formatStoredDate(outing.startTime)} · {confirmed.length} species
                       </p>
                       {confirmed.length > 0 && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">

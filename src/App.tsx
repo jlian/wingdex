@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
@@ -148,18 +149,17 @@ function App() {
 function BootShell() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
+      <header className="bg-card/95 backdrop-blur-lg border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
-            <div className="hidden md:flex gap-2">
+            <div className="flex gap-2">
               <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
               <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
+              <div className="hidden md:block h-8 w-20 rounded-md bg-muted animate-pulse" />
+              <div className="hidden md:block h-8 w-20 rounded-md bg-muted animate-pulse" />
             </div>
             <div className="flex items-center gap-3">
-              <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
               <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
             </div>
           </div>
@@ -197,27 +197,39 @@ function AppContent({ user }: { user: UserInfo }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useBirdDexData(user.id)
+  const { resolvedTheme } = useTheme()
+
+  // Sync <meta name="theme-color"> with current theme (#17)
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) {
+      meta.setAttribute('content', resolvedTheme === 'dark' ? '#262e29' : '#e5ddd0')
+    }
+  }, [resolvedTheme])
 
   const navItems = [
     { value: 'home', label: 'Home', icon: House },
-    { value: 'outings', label: 'Outings', icon: List },
     { value: 'birddex', label: 'BirdDex', icon: Bird },
+    { value: 'outings', label: 'Outings', icon: List },
     { value: 'settings', label: 'Settings', icon: Gear },
   ]
+
+  // Mobile nav only shows BirdDex + Outings (Home via logo, Settings via avatar)
+  const mobileNavItems = navItems.filter(i => i.value === 'birddex' || i.value === 'outings')
 
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
-        {/* ── Top header + desktop nav ──────────────────────── */}
-        <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
+        {/* ── Top header — non-sticky, scrolls with content ── */}
+        <header className="bg-card/95 backdrop-blur-lg border-b border-border">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
-              {/* Logo */}
+              {/* Logo — navigates to Home */}
               <button
                 onClick={() => navigate('home')}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 hover:opacity-80 active:scale-[0.97] transition-all"
               >
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
@@ -242,9 +254,37 @@ function AppContent({ user }: { user: UserInfo }) {
                 ))}
               </TabsList>
 
-              {/* Right side: avatar */}
+              {/* Mobile nav — BirdDex + Outings tabs, visible only on mobile */}
+              <TabsList className="flex md:hidden bg-transparent gap-1 h-auto p-0">
+                {mobileNavItems.map(item => (
+                  <TabsTrigger
+                    key={item.value}
+                    value={item.value}
+                    onClick={() => {
+                      if (item.value === tab && subId) navigate(item.value)
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
+                      data-[state=active]:bg-primary/10 data-[state=active]:text-primary
+                      data-[state=inactive]:text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <item.icon size={16} />
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {/* Right side: avatar — navigates to Settings on mobile */}
               <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
+                <button
+                  onClick={() => navigate('settings')}
+                  className="md:hidden hover:opacity-80 active:scale-[0.97] transition-all"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatarUrl} alt={user.login} />
+                    <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </button>
+                <Avatar className="h-8 w-8 hidden md:flex">
                   <AvatarImage src={user.avatarUrl} alt={user.login} />
                   <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
@@ -254,8 +294,8 @@ function AppContent({ user }: { user: UserInfo }) {
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="w-full max-w-5xl mx-auto pb-20 md:pb-8">
-          <TabsContent value="home" className="mt-0">
+        <main className="w-full max-w-5xl mx-auto pb-8">
+          <TabsContent value="home" className="mt-0" forceMount hidden={tab !== 'home'}>
             <HomePage
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
@@ -265,7 +305,7 @@ function AppContent({ user }: { user: UserInfo }) {
             />
           </TabsContent>
 
-          <TabsContent value="outings" className="mt-0">
+          <TabsContent value="outings" className="mt-0" forceMount hidden={tab !== 'outings'}>
             <OutingsPage
               data={data}
               selectedOutingId={tab === 'outings' ? (subId ?? null) : null}
@@ -274,7 +314,7 @@ function AppContent({ user }: { user: UserInfo }) {
             />
           </TabsContent>
 
-          <TabsContent value="birddex" className="mt-0">
+          <TabsContent value="birddex" className="mt-0" forceMount hidden={tab !== 'birddex'}>
             <BirdDexPage
               data={data}
               selectedSpecies={tab === 'birddex' ? (subId ?? null) : null}
@@ -283,29 +323,10 @@ function AppContent({ user }: { user: UserInfo }) {
             />
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-0">
+          <TabsContent value="settings" className="mt-0" forceMount hidden={tab !== 'settings'}>
             <SettingsPage data={data} user={user} />
           </TabsContent>
         </main>
-
-        {/* ── Mobile bottom nav — hidden on desktop ────────── */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border md:hidden z-50">
-          <TabsList className="w-full h-16 bg-transparent grid grid-cols-4 rounded-none">
-            {navItems.map(item => (
-              <TabsTrigger
-                key={item.value}
-                value={item.value}
-                onClick={() => {
-                  if (item.value === tab && subId) navigate(item.value)
-                }}
-                className="flex flex-col gap-1 data-[state=active]:text-primary"
-              >
-                <item.icon size={22} />
-                <span className="text-[11px]">{item.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </nav>
       </Tabs>
 
       {showAddPhotos && (
