@@ -143,6 +143,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         // No species found on full image — ask user to crop and retry
         console.log('⚠️ No species identified — asking user to crop or skip')
         setStep('photo-manual-crop')
+      } else if (result.multipleBirds && !imageUrl) {
+        // Multiple bird species detected — let user crop to the one they want
+        console.log('🐦🐦 Multiple species detected — asking user to crop')
+        toast.info('Multiple bird species detected — crop to the one you want')
+        setCurrentCandidates(result.candidates)
+        setStep('photo-manual-crop')
       } else {
         setCurrentCandidates(result.candidates)
         setStep('photo-confirm')

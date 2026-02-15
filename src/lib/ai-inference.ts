@@ -12,6 +12,7 @@ interface VisionResult {
 export interface BirdIdResult {
   candidates: VisionResult[]
   cropBox?: { x: number; y: number; width: number; height: number }
+  multipleBirds?: boolean
 }
 
 /* ------------------------------------------------------------------ */
@@ -156,21 +157,49 @@ export async function identifyBirdInPhoto(
     const compressed = compressImage(img, 512, 0.5)
     console.log(`📐 ID: ${Math.round(imageDataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB`)
 
-    let ctx = ''
-    if (locationName) ctx += ` Location: ${locationName}.`
-    if (location) ctx += ` GPS: ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`
+    const ctxParts: string[] = []
+    if (location) ctxParts.push(`Primary geolocation (authoritative): GPS ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}.`)
+    if (locationName) ctxParts.push(`Place label (secondary, may be noisy): ${locationName}.`)
     if (month !== undefined) {
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-      ctx += ` Month: ${months[month]}.`
+      ctxParts.push(`Month: ${months[month]}.`)
     }
+    const ctx = ctxParts.length ? `\nContext:\n- ${ctxParts.join('\n- ')}` : ''
 
-    const text = `Identify bird species in this photo.${ctx}
-IMPORTANT: Only suggest species whose geographic range includes the specified location. Do not suggest species that are not found in the region. Pay close attention to species splits by region (e.g. Western vs Eastern Cattle-Egret).
-If a bird is present, return your top candidate AND 1-3 alternative species that this bird could also be, even if you are fairly sure of the top pick. The top candidate MUST be first in the "candidates" array, and all candidates MUST be ordered by descending confidence. Consider similar-looking species, seasonal plumage variants, and regional subspecies as alternatives.
-Also return a square cropBox centered on the bird as percentage coordinates (0-100), sized to tightly fit the whole bird.
-Return JSON: {"candidates":[{"species":"Common Kingfisher (Alcedo atthis)","confidence":0.85},{"species":"Blue-eared Kingfisher (Alcedo meninting)","confidence":0.5},{"species":"Indigo-banded Kingfisher (Ceyx melanurus)","confidence":0.35}],"cropBox":{"x":15,"y":20,"width":50,"height":50}}
-Confidence: 0.85-1.0 definitive, 0.5-0.84 likely, 0.3-0.49 possible. Be conservative — only use 0.9+ when field marks are unambiguous.
-No bird: {"candidates":[],"cropBox":null}`
+    const text = `Identify birds in this image and return ONE JSON object only.${ctx}
+
+  Process (in order):
+  1) Detect all birds.
+  2) Select ONE focal bird: prefer the most notable/uncommon species; if all are common (gulls, pigeons, crows, sparrows), pick the largest clear one; if tied, nearest image center.
+  3) Note the focal bird's center position in the image as a percentage.
+  4) Identify only that focal bird.
+
+  Rules:
+  - Never mix traits across birds.
+  - GPS and month are authoritative range constraints.
+  - Location name is secondary habitat context only. If it conflicts with GPS/month, trust GPS/month.
+  - Only suggest species expected at that location/time; account for regional splits and seasonal plumage.
+  - Lower confidence for small/blurry/occluded/backlit birds.
+
+  Candidates:
+  - Return 1-3 candidates total (1 primary + up to 2 alternatives), sorted by confidence descending.
+  - species format: "Common Name (Scientific name)".
+
+  Confidence:
+  - 0.90-1.00 diagnostic field marks clearly visible
+  - 0.75-0.89 strong match
+  - 0.50-0.74 likely
+  - 0.30-0.49 possible
+
+  Output JSON only:
+  - Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87}],"birdCenter":[35,60],"multipleBirds":false}
+  - No bird: {"candidates":[],"birdCenter":null,"multipleBirds":false}
+
+  multipleBirds: true if more than one bird species is visible in the image.
+
+  birdCenter: [x, y] percentage position of the focal bird's center.
+  - Values 0-100 (percentage of image width and height)
+  - integers only`
 
     const response = await withRetry(() =>
       sparkVisionLLM(text, compressed, VISION_MODEL, {
@@ -205,15 +234,34 @@ No bird: {"candidates":[],"cropBox":null}`
     console.log(`✅ ${candidates.length} candidates:`, candidates)
 
     let cropBox: BirdIdResult['cropBox'] = undefined
-    if (parsed.cropBox && typeof parsed.cropBox.x === 'number') {
-      const { x, y, width, height } = parsed.cropBox
-      if (x >= 0 && y >= 0 && width > 5 && height > 5 && x + width <= 101 && y + height <= 101) {
-        cropBox = { x, y, width, height }
-        console.log('✅ AI crop box:', cropBox)
+    // LLM returns birdCenter: [x%, y%] — build a generous crop box around it
+    const center = parsed.birdCenter
+    if (Array.isArray(center) && center.length >= 2) {
+      const cx = Number(center[0])
+      const cy = Number(center[1])
+      if (Number.isFinite(cx) && Number.isFinite(cy)) {
+        const clampedCx = Math.max(0, Math.min(100, cx))
+        const clampedCy = Math.max(0, Math.min(100, cy))
+        // Build a square crop in pixel space using 40% of the shorter side
+        const shortSide = Math.min(img.width, img.height)
+        const cropPx = shortSide * 0.4
+        const wPct = (cropPx / img.width) * 100   // ≤ 40 for landscape
+        const hPct = (cropPx / img.height) * 100   // ≤ 40 for portrait
+        const x = Math.max(0, Math.min(100 - wPct, clampedCx - wPct / 2))
+        const y = Math.max(0, Math.min(100 - hPct, clampedCy - hPct / 2))
+        cropBox = {
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(wPct),
+          height: Math.round(hPct),
+        }
+        console.log(`✅ AI bird center: (${cx}, ${cy}) → crop`, cropBox)
       }
     }
 
-    return { candidates, cropBox }
+    const multipleBirds = parsed.multipleBirds === true
+
+    return { candidates, cropBox, multipleBirds }
   } catch (error) {
     console.error('❌ Bird ID error:', error)
     if (error instanceof Error) {

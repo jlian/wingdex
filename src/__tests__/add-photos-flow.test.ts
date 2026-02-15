@@ -115,6 +115,15 @@ describe('normalizeLocationName', () => {
     expect(normalizeLocationName('  Seattle, WA  ')).toBe('Seattle, WA')
   })
 
+  it('drops granular leading POI labels when city/state are present', () => {
+    expect(normalizeLocationName('South Beach Trail, Seattle, Washington')).toBe('Seattle, Washington')
+    expect(normalizeLocationName('Parking Lot C, Seattle, Washington')).toBe('Seattle, Washington')
+  })
+
+  it('keeps meaningful park-level names', () => {
+    expect(normalizeLocationName('Discovery Park, Seattle, Washington')).toBe('Discovery Park, Seattle, Washington')
+  })
+
   it('returns empty string for unknown location', () => {
     expect(normalizeLocationName('Unknown Location')).toBe('')
     expect(normalizeLocationName('   ')).toBe('')

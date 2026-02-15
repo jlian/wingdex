@@ -62,47 +62,156 @@ export default function OutingReview({
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
     try {
-      // Use OpenStreetMap Nominatim for reliable reverse geocoding (no auth needed)
-      // zoom=17 resolves to POI level (parks, buildings) instead of neighborhoods
+      // Prefer Nominatim-native place hierarchy:
+      // 1) nearby major nature POI from bounded search (park/reserve/refuge/etc.)
+      // 2) natural feature at point (strait/bay/lake/cliff/etc.)
+      // 3) neighborhood-level reverse geocode
+      // 4) city-level reverse geocode
       console.log('📍 Reverse geocoding via Nominatim...')
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=17&addressdetails=1`
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'BirdDex-App/1.0' },
-      })
-      
-      if (!res.ok) throw new Error(`Nominatim ${res.status}`)
-      
-      const data = await res.json()
-      let name = ''
-      
-      if (data.address) {
-        const a = data.address
-        // Build a concise location: prefer specific POI name, then park/reserve, then suburb/city
-        const parts: string[] = []
-        // Nominatim's "name" field often has the specific POI (e.g. "Green Lake Park")
-        if (data.name && data.name !== a.city && data.name !== a.state && data.name !== a.country) {
-          parts.push(data.name)
-        } else if (a.park || a.nature_reserve || a.leisure) {
-          parts.push(a.park || a.nature_reserve || a.leisure)
-        } else if (a.tourism || a.amenity || a.building) {
-          parts.push(a.tourism || a.amenity || a.building)
-        }
-        if (a.suburb || a.neighbourhood || a.village || a.town) {
-          parts.push(a.suburb || a.neighbourhood || a.village || a.town)
-        }
-        if (a.city || a.county) {
-          parts.push(a.city || a.county)
-        }
-        if (a.state) parts.push(a.state)
-        if (a.country) parts.push(a.country)
-        name = parts.filter(Boolean).slice(0, 3).join(', ')
+
+      const scoreResult = (result: any): number => {
+        if (!result) return 0
+        const category = String(result.category || '').toLowerCase()
+        const type = String(result.type || '').toLowerCase()
+        const address = result.address || {}
+        const hasName = Boolean(result.name || result.namedetails?.['name:en'] || result.namedetails?.name)
+
+        let score = 0
+        if (category === 'leisure' && type === 'park') score += 100
+        else if (category === 'boundary' && type === 'protected_area') score += 95
+        else if (category === 'natural') score += 80
+        else if (category === 'waterway') score += 72
+        else if (category === 'place' && ['suburb', 'neighbourhood', 'village', 'town'].includes(type)) score += 60
+        else if (category === 'boundary' && type === 'administrative') score += 45
+
+        if (hasName) score += 5
+        if (address.city || address.town || address.village || address.county) score += 5
+        return Math.min(score, 100)
       }
-      
-      if (!name && data.display_name) {
-        // Fallback to shortened display_name
-        name = data.display_name.split(',').slice(0, 3).join(',').trim()
+
+      const fetchNearbyNaturePlace = async (): Promise<any | null> => {
+        const deltas = [0.02]
+        const queries = ['park']
+        const EARLY_EXIT_SCORE = 90
+        let best: any | null = null
+        let bestScore = 0
+
+        for (const delta of deltas) {
+          const left = (lon - delta).toFixed(6)
+          const right = (lon + delta).toFixed(6)
+          const top = (lat + delta).toFixed(6)
+          const bottom = (lat - delta).toFixed(6)
+
+          for (const q of queries) {
+            const url = new URL('https://nominatim.openstreetmap.org/search')
+            url.searchParams.set('format', 'jsonv2')
+            url.searchParams.set('q', q)
+            url.searchParams.set('addressdetails', '1')
+            url.searchParams.set('namedetails', '1')
+            url.searchParams.set('accept-language', 'en')
+            url.searchParams.set('bounded', '1')
+            url.searchParams.set('limit', '5')
+            url.searchParams.set('viewbox', `${left},${top},${right},${bottom}`)
+
+            const res = await fetch(url.toString(), {
+              headers: { 'User-Agent': 'BirdDex-App/1.0' },
+            })
+            if (!res.ok) throw new Error(`Nominatim ${res.status}`)
+
+            const results = await res.json()
+            if (!Array.isArray(results) || results.length === 0) continue
+
+            for (const item of results) {
+              const itemScore = scoreResult(item)
+              if (itemScore > bestScore) {
+                best = item
+                bestScore = itemScore
+              }
+              if (itemScore >= EARLY_EXIT_SCORE) return item
+            }
+          }
+        }
+
+        return best
       }
-      
+
+      const fetchReverse = async (params: Record<string, string>): Promise<any | null> => {
+        const url = new URL('https://nominatim.openstreetmap.org/reverse')
+        url.searchParams.set('lat', String(lat))
+        url.searchParams.set('lon', String(lon))
+        url.searchParams.set('format', 'jsonv2')
+        url.searchParams.set('addressdetails', '1')
+        url.searchParams.set('namedetails', '1')
+        url.searchParams.set('accept-language', 'en')
+        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+
+        const res = await fetch(url.toString(), {
+          headers: { 'User-Agent': 'BirdDex-App/1.0' },
+        })
+        if (!res.ok) throw new Error(`Nominatim ${res.status}`)
+        return res.json()
+      }
+
+      const formatLabel = (result: any): string => {
+        if (!result) return ''
+        const englishName =
+          result.namedetails?.['name:en'] ||
+          result.namedetails?.name
+        const address = result.address || {}
+        const primary =
+          englishName ||
+          result.name ||
+          address.park ||
+          address.nature_reserve ||
+          address.recreation_ground ||
+          address.leisure ||
+          address.tourism ||
+          address.amenity ||
+          address.neighbourhood ||
+          address.suburb ||
+          address.village ||
+          address.town ||
+          address.city ||
+          address.county ||
+          address.state
+
+        const locality =
+          address.neighbourhood ||
+          address.suburb ||
+          address.village ||
+          address.town ||
+          address.city ||
+          address.county
+
+        const parts = [primary, locality, address.state]
+          .filter((v, idx, arr) => !!v && arr.indexOf(v) === idx)
+          .slice(0, 3)
+
+        return parts.join(', ')
+      }
+
+      const naturePoiResult = await fetchNearbyNaturePlace()
+      const naturePoiScore = scoreResult(naturePoiResult)
+      let name = naturePoiScore >= 60 ? formatLabel(naturePoiResult) : ''
+
+      if (!name) {
+        const naturalResult = await fetchReverse({ layer: 'natural', zoom: '15' })
+        const naturalScore = scoreResult(naturalResult)
+        if (naturalScore >= 60) {
+          name = formatLabel(naturalResult)
+        }
+      }
+
+      if (!name) {
+        const neighborhoodResult = await fetchReverse({ layer: 'address', zoom: '14' })
+        name = formatLabel(neighborhoodResult)
+      }
+
+      if (!name) {
+        const cityResult = await fetchReverse({ layer: 'address', zoom: '10' })
+        name = formatLabel(cityResult)
+      }
+
       if (!name) throw new Error('No location name returned')
       
       console.log('✅ Location identified:', name)

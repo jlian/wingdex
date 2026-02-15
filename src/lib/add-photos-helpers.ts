@@ -73,6 +73,22 @@ export function normalizeLocationName(locationName: string): string {
   if (!trimmed || trimmed === 'Unknown Location') {
     return ''
   }
+
+  const parts = trimmed
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 3) {
+    const first = parts[0].toLowerCase()
+    const isGranularLead = /(\btrail\b|\bpath\b|\bparking\b|\bparking lot\b|\bviewpoint\b|\blookout\b|\bboat ramp\b|\bdock\b|\bpier\b|\baccess\b|\bentrance\b|\broad\b|\bstreet\b|\bavenue\b|\bave\b|\bboulevard\b|\bblvd\b|\bdrive\b|\bdr\b|\blane\b|\bln\b|\bway\b|\bhighway\b|\bhwy\b|\bexit\b)/.test(first)
+
+    if (isGranularLead) {
+      // Prefer broader city/state context for AI prompts
+      return `${parts[1]}, ${parts[2]}`
+    }
+  }
+
   return trimmed
 }
 
