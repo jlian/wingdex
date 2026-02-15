@@ -70,22 +70,22 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
   return (
     <div className="pb-8 animate-fade-in">
       {/* ── Hero ─────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto">
+      <div className="px-4 sm:px-6 pt-8 sm:pt-10 pb-4 max-w-3xl mx-auto">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="font-serif text-5xl sm:text-6xl font-semibold text-foreground tracking-tight leading-none">
               {dex.length}
             </p>
-            <p className="font-serif text-lg sm:text-xl text-muted-foreground mt-1">
+            <p className="font-serif text-lg sm:text-xl text-muted-foreground italic mt-1">
               species observed
             </p>
           </div>
           <button
             onClick={onAddPhotos}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-              bg-gradient-to-br from-emerald-500 to-teal-600
-              text-white text-sm font-semibold
-              shadow-sm hover:brightness-110 active:scale-[0.97]
+              bg-gradient-to-r from-primary/90 to-primary
+              text-primary-foreground text-sm font-semibold
+              shadow-sm hover:brightness-105 active:scale-[0.97]
               transition-all duration-150 cursor-pointer flex-shrink-0"
           >
             <Camera size={18} weight="bold" />
