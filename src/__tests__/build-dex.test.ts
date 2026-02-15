@@ -156,4 +156,24 @@ describe('buildDexFromState', () => {
     // Same outing, so unique outings = 1
     expect(result[0].totalOutings).toBe(1)
   })
+
+  it('consolidates observations from CSV import, photo upload, and manual add into one dex entry when names use canonical format', () => {
+    const outings = [makeOuting()]
+    const observations = [
+      // Simulates CSV import (always "Common Name (Scientific Name)")
+      makeObs({ id: 'obs-csv', speciesName: 'Great Blue Heron (Ardea herodias)', count: 2, notes: 'Imported from eBird' }),
+      // Simulates AI photo upload (also "Common Name (Scientific Name)")
+      makeObs({ id: 'obs-upload', speciesName: 'Great Blue Heron (Ardea herodias)', count: 1, representativePhotoId: 'photo-1' }),
+      // Simulates manual add (now normalized to same format via findBestMatch)
+      makeObs({ id: 'obs-manual', speciesName: 'Great Blue Heron (Ardea herodias)', count: 1, notes: 'Manually added' }),
+    ]
+    const result = buildDexFromState(outings, observations, [])
+
+    // All three should converge into a single dex entry
+    expect(result).toHaveLength(1)
+    expect(result[0].speciesName).toBe('Great Blue Heron (Ardea herodias)')
+    expect(result[0].totalCount).toBe(4)
+    expect(result[0].totalOutings).toBe(1)
+    expect(result[0].bestPhotoId).toBe('photo-1')
+  })
 })
