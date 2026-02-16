@@ -80,7 +80,7 @@ describe('eBird CSV utilities', () => {
 
     const previews = parseEBirdCSV(csv)
     expect(previews).toHaveLength(1)
-    expect(previews[0].speciesName).toBe('Northern Pintail')
+    expect(previews[0].speciesName).toBe('Northern Pintail (Anas acuta)')
     expect(previews[0].location).toBe('Lagoon')
   })
 
@@ -708,6 +708,123 @@ describe('eBird CSV utilities', () => {
         expect(fields).toHaveLength(19)
       }
     })
+
+    it('preserves local time from offset-aware ISO startTime (not browser TZ)', () => {
+      // Outing observed in Hawaii (UTC-10) at 7:16 PM local time
+      const outing: Outing = {
+        id: 'o1',
+        userId: 'u1',
+        startTime: '2024-12-18T19:16:00-10:00',
+        endTime: '2024-12-18T20:16:00-10:00',
+        locationName: 'Maui',
+        lat: 20.682568,
+        lon: -156.442741,
+        notes: '',
+        createdAt: '2024-12-18T19:16:00-10:00',
+      }
+      const observations: Observation[] = [
+        {
+          id: 'obs_1',
+          outingId: 'o1',
+          speciesName: 'Chukar Partridge (Alectoris chukar)',
+          count: 1,
+          certainty: 'confirmed',
+          notes: '',
+        },
+      ]
+
+      const csv = exportOutingToEBirdCSV(outing, observations)
+      const fields = parseCSVLineForTest(csv)
+      // Date (col 8) should be 12/18/2024 (local), not 12/19 (UTC)
+      expect(fields[8]).toBe('12/18/2024')
+      // Time (col 9) should be 19:16 (local), not 05:16 (UTC)
+      expect(fields[9]).toBe('19:16')
+    })
   })
 
 })
+
+  /* ---------- taxonomy normalization during import ---------- */
+
+  describe('taxonomy normalization during CSV import', () => {
+    it('normalizes Chukar to Chukar Partridge using scientific name', () => {
+      // The eBird CSV has "Chukar" as the common name, but the taxonomy
+      // calls this species "Chukar Partridge" (Alectoris chukar).
+      const csv = ebirdCSV([
+        'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      expect(previews).toHaveLength(1)
+      expect(previews[0].speciesName).toBe('Chukar Partridge (Alectoris chukar)')
+    })
+
+    it('keeps canonical names unchanged', () => {
+      // "Canada Goose" is already the canonical common name in the taxonomy
+      const csv = ebirdCSV([
+        'S276393806,Canada Goose,Branta canadensis,342,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,08:15 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      expect(previews).toHaveLength(1)
+      expect(previews[0].speciesName).toBe('Canada Goose (Branta canadensis)')
+    })
+
+    it('normalizes all species in the test CSV file via scientific name', () => {
+      // Parse the full test CSV
+      const csv = ebirdCSV([
+        'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+        'S276512830,Rock Pigeon,Columba livia,1853,X,CN-21,,L53473988,Dalian,39.063208,122.057679,2016-06-06,10:50 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      // Both should be in canonical "Common Name (Scientific Name)" format
+      for (const p of previews) {
+        expect(p.speciesName).toMatch(/^.+\(.+\)$/)
+      }
+      // Chukar should be normalized to Chukar Partridge
+      expect(previews[0].speciesName).toBe('Chukar Partridge (Alectoris chukar)')
+      // Rock Pigeon should stay as Rock Pigeon
+      expect(previews[1].speciesName).toBe('Rock Pigeon (Columba livia)')
+    })
+  })
+
+  /* ---------- timezone-aware date handling ---------- */
+
+  describe('timezone-aware date handling', () => {
+    it('produces correct offset for Hawaii observation (UTC-10, no DST)', () => {
+      const csv = ebirdCSV([
+        'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const p = parseEBirdCSV(csv)[0]
+      // Hawaii is UTC-10, no DST
+      expect(p.date).toBe('2024-12-18T19:16:00-10:00')
+    })
+
+    it('produces correct offset for Taipei observation (UTC+8, no DST)', () => {
+      const csv = ebirdCSV([
+        'S290456247,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const p = parseEBirdCSV(csv)[0]
+      // Taipei is UTC+8
+      expect(p.date).toBe('2025-12-27T15:06:00+08:00')
+    })
+
+    it('produces correct offset for Seattle observation (UTC-7 in summer, UTC-8 in winter)', () => {
+      // Summer: PDT (UTC-7)
+      const csvSummer = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+      const summer = parseEBirdCSV(csvSummer)[0]
+      expect(summer.date).toBe('2025-06-01T11:07:00-07:00')
+
+      // Winter: PST (UTC-8)
+      const csvWinter = ebirdCSV([
+        'S2,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-01-15,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+      const winter = parseEBirdCSV(csvWinter)[0]
+      expect(winter.date).toBe('2025-01-15T11:07:00-08:00')
+    })
+  })

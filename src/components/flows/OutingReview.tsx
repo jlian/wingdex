@@ -7,7 +7,7 @@ import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete
 import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } from '@phosphor-icons/react'
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
-import { dateToLocalISOWithOffset, formatStoredDate } from '@/lib/timezone'
+import { toLocalISOWithOffset, formatStoredDate } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
 
@@ -252,24 +252,38 @@ export default function OutingReview({
     }
   }
 
+  /**
+   * Extract browser-local date/time components from a Date as a naive ISO string.
+   * Since the Date was constructed from a naive EXIF time string (parsed in
+   * browser-local timezone), this recovers the original EXIF wall-clock time.
+   * We then pass it to toLocalISOWithOffset() with GPS coords to attach the
+   * correct timezone offset for the photo's location.
+   */
+  const dateToNaiveISO = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+  }
+
   const doConfirm = (name: string) => {
     if (useExistingOuting && matchingOuting) {
       // Merge into existing outing — expand its time window if needed
-      const existingStart = new Date(matchingOuting.startTime).getTime()
-      const existingEnd = new Date(matchingOuting.endTime).getTime()
-      const clusterStart = cluster.startTime.getTime()
-      const clusterEnd = cluster.endTime.getTime()
+      // Convert cluster's naive EXIF times to offset-aware ISO strings
+      // using the outing's GPS coords, then compare properly in UTC.
+      const clusterStartISO = toLocalISOWithOffset(
+        dateToNaiveISO(cluster.startTime), matchingOuting.lat, matchingOuting.lon
+      )
+      const clusterEndISO = toLocalISOWithOffset(
+        dateToNaiveISO(cluster.endTime), matchingOuting.lat, matchingOuting.lon
+      )
+      const existingStartMs = new Date(matchingOuting.startTime).getTime()
+      const existingEndMs = new Date(matchingOuting.endTime).getTime()
+      const clusterStartMs = new Date(clusterStartISO).getTime()
+      const clusterEndMs = new Date(clusterEndISO).getTime()
 
-      if (clusterStart < existingStart || clusterEnd > existingEnd) {
+      if (clusterStartMs < existingStartMs || clusterEndMs > existingEndMs) {
         data.updateOuting(matchingOuting.id, {
-          startTime: dateToLocalISOWithOffset(
-            new Date(Math.min(existingStart, clusterStart)),
-            matchingOuting.lat, matchingOuting.lon
-          ),
-          endTime: dateToLocalISOWithOffset(
-            new Date(Math.max(existingEnd, clusterEnd)),
-            matchingOuting.lat, matchingOuting.lon
-          ),
+          startTime: clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
+          endTime: clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
         })
       }
 
@@ -281,8 +295,8 @@ export default function OutingReview({
     const outing = {
       id: outingId,
       userId: userId.toString(),
-      startTime: dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon),
-      endTime: dateToLocalISOWithOffset(effectiveEndTime, effectiveLat, effectiveLon),
+      startTime: toLocalISOWithOffset(dateToNaiveISO(effectiveStartTime), effectiveLat, effectiveLon),
+      endTime: toLocalISOWithOffset(dateToNaiveISO(effectiveEndTime), effectiveLat, effectiveLon),
       locationName: name || 'Unknown Location',
       defaultLocationName: name || 'Unknown Location',
       lat: effectiveLat,
