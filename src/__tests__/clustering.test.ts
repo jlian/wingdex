@@ -269,10 +269,12 @@ describe('findMatchingOuting', () => {
       lat: 48.0,
       lon: -122.0,
     })
+    // Cluster is 2 hours after outing ends (within 5hr buffer for time,
+    // but >30 min apart so normal 6km distance threshold applies)
     const cluster = {
       photos: [makePhoto()],
-      startTime: new Date('2025-06-01T09:00:00Z'),
-      endTime: new Date('2025-06-01T10:00:00Z'),
+      startTime: new Date('2025-06-01T12:00:00Z'),
+      endTime: new Date('2025-06-01T13:00:00Z'),
       centerLat: 48.0 + 8 / 111, // ~8 km north
       centerLon: -122.0,
     }
@@ -456,6 +458,85 @@ describe('findMatchingOuting (offset-aware strings)', () => {
       photos: [makePhoto()],
       startTime: new Date('2024-12-19T11:00:00Z'),
       endTime: new Date('2024-12-19T11:30:00Z'),
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBe(outing)
+  })
+})
+
+// ─── Merlin device-location relaxed matching ─────────────
+
+describe('findMatchingOuting (Merlin relaxed distance)', () => {
+  it('matches 20km-apart GPS when times are within 30 min (Merlin case)', () => {
+    // eBird checklist created by Merlin at the hotel (west Maui)
+    const outing = makeOuting({
+      startTime: '2024-12-18T17:16:00-10:00',
+      endTime: '2024-12-18T18:16:00-10:00',
+      lat: 20.6826,   // Lahaina / west Maui (device location)
+      lon: -156.4427,
+    })
+    // Photo EXIF GPS is the actual observation site (central Maui) — 20km away
+    // Same time (within 30 min)
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2024-12-18T17:16:00-10:00'),
+      endTime: new Date('2024-12-18T17:16:00-10:00'),
+      centerLat: 20.7148,   // White Hill / central Maui (photo GPS)
+      centerLon: -156.2502,
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBe(outing)
+  })
+
+  it('does not match 20km-apart GPS when times are 2 hours apart', () => {
+    // Same locations as above, but cluster is 2 hours later — normal 6km threshold applies
+    const outing = makeOuting({
+      startTime: '2024-12-18T15:00:00-10:00',
+      endTime: '2024-12-18T16:00:00-10:00',
+      lat: 20.6826,
+      lon: -156.4427,
+    })
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2024-12-18T18:00:00-10:00'),
+      endTime: new Date('2024-12-18T18:30:00-10:00'),
+      centerLat: 20.7148,
+      centerLon: -156.2502,
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBeUndefined()
+  })
+
+  it('does not match 60km-apart GPS even when times are within 30 min', () => {
+    // Relaxed threshold is 50km — 60km should still fail
+    const outing = makeOuting({
+      startTime: '2024-12-18T17:16:00-10:00',
+      endTime: '2024-12-18T18:16:00-10:00',
+      lat: 20.72,
+      lon: -156.15,
+    })
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2024-12-18T17:20:00-10:00'),
+      endTime: new Date('2024-12-18T17:20:00-10:00'),
+      // ~60km away (roughly 0.54 degrees latitude)
+      centerLat: 20.72 + 60 / 111,
+      centerLon: -156.15,
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBeUndefined()
+  })
+
+  it('matches same-island GPS (30km) when times overlap exactly', () => {
+    // Exact time overlap with ~30km distance — should match with relaxed threshold
+    const outing = makeOuting({
+      startTime: '2025-01-15T09:00:00-08:00',
+      endTime: '2025-01-15T11:00:00-08:00',
+      lat: 47.66,    // Discovery Park, Seattle
+      lon: -122.42,
+    })
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2025-01-15T10:00:00-08:00'),
+      endTime: new Date('2025-01-15T10:30:00-08:00'),
+      centerLat: 47.90,   // ~27km north (Lynnwood area)
+      centerLon: -122.30,
     }
     expect(findMatchingOuting(cluster, [outing])).toBe(outing)
   })
