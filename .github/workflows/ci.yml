@@ -7,11 +7,54 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  classify:
+    name: Classify CI Mode
+    runs-on: ubuntu-latest
+    outputs:
+      run_full: ${{ steps.decision.outputs.run_full }}
+      reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - name: Detect docs-only changes
+        if: github.event_name == 'pull_request'
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            non_docs:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+
+      - name: Classify CI mode
+        id: decision
+        shell: bash
+        run: |
+          run_full=true
+          reason="full CI"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            if [[ "${{ github.head_ref }}" == release-please--* ]]; then
+              run_full=false
+              reason="release-please branch"
+            elif [[ "${{ steps.changes.outputs.docs }}" == "true" && "${{ steps.changes.outputs.non_docs }}" != "true" ]]; then
+              run_full=false
+              reason="docs-only changes"
+            fi
+          fi
+
+          echo "run_full=$run_full" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    name: Full Build and Test
+    needs: classify
+    if: needs.classify.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -37,3 +80,22 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  ci:
+    name: CI Gate
+    needs: [classify, build-and-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize CI result
+        shell: bash
+        run: |
+          if [[ "${{ needs.classify.outputs.run_full }}" == "true" ]]; then
+            [[ "${{ needs.build-and-test.result }}" == "success" ]] || {
+              echo "Full CI was required but did not succeed"
+              exit 1
+            }
+            echo "Full CI completed successfully"
+          else
+            echo "Fast-path CI completed successfully (${{ needs.classify.outputs.reason }})"
+          fi
