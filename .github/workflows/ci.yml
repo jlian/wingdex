@@ -8,6 +8,7 @@ on:
 
 jobs:
   classify:
+    name: Classify CI Mode
     runs-on: ubuntu-latest
     outputs:
       run_full: ${{ steps.decision.outputs.run_full }}
@@ -47,7 +48,8 @@ jobs:
           echo "run_full=$run_full" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
 
-  full-ci:
+  build-and-test:
+    name: Full Build and Test
     needs: classify
     if: needs.classify.outputs.run_full == 'true'
     runs-on: ubuntu-latest
@@ -80,7 +82,8 @@ jobs:
         run: npm run build
 
   ci:
-    needs: [classify, full-ci]
+    name: CI Gate
+    needs: [classify, build-and-test]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -88,7 +91,7 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ needs.classify.outputs.run_full }}" == "true" ]]; then
-            [[ "${{ needs.full-ci.result }}" == "success" ]] || {
+            [[ "${{ needs.build-and-test.result }}" == "success" ]] || {
               echo "Full CI was required but did not succeed"
               exit 1
             }
