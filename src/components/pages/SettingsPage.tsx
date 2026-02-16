@@ -178,11 +178,13 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              eBird exports all times in a single timezone, but doesn&apos;t
-              document which one or let you see it. It&apos;s typically your
-              account&apos;s home location. To verify: compare a checklist time
-              in the CSV to the time shown on eBird.org for that checklist.
-              Choose &ldquo;None&rdquo; if you only bird in one timezone.
+              eBird records times in the timezone of the device that submitted
+              the checklist &mdash; typically your phone&apos;s home timezone.
+              This includes Merlin: if you ID photos from a trip abroad at
+              home, Merlin maps the photo&apos;s time to your device&apos;s
+              timezone. If you only bird locally, choose &ldquo;None&rdquo;.
+              Otherwise, select your home timezone so we can convert times to
+              each observation&apos;s local time.
             </p>
           </div>
 
