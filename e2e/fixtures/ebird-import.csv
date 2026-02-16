@@ -1,0 +1,5 @@
+Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Start Time,Protocol,Number of Observers,Duration,All observations reported?,Effort Distance Miles,Effort area acres,Species Comments,Checklist Comments
+S1234001,Chukar,Alectoris chukar,153,2,US-HI,Maui,L12345,Haleakala National Park,20.7204,-156.1552,2025-11-15,08:30 AM,eBird - Traveling Count,1,120,1,3.5,,Seen near summit trail,Morning hike
+S1234001,Nene,Branta sandvicensis,129,3,US-HI,Maui,L12345,Haleakala National Park,20.7204,-156.1552,2025-11-15,08:30 AM,eBird - Traveling Count,1,120,1,3.5,,Grazing near road,Morning hike
+S1234002,Steller's Jay,Cyanocitta stelleri,15823,1,US-WA,King,L67890,Discovery Park,47.6615,-122.4197,2025-12-20,10:15 AM,eBird - Stationary Count,2,45,1,,,Eating cherries in backyard,Cold clear morning
+S1234002,Dark-eyed Junco,Junco hyemalis,22174,4,US-WA,King,L67890,Discovery Park,47.6615,-122.4197,2025-12-20,10:15 AM,eBird - Stationary Count,2,45,1,,,Feeding on ground,Cold clear morning
