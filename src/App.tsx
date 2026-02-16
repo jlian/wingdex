@@ -80,8 +80,8 @@ function useHashRouter() {
     window.history.pushState(null, '', hash || window.location.pathname)
     if (subId) navigatingWithSubId.current = true
     setRoute({ tab, subId })
-    // Scroll to top on forward navigation
-    window.scrollTo(0, 0)
+    // Scroll to top on forward navigation into a detail view
+    if (subId) window.scrollTo(0, 0)
   }, [])
 
   const handleTabChange = useCallback((val: string) => {
@@ -261,6 +261,7 @@ function AppContent({ user }: { user: UserInfo }) {
               <button
                 onClick={() => navigate('home')}
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
+                aria-label="Home"
               >
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
@@ -290,6 +291,7 @@ function AppContent({ user }: { user: UserInfo }) {
                 <button
                   onClick={() => navigate('settings')}
                   className="cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
+                  aria-label="Settings"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatarUrl} alt={user.login} />
