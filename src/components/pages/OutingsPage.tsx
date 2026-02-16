@@ -28,7 +28,7 @@ import { StatCard } from '@/components/ui/stat-card'
 import { exportOutingToEBirdCSV } from '@/lib/ebird'
 import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
-import { formatStoredDate, formatStoredTime } from '@/lib/timezone'
+import { formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
 import { toast } from 'sonner'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { Outing, Observation } from '@/lib/types'
@@ -407,7 +407,7 @@ function OutingDetail({
             </span>
             <span className="flex items-center gap-1.5">
               <Clock size={14} />
-              {formatStoredTime(outing.startTime)}
+              {formatStoredTimeWithTZ(outing.startTime)}
               {durationStr && <span className="text-muted-foreground/60">({durationStr})</span>}
             </span>
           </div>

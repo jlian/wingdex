@@ -7,6 +7,8 @@ import {
   getOffsetForLocalWallTime,
   getTimezoneFromCoords,
   getUtcOffsetString,
+  convertTimezones,
+  getTimezoneAbbreviation,
 } from '@/lib/timezone'
 
 describe('timezone utilities', () => {
@@ -351,6 +353,86 @@ describe('timezone utilities', () => {
 
       const winter = getUtcOffsetString('Europe/London', new Date('2025-01-01T12:00:00Z'))
       expect(winter).toBe('+00:00')
+    })
+  })
+
+  describe('convertTimezones', () => {
+    it('converts Pacific time to Hawaii time (PST → HST)', () => {
+      // 7:16 PM PST on Dec 18 → 5:16 PM HST on Dec 18
+      const result = convertTimezones(
+        '2024-12-18T19:16:00',
+        'America/Los_Angeles',
+        20.682568, -156.442741,
+      )
+      expect(result).toBe('2024-12-18T17:16:00-10:00')
+    })
+
+    it('converts Pacific time to Taipei time (PST → CST+8)', () => {
+      // 3:06 PM PST on Dec 27 → 7:06 AM +08:00 on Dec 28
+      const result = convertTimezones(
+        '2025-12-27T15:06:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157,
+      )
+      expect(result).toBe('2025-12-28T07:06:00+08:00')
+    })
+
+    it('no-ops when source and destination are the same timezone', () => {
+      // 11:07 AM PDT in Seattle (which is also America/Los_Angeles)
+      const result = convertTimezones(
+        '2025-06-01T11:07:00',
+        'America/Los_Angeles',
+        47.6, -122.4,
+      )
+      expect(result).toBe('2025-06-01T11:07:00-07:00')
+    })
+
+    it('converts Pacific summer time to Central summer time (PDT → CDT)', () => {
+      // 8:15 AM PDT → 10:15 AM CDT
+      const result = convertTimezones(
+        '2025-09-28T08:15:00',
+        'America/Los_Angeles',
+        41.963254, -87.631954,
+      )
+      expect(result).toBe('2025-09-28T10:15:00-05:00')
+    })
+
+    it('handles date boundary crossing (forward)', () => {
+      // 11 PM PST → next day 5 AM in UTC+6 (e.g., Dhaka)
+      const result = convertTimezones(
+        '2025-01-15T23:00:00',
+        'America/Los_Angeles',
+        23.8103, 90.4125, // Dhaka
+      )
+      // 23:00 PST = 07:00 UTC next day = 13:00 +06:00 next day
+      expect(result).toBe('2025-01-16T13:00:00+06:00')
+    })
+
+    it('returns input unchanged for invalid format', () => {
+      const result = convertTimezones('not-a-date', 'America/Los_Angeles', 47.6, -122.4)
+      expect(result).toBe('not-a-date')
+    })
+  })
+
+  describe('getTimezoneAbbreviation', () => {
+    it('returns HST for Hawaii offset', () => {
+      expect(getTimezoneAbbreviation('2024-12-18T17:16:00-10:00')).toBe('HST')
+    })
+
+    it('returns PST for Pacific winter', () => {
+      expect(getTimezoneAbbreviation('2025-01-15T11:07:00-08:00')).toBe('PST')
+    })
+
+    it('returns PDT for Pacific summer', () => {
+      expect(getTimezoneAbbreviation('2025-06-01T11:07:00-07:00')).toBe('PDT')
+    })
+
+    it('returns empty string for no offset', () => {
+      expect(getTimezoneAbbreviation('2025-01-15T11:07:00')).toBe('')
+    })
+
+    it('returns empty string for invalid date', () => {
+      expect(getTimezoneAbbreviation('not-a-date')).toBe('')
     })
   })
 })

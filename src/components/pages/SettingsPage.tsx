@@ -9,7 +9,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest } from '@phosphor-icons/react'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
@@ -31,6 +34,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [profileTimezone, setProfileTimezone] = useState('America/Los_Angeles')
   const { theme, setTheme } = useTheme()
 
   useEffect(() => {
@@ -43,7 +47,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
     try {
       const content = await file.text()
-      const previews = parseEBirdCSV(content)
+      const previews = parseEBirdCSV(content, profileTimezone)
 
       if (previews.length === 0) {
         toast.error('No valid data found in CSV')
@@ -142,6 +146,38 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
 
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <GlobeHemisphereWest size={14} />
+              eBird profile timezone
+            </label>
+            <Select value={profileTimezone} onValueChange={setProfileTimezone}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
+                <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific (PST/PDT)</SelectItem>
+                <SelectItem value="America/Denver">Mountain (MST/MDT)</SelectItem>
+                <SelectItem value="America/Chicago">Central (CST/CDT)</SelectItem>
+                <SelectItem value="America/New_York">Eastern (EST/EDT)</SelectItem>
+                <SelectItem value="America/Puerto_Rico">Atlantic (AST)</SelectItem>
+                <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                <SelectItem value="Europe/Paris">Central Europe (CET/CEST)</SelectItem>
+                <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
+                <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
+                <SelectItem value="Asia/Taipei">Taipei (CST)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
+                <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
+                <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Set this to match your eBird account timezone for accurate observation times
+            </p>
+          </div>
+
           <Button
             variant="outline"
             className="w-full justify-start"
