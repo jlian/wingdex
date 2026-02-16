@@ -69,6 +69,8 @@ function useHashRouter() {
     window.history.pushState(null, '', hash || window.location.pathname)
     if (subId) navigatingWithSubId.current = true
     setRoute({ tab, subId })
+    // Scroll to top on forward navigation into a detail view
+    window.scrollTo(0, 0)
   }, [])
 
   const handleTabChange = useCallback((val: string) => {
