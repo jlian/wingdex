@@ -70,7 +70,25 @@ describe('getWikimediaImage', () => {
     const result = await getWikimediaImage('Unique Robin C (Turdus uniqueus)')
     expect(result).toContain('fallback.jpg')
     expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls[1][0]).toContain('Turdus_uniqueus')
     expect(mockFetch.mock.calls[2][0]).toContain('Unique_Robin_C_bird')
+  })
+
+  it('falls back to common name + " bird" when common and scientific have no image', async () => {
+    // Strategy 1: common name — no image
+    mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
+    // Strategy 2: scientific — no image
+    mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
+    // Strategy 3: common name + " bird" — has image
+    mockWikiResponse(wikiData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' },
+      originalimage: undefined,
+    }))
+
+    const result = await getWikimediaImage('Unique Robin C2 (Turdus uniqueus2)')
+    expect(result).toContain('fallback.jpg')
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Robin_C2_bird')
   })
 
   it('returns undefined when all strategies fail', async () => {
@@ -118,7 +136,9 @@ describe('getWikimediaImage', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it('tries dehyphenated common name before the hyphenated title', async () => {
+  it('tries dehyphenated common name after common/scientific/common+bird for hyphenated species', async () => {
+    mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
+    mockWikiResponse(wikiData({ thumbnail: undefined, originalimage: undefined }))
     mockWikiResponse(wikiData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-dehyphenated.jpg' },
       originalimage: undefined,
@@ -126,8 +146,9 @@ describe('getWikimediaImage', () => {
 
     const result = await getWikimediaImage('Unique-Hyphenated Bird M')
     expect(result).toContain('dehyphenated.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Hyphenated_Bird_M')
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls[0][0]).toContain('Unique-Hyphenated_Bird_M')
+    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Hyphenated_Bird_M')
   })
 })
 
@@ -176,6 +197,21 @@ describe('getWikimediaSummary', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
+  it('falls back to common name when scientific summary is missing and no cache collision', async () => {
+    mockWikiResponse(wikiData({ extract: undefined }))
+    mockWikiResponse(wikiData({
+      title: 'Unique Jay J',
+      extract: 'Found via common name fallback.',
+    }))
+
+    const result = await getWikimediaSummary('Unique Jay J2 (Cyanocitta cristata2)')
+    expect(result).toBeDefined()
+    expect(result!.extract).toContain('common name fallback')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Jay_J2')
+    expect(mockFetch.mock.calls[1][0]).toContain('Cyanocitta_cristata2')
+  })
+
   it('caches results for subsequent calls', async () => {
     mockWikiResponse(wikiData({ extract: 'Cached bird.' }))
 
@@ -209,7 +245,9 @@ describe('getWikimediaSummary', () => {
     expect(result).toBeUndefined()
   })
 
-  it('tries dehyphenated common name first for summary lookups', async () => {
+  it('tries dehyphenated common name last for summary lookups', async () => {
+    mockWikiResponse(wikiData({ extract: undefined }))
+    mockWikiResponse(wikiData({ extract: undefined }))
     mockWikiResponse(wikiData({
       title: 'Unique Hyphenated Bird M',
       extract: 'Found via dehyphenated title.',
@@ -218,7 +256,8 @@ describe('getWikimediaSummary', () => {
     const result = await getWikimediaSummary('Unique-Hyphenated Bird M')
     expect(result).toBeDefined()
     expect(result!.extract).toContain('dehyphenated')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Hyphenated_Bird_M')
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls[0][0]).toContain('Unique-Hyphenated_Bird_M')
+    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Hyphenated_Bird_M')
   })
 })
