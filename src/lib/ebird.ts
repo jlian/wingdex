@@ -1,6 +1,7 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
 import { getTimezoneFromCoords, getOffsetForLocalWallTime } from './timezone'
+import { findBestMatch } from './taxonomy'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -148,9 +149,25 @@ export function exportOutingToEBirdCSV(
 ): string {
   const { includeHeader = false } = options
 
-  const outingDate = new Date(outing.startTime)
-  const date = `${String(outingDate.getMonth() + 1).padStart(2, '0')}/${String(outingDate.getDate()).padStart(2, '0')}/${outingDate.getFullYear()}`
-  const time = `${String(outingDate.getHours()).padStart(2, '0')}:${String(outingDate.getMinutes()).padStart(2, '0')}`
+  // Parse the local date/time from the stored ISO string (which may have
+  // a timezone offset like "2024-12-18T19:16:00-10:00").  Using
+  // new Date().getHours() would convert to the browser's timezone, giving
+  // wrong results when browser TZ differs from the observation TZ.
+  const localMatch = outing.startTime.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+  )
+  const date = localMatch
+    ? `${localMatch[2]}/${localMatch[3]}/${localMatch[1]}`
+    : (() => {
+        const d = new Date(outing.startTime)
+        return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`
+      })()
+  const time = localMatch
+    ? `${localMatch[4]}:${localMatch[5]}`
+    : (() => {
+        const d = new Date(outing.startTime)
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      })()
 
   const rows = observations
     .filter(obs => obs.certainty === 'confirmed')
@@ -227,9 +244,16 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
       // "X" means species present but not counted — treat as 1
       const count = rawCount.toUpperCase() === 'X' ? 1 : parseInt(rawCount || '1', 10)
 
-      const fullName = scientificName && !speciesName.includes('(')
+      const rawName = scientificName && !speciesName.includes('(')
         ? `${speciesName} (${scientificName})`
         : speciesName
+
+      // Normalize against taxonomy so CSV names like "Chukar" become
+      // "Chukar Partridge (Alectoris chukar)" matching the canonical taxonomy.
+      const taxonMatch = findBestMatch(rawName)
+      const fullName = taxonMatch
+        ? `${taxonMatch.common} (${taxonMatch.scientific})`
+        : rawName
 
       previews.push({
         speciesName: fullName,
