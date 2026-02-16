@@ -13,16 +13,14 @@ test.describe('App smoke tests', () => {
     await expect(header.getByText('BirdDex')).toBeVisible();
   });
 
-  test('renders all four nav tabs', async ({ page }) => {
+  test('renders top nav tabs', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // On desktop (default viewport), nav tabs are in the header
     const header = page.locator('header');
-    await expect(header.getByText('Home')).toBeVisible();
     await expect(header.getByText('Outings')).toBeVisible();
     await expect(header.getByText('BirdDex')).toBeVisible();
-    await expect(header.getByText('Settings')).toBeVisible();
   });
 
   test('can navigate between tabs', async ({ page }) => {
@@ -41,12 +39,12 @@ test.describe('App smoke tests', () => {
       page.getByText('Your BirdDex is empty').or(page.getByRole('heading', { name: 'BirdDex' }))
     ).toBeVisible({ timeout: 5_000 });
 
-    // Click Settings tab
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    // Open Settings via avatar button (last header button)
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
-    // Navigate back to Home
-    await page.getByRole('tab', { name: 'Home' }).first().click();
+    // Navigate back to Home via logo button (first header button)
+    await page.locator('header button').first().click();
     await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 });
   });
 
@@ -61,8 +59,8 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Navigate to Settings
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    // Navigate to Settings via avatar button
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Settings page should show expected sections

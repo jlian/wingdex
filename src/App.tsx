@@ -337,7 +337,7 @@ function AppContent({ user }: { user: UserInfo }) {
       {/* Footer */}
       <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
         <span>
-          BirdDex v1.1.0 by{' '}
+          BirdDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} by{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
             John Lian
           </a>

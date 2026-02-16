@@ -313,14 +313,14 @@ function normalizeDate(dateStr: string, timeStr?: string, lat?: number, lon?: nu
 
     if (lat != null && lon != null) {
       const timezone = getTimezoneFromCoords(lat, lon)
-      const tempDate = new Date(year, month, day, hours, minutes)
+      const tempDate = new Date(Date.UTC(year, month, day, hours, minutes))
       const offset = getUtcOffsetString(timezone, tempDate)
       return `${localStr}${offset}`
     }
 
     // Fallback: browser timezone
     const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const tempDate = new Date(year, month, day, hours, minutes)
+    const tempDate = new Date(Date.UTC(year, month, day, hours, minutes))
     const offset = getUtcOffsetString(browserTz, tempDate)
     return `${localStr}${offset}`
   } catch {

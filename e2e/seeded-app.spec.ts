@@ -5,11 +5,8 @@ test.describe('App with seeded data', () => {
   test('home page shows correct stat cards', async ({ page }) => {
     await injectSeedData(page)
 
-    // Stat cards should reflect seeded data: 17 confirmed species, 5 outings
-    await expect(page.getByText('Species').first()).toBeVisible({ timeout: 5_000 })
-    await expect(page.getByText('17', { exact: true }).first()).toBeVisible()
-    await expect(page.getByText('Outings').first()).toBeVisible()
-    await expect(page.getByText('5', { exact: true }).first()).toBeVisible()
+    // Hero count should reflect seeded data
+    await expect(page.getByText('17 species observed')).toBeVisible({ timeout: 5_000 })
   })
 
   test('home page shows recent species section', async ({ page }) => {
@@ -69,8 +66,8 @@ test.describe('App with seeded data', () => {
     await page.waitForTimeout(500)
 
     // Should show Red-tailed Hawk but not unrelated species
-    await expect(page.getByText('Red-tailed Hawk').first()).toBeVisible()
-    await expect(page.getByText('Blue Jay')).not.toBeVisible()
+    await expect(page.locator('p:visible', { hasText: 'Red-tailed Hawk' }).first()).toBeVisible()
+    await expect(page.locator('p:visible', { hasText: 'Blue Jay' })).toHaveCount(0)
   })
 
   test('clicking a species opens its detail view', async ({ page }) => {
@@ -79,7 +76,7 @@ test.describe('App with seeded data', () => {
     await page.getByRole('tab', { name: 'BirdDex' }).first().click()
     await expect(page.getByText('17 species observed')).toBeVisible({ timeout: 5_000 })
 
-    await page.getByText('Northern Cardinal').first().click()
+    await page.locator('p:visible', { hasText: 'Northern Cardinal' }).first().click()
     await page.waitForTimeout(1000)
 
     // Detail view should show species info

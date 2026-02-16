@@ -51,18 +51,26 @@ export function toLocalISOWithOffset(
   // Normalize separators: "2024:01:15 17:00:00" → "2024-01-15T17:00:00"
   const normalized = localDatetime.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3').replace(' ', 'T')
 
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  const tempDate = match
+    ? new Date(Date.UTC(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      Number(match[4]),
+      Number(match[5]),
+      Number(match[6] ?? '0'),
+    ))
+    : new Date(normalized)
+
   if (lat != null && lon != null) {
     const timezone = getTimezoneFromCoords(lat, lon)
-    // Parse the local datetime to get a Date (interpreted as local browser time, but we only
-    // need it for DST offset lookup — the actual date/time values come from the string)
-    const tempDate = new Date(normalized)
     const offset = getUtcOffsetString(timezone, tempDate)
     return `${normalized}${offset}`
   }
 
   // Fallback: use browser's local timezone
   const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const tempDate = new Date(normalized)
   const offset = getUtcOffsetString(browserTz, tempDate)
   return `${normalized}${offset}`
 }

@@ -11,6 +11,7 @@ import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { getEbirdUrl } from '@/lib/taxonomy'
+import { formatStoredDate } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
@@ -133,7 +134,7 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
             <BirdRow
               key={entry.speciesName}
               speciesName={entry.speciesName}
-              subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${new Date(entry.firstSeenDate).toLocaleDateString()}`}
+              subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${formatStoredDate(entry.firstSeenDate)}`}
               onClick={() => onSelectSpecies(entry.speciesName)}
             />
           )
@@ -229,7 +230,7 @@ function SpeciesDetail({
               </span>
               <span className="text-border">·</span>
               <span>
-                First <span className="font-semibold text-foreground">{new Date(entry.firstSeenDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                First <span className="font-semibold text-foreground">{formatStoredDate(entry.firstSeenDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               </span>
             </div>
           </div>
