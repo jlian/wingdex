@@ -646,9 +646,7 @@ function OutingDetail({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (!pendingDeleteObservation) return
-                for (const id of pendingDeleteObservation.ids) {
-                  data.updateObservation(id, { certainty: 'rejected' })
-                }
+                data.bulkUpdateObservations(pendingDeleteObservation.ids, { certainty: 'rejected' })
                 toast.success('Observation removed')
                 setPendingDeleteObservation(null)
               }}
