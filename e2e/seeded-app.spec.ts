@@ -41,7 +41,7 @@ test.describe('App with seeded data', () => {
     // Detail view should show a heading with the location name
     await expect(page.getByRole('heading', { name: 'Central Park, New York' })).toBeVisible()
     // Should show species from that outing
-    await expect(page.getByText('Northern Cardinal').first()).toBeVisible()
+    await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
 
   test('birddex page lists species with count', async ({ page }) => {
