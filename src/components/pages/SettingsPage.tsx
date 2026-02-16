@@ -178,8 +178,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Match your eBird Region Preference. eBird exports times in your
-              region&apos;s timezone. Choose &ldquo;None&rdquo; if you use World region.
+              eBird exports all times in your account&apos;s timezone, not the
+              observation&apos;s local time. Set this to your primary location.
             </p>
           </div>
 
