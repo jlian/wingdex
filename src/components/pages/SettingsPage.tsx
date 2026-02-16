@@ -47,7 +47,10 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
     try {
       const content = await file.text()
-      const previews = parseEBirdCSV(content, profileTimezone)
+      const previews = parseEBirdCSV(
+        content,
+        profileTimezone === 'observation-local' ? undefined : profileTimezone,
+      )
 
       if (previews.length === 0) {
         toast.error('No valid data found in CSV')
@@ -156,12 +159,12 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
-                <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
                 <SelectItem value="America/Los_Angeles">Pacific (PST/PDT)</SelectItem>
                 <SelectItem value="America/Denver">Mountain (MST/MDT)</SelectItem>
                 <SelectItem value="America/Chicago">Central (CST/CDT)</SelectItem>
                 <SelectItem value="America/New_York">Eastern (EST/EDT)</SelectItem>
+                <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
+                <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
                 <SelectItem value="America/Puerto_Rico">Atlantic (AST)</SelectItem>
                 <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
                 <SelectItem value="Europe/Paris">Central Europe (CET/CEST)</SelectItem>
@@ -171,10 +174,12 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
                 <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
                 <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
+                <SelectItem value="observation-local">None (times already local)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Set this to match your eBird account timezone for accurate observation times
+              Match your eBird Region Preference. eBird exports times in your
+              region&apos;s timezone. Choose &ldquo;None&rdquo; if you use World region.
             </p>
           </div>
 
