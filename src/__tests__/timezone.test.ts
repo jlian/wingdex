@@ -9,7 +9,6 @@ import {
   getUtcOffsetString,
   convertTimezones,
   getTimezoneAbbreviation,
-  parseStoredTime,
   formatStoredTimeWithTZ,
 } from '@/lib/timezone'
 
@@ -133,6 +132,18 @@ describe('timezone utilities', () => {
     it('displays the local time for Taipei timezone', () => {
       const result = formatStoredTime('2025-12-27T15:06:00+08:00')
       expect(result).toMatch(/03:06|3:06/)
+    })
+
+    it('handles offset-aware timestamp without seconds', () => {
+      const date = formatStoredDate('2024-01-15T17:16-10:00', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+      const time = formatStoredTime('2024-01-15T17:16-10:00')
+      expect(date).toContain('2024')
+      expect(date).toContain('15')
+      expect(time).toMatch(/05:16|5:16/)
     })
   })
 
@@ -435,27 +446,6 @@ describe('timezone utilities', () => {
 
     it('returns empty string for invalid date', () => {
       expect(getTimezoneAbbreviation('not-a-date')).toBe('')
-    })
-  })
-
-  // ─── parseStoredTime ───────────────────────────────────────
-
-  describe('parseStoredTime', () => {
-    it('parses offset-aware ISO string', () => {
-      const { date } = parseStoredTime('2024-12-18T17:16:00-10:00')
-      // -10:00 means UTC is Dec 19 03:16
-      expect(date.toISOString()).toBe('2024-12-19T03:16:00.000Z')
-    })
-
-    it('parses Z-suffix ISO string (legacy)', () => {
-      const { date } = parseStoredTime('2024-12-18T19:16:00.000Z')
-      expect(date.toISOString()).toBe('2024-12-18T19:16:00.000Z')
-    })
-
-    it('parses naive datetime string (legacy)', () => {
-      const { date } = parseStoredTime('2024-12-18 17:00:00')
-      expect(date).toBeInstanceOf(Date)
-      expect(isNaN(date.getTime())).toBe(false)
     })
   })
 

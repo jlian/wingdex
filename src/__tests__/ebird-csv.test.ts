@@ -542,6 +542,25 @@ describe('eBird CSV utilities', () => {
         expect(cell).toMatch(/^".*"$/)
       }
     })
+
+    it('preserves local calendar date from offset-aware timestamps', () => {
+      const dex: DexEntry[] = [
+        {
+          speciesName: 'Chukar (Alectoris chukar)',
+          firstSeenDate: '2025-01-15T23:30:00-10:00',
+          lastSeenDate: '2025-01-16T00:30:00-10:00',
+          totalOutings: 2,
+          totalCount: 3,
+          notes: '',
+        },
+      ]
+
+      const csv = exportDexToCSV(dex)
+      const [, row] = csv.split('\n')
+      const cells = parseCSVLineForTest(row)
+      expect(cells[2]).toBe('2025-01-15')
+      expect(cells[3]).toBe('2025-01-16')
+    })
   })
 
   describe('outing CSV export', () => {

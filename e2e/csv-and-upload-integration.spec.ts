@@ -74,7 +74,7 @@ async function loadApp(page: Page) {
 
 /** Navigate to Settings page. */
 async function goToSettings(page: Page) {
-  await page.locator('header button').last().click()
+  await page.getByRole('button', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 })
 }
 

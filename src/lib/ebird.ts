@@ -452,6 +452,9 @@ export function exportDexToCSV(dex: DexEntry[]): string {
 
 /** Format an ISO date string as YYYY-MM-DD for stable CSV output */
 function formatISODate(isoString: string): string {
+  const localDateMatch = isoString.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (localDateMatch) return localDateMatch[1]
+
   try {
     const d = new Date(isoString)
     if (isNaN(d.getTime())) return isoString

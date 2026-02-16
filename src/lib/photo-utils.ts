@@ -88,8 +88,6 @@ function parseGPS(
     const numEntries = view.getUint16(tiffOffset + gpsIfdOffset, littleEndian)
     let lat = 0, lon = 0, latRef = '', lonRef = ''
     
-    console.log(`📍 GPS IFD: ${numEntries} entries`)
-    
     for (let i = 0; i < numEntries; i++) {
       const entryOffset = tiffOffset + gpsIfdOffset + 2 + i * 12
       const tag = view.getUint16(entryOffset, littleEndian)
@@ -107,36 +105,28 @@ function parseGPS(
       
       if (tag === 1) { // GPSLatitudeRef
         latRef = String.fromCharCode(view.getUint8(dataOffset))
-        console.log(`  LatRef: ${latRef}`)
       } else if (tag === 3) { // GPSLongitudeRef
         lonRef = String.fromCharCode(view.getUint8(dataOffset))
-        console.log(`  LonRef: ${lonRef}`)
       } else if (tag === 2) { // GPSLatitude (3 rationals = 24 bytes, always offset)
         const d = view.getUint32(dataOffset, littleEndian) / view.getUint32(dataOffset + 4, littleEndian)
         const m = view.getUint32(dataOffset + 8, littleEndian) / view.getUint32(dataOffset + 12, littleEndian)
         const s = view.getUint32(dataOffset + 16, littleEndian) / view.getUint32(dataOffset + 20, littleEndian)
         lat = d + m / 60 + s / 3600
-        console.log(`  Lat: ${d}° ${m}' ${s}" = ${lat}`)
       } else if (tag === 4) { // GPSLongitude (3 rationals = 24 bytes, always offset)
         const d = view.getUint32(dataOffset, littleEndian) / view.getUint32(dataOffset + 4, littleEndian)
         const m = view.getUint32(dataOffset + 8, littleEndian) / view.getUint32(dataOffset + 12, littleEndian)
         const s = view.getUint32(dataOffset + 16, littleEndian) / view.getUint32(dataOffset + 20, littleEndian)
         lon = d + m / 60 + s / 3600
-        console.log(`  Lon: ${d}° ${m}' ${s}" = ${lon}`)
       }
     }
     
     if (lat && lon) {
-      const result = {
+      return {
         lat: latRef === 'S' ? -lat : lat,
         lon: lonRef === 'W' ? -lon : lon
       }
-      console.log(`📍 GPS result: ${result.lat}, ${result.lon}`)
-      return result
     }
-    console.warn('⚠️ GPS IFD found but lat/lon incomplete:', { lat, lon, latRef, lonRef })
-  } catch (err) {
-    console.error('❌ GPS parse error:', err)
+  } catch {
   }
   return null
 }
