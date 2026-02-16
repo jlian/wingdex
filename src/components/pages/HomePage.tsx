@@ -24,7 +24,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
     .slice(0, 5)
   const recentSpecies = dex
     .slice()
-    .sort((a, b) => new Date(b.addedDate || b.firstSeenDate).getTime() - new Date(a.addedDate || a.firstSeenDate).getTime())
+    .sort((a, b) => new Date(b.firstSeenDate).getTime() - new Date(a.firstSeenDate).getTime())
     .slice(0, 6)
 
   const thisMonth = new Date()
