@@ -112,6 +112,17 @@ export function useBirdDexData(userId: number) {
     })
   }
 
+  const bulkUpdateObservations = (ids: string[], updates: Partial<Observation>) => {
+    const idSet = new Set(ids)
+    setObservations(currentObservations => {
+      const updatedObservations = (currentObservations || []).map(observation =>
+        idSet.has(observation.id) ? { ...observation, ...updates } : observation
+      )
+      setDex(currentDex => buildDexFromState(outings || [], updatedObservations, currentDex || []))
+      return updatedObservations
+    })
+  }
+
   const updateDex = (
     outingId: string,
     confirmedObservations: Observation[]
@@ -340,6 +351,7 @@ export function useBirdDexData(userId: number) {
     deleteOuting,
     addObservations,
     updateObservation,
+    bulkUpdateObservations,
     updateDex,
     getOutingObservations,
     getOutingPhotos,

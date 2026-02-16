@@ -51,7 +51,7 @@ export default function OutingReview({
   // Manual date/time editing (#13)
   const [editingDateTime, setEditingDateTime] = useState(false)
   const [manualDate, setManualDate] = useState(
-    cluster.startTime.toISOString().split('T')[0] // YYYY-MM-DD
+    `${cluster.startTime.getFullYear()}-${String(cluster.startTime.getMonth() + 1).padStart(2, '0')}-${String(cluster.startTime.getDate()).padStart(2, '0')}`
   )
   const [manualTime, setManualTime] = useState(
     cluster.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -139,9 +139,7 @@ export default function OutingReview({
             url.searchParams.set('limit', '5')
             url.searchParams.set('viewbox', `${left},${top},${right},${bottom}`)
 
-            const res = await fetch(url.toString(), {
-              headers: { 'User-Agent': 'BirdDex-App/1.0' },
-            })
+            const res = await fetch(url.toString())
             if (!res.ok) throw new Error(`Nominatim ${res.status}`)
 
             const results = await res.json()
@@ -171,9 +169,7 @@ export default function OutingReview({
         url.searchParams.set('accept-language', 'en')
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
 
-        const res = await fetch(url.toString(), {
-          headers: { 'User-Agent': 'BirdDex-App/1.0' },
-        })
+        const res = await fetch(url.toString())
         if (!res.ok) throw new Error(`Nominatim ${res.status}`)
         return res.json()
       }
@@ -319,9 +315,7 @@ export default function OutingReview({
       url.searchParams.set('q', placeQuery)
       url.searchParams.set('limit', '5')
       url.searchParams.set('accept-language', 'en')
-      const res = await fetch(url.toString(), {
-        headers: { 'User-Agent': 'BirdDex-App/1.0' },
-      })
+      const res = await fetch(url.toString())
       if (!res.ok) throw new Error(`Nominatim ${res.status}`)
       const results = await res.json()
       setPlaceResults(results)

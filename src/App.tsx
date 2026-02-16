@@ -242,7 +242,7 @@ function AppContent({ user }: { user: UserInfo }) {
       <Toaster position="top-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
-        {/* ── Top header — non-sticky, scrolls with content ── */}
+        {/* ── Top header — sticky at top, content scrolls beneath ── */}
         <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">

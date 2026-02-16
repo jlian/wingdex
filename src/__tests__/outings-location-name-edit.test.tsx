@@ -37,6 +37,7 @@ function createDataStore(): BirdDexDataStore {
     deleteOuting: vi.fn(),
     addObservations: vi.fn(),
     updateObservation: vi.fn(),
+    bulkUpdateObservations: vi.fn(),
     updateDex: vi.fn(() => ({ newSpeciesCount: 0 })),
     getOutingObservations: vi.fn(() => []),
     getOutingPhotos: vi.fn(() => []),
