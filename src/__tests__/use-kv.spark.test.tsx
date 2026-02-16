@@ -69,6 +69,7 @@ describe('useKV (Spark runtime)', () => {
     await waitFor(() => {
       expect(latest?.value).toEqual(['from-kv'])
     })
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/__probe__'))).toBe(false)
 
     const getCallsAfterMount = fetchMock.mock.calls.filter(
       ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'GET',
@@ -120,6 +121,7 @@ describe('useKV (Spark runtime)', () => {
       )
       expect(postCalls.length).toBe(1)
     })
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/__probe__'))).toBe(false)
 
     rerender(<Harness storageKey={key} initialValue={[]} onChange={onChange} />)
 

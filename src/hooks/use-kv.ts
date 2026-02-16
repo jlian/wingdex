@@ -10,7 +10,6 @@ type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 
 const LS_PREFIX = 'birddex_kv_'
 const KV_BASE = '/_spark/kv'
-const SPARK_KV_PROBE_TTL_MS = 30_000
 const SPARK_KV_WRITE_RETRIES = 2
 const USER_SCOPED_KEY_PATTERN = /^u\d+_[a-zA-Z][a-zA-Z0-9_]*$/
 
@@ -27,40 +26,17 @@ function isSparkHostedRuntime(): boolean {
   return host === 'github.app' || host.endsWith('.github.app')
 }
 
-// Cached after first probe so we only check once
-let _sparkKvAvailable: boolean | null = null
-let _sparkKvCheckedAt = 0
-
-async function probeSparkKv(): Promise<boolean> {
-  if (!isSparkHostedRuntime()) {
-    _sparkKvAvailable = false
-    _sparkKvCheckedAt = Date.now()
-    return false
-  }
-
-  const isFresh = Date.now() - _sparkKvCheckedAt < SPARK_KV_PROBE_TTL_MS
-  if (_sparkKvAvailable !== null && isFresh) return _sparkKvAvailable
-  try {
-    // Probe by GETting a specific key. The listing endpoint (/_spark/kv)
-    // isn't supported by the production runtime. A 404 on a single key
-    // means "key not found" which still proves KV is reachable.
-    const res = await fetch(`${KV_BASE}/__probe__`, { method: 'GET' })
-    _sparkKvAvailable = res.ok || res.status === 404
-    _sparkKvCheckedAt = Date.now()
-  } catch {
-    _sparkKvAvailable = false
-    _sparkKvCheckedAt = Date.now()
-  }
-  return _sparkKvAvailable
-}
-
 async function sparkKvGet<T>(key: string): Promise<T | undefined> {
   try {
     const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
       method: 'GET',
       headers: { 'Content-Type': 'text/plain' },
     })
-    if (!res.ok) return undefined
+    if (res.status === 404) return undefined
+    if (!res.ok) {
+      console.warn(`[useKV] Unexpected Spark KV GET status ${res.status} for key "${key}".`)
+      return undefined
+    }
     return JSON.parse(await res.text())
   } catch { return undefined }
 }
@@ -146,20 +122,14 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
 
     let cancelled = false
     ;(async () => {
-      const available = await probeSparkKv()
+      useSparkKv.current = true
+      const stored = await sparkKvGet<T>(key)
       if (cancelled) return
-      useSparkKv.current = available
-      if (available) {
-        const stored = await sparkKvGet<T>(key)
-        if (cancelled) return
-        if (stored !== undefined) {
-          setValue(stored)
-        } else {
-          await sparkKvSet(key, initialValueRef.current)
-          setValue(initialValueRef.current)
-        }
+      if (stored !== undefined) {
+        setValue(stored)
       } else {
-        console.warn(`[useKV] Spark KV unavailable in Spark runtime for key "${key}".`)
+        await sparkKvSet(key, initialValueRef.current)
+        setValue(initialValueRef.current)
       }
     })()
     return () => { cancelled = true }

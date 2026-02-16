@@ -25,6 +25,7 @@
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
+        "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
