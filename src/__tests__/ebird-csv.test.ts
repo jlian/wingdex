@@ -829,3 +829,146 @@ describe('eBird CSV utilities', () => {
       expect(winter.date).toBe('2025-01-15T11:07:00-08:00')
     })
   })
+
+  /* ---------- groupPreviewsIntoOutings timezone edge cases ---------- */
+
+  describe('groupPreviewsIntoOutings timezone edge cases', () => {
+    it('groups by local date, not UTC date, for negative offset near midnight', () => {
+      // Two Hawaii observations at 11 PM and 11:30 PM local (Dec 18)
+      // In UTC these are Dec 19 09:00 and 09:30 — but should group under Dec 18
+      const previews = [
+        {
+          speciesName: 'Chukar (Alectoris chukar)',
+          date: '2024-12-18T23:00:00-10:00',
+          location: 'Maui',
+          count: 1,
+          lat: 20.682568,
+          lon: -156.442741,
+        },
+        {
+          speciesName: 'Rock Pigeon (Columba livia)',
+          date: '2024-12-18T23:30:00-10:00',
+          location: 'Maui',
+          count: 2,
+          lat: 20.682568,
+          lon: -156.442741,
+        },
+      ]
+
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+      // Both are on local date 2024-12-18, same location → one outing
+      expect(outings).toHaveLength(1)
+      expect(observations).toHaveLength(2)
+      // Outing startTime should preserve the offset-aware format
+      expect(outings[0].startTime).toContain('2024-12-18')
+    })
+
+    it('splits observations across different local dates even if UTC date is the same', () => {
+      // Taipei Dec 27 00:30 (+08:00) = Dec 26 16:30 UTC
+      // Taipei Dec 28 00:30 (+08:00) = Dec 27 16:30 UTC
+      // Different local dates → different outings
+      const previews = [
+        {
+          speciesName: 'Bird A',
+          date: '2025-12-27T00:30:00+08:00',
+          location: 'Taipei',
+          count: 1,
+          lat: 24.99591,
+          lon: 121.588157,
+        },
+        {
+          speciesName: 'Bird B',
+          date: '2025-12-28T00:30:00+08:00',
+          location: 'Taipei',
+          count: 1,
+          lat: 24.99591,
+          lon: 121.588157,
+        },
+      ]
+
+      const { outings } = groupPreviewsIntoOutings(previews, 'u1')
+      expect(outings).toHaveLength(2)
+    })
+
+    it('endTime of grouped outing is offset-aware when GPS is available', () => {
+      const previews = [
+        {
+          speciesName: 'Bird A',
+          date: '2024-12-18T17:16:00-10:00',
+          location: 'Maui',
+          count: 1,
+          lat: 20.682568,
+          lon: -156.442741,
+        },
+        {
+          speciesName: 'Bird B',
+          date: '2024-12-18T19:16:00-10:00',
+          location: 'Maui',
+          count: 1,
+          lat: 20.682568,
+          lon: -156.442741,
+        },
+      ]
+
+      const { outings } = groupPreviewsIntoOutings(previews, 'u1')
+      expect(outings).toHaveLength(1)
+      // endTime should have -10:00 offset, not Z
+      expect(outings[0].endTime).toMatch(/-10:00$/)
+    })
+  })
+
+  /* ---------- import → export roundtrip ---------- */
+
+  describe('import → export roundtrip', () => {
+    it('preserves Hawaii observation date/time through import → group → export', () => {
+      const csv = ebirdCSV([
+        'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // Import
+      const previews = parseEBirdCSV(csv)
+      expect(previews[0].date).toBe('2024-12-18T19:16:00-10:00')
+
+      // Group into outings
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+      expect(outings).toHaveLength(1)
+      // startTime should preserve local date
+      expect(outings[0].startTime).toContain('2024-12-18')
+
+      // Export
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const fields = parseCSVLineForTest(exportCsv)
+      // Date should be 12/18/2024 (local), not 12/19 (UTC)
+      expect(fields[8]).toBe('12/18/2024')
+      // Time should be 19:16 (7:16 PM local)
+      expect(fields[9]).toBe('19:16')
+    })
+
+    it('preserves Taipei observation date/time through import → group → export', () => {
+      const csv = ebirdCSV([
+        'S290456247,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const fields = parseCSVLineForTest(exportCsv)
+      expect(fields[8]).toBe('12/27/2025')
+      expect(fields[9]).toBe('15:06')
+    })
+
+    it('preserves Seattle summer observation through roundtrip', () => {
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Greenlake,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const fields = parseCSVLineForTest(exportCsv)
+      expect(fields[8]).toBe('06/01/2025')
+      expect(fields[9]).toBe('11:07')
+    })
+  })

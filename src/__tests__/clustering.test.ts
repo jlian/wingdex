@@ -312,3 +312,151 @@ describe('findMatchingOuting', () => {
     expect(findMatchingOuting(cluster, [outing1, outing2])).toBe(outing1)
   })
 })
+
+// ─── Timezone-aware clustering edge cases ─────────────────
+
+describe('clusterPhotosIntoOutings (offset-aware exifTime)', () => {
+  it('clusters photos with same UTC instant from different timezone offsets', () => {
+    // Both represent the exact same UTC instant: 2025-06-01T18:00:00Z
+    // Hawaii: 8:00 AM local (-10:00)
+    // Seattle: 11:00 AM local (-07:00)
+    const photos = [
+      makePhoto({
+        exifTime: '2025-06-01T08:00:00-10:00',  // = 18:00 UTC
+        gps: { lat: 20.68, lon: -156.44 },
+      }),
+      makePhoto({
+        exifTime: '2025-06-01T11:00:00-07:00',  // = 18:00 UTC
+        gps: { lat: 47.6, lon: -122.4 },
+      }),
+    ]
+    const clusters = clusterPhotosIntoOutings(photos)
+    // Same UTC instant → within 5hr threshold, but >6km apart → split by distance
+    expect(clusters).toHaveLength(2)
+  })
+
+  it('clusters nearby photos with offset-aware times within threshold', () => {
+    // Two photos in Seattle, 2 hours apart local time, same GPS area
+    const photos = [
+      makePhoto({
+        exifTime: '2025-06-01T09:00:00-07:00',
+        gps: { lat: 47.6, lon: -122.4 },
+      }),
+      makePhoto({
+        exifTime: '2025-06-01T11:00:00-07:00',
+        gps: { lat: 47.61, lon: -122.41 },
+      }),
+    ]
+    const clusters = clusterPhotosIntoOutings(photos)
+    expect(clusters).toHaveLength(1)
+    expect(clusters[0].photos).toHaveLength(2)
+  })
+
+  it('splits photos at same local time but far apart in UTC (different TZs)', () => {
+    // "11:00 AM" in Taipei (+08:00) = 03:00 UTC
+    // "11:00 AM" in Hawaii (-10:00) = 21:00 UTC
+    // 18 hours apart in UTC → well beyond 5hr threshold
+    const photos = [
+      makePhoto({
+        exifTime: '2025-06-01T11:00:00+08:00',   // = 03:00 UTC
+        gps: { lat: 24.99, lon: 121.59 },
+      }),
+      makePhoto({
+        exifTime: '2025-06-01T11:00:00-10:00',   // = 21:00 UTC
+        gps: { lat: 20.68, lon: -156.44 },
+      }),
+    ]
+    const clusters = clusterPhotosIntoOutings(photos)
+    // 18h apart in UTC → split
+    expect(clusters).toHaveLength(2)
+  })
+
+  it('correctly sorts offset-aware photos by UTC for clustering', () => {
+    // Photo A: 10 PM Hawaii (-10) = 08:00 UTC next day → 2025-06-02T08:00Z
+    // Photo B: 6 AM Taipei (+8) = 22:00 UTC prev day → 2025-06-01T22:00Z
+    // Photo B is actually *earlier* in UTC despite later local-calendar feel
+    const photos = [
+      makePhoto({
+        exifTime: '2025-06-02T10:00:00-10:00',  // = June 2 20:00 UTC
+        gps: { lat: 20.68, lon: -156.44 },
+      }),
+      makePhoto({
+        exifTime: '2025-06-02T06:00:00+08:00',  // = June 1 22:00 UTC
+        gps: { lat: 24.99, lon: 121.59 },
+      }),
+    ]
+    const clusters = clusterPhotosIntoOutings(photos)
+    // 22h apart, different locations → 2 clusters
+    expect(clusters).toHaveLength(2)
+    // The Taipei photo should sort first (earlier UTC)
+    expect(clusters[0].photos[0].exifTime).toContain('+08:00')
+  })
+
+  it('cluster start/end times are correct UTC instants from offset-aware strings', () => {
+    const photos = [
+      makePhoto({ exifTime: '2025-06-01T08:00:00-10:00' }),  // = 18:00 UTC
+      makePhoto({ exifTime: '2025-06-01T10:00:00-10:00' }),  // = 20:00 UTC
+      makePhoto({ exifTime: '2025-06-01T12:00:00-10:00' }),  // = 22:00 UTC
+    ]
+    const clusters = clusterPhotosIntoOutings(photos)
+    expect(clusters).toHaveLength(1)
+    expect(clusters[0].startTime.toISOString()).toBe('2025-06-01T18:00:00.000Z')
+    expect(clusters[0].endTime.toISOString()).toBe('2025-06-01T22:00:00.000Z')
+  })
+})
+
+describe('findMatchingOuting (offset-aware strings)', () => {
+  it('matches cluster with offset-aware outing times', () => {
+    // Outing stored as Hawaii offset-aware ISO
+    const outing = makeOuting({
+      startTime: '2024-12-18T17:00:00-10:00',  // = Dec 19 03:00 UTC
+      endTime: '2024-12-18T19:00:00-10:00',    // = Dec 19 05:00 UTC
+      lat: 20.68,
+      lon: -156.44,
+    })
+    // Cluster also at Hawaii times
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2024-12-18T18:00:00-10:00'),  // = Dec 19 04:00 UTC
+      endTime: new Date('2024-12-18T18:30:00-10:00'),
+      centerLat: 20.69,
+      centerLon: -156.45,
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBe(outing)
+  })
+
+  it('does not match when offset-aware times are far apart in UTC despite similar local time', () => {
+    // Outing in Taipei: 8 AM local (+08:00) = midnight UTC
+    const outing = makeOuting({
+      startTime: '2025-06-01T08:00:00+08:00',  // = 00:00 UTC
+      endTime: '2025-06-01T10:00:00+08:00',    // = 02:00 UTC
+      lat: 24.99,
+      lon: 121.59,
+    })
+    // Cluster in Hawaii: 8 AM local (-10:00) = 18:00 UTC
+    // 16 hours apart → well outside 5hr buffer
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2025-06-01T08:00:00-10:00'),  // = 18:00 UTC
+      endTime: new Date('2025-06-01T09:00:00-10:00'),
+      centerLat: 20.68,
+      centerLon: -156.44,
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBeUndefined()
+  })
+
+  it('matches cluster when offset-aware times are near in UTC despite different local dates', () => {
+    // Outing in Hawaii at 11 PM Dec 18 (-10:00) = Dec 19 09:00 UTC
+    const outing = makeOuting({
+      startTime: '2024-12-18T23:00:00-10:00',  // = Dec 19 09:00 UTC
+      endTime: '2024-12-18T23:30:00-10:00',    // = Dec 19 09:30 UTC
+    })
+    // Cluster 2 hours later in UTC = Dec 19 11:00 UTC (within 5hr buffer)
+    const cluster = {
+      photos: [makePhoto()],
+      startTime: new Date('2024-12-19T11:00:00Z'),
+      endTime: new Date('2024-12-19T11:30:00Z'),
+    }
+    expect(findMatchingOuting(cluster, [outing])).toBe(outing)
+  })
+})
