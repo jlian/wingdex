@@ -1,0 +1,26 @@
+{
+  "imageFile": "Great_blue_heron_with_Mount_Baker_from_Drayton_Harbor.jpg",
+  "context": {
+    "lat": 48.9784,
+    "lon": -122.7913,
+    "month": 9,
+    "locationName": "Drayton Harbor, Blaine, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.90}],\"birdCenter\":[50,85],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Great Blue Heron (Ardea herodias)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      50,
+      85
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:15.633Z"
+}

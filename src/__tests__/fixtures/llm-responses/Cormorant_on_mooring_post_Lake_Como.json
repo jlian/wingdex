@@ -1,0 +1,26 @@
+{
+  "imageFile": "Cormorant_on_mooring_post_Lake_Como.jpg",
+  "context": {
+    "lat": 45.8097,
+    "lon": 9.0846,
+    "month": 8,
+    "locationName": "Lake Como, Italy"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.90}],\"birdCenter\":[45,40],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Great Cormorant (Phalacrocorax carbo)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      45,
+      40
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:40.478Z"
+}

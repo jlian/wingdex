@@ -1,0 +1,26 @@
+{
+  "imageFile": "Great_blue_heron_roosting_at_Carkeek_Park.jpg",
+  "context": {
+    "lat": 47.7117,
+    "lon": -122.3771,
+    "month": 7,
+    "locationName": "Carkeek Park, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.95}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Great Blue Heron (Ardea herodias)",
+        "confidence": 0.95
+      }
+    ],
+    "birdCenter": [
+      40,
+      55
+    ],
+    "birdSize": "medium",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:07.441Z"
+}

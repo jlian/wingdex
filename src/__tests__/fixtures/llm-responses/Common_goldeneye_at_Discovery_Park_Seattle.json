@@ -1,0 +1,26 @@
+{
+  "imageFile": "Common_goldeneye_at_Discovery_Park_Seattle.jpeg",
+  "context": {
+    "lat": 47.66,
+    "lon": -122.4287,
+    "month": 0,
+    "locationName": "Discovery Park, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.85}],\"birdCenter\":[70,30],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Western Gull (Larus occidentalis)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      70,
+      30
+    ],
+    "birdSize": "medium",
+    "multipleBirds": true
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:01.290Z"
+}

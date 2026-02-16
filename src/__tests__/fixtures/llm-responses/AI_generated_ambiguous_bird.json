@@ -1,0 +1,26 @@
+{
+  "imageFile": "AI_generated_ambiguous_bird.png",
+  "context": {
+    "lat": 40,
+    "lon": -100,
+    "month": 5,
+    "locationName": "Unknown (AI-generated test image)"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Least Flycatcher (Empidonax minimus)\",\"confidence\":0.88}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Least Flycatcher (Empidonax minimus)",
+        "confidence": 0.88
+      }
+    ],
+    "birdCenter": [
+      50,
+      55
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:55.379Z"
+}

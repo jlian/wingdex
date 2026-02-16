@@ -30,38 +30,123 @@ const FIXTURE_DIR = join(import.meta.dirname, '..', 'src', '__tests__', 'fixture
 mkdirSync(FIXTURE_DIR, { recursive: true })
 
 // Canonical image set with context metadata
+// GPS/month derived from EXIF data and the real eBird CSV export.
 const IMAGES = [
+  // ── Seattle / Pacific Northwest ──────────────────────────
   {
     file: 'American_goldfinch_in_maple_at_Union_Bay_Natural_Area.jpg',
-    lat: 47.6564, lon: -122.2924, month: 8, location: 'Union Bay Natural Area, Seattle, WA',
+    lat: 47.6543, lon: -122.2952, month: 10, location: 'Union Bay Natural Area, Seattle, WA',
   },
   {
     file: "Anna's_hummingbird_in_Seattle_garden.jpg",
-    lat: 47.6, lon: -122.33, month: 3, location: 'Seattle, WA',
+    lat: 47.6399, lon: -122.4039, month: 6, location: 'Seattle, WA',
   },
   {
-    file: 'Chukar_partridge_near_Haleakala_summit_Maui.jpg',
-    lat: 20.7204, lon: -156.1552, month: 11, location: 'Haleakala, Maui, HI',
+    file: 'Belted_kingfisher_above_Puget_Sound_Carkeek_Park.jpg',
+    lat: 47.7117, lon: -122.3771, month: 7, location: 'Carkeek Park, Seattle, WA',
   },
   {
     file: 'Cormorants_on_navigation_marker_Skagit_Bay.jpg',
     lat: 48.3918, lon: -122.4885, month: 6, location: 'Skagit Bay, WA',
   },
   {
+    file: 'Cormorants_on_rock_Monterey_Harbor_sunset.jpg',
+    lat: 36.6002, lon: -121.8947, month: 8, location: 'Monterey Harbor, CA',
+  },
+  {
     file: 'Dark-eyed_junco_in_foliage_Seattle_Arboretum.jpg',
     lat: 47.6399, lon: -122.2958, month: 10, location: 'Washington Park Arboretum, Seattle, WA',
   },
   {
-    file: 'Stellers_Jay_eating_cherries_Seattle_backyard.jpg',
-    lat: 47.68, lon: -122.34, month: 7, location: 'Seattle, WA',
+    file: 'Great_blue_heron_roosting_at_Carkeek_Park.jpg',
+    lat: 47.7117, lon: -122.3771, month: 7, location: 'Carkeek Park, Seattle, WA',
   },
+  {
+    file: 'Great_blue_heron_with_Mount_Baker_from_Drayton_Harbor.jpg',
+    lat: 48.9784, lon: -122.7913, month: 9, location: 'Drayton Harbor, Blaine, WA',
+  },
+  {
+    file: 'Gulls_on_picnic_tables_Seattle_waterfront.jpg',
+    lat: 47.6062, lon: -122.3421, month: 7, location: 'Seattle Waterfront, WA',
+  },
+  {
+    file: 'Hairy_woodpecker_on_mossy_tree_Carkeek_Park.jpg',
+    lat: 47.7117, lon: -122.3771, month: 6, location: 'Carkeek Park, Seattle, WA',
+  },
+  {
+    file: 'Lesser_scaup_hen_on_Union_Bay_Natural_Area.jpg',
+    lat: 47.6543, lon: -122.2952, month: 10, location: 'Union Bay Natural Area, Seattle, WA',
+  },
+  {
+    file: 'Mallard_drake_on_Union_Bay_Natural_Area.jpg',
+    lat: 47.6543, lon: -122.2952, month: 10, location: 'Union Bay Natural Area, Seattle, WA',
+  },
+  {
+    file: 'Stellers_Jay_eating_cherries_Seattle_backyard.jpg',
+    lat: 47.6399, lon: -122.4039, month: 5, location: 'Seattle, WA',
+  },
+  {
+    file: 'Tufted_puffin_near_Smith_Island_Washington.jpg',
+    lat: 48.3204, lon: -122.8352, month: 7, location: 'Smith Island, WA',
+  },
+  {
+    file: 'Common_goldeneye_at_Discovery_Park_Seattle.jpeg',
+    lat: 47.6600, lon: -122.4287, month: 0, location: 'Discovery Park, Seattle, WA',
+  },
+  // ── Chicago / Midwest ────────────────────────────────────
+  {
+    file: 'Black-throated_blue_warbler_in_Chicago_park.jpg',
+    lat: 41.9632, lon: -87.6342, month: 8, location: 'Montrose Point, Chicago, IL',
+  },
+  {
+    file: 'Female_northern_cardinal_in_Chicago_park.jpg',
+    lat: 41.9632, lon: -87.6342, month: 8, location: 'Chicago, IL',
+  },
+  {
+    file: 'House_sparrow_bathing_in_mosaic_fountain_Park_Ridge.jpg',
+    lat: 42.0089, lon: -87.8310, month: 8, location: 'Park Ridge, IL',
+  },
+  {
+    file: 'Palm_warbler_on_Lake_Michigan_shore_Chicago.jpg',
+    lat: 41.9632, lon: -87.6342, month: 8, location: 'Lake Michigan shore, Chicago, IL',
+  },
+  {
+    file: 'Sanderling_foraging_Lake_Michigan_Chicago.jpg',
+    lat: 41.9632, lon: -87.6342, month: 8, location: 'Lake Michigan, Chicago, IL',
+  },
+  // ── Hawaii ───────────────────────────────────────────────
+  {
+    file: 'Chukar_partridge_near_Haleakala_summit_Maui.jpg',
+    lat: 20.7148, lon: -156.2502, month: 11, location: 'Haleakala, Maui, HI',
+  },
+  // ── Europe ───────────────────────────────────────────────
   {
     file: 'Pigeons_near_Museumplein_Amsterdam.jpg',
-    lat: 52.3579, lon: 4.8815, month: 4, location: 'Museumplein, Amsterdam, Netherlands',
+    lat: 52.3581, lon: 4.8826, month: 11, location: 'Museumplein, Amsterdam, Netherlands',
   },
   {
+    file: 'Cormorant_on_mooring_post_Lake_Como.jpg',
+    lat: 45.8097, lon: 9.0846, month: 8, location: 'Lake Como, Italy',
+  },
+  // ── Asia ─────────────────────────────────────────────────
+  {
     file: 'Geese_in_misty_rice_paddies_Dehua_Fujian.jpg',
-    lat: 25.7, lon: 118.24, month: 1, location: 'Dehua, Fujian, China',
+    lat: 25.7, lon: 118.24, month: 0, location: 'Dehua, Fujian, China',
+  },
+  {
+    file: 'Common_kingfisher_at_Taipei_Zoo.jpeg',
+    lat: 24.998, lon: 121.581, month: 11, location: 'Taipei Zoo, Taiwan',
+  },
+  // ── Edge cases ───────────────────────────────────────────
+  {
+    file: 'AI_generated_ambiguous_bird.png',
+    // AI-generated image — no real GPS. Use generic coords.
+    lat: 40.0, lon: -100.0, month: 5, location: 'Unknown (AI-generated test image)',
+  },
+  {
+    file: 'Unknown_bird_no_GPS.jpeg',
+    // Intentionally no GPS — tests the "no location" path
+    lat: undefined, lon: undefined, month: undefined, location: undefined,
   },
 ]
 

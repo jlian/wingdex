@@ -1,0 +1,26 @@
+{
+  "imageFile": "House_sparrow_bathing_in_mosaic_fountain_Park_Ridge.jpg",
+  "context": {
+    "lat": 42.0089,
+    "lon": -87.831,
+    "month": 8,
+    "locationName": "Park Ridge, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "House Sparrow (Passer domesticus)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      50,
+      55
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:19.799Z"
+}

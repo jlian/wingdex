@@ -21,7 +21,7 @@ import { findBestMatch } from '@/lib/taxonomy'
 
 interface Fixture {
   imageFile: string
-  context: { lat: number; lon: number; month: number; locationName: string }
+  context: { lat?: number; lon?: number; month?: number; locationName?: string }
   rawResponse: string
   parsed: {
     candidates: { species: string; confidence: number }[]
@@ -66,6 +66,13 @@ function replayFixture(fixture: Fixture) {
   })
 }
 
+/** Build location param — returns null when lat/lon are missing (no-GPS edge case) */
+function fixtureLocation(f: Fixture) {
+  return f.context.lat != null && f.context.lon != null
+    ? { lat: f.context.lat, lon: f.context.lon }
+    : null
+}
+
 // ── Tests ───────────────────────────────────────────────────
 
 describe('LLM fixture replay', () => {
@@ -94,8 +101,11 @@ describe('LLM fixture replay', () => {
       expect(f.parsed).toBeTruthy()
       expect(Array.isArray(f.parsed.candidates)).toBe(true)
       expect(f.model).toBeTruthy()
-      expect(f.context.lat).toBeTypeOf('number')
-      expect(f.context.lon).toBeTypeOf('number')
+      // No-GPS fixture has empty context; all others must have lat/lon
+      if (f.context.lat != null) {
+        expect(f.context.lat).toBeTypeOf('number')
+        expect(f.context.lon).toBeTypeOf('number')
+      }
     }
   )
 
@@ -159,7 +169,7 @@ describe('LLM fixture replay', () => {
 
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
-          { lat: f.context.lat, lon: f.context.lon },
+          fixtureLocation(f),
           f.context.month,
           f.context.locationName,
         )
@@ -184,7 +194,7 @@ describe('LLM fixture replay', () => {
 
           const result = await identifyBirdInPhoto(
             'data:image/jpeg;base64,test',
-            { lat: f.context.lat, lon: f.context.lon },
+            fixtureLocation(f),
             f.context.month,
             f.context.locationName,
           )
@@ -211,7 +221,7 @@ describe('LLM fixture replay', () => {
 
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
-          { lat: f.context.lat, lon: f.context.lon },
+          fixtureLocation(f),
           f.context.month,
         )
 
@@ -270,7 +280,7 @@ describe('LLM fixture replay', () => {
 
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
-          { lat: f.context.lat, lon: f.context.lon },
+          fixtureLocation(f),
           f.context.month,
         )
 
@@ -289,7 +299,7 @@ describe('LLM fixture replay', () => {
 
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
-          { lat: f.context.lat, lon: f.context.lon },
+          fixtureLocation(f),
           f.context.month,
         )
 
@@ -307,7 +317,7 @@ describe('LLM fixture replay', () => {
 
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
-          { lat: f.context.lat, lon: f.context.lon },
+          fixtureLocation(f),
           f.context.month,
         )
 
@@ -325,7 +335,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -340,7 +350,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -355,7 +365,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -369,7 +379,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -388,7 +398,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
       )
 
@@ -401,7 +411,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -415,7 +425,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )
@@ -429,7 +439,7 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto(
         'data:image/jpeg;base64,test',
-        { lat: f.context.lat, lon: f.context.lon },
+        fixtureLocation(f),
         f.context.month,
         f.context.locationName,
       )

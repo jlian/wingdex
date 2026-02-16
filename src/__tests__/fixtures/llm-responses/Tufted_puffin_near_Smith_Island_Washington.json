@@ -1,0 +1,26 @@
+{
+  "imageFile": "Tufted_puffin_near_Smith_Island_Washington.jpg",
+  "context": {
+    "lat": 48.3204,
+    "lon": -122.8352,
+    "month": 7,
+    "locationName": "Smith Island, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95}],\"birdCenter\":[25,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Tufted Puffin (Fratercula cirrhata)",
+        "confidence": 0.95
+      }
+    ],
+    "birdCenter": [
+      25,
+      55
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:55.462Z"
+}

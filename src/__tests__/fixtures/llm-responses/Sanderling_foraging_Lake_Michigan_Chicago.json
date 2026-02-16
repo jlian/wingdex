@@ -1,0 +1,26 @@
+{
+  "imageFile": "Sanderling_foraging_Lake_Michigan_Chicago.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Lake Michigan, Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.90}],\"birdCenter\":[30,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Sanderling (Calidris alba)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      30,
+      60
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:32.529Z"
+}

@@ -1,0 +1,26 @@
+{
+  "imageFile": "Gulls_on_picnic_tables_Seattle_waterfront.jpg",
+  "context": {
+    "lat": 47.6062,
+    "lon": -122.3421,
+    "month": 7,
+    "locationName": "Seattle Waterfront, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.85}],\"birdCenter\":[30,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Western Gull (Larus occidentalis)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      30,
+      75
+    ],
+    "birdSize": "medium",
+    "multipleBirds": true
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:23.243Z"
+}

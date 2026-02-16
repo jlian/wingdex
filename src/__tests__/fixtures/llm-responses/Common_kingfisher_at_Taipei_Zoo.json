@@ -1,0 +1,26 @@
+{
+  "imageFile": "Common_kingfisher_at_Taipei_Zoo.jpeg",
+  "context": {
+    "lat": 24.998,
+    "lon": 121.581,
+    "month": 11,
+    "locationName": "Taipei Zoo, Taiwan"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.95}],\"birdCenter\":[70,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Common Kingfisher (Alcedo atthis)",
+        "confidence": 0.95
+      }
+    ],
+    "birdCenter": [
+      70,
+      55
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:48.881Z"
+}
