@@ -267,6 +267,7 @@ describe('getWikimediaSummary', () => {
     expect(result!.extract).toContain('dehyphenated')
     expect(mockFetch).toHaveBeenCalledTimes(3)
     expect(mockFetch.mock.calls[0][0]).toContain('Unique-Hyphenated_Bird_M')
+    expect(mockFetch.mock.calls[1][0]).toContain('Unique-Hyphenated_Bird_M_bird')
     expect(mockFetch.mock.calls[2][0]).toContain('Unique_Hyphenated_Bird_M')
   })
 })
