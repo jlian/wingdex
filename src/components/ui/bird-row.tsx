@@ -33,9 +33,15 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
       role="button"
       tabIndex={0}
       className="flex items-stretch gap-3 px-2 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={onClick}
+      onClick={(event) => {
+        // Ignore clicks on nested interactive elements (e.g. action buttons)
+        if ((event.target as HTMLElement).closest('button, a, [role="button"]') !== event.currentTarget) return
+        onClick()
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
+          // Ignore keypresses originating from nested interactive elements
+          if ((event.target as HTMLElement).closest('button, a, [role="button"]') !== event.currentTarget) return
           event.preventDefault()
           onClick()
         }

@@ -34,7 +34,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [profileTimezone, setProfileTimezone] = useState('America/Los_Angeles')
+  const [profileTimezone, setProfileTimezone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
+  )
   const { theme, setTheme } = useTheme()
 
   useEffect(() => {

@@ -39,12 +39,12 @@ test.describe('App smoke tests', () => {
       page.getByText('Your BirdDex is empty').or(page.getByRole('heading', { name: 'BirdDex' }))
     ).toBeVisible({ timeout: 5_000 });
 
-    // Open Settings via avatar button (last header button)
-    await page.locator('header button').last().click();
+    // Open Settings via avatar button
+    await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
-    // Navigate back to Home via logo button (first header button)
-    await page.locator('header button').first().click();
+    // Navigate back to Home via logo button
+    await page.getByRole('button', { name: 'Home' }).click();
     await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 });
   });
 
@@ -60,7 +60,7 @@ test.describe('App smoke tests', () => {
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Navigate to Settings via avatar button
-    await page.locator('header button').last().click();
+    await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Settings page should show expected sections
