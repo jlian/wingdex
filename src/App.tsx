@@ -244,7 +244,7 @@ function AppContent({ user }: { user: UserInfo }) {
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
         {/* ── Top header — sticky at top, content scrolls beneath ── */}
         <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo — navigates to Home */}
               <button
@@ -291,7 +291,7 @@ function AppContent({ user }: { user: UserInfo }) {
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="w-full max-w-5xl mx-auto pb-8">
+        <main className="w-full max-w-3xl mx-auto pb-8">
           <TabsContent value="home" className="mt-0" forceMount hidden={tab !== 'home'}>
             <HomePage
               data={data}
