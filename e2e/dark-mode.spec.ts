@@ -20,7 +20,8 @@ test.describe('Dark mode', () => {
     expect(lightVars.colorForeground.length).toBeGreaterThan(0);
     expect(lightVars.bodyBackground).not.toBe('rgba(0, 0, 0, 0)');
 
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    // Navigate to Settings via avatar button (Settings is no longer a tab)
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
     await page.getByRole('button', { name: 'Dark' }).click();
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -45,8 +46,8 @@ test.describe('Dark mode', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Navigate to Settings
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    // Navigate to Settings via avatar button
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Appearance section should be visible
@@ -60,8 +61,8 @@ test.describe('Dark mode', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Navigate to Settings
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    // Navigate to Settings via avatar button
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Click Dark
@@ -76,7 +77,7 @@ test.describe('Dark mode', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Switch to Dark first
@@ -100,7 +101,7 @@ test.describe('Dark mode', () => {
     );
 
     // Switch to dark
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
     await page.getByRole('button', { name: 'Dark' }).click();
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -121,7 +122,7 @@ test.describe('Dark mode', () => {
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
     // Switch to dark
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
     await page.getByRole('button', { name: 'Dark' }).click();
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -166,7 +167,7 @@ test.describe('Dark mode', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    await page.getByRole('tab', { name: 'Settings' }).first().click();
+    await page.locator('header button').last().click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
 
     // Toggle dark → light → dark

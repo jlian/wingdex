@@ -149,7 +149,7 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible();
 
     // Upload a test image
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.getByRole('dialog').locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
 
     // Should show the extracting step with progress
@@ -174,7 +174,7 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Upload multiple test images
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.getByRole('dialog').locator('input[type="file"]');
     await fileInput.setInputFiles([
       path.resolve('src/assets/images/bird-test.jpeg'),
       path.resolve('src/assets/images/Stellers_Jay_eating_cherries_Seattle_backyard.jpg'),
@@ -196,7 +196,7 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     // Upload a file to move past the initial 'upload' step
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.getByRole('dialog').locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
 
     // Wait for the wizard to advance past the upload step
@@ -226,7 +226,7 @@ test.describe('App smoke tests', () => {
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.getByRole('dialog').locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
 
     await expect(
