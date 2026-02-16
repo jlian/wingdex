@@ -68,7 +68,7 @@ function replayFixture(fixture: Fixture) {
   })
 }
 
-/** Build location param — returns null when lat/lon are missing (no-GPS edge case) */
+/** Build location param — returns undefined when lat/lon are missing (no-GPS edge case) */
 function fixtureLocation(f: Fixture) {
   return f.context.lat != null && f.context.lon != null
     ? { lat: f.context.lat, lon: f.context.lon }
