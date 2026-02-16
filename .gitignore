@@ -38,3 +38,4 @@ test-results/
 playwright-report/
 screenshots/
 wiki-validation-report.txt
+src/assets/csv/
