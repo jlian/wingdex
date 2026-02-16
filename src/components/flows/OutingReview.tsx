@@ -7,7 +7,7 @@ import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete
 import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } from '@phosphor-icons/react'
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
-import { toLocalISOWithOffset, formatStoredDate } from '@/lib/timezone'
+import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTime } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
 
@@ -48,13 +48,19 @@ export default function OutingReview({
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
 
+  // Compute observation-local ISO string for display and manual editing.
+  // cluster.startTime is a UTC-correct Date (exifTime is offset-aware),
+  // so dateToLocalISOWithOffset formats it in the photo's GPS timezone.
+  const startLocalISO = dateToLocalISOWithOffset(cluster.startTime, cluster.centerLat, cluster.centerLon)
+  const startLocalMatch = startLocalISO.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/)
+
   // Manual date/time editing (#13)
   const [editingDateTime, setEditingDateTime] = useState(false)
   const [manualDate, setManualDate] = useState(
-    `${cluster.startTime.getFullYear()}-${String(cluster.startTime.getMonth() + 1).padStart(2, '0')}-${String(cluster.startTime.getDate()).padStart(2, '0')}`
+    startLocalMatch ? startLocalMatch[1] : cluster.startTime.toISOString().slice(0, 10)
   )
   const [manualTime, setManualTime] = useState(
-    cluster.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    startLocalMatch ? startLocalMatch[2] : '00:00'
   )
   const [overriddenStartTime, setOverriddenStartTime] = useState<Date | null>(null)
 
@@ -252,33 +258,21 @@ export default function OutingReview({
     }
   }
 
-  /**
-   * Extract browser-local date/time components from a Date as a naive ISO string.
-   * Since the Date was constructed from a naive EXIF time string (parsed in
-   * browser-local timezone), this recovers the original EXIF wall-clock time.
-   * We then pass it to toLocalISOWithOffset() with GPS coords to attach the
-   * correct timezone offset for the photo's location.
-   */
-  const dateToNaiveISO = (d: Date) => {
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-  }
-
   const doConfirm = (name: string) => {
     if (useExistingOuting && matchingOuting) {
-      // Merge into existing outing — expand its time window if needed
-      // Convert cluster's naive EXIF times to offset-aware ISO strings
-      // using the outing's GPS coords, then compare properly in UTC.
-      const clusterStartISO = toLocalISOWithOffset(
-        dateToNaiveISO(cluster.startTime), matchingOuting.lat, matchingOuting.lon
+      // Merge into existing outing — expand its time window if needed.
+      // cluster.startTime is a proper UTC instant (exifTime is offset-aware),
+      // so dateToLocalISOWithOffset correctly formats it in the outing's TZ.
+      const clusterStartISO = dateToLocalISOWithOffset(
+        cluster.startTime, matchingOuting.lat, matchingOuting.lon
       )
-      const clusterEndISO = toLocalISOWithOffset(
-        dateToNaiveISO(cluster.endTime), matchingOuting.lat, matchingOuting.lon
+      const clusterEndISO = dateToLocalISOWithOffset(
+        cluster.endTime, matchingOuting.lat, matchingOuting.lon
       )
       const existingStartMs = new Date(matchingOuting.startTime).getTime()
       const existingEndMs = new Date(matchingOuting.endTime).getTime()
-      const clusterStartMs = new Date(clusterStartISO).getTime()
-      const clusterEndMs = new Date(clusterEndISO).getTime()
+      const clusterStartMs = cluster.startTime.getTime()
+      const clusterEndMs = cluster.endTime.getTime()
 
       if (clusterStartMs < existingStartMs || clusterEndMs > existingEndMs) {
         data.updateOuting(matchingOuting.id, {
@@ -295,8 +289,8 @@ export default function OutingReview({
     const outing = {
       id: outingId,
       userId: userId.toString(),
-      startTime: toLocalISOWithOffset(dateToNaiveISO(effectiveStartTime), effectiveLat, effectiveLon),
-      endTime: toLocalISOWithOffset(dateToNaiveISO(effectiveEndTime), effectiveLat, effectiveLon),
+      startTime: dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon),
+      endTime: dateToLocalISOWithOffset(effectiveEndTime, effectiveLat, effectiveLon),
       locationName: name || 'Unknown Location',
       defaultLocationName: name || 'Unknown Location',
       lat: effectiveLat,
@@ -315,7 +309,12 @@ export default function OutingReview({
     const [year, month, day] = manualDate.split('-').map(Number)
     const [hours, minutes] = manualTime.split(':').map(Number)
     if (!isNaN(year) && !isNaN(month) && !isNaN(day) && !isNaN(hours) && !isNaN(minutes)) {
-      setOverriddenStartTime(new Date(year, month - 1, day, hours, minutes))
+      // User types observation-local time. Convert to a correct UTC instant
+      // by treating it as naive local at the GPS coords.
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const naiveISO = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`
+      const offsetAware = toLocalISOWithOffset(naiveISO, effectiveLat, effectiveLon)
+      setOverriddenStartTime(new Date(offsetAware))
       setEditingDateTime(false)
     }
   }
@@ -360,13 +359,16 @@ export default function OutingReview({
         {/* Date/time display with edit capability (#13) */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <CalendarBlank size={18} />
-          <span>
-            {effectiveStartTime.toLocaleDateString()} at{' '}
-            {effectiveStartTime.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
+          {(() => {
+            // Format in the observation's timezone (GPS coords), not browser TZ
+            const displayISO = dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon)
+            return (
+              <span>
+                {formatStoredDate(displayISO)} at{' '}
+                {formatStoredTime(displayISO)}
+              </span>
+            )
+          })()}
           <Button
             variant="ghost"
             size="sm"

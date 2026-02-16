@@ -1,6 +1,6 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
-import { getTimezoneFromCoords, getOffsetForLocalWallTime } from './timezone'
+import { getTimezoneFromCoords, getOffsetForLocalWallTime, dateToLocalISOWithOffset } from './timezone'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -68,7 +68,9 @@ export function groupPreviewsIntoOutings(
   }
 
   for (const p of previews) {
-    const dateKey = new Date(p.date).toISOString().split('T')[0]
+    // Extract local date from offset-aware ISO (e.g. "2024-12-18T19:16:00-10:00" → "2024-12-18")
+    // so grouping uses observation-local calendar day, not UTC day.
+    const dateKey = p.date.slice(0, 10)
     const key =
       p.submissionId && (submissionIdCounts.get(p.submissionId) || 0) > 1
         ? p.submissionId
@@ -88,9 +90,12 @@ export function groupPreviewsIntoOutings(
     const outingId = `outing_import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     const first = group[0]
     const startTime = first.date
-    // Use latest record time or +1h as endTime
+    // Use latest record time or +1h as endTime, keeping it offset-aware
     const dates = group.map(p => new Date(p.date).getTime())
-    const endTime = new Date(Math.max(...dates) + 3600000).toISOString()
+    const latestDate = new Date(Math.max(...dates) + 3600000)
+    const endTime = (first.lat != null && first.lon != null)
+      ? dateToLocalISOWithOffset(latestDate, first.lat, first.lon)
+      : latestDate.toISOString()
 
     const checklistNotes = first.checklistNotes || ''
     const outingNotes = checklistNotes
