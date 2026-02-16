@@ -34,6 +34,7 @@ const WIKI_OVERRIDES = {
   'Black-hooded Antthrush': 'Black-faced antthrush',
   'Chukar': 'Chukar partridge',
   'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
+  'Merlin': 'Merlin (bird)',
   'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
   'Rose-bellied Chat': 'Rose-breasted chat',
 }
