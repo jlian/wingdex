@@ -29,7 +29,18 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   )
 
   return (
-    <div className="flex items-stretch gap-3 px-2 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer" onClick={onClick}>
+    <div
+      role="button"
+      tabIndex={0}
+      className="flex items-stretch gap-3 px-2 rounded-lg hover:bg-muted/30 active:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+    >
       {/* Thumbnail */}
       <div className="flex-shrink-0 flex items-center py-1.5">
         {image}
