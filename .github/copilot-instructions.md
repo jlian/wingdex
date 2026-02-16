@@ -66,3 +66,15 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Before starting any dev server, first verify whether `http://localhost:5000` is already available.
 - Do not start an additional `npm run dev` process if port 5000 is already serving the app.
 - For Playwright/e2e checks, target the existing server on port 5000 by default.
+
+## 6. PR Review Hygiene
+
+**When working on an active PR, check and address review feedback before pushing.**
+
+Before pushing commits to a branch with an open PR:
+- Fetch unresolved PR review comments/threads.
+- Address relevant feedback in code when in scope.
+- If feedback is stale or not applicable, reply with a concise rationale.
+- Resolve review threads after fixes/replies when appropriate.
+
+Goal: avoid pushing follow-up commits that miss existing reviewer feedback.

@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
 
+## [1.2.1](https://github.com/jlian/birddex/compare/v1.2.0...v1.2.1) (2026-02-16)
+
+
+### Bug Fixes
+
+* use plain v tags for release-please ([#85](https://github.com/jlian/birddex/issues/85)) ([ab4a2da](https://github.com/jlian/birddex/commit/ab4a2da3df3de4abb6e16589010b1a48f70bcd4f))
+
 ## 1.2.0 (2026-02-16)
 
 ### Features
