@@ -78,3 +78,14 @@ Before pushing commits to a branch with an open PR:
 - Resolve review threads after fixes/replies when appropriate.
 
 Goal: avoid pushing follow-up commits that miss existing reviewer feedback.
+
+## 7. Repository Defaults (BirdDex)
+
+For repository-specific CLI commands in this workspace, use these defaults unless the user specifies otherwise:
+- Owner/repo: `jlian/birddex`
+- Default branch: `main`
+- Active PR checks may include semantic PR title validation requiring Conventional Commit style titles (e.g., `fix(ci): ...`).
+
+When running `gh` commands in this Codespace, if auth appears to be sourced from an injected `GITHUB_TOKEN`, prefer:
+- `env -u GITHUB_TOKEN gh ...`
+- `env -u GITHUB_TOKEN gh auth setup-git` before authenticated git push, when needed.

@@ -1,8 +1,10 @@
-// @ts-nocheck — this test uses Node.js APIs (fs, path, __dirname) provided by vitest
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parseEXIF } from '@/lib/photo-utils'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /**
  * Unit test for EXIF extraction.

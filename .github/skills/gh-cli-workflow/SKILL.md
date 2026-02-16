@@ -1,9 +1,9 @@
 ---
 name: gh-cli-workflow
-description: Use GitHub CLI for BirdDex PR and issue workflows in Spark Codespaces, including PR updates, issue close flow, and malformed-comment fixes.
+description: Use GitHub CLI for PR and issue workflows in Codespaces, including PR updates, issue close flow, and malformed-comment fixes.
 ---
 
-# GitHub Skill (BirdDex)
+# GitHub CLI Workflow Skill
 
 Use `gh` for PR/issue workflows and `gh api` for operations not covered by built-in commands.
 
@@ -20,6 +20,11 @@ EOF
 )"
 ```
 
+Important:
+- Keep the heredoc delimiter quoted (`<<'EOF'`) so backticks in markdown are treated as plain text.
+- Do not put markdown with backticks directly inside a double-quoted `--body "..."` string.
+- `--body-file` is still fine for very long bodies, but inline heredoc is the default.
+
 Avoid:
 ```bash
 gh pr comment --body "Line 1\n\nLine 2"
@@ -32,18 +37,39 @@ gh pr view --json number,title,url,body
 gh pr view --comments
 ```
 
+Auth note for Codespaces/CI shells:
+- If `gh` unexpectedly uses an injected `GITHUB_TOKEN`, run commands as `env -u GITHUB_TOKEN gh ...`.
+- For git pushes using GH credentials in the same session, run `env -u GITHUB_TOKEN gh auth setup-git` once.
+
 Create/update PRs:
+
 ```bash
-gh pr create --title "..." --body 'Summary
-
-- item' --base main --head <branch>
-gh pr edit --body 'Updated summary
-
-- item'
+gh pr create --title "..." --base main --head <branch> --body "$(cat <<'EOF'
+## Summary
+- item
+EOF
+)"
+gh pr edit --body "$(cat <<'EOF'
+## Updated summary
+- item
+EOF
+)"
 gh pr edit --body ""
-gh pr comment --body 'Short update
+gh pr comment --body "$(cat <<'EOF'
+Short update
 
-- test 1 passed'
+- test 1 passed
+EOF
+)"
+```
+
+If PR title check fails:
+- Error pattern: `No release type found in pull request title`.
+- Fix with Conventional Commit title prefixes like `feat:`, `fix:`, `docs:`, `test:`, `build:`, `ci:`, `chore:`, `refactor:`, `perf:`, `revert:`.
+- Update title quickly:
+
+```bash
+env -u GITHUB_TOKEN gh pr edit <number> --title "fix(ci): short imperative summary"
 ```
 
 ## 3) Issue workflow
@@ -70,8 +96,8 @@ gh issue reopen <number>
 `gh` does not provide a direct PR comment edit command; use issue-comment API endpoints.
 
 ```bash
-gh api --method PATCH /repos/jlian/birddex/issues/comments/<comment_id> -f body='Updated markdown body'
-gh api --method DELETE /repos/jlian/birddex/issues/comments/<comment_id>
+gh api --method PATCH /repos/<owner>/<repo>/issues/comments/<comment_id> -f body='Updated markdown body'
+gh api --method DELETE /repos/<owner>/<repo>/issues/comments/<comment_id>
 ```
 
 ## 5) CI and workflow checks
@@ -86,8 +112,8 @@ gh run view <run-id> --repo owner/repo --log-failed
 Use these commands when you want to triage/reply/resolve review comments without `jq` parsing.
 
 ```bash
-gh pr view 75 --repo jlian/birddex --comments
-gh pr view 75 --repo jlian/birddex --web
+gh pr view <pr-number> --repo <owner>/<repo> --comments
+gh pr view <pr-number> --repo <owner>/<repo> --web
 ```
 
 Notes:
@@ -97,13 +123,13 @@ Notes:
 List review threads (with IDs, path, unresolved flag):
 
 ```bash
-gh api graphql -f query='query { repository(owner:"jlian", name:"birddex") { pullRequest(number:75) { reviewThreads(first:100) { nodes { id isResolved path comments(last:1){nodes{url body author{login}}} } } } } }'
+gh api graphql -f query='query { repository(owner:"<owner>", name:"<repo>") { pullRequest(number:<pr-number>) { reviewThreads(first:100) { nodes { id isResolved path comments(last:1){nodes{url body author{login}}} } } } } }'
 ```
 
 Quick unresolved check without `jq`:
 
 ```bash
-gh api graphql -f query='query { repository(owner:"jlian", name:"birddex") { pullRequest(number:75) { reviewThreads(first:100) { nodes { id isResolved } } } } }' | grep '"isResolved": false' || true
+gh api graphql -f query='query { repository(owner:"<owner>", name:"<repo>") { pullRequest(number:<pr-number>) { reviewThreads(first:100) { nodes { id isResolved } } } } }' | grep '"isResolved": false' || true
 ```
 
 Reply to a review thread and resolve it (CLI):

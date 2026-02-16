@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "if [ -n \"$CODESPACES\" ]; then git config --local commit.gpgsign false; else echo 'Skipping git signing override outside Codespaces'; fi"
+        "if [ -n \"$CODESPACES\" ]; then git config --local commit.gpgsign false; else echo \"Skipping git signing override outside Codespaces\"; fi"
       ],
       "problemMatcher": []
     },
@@ -27,7 +27,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "if [ -z \"$CODESPACES\" ]; then echo 'Skipping ensure-app-on-5000 outside Codespaces'; exit 0; fi; if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo 'App already available on :5000'; else echo 'No app on :5000, starting npm run dev'; npm run dev; fi"
+        "if [ -z \"$CODESPACES\" ]; then echo \"Skipping ensure-app-on-5000 outside Codespaces\"; exit 0; fi; if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo \"App already available on :5000\"; else echo \"No app on :5000, starting npm run dev\"; npm run dev; fi"
       ],
       "isBackground": true,
       "problemMatcher": {
