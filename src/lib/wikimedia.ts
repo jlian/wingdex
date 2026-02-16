@@ -38,7 +38,7 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
       { headers: { 'Api-User-Agent': 'BirdDex/1.0 (bird identification app)' } }
     )
-    if (!res.ok && typeof res.status === 'number' && res.status > 0 && res.status !== 404) {
+    if (!res.ok && res.status !== 404) {
       console.warn(`[wikimedia] Unexpected summary response ${res.status} for "${title}"`)
     }
     if (!res.ok) return null
@@ -141,7 +141,7 @@ export async function getWikimediaSummary(
     return summaryCache.get(cacheKey)
   }
 
-  // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
+  // Try override → dehyphenated → common name → scientific name → common + " bird" → Gray↔Grey swap
   const override = WIKI_OVERRIDES[common]
   const candidates = [override, dehyphenated, common, scientific, `${common} bird`].filter(Boolean) as string[]
   if (/gray|grey/i.test(common)) {

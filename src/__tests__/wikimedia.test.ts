@@ -8,7 +8,7 @@ const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia
 
 function mockWikiResponse(data: Record<string, unknown> | null) {
   if (data === null) {
-    mockFetch.mockResolvedValueOnce({ ok: false })
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
   } else {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => data })
   }
