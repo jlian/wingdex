@@ -149,31 +149,56 @@ function App() {
 function BootShell() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card/95 backdrop-blur-lg border-b border-border">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
             <div className="flex gap-2">
-              <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
               <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-            </div>
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
           </div>
         </div>
       </header>
 
-      <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-        <div className="h-8 w-52 rounded-md bg-muted animate-pulse" />
-        <div className="h-20 w-full rounded-xl bg-muted animate-pulse" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          <div className="h-16 rounded-lg bg-muted animate-pulse" />
+      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
+        {/* Hero skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-12 w-20 rounded-md bg-muted animate-pulse" />
+            <div className="h-5 w-36 rounded-md bg-muted animate-pulse" />
+          </div>
+          <div className="h-12 w-24 rounded-xl bg-muted animate-pulse" />
         </div>
-      </main>
+
+        {/* Recent Species skeleton */}
+        <div className="space-y-3 pt-2">
+          <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
+          <div className="flex gap-3 overflow-hidden">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="w-28 flex-shrink-0 space-y-2">
+                <div className="aspect-square rounded-lg bg-muted animate-pulse" />
+                <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Outings skeleton */}
+        <div className="space-y-3 pt-2">
+          <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex gap-3 items-start py-3 border-b border-border last:border-0">
+              <div className="h-4 w-4 rounded-full bg-muted animate-pulse mt-0.5" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-28 rounded bg-muted animate-pulse" />
+                <div className="h-3 w-40 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -214,12 +239,11 @@ function AppContent({ user }: { user: UserInfo }) {
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
-      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="gap-0">
-        {/* ── Top header — sticky, translucent with bottom fade ── */}
-        <header className="sticky top-0 z-40">
-          <div className="bg-background/80 backdrop-blur-xl">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6">
-              <div className="flex items-center justify-between h-14 sm:h-16">
+      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
+        {/* ── Top header — non-sticky, scrolls with content ── */}
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo — navigates to Home */}
               <button
                 onClick={() => navigate('home')}
@@ -260,11 +284,8 @@ function AppContent({ user }: { user: UserInfo }) {
                   </Avatar>
                 </button>
               </div>
-              </div>
             </div>
           </div>
-          {/* Bottom fade — softens the edge into content */}
-          <div className="h-4 bg-gradient-to-b from-background/60 to-transparent pointer-events-none" />
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
