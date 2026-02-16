@@ -37,7 +37,12 @@ export function getUtcOffsetString(timezone: string, date: Date): string {
 
   // tzPart.value is like "GMT", "GMT-10:00", "GMT+5:30", "GMT+5"
   const match = tzPart.value.match(/GMT([+-]\d{1,2}(?::\d{2})?)/)
-  if (!match) return '+00:00' // "GMT" with no offset means UTC
+  if (!match) {
+    // Some runtimes return abbreviations for 'short' (e.g. "PDT", "HST").
+    // Derive numeric offset from wall-clock parts in the target timezone.
+    const derived = deriveOffsetFromParts(timezone, date)
+    return derived ?? '+00:00'
+  }
 
   let offset = match[1]
   // Normalize: ensure hours are two digits, e.g. "+5:30" → "+05:30", "+5" → "+05"
@@ -45,6 +50,47 @@ export function getUtcOffsetString(timezone: string, date: Date): string {
   // Ensure minutes are present, e.g. "+05" → "+05:00"
   if (!offset.includes(':')) offset += ':00'
   return offset
+}
+
+function deriveOffsetFromParts(timezone: string, date: Date): string | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(date)
+
+    const get = (type: Intl.DateTimeFormatPartTypes): number | null => {
+      const v = parts.find(p => p.type === type)?.value
+      return v != null ? Number(v) : null
+    }
+
+    const year = get('year')
+    const month = get('month')
+    const day = get('day')
+    const hour = get('hour')
+    const minute = get('minute')
+    const second = get('second')
+
+    if ([year, month, day, hour, minute, second].some(v => v == null || Number.isNaN(v))) {
+      return null
+    }
+
+    const wallAsUtcMs = Date.UTC(year!, month! - 1, day!, hour!, minute!, second!)
+    const offsetMs = wallAsUtcMs - date.getTime()
+    const sign = offsetMs >= 0 ? '+' : '-'
+    const totalMinutes = Math.round(Math.abs(offsetMs) / 60_000)
+    const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
+    const mm = String(totalMinutes % 60).padStart(2, '0')
+    return `${sign}${hh}:${mm}`
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -159,27 +205,6 @@ export function dateToLocalISOWithOffset(
   // sv-SE locale gives us "YYYY-MM-DD HH:MM:SS" format
   const formatted = fmt.format(date).replace(' ', 'T')
   return `${formatted}${offset}`
-}
-
-/**
- * Parse a stored time string and display it in its original timezone.
- * Handles both:
- *  - ISO with offset: "2024-01-15T17:00:00-10:00" → shows 5:00 PM
- *  - Legacy UTC ISO: "2024-01-15T03:00:00.000Z" → shows in browser local time (legacy behavior)
- *  - Naive local: "2024-01-15 17:00:00" → shows as-is in browser local time (legacy behavior)
- */
-export function parseStoredTime(timeStr: string): { date: Date; timezone?: string } {
-  // Check for offset like +05:30 or -10:00 at end (but not Z)
-  const offsetMatch = timeStr.match(/([+-]\d{2}:\d{2})$/)
-  if (offsetMatch) {
-    return {
-      date: new Date(timeStr),
-      // We can't directly recover the IANA timezone from just an offset,
-      // but we can use the offset for display purposes
-      timezone: undefined, // Display will use the offset from the ISO string
-    }
-  }
-  return { date: new Date(timeStr) }
 }
 
 /**
@@ -311,7 +336,10 @@ export function formatStoredDate(
     // Parse the local part as a date (treating it as UTC to avoid browser timezone shifts)
     const [datePart, timePart] = localPart.split('T')
     const [year, month, day] = datePart.split('-').map(Number)
-    const [hour, minute, second] = (timePart || '00:00:00').split(':').map(Number)
+    const [hourStr = '0', minuteStr = '0', secondStr = '0'] = (timePart || '00:00:00').split(':')
+    const hour = Number(hourStr)
+    const minute = Number(minuteStr)
+    const second = Number(secondStr)
 
     // Create a Date in UTC with these values, then format in UTC
     // This preserves the original local time for display
@@ -340,7 +368,10 @@ export function formatStoredTime(
     const localPart = timeStr.slice(0, -6)
     const [datePart, timePart] = localPart.split('T')
     const [year, month, day] = datePart.split('-').map(Number)
-    const [hour, minute, second] = (timePart || '00:00:00').split(':').map(Number)
+    const [hourStr = '0', minuteStr = '0', secondStr = '0'] = (timePart || '00:00:00').split(':')
+    const hour = Number(hourStr)
+    const minute = Number(minuteStr)
+    const second = Number(secondStr)
 
     const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
 

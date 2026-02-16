@@ -301,7 +301,7 @@ function SpeciesDetail({
                       {outing.locationName || 'Unknown location'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(outing.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      {formatStoredDate(outing.startTime, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                       {observation.count > 1 && ` · x${observation.count}`}
                       {' · '}
                       {observation.certainty.charAt(0).toUpperCase() + observation.certainty.slice(1)}
