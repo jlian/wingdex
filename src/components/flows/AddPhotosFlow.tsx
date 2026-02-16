@@ -22,6 +22,7 @@ import { identifyBirdInPhoto } from '@/lib/ai-inference'
 import type { BirdIdResult } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName } from '@/lib/utils'
+import { toLocalISOWithOffset } from '@/lib/timezone'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import { Confetti } from '@/components/ui/confetti'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
@@ -289,14 +290,21 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           outingId: '',
           dataUrl,
           thumbnail,
-          exifTime: exif.timestamp,
+          // Store offset-aware ISO when GPS is available so clustering and
+          // outing matching compare correct UTC instants regardless of browser TZ.
+          // Falls back to naive EXIF time (browser-local) when no GPS.
+          exifTime: exif.timestamp
+            ? (exif.gps
+                ? toLocalISOWithOffset(exif.timestamp, exif.gps.lat, exif.gps.lon)
+                : exif.timestamp)
+            : undefined,
           gps: exif.gps,
           fileHash: hash,
           fileName: file.name
         }
 
         const existing = data.photos.find(
-          p => p.fileHash === hash && p.exifTime === exif.timestamp
+          p => p.fileHash === hash && p.exifTime === photo.exifTime
         )
         if (existing) {
           duplicatePhotos.push(photo)
