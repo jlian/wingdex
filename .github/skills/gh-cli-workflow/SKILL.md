@@ -20,6 +20,11 @@ EOF
 )"
 ```
 
+Important:
+- Keep the heredoc delimiter quoted (`<<'EOF'`) so backticks in markdown are treated as plain text.
+- Do not put markdown with backticks directly inside a double-quoted `--body "..."` string.
+- `--body-file` is still fine for very long bodies, but inline heredoc is the default.
+
 Avoid:
 ```bash
 gh pr comment --body "Line 1\n\nLine 2"
@@ -32,18 +37,30 @@ gh pr view --json number,title,url,body
 gh pr view --comments
 ```
 
+Auth note for Codespaces/CI shells:
+- If `gh` unexpectedly uses an injected `GITHUB_TOKEN`, run commands as `env -u GITHUB_TOKEN gh ...`.
+- For git pushes using GH credentials in the same session, run `env -u GITHUB_TOKEN gh auth setup-git` once.
+
 Create/update PRs:
+
 ```bash
-gh pr create --title "..." --body 'Summary
-
-- item' --base main --head <branch>
-gh pr edit --body 'Updated summary
-
-- item'
+gh pr create --title "..." --base main --head <branch> --body "$(cat <<'EOF'
+## Summary
+- item
+EOF
+)"
+gh pr edit --body "$(cat <<'EOF'
+## Updated summary
+- item
+EOF
+)"
 gh pr edit --body ""
-gh pr comment --body 'Short update
+gh pr comment --body "$(cat <<'EOF'
+Short update
 
-- test 1 passed'
+- test 1 passed
+EOF
+)"
 ```
 
 ## 3) Issue workflow
