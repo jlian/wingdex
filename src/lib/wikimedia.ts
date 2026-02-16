@@ -1,5 +1,5 @@
 /**
- * Fetch bird images and summaries from Wikipedia REST API.
+ * Fetch bird images and summaries from Wikipedia Action API.
  * Tries multiple search strategies: common name → scientific name → common name + " bird".
  * No API key required; rate-limited by User-Agent convention.
  */
@@ -47,11 +47,6 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
     }
     if (!res.ok) return null
     const payload = await res.json() as {
-      title?: string
-      extract?: string
-      thumbnail?: { source?: string }
-      originalimage?: { source?: string }
-      content_urls?: { desktop?: { page?: string } }
       query?: {
         pages?: Array<{
           missing?: boolean
@@ -61,22 +56,6 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
           original?: { source?: string }
           fullurl?: string
         }>
-      }
-    }
-
-    if (
-      payload.title !== undefined
-      || payload.extract !== undefined
-      || payload.thumbnail !== undefined
-      || payload.originalimage !== undefined
-      || payload.content_urls !== undefined
-    ) {
-      return {
-        title: payload.title,
-        extract: payload.extract,
-        thumbnail: payload.thumbnail?.source ? { source: payload.thumbnail.source } : undefined,
-        originalimage: payload.originalimage?.source ? { source: payload.originalimage.source } : undefined,
-        content_urls: payload.content_urls,
       }
     }
 
