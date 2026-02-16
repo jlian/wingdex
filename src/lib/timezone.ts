@@ -17,24 +17,74 @@ export function getTimezoneFromCoords(lat: number, lon: number): string {
  */
 export function getUtcOffsetString(timezone: string, date: Date): string {
   // Format the date in the target timezone to get the UTC offset
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    timeZoneName: 'longOffset',
-  }).formatToParts(date)
+  // longOffset may throw on older iOS/Safari — fall back to shortOffset then short
+  let parts: Intl.DateTimeFormatPart[] | undefined
+  for (const tzName of ['longOffset', 'shortOffset', 'short'] as const) {
+    try {
+      parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: tzName,
+      }).formatToParts(date)
+      break
+    } catch {
+      // try next format
+    }
+  }
+  if (!parts) return '+00:00'
 
   const tzPart = parts.find(p => p.type === 'timeZoneName')
   if (!tzPart) return '+00:00'
 
-  // tzPart.value is like "GMT", "GMT-10:00", "GMT+5:30"
+  // tzPart.value is like "GMT", "GMT-10:00", "GMT+5:30", "GMT+5"
   const match = tzPart.value.match(/GMT([+-]\d{1,2}(?::\d{2})?)/)
   if (!match) return '+00:00' // "GMT" with no offset means UTC
 
   let offset = match[1]
-  // Normalize: ensure hours are two digits, e.g. "+5:30" → "+05:30"
-  offset = offset.replace(/^([+-])(\d)(?=:)/, '$10$2')
+  // Normalize: ensure hours are two digits, e.g. "+5:30" → "+05:30", "+5" → "+05"
+  offset = offset.replace(/^([+-])(\d)(?=:|$)/, '$10$2')
   // Ensure minutes are present, e.g. "+05" → "+05:00"
   if (!offset.includes(':')) offset += ':00'
   return offset
+}
+
+/**
+ * Parse an offset string like "+05:30" or "-10:00" into milliseconds.
+ */
+function parseOffsetMs(offset: string): number {
+  const m = offset.match(/^([+-])(\d{2}):(\d{2})$/)
+  if (!m) return 0
+  const sign = m[1] === '+' ? 1 : -1
+  return sign * (Number(m[2]) * 60 + Number(m[3])) * 60_000
+}
+
+/**
+ * Get the correct UTC offset for a given local wall time in a timezone.
+ * Uses an iterative approach to handle DST transitions correctly:
+ * the naive Date.UTC guess may land on the wrong side of a DST boundary,
+ * so we correct by computing the actual UTC instant from the first offset
+ * and re-checking.
+ */
+export function getOffsetForLocalWallTime(
+  timezone: string,
+  year: number, month: number, day: number,
+  hour: number = 0, minute: number = 0, second: number = 0,
+): string {
+  // First guess: treat wall-time components as UTC
+  const wallAsUtc = Date.UTC(year, month, day, hour, minute, second)
+  const offset1 = getUtcOffsetString(timezone, new Date(wallAsUtc))
+  const offsetMs1 = parseOffsetMs(offset1)
+
+  // Corrected UTC: wall time - offset (since wallTime = utc + offset)
+  const correctedUtc = wallAsUtc - offsetMs1
+  const offset2 = getUtcOffsetString(timezone, new Date(correctedUtc))
+
+  if (offset1 === offset2) return offset1
+
+  // If inconsistent (DST boundary), re-correct with the second offset
+  const offsetMs2 = parseOffsetMs(offset2)
+  const correctedUtc2 = wallAsUtc - offsetMs2
+  const offset3 = getUtcOffsetString(timezone, new Date(correctedUtc2))
+  return offset3
 }
 
 /**
@@ -63,15 +113,17 @@ export function toLocalISOWithOffset(
     ))
     : new Date(normalized)
 
-  if (lat != null && lon != null) {
-    const timezone = getTimezoneFromCoords(lat, lon)
-    const offset = getUtcOffsetString(timezone, tempDate)
-    return `${normalized}${offset}`
-  }
+  const year = match ? Number(match[1]) : tempDate.getUTCFullYear()
+  const month = match ? Number(match[2]) - 1 : tempDate.getUTCMonth()
+  const day = match ? Number(match[3]) : tempDate.getUTCDate()
+  const hour = match ? Number(match[4]) : tempDate.getUTCHours()
+  const min = match ? Number(match[5]) : tempDate.getUTCMinutes()
+  const sec = match ? Number(match[6] ?? '0') : tempDate.getUTCSeconds()
 
-  // Fallback: use browser's local timezone
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const offset = getUtcOffsetString(browserTz, tempDate)
+  const timezone = (lat != null && lon != null)
+    ? getTimezoneFromCoords(lat, lon)
+    : Intl.DateTimeFormat().resolvedOptions().timeZone
+  const offset = getOffsetForLocalWallTime(timezone, year, month, day, hour, min, sec)
   return `${normalized}${offset}`
 }
 

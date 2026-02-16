@@ -1,6 +1,6 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
-import { getTimezoneFromCoords, getUtcOffsetString } from './timezone'
+import { getTimezoneFromCoords, getOffsetForLocalWallTime } from './timezone'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -311,17 +311,10 @@ function normalizeDate(dateStr: string, timeStr?: string, lat?: number, lon?: nu
     const pad = (n: number) => String(n).padStart(2, '0')
     const localStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`
 
-    if (lat != null && lon != null) {
-      const timezone = getTimezoneFromCoords(lat, lon)
-      const tempDate = new Date(Date.UTC(year, month, day, hours, minutes))
-      const offset = getUtcOffsetString(timezone, tempDate)
-      return `${localStr}${offset}`
-    }
-
-    // Fallback: browser timezone
-    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const tempDate = new Date(Date.UTC(year, month, day, hours, minutes))
-    const offset = getUtcOffsetString(browserTz, tempDate)
+    const timezone = (lat != null && lon != null)
+      ? getTimezoneFromCoords(lat, lon)
+      : Intl.DateTimeFormat().resolvedOptions().timeZone
+    const offset = getOffsetForLocalWallTime(timezone, year, month, day, hours, minutes)
     return `${localStr}${offset}`
   } catch {
     
