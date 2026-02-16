@@ -4,12 +4,10 @@
     {
       "label": "disable-git-signing-local",
       "type": "shell",
-      "command": "git",
+      "command": "bash",
       "args": [
-        "config",
-        "--local",
-        "commit.gpgsign",
-        "false"
+        "-lc",
+        "if [ -n \"$CODESPACES\" ]; then git config --local commit.gpgsign false; else echo 'Skipping git signing override outside Codespaces'; fi"
       ],
       "problemMatcher": []
     },
@@ -29,9 +27,20 @@
       "command": "bash",
       "args": [
         "-lc",
-        "if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo 'App already available on :5000'; else echo 'No app on :5000, starting npm run dev'; nohup npm run dev >/tmp/birddex-dev.log 2>&1 & fi"
+        "if [ -z \"$CODESPACES\" ]; then echo 'Skipping ensure-app-on-5000 outside Codespaces'; exit 0; fi; if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo 'App already available on :5000'; else echo 'No app on :5000, starting npm run dev'; npm run dev; fi"
       ],
-      "problemMatcher": []
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "No app on :5000, starting npm run dev|App already available on :5000|Skipping ensure-app-on-5000 outside Codespaces",
+          "endsPattern": "Local:|App already available on :5000|Skipping ensure-app-on-5000 outside Codespaces"
+        }
+      }
     },
     {
       "label": "bootstrap-playwright-mcp",

@@ -1,6 +1,7 @@
 /**
  * Fetch bird images and summaries from Wikipedia Action API.
- * Tries multiple search strategies: common name → scientific name → common name + " bird".
+ * Tries multiple search strategies using overrides and normalized variants
+ * (common/scientific names, common + " bird", Gray↔Grey, and dehyphenation).
  * No API key required; rate-limited by User-Agent convention.
  */
 import { getDisplayName, getScientificName } from './utils'
@@ -32,8 +33,21 @@ export interface WikiSummary {
   pageUrl: string
 }
 
-/** Fetch a Wikipedia page summary, returns null on miss */
-async function fetchSummary(title: string): Promise<{ thumbnail?: { source: string }; originalimage?: { source: string }; extract?: string; content_urls?: { desktop?: { page?: string } }; title?: string } | null> {
+type WikiSummaryPayload = {
+  thumbnail?: { source: string }
+  originalimage?: { source: string }
+  extract?: string
+  content_urls?: { desktop?: { page?: string } }
+  title?: string
+}
+
+type FetchSummaryResult =
+  | { kind: 'hit'; data: WikiSummaryPayload }
+  | { kind: 'miss' }
+  | { kind: 'error' }
+
+/** Fetch a Wikipedia page summary and classify hit/miss/error for caching decisions. */
+async function fetchSummary(title: string): Promise<FetchSummaryResult> {
   try {
     const normalizedTitle = title.replace(/ /g, '_')
     const encodedTitle = encodeURIComponent(normalizedTitle)
@@ -43,9 +57,9 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
     )
     if (!res.ok && res.status !== 404) {
       console.warn(`[wikimedia] Unexpected summary response ${res.status} for "${title}"`)
-      return null
+      return { kind: 'error' }
     }
-    if (!res.ok) return null
+    if (!res.ok) return { kind: 'miss' }
     const payload = await res.json() as {
       query?: {
         pages?: Array<{
@@ -60,22 +74,25 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
     }
 
     const page = payload.query?.pages?.[0]
-    if (!page || page.missing) return null
+    if (!page || page.missing) return { kind: 'miss' }
 
     return {
-      title: page.title,
-      extract: page.extract,
-      thumbnail: page.thumbnail?.source ? { source: page.thumbnail.source } : undefined,
-      originalimage: page.original?.source ? { source: page.original.source } : undefined,
-      content_urls: page.fullurl ? { desktop: { page: page.fullurl } } : undefined,
+      kind: 'hit',
+      data: {
+        title: page.title,
+        extract: page.extract,
+        thumbnail: page.thumbnail?.source ? { source: page.thumbnail.source } : undefined,
+        originalimage: page.original?.source ? { source: page.original.source } : undefined,
+        content_urls: page.fullurl ? { desktop: { page: page.fullurl } } : undefined,
+      },
     }
   } catch {
-    return null
+    return { kind: 'error' }
   }
 }
 
 /** Extract image URL from a Wikipedia summary response */
-function extractImageUrl(data: NonNullable<Awaited<ReturnType<typeof fetchSummary>>>, _size: number): string | undefined {
+function extractImageUrl(data: WikiSummaryPayload, _size: number): string | undefined {
   if (data.thumbnail?.source) {
     return data.thumbnail.source
   }
@@ -113,27 +130,48 @@ export async function getWikimediaImage(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<string | undefined> => {
+    let hadTransientError = false
+
     // Strategy 0: Check manual overrides for known mismatches
     const override = WIKI_OVERRIDES[common]
-    let data = override ? await fetchSummary(override) : null
-    let imageUrl = data ? extractImageUrl(data, size) : undefined
+    let imageUrl: string | undefined
+    if (override) {
+      const result = await fetchSummary(override)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
+    }
 
     // Strategy 1: Try common name directly
     if (!imageUrl) {
-      data = await fetchSummary(common)
-      imageUrl = data ? extractImageUrl(data, size) : undefined
+      const result = await fetchSummary(common)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
     }
 
     // Strategy 2: Try scientific name if common name had no image
     if (!imageUrl && scientific) {
-      data = await fetchSummary(scientific)
-      imageUrl = data ? extractImageUrl(data, size) : undefined
+      const result = await fetchSummary(scientific)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
     }
 
     // Strategy 3: Try common name + " bird" (disambiguates e.g. "Robin")
     if (!imageUrl) {
-      data = await fetchSummary(`${common} bird`)
-      imageUrl = data ? extractImageUrl(data, size) : undefined
+      const result = await fetchSummary(`${common} bird`)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
     }
 
     // Strategy 4: Try Gray↔Grey swap (eBird uses "Gray", Wikipedia often has "Grey")
@@ -141,17 +179,29 @@ export async function getWikimediaImage(
       const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
         === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
         : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
-      data = await fetchSummary(swapped)
-      imageUrl = data ? extractImageUrl(data, size) : undefined
+      const result = await fetchSummary(swapped)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
     }
 
     // Strategy 5: Try dehyphenated (eBird: "Storm-Petrel", Wikipedia: "storm petrel")
     if (!imageUrl && dehyphenated) {
-      data = await fetchSummary(dehyphenated)
-      imageUrl = data ? extractImageUrl(data, size) : undefined
+      const result = await fetchSummary(dehyphenated)
+      if (result.kind === 'hit') {
+        imageUrl = extractImageUrl(result.data, size)
+      } else if (result.kind === 'error') {
+        hadTransientError = true
+      }
     }
 
-    imageCache.set(cacheKey, imageUrl ?? null)
+    if (imageUrl) {
+      imageCache.set(cacheKey, imageUrl)
+    } else if (!hadTransientError) {
+      imageCache.set(cacheKey, null)
+    }
     return imageUrl
   })()
 
@@ -183,6 +233,8 @@ export async function getWikimediaSummary(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<WikiSummary | undefined> => {
+    let hadTransientError = false
+
     // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
     const override = WIKI_OVERRIDES[common]
     const candidates = [override, common, scientific, `${common} bird`].filter(Boolean) as string[]
@@ -197,20 +249,27 @@ export async function getWikimediaSummary(
     }
 
     for (const candidate of candidates) {
-      const data = await fetchSummary(candidate)
-      if (data?.extract) {
+      const result = await fetchSummary(candidate)
+      if (result.kind === 'error') {
+        hadTransientError = true
+        continue
+      }
+
+      if (result.kind === 'hit' && result.data.extract) {
         const summary: WikiSummary = {
-          title: data.title || common,
-          extract: data.extract,
-          imageUrl: extractImageUrl(data, 800),
-          pageUrl: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
+          title: result.data.title || common,
+          extract: result.data.extract,
+          imageUrl: extractImageUrl(result.data, 800),
+          pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
         }
         summaryCache.set(cacheKey, summary)
         return summary
       }
     }
 
-    summaryCache.set(cacheKey, null)
+    if (!hadTransientError) {
+      summaryCache.set(cacheKey, null)
+    }
     return undefined
   })()
 

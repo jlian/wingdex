@@ -6,9 +6,14 @@ vi.stubGlobal('fetch', mockFetch)
 // Import after mocking fetch
 const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
-function mockWikiResponse(pageData: Record<string, unknown> | null) {
+function mockWikiResponse(pageData: Record<string, unknown> | null | 'missing') {
   if (pageData === null) {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+  } else if (pageData === 'missing') {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ query: { pages: [{ missing: true }] } }),
+    })
   } else {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -96,7 +101,7 @@ describe('getWikimediaImage', () => {
 
   it('returns undefined when all strategies fail', async () => {
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    mockWikiResponse(null)
+    mockWikiResponse('missing')
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
 
     const result = await getWikimediaImage('Nonexistent Flycatcher D')
@@ -201,7 +206,7 @@ describe('getWikimediaSummary', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to common name when scientific summary is missing and no cache collision', async () => {
+  it('falls back to scientific name when common summary is missing and no cache collision', async () => {
     mockWikiResponse(wikiPageData({ extract: undefined }))
     mockWikiResponse(wikiPageData({
       title: 'Unique Jay J',
