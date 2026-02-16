@@ -1,0 +1,26 @@
+{
+  "imageFile": "Dark-eyed_junco_in_foliage_Seattle_Arboretum.jpg",
+  "context": {
+    "lat": 47.6399,
+    "lon": -122.2958,
+    "month": 10,
+    "locationName": "Washington Park Arboretum, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Dark-eyed Junco (Junco hyemalis)\",\"confidence\":0.90}],\"birdCenter\":[65,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Dark-eyed Junco (Junco hyemalis)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      65,
+      50
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:35.087Z"
+}

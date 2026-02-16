@@ -1,0 +1,30 @@
+{
+  "imageFile": "Cormorants_on_navigation_marker_Skagit_Bay.jpg",
+  "context": {
+    "lat": 48.3918,
+    "lon": -122.4885,
+    "month": 6,
+    "locationName": "Skagit Bay, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Pelagic Cormorant (Urile pelagicus)\",\"confidence\":0.85},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.70}],\"birdCenter\":[50,40],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Pelagic Cormorant (Urile pelagicus)",
+        "confidence": 0.85
+      },
+      {
+        "species": "Glaucous-winged Gull (Larus glaucescens)",
+        "confidence": 0.7
+      }
+    ],
+    "birdCenter": [
+      50,
+      40
+    ],
+    "birdSize": "medium",
+    "multipleBirds": true
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:27.868Z"
+}

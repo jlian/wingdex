@@ -1,0 +1,26 @@
+{
+  "imageFile": "Geese_in_misty_rice_paddies_Dehua_Fujian.jpg",
+  "context": {
+    "lat": 25.7,
+    "lon": 118.24,
+    "month": 1,
+    "locationName": "Dehua, Fujian, China"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Swan Goose (Anser cygnoides)\",\"confidence\":0.85}],\"birdCenter\":[50,80],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Swan Goose (Anser cygnoides)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      50,
+      80
+    ],
+    "birdSize": "medium",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:57.970Z"
+}

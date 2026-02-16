@@ -1,0 +1,26 @@
+{
+  "imageFile": "Anna's_hummingbird_in_Seattle_garden.jpg",
+  "context": {
+    "lat": 47.6,
+    "lon": -122.33,
+    "month": 3,
+    "locationName": "Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Anna's Hummingbird (Calypte anna)\",\"confidence\":0.90}],\"birdCenter\":[70,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Anna's Hummingbird (Calypte anna)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      70,
+      50
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:12.812Z"
+}
