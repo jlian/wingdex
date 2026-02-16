@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
 
+## [1.2.3](https://github.com/jlian/birddex/compare/v1.2.2...v1.2.3) (2026-02-16)
+
+
+### Bug Fixes
+
+* **ci:** make paths-filter v3 compatible on push and PR ([506a6b9](https://github.com/jlian/birddex/commit/506a6b9640dd22a469c080d8bcef5a5ad68038a9))
+* **ci:** simplify single-check workflow and enforce lint/typecheck reliability ([#90](https://github.com/jlian/birddex/issues/90)) ([b16d477](https://github.com/jlian/birddex/commit/b16d477835558594210eba3b49dfe48d095e8642))
+
 ## [1.2.2](https://github.com/jlian/birddex/compare/v1.2.1...v1.2.2) (2026-02-16)
 
 
