@@ -59,3 +59,15 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. PR Review Hygiene
+
+**When working on an active PR, check and address review feedback before pushing.**
+
+Before pushing commits to a branch with an open PR:
+- Fetch unresolved PR review comments/threads.
+- Address relevant feedback in code when in scope.
+- If feedback is stale or not applicable, reply with a concise rationale.
+- Resolve review threads after fixes/replies when appropriate.
+
+Goal: avoid pushing follow-up commits that miss existing reviewer feedback.
