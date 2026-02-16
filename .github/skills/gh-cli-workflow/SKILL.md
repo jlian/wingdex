@@ -8,30 +8,54 @@ description: Use GitHub CLI for BirdDex PR and issue workflows in Spark Codespac
 Use `gh` for PR/issue CRUD and `gh api` for comment edits/deletes.
 
 ## Newline-safe markdown bodies
-Prefer files to avoid literal `\n` rendering:
+Prefer inline multiline bodies (no temp files, no escaped `\n`).
 
-`cat > /tmp/body.md <<'EOF'`
-`Line 1`
-`Line 2`
-`EOF`
+Good:
+```bash
+gh pr comment --body 'Line 1
 
-Then use `--body-file /tmp/body.md`.
+Line 2'
+```
 
-Avoid: `--body "line1\n\nline2"`
+Also good for longer text:
+```bash
+gh pr edit --body "$(cat <<'EOF'
+## Summary
+Line 1
+
+Line 2
+EOF
+)"
+```
+
+Avoid:
+```bash
+gh pr comment --body "Line 1\n\nLine 2"
+```
 
 ## Pull Requests
 - Read active PR: `gh pr view --json number,title,url,body`
-- Create PR: `gh pr create --title "..." --body-file /tmp/pr_body.md --base main --head <branch>`
-- Update PR body: `gh pr edit --body-file /tmp/pr_body.md`
+- Create PR: `gh pr create --title "..." --body 'Summary
+
+- item' --base main --head <branch>`
+- Update PR body: `gh pr edit --body 'Updated summary
+
+- item'`
 - Clear PR body: `gh pr edit --body ""`
 - Read comments: `gh pr view --comments`
-- Add comment: `gh pr comment --body-file /tmp/comment.md`
+- Add comment: `gh pr comment --body 'Short update
+
+- test 1 passed'`
 
 ## Issues
 - Read issue: `gh issue view <number> --json number,title,body,state,url`
-- Update issue body: `gh issue edit <number> --body-file /tmp/issue_body.md`
+- Update issue body: `gh issue edit <number> --body 'Updated issue body
+
+Details'`
 - Read comments: `gh issue view <number> --comments`
-- Add comment: `gh issue comment <number> --body-file /tmp/comment.md`
+- Add comment: `gh issue comment <number> --body 'Resolution summary
+
+- action 1'`
 - Close issue: `gh issue close <number> --reason "completed"`
 - Close not planned: `gh issue close <number> --reason "not planned"`
 - Reopen: `gh issue reopen <number>`
