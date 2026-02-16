@@ -54,7 +54,15 @@ function useHashRouter() {
   const navigatingWithSubId = useRef(false)
 
   useEffect(() => {
-    const onChange = () => setRoute(parseHash())
+    const onChange = () => {
+      // popstate fires on browser back/forward — restore saved scroll position
+      const saved = window.history.state?.scrollY
+      setRoute(parseHash())
+      if (typeof saved === 'number') {
+        // Defer so the DOM renders the target view first
+        requestAnimationFrame(() => window.scrollTo(0, saved))
+      }
+    }
     window.addEventListener('popstate', onChange)
     return () => window.removeEventListener('popstate', onChange)
   }, [])
@@ -63,13 +71,16 @@ function useHashRouter() {
   useEffect(() => { navigatingWithSubId.current = false })
 
   const navigate = useCallback((tab: string, subId?: string) => {
+    // Save current scroll position in the current history entry before navigating away
+    window.history.replaceState({ scrollY: window.scrollY }, '')
+
     const hash = subId
       ? `#${tab}/${encodeURIComponent(subId)}`
       : tab === 'home' ? '' : `#${tab}`
     window.history.pushState(null, '', hash || window.location.pathname)
     if (subId) navigatingWithSubId.current = true
     setRoute({ tab, subId })
-    // Scroll to top on forward navigation into a detail view
+    // Scroll to top on forward navigation
     window.scrollTo(0, 0)
   }, [])
 
