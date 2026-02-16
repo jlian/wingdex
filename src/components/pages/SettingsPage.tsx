@@ -32,6 +32,7 @@ interface SettingsPageProps {
 export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [profileTimezone, setProfileTimezone] = useState(
@@ -151,53 +152,79 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
 
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <GlobeHemisphereWest size={14} />
-              eBird profile timezone
-            </label>
-            <Select value={profileTimezone} onValueChange={setProfileTimezone}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="America/Los_Angeles">Pacific (PST/PDT)</SelectItem>
-                <SelectItem value="America/Denver">Mountain (MST/MDT)</SelectItem>
-                <SelectItem value="America/Chicago">Central (CST/CDT)</SelectItem>
-                <SelectItem value="America/New_York">Eastern (EST/EDT)</SelectItem>
-                <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
-                <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
-                <SelectItem value="America/Puerto_Rico">Atlantic (AST)</SelectItem>
-                <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
-                <SelectItem value="Europe/Paris">Central Europe (CET/CEST)</SelectItem>
-                <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
-                <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
-                <SelectItem value="Asia/Taipei">Taipei (CST)</SelectItem>
-                <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
-                <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
-                <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
-                <SelectItem value="observation-local">None (times already local)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              eBird records times in the timezone of the device that submitted
-              the checklist &mdash; typically your phone&apos;s home timezone.
-              This includes Merlin: if you ID photos from a trip abroad at
-              home, Merlin maps the photo&apos;s time to your device&apos;s
-              timezone. If you only bird locally, choose &ldquo;None&rdquo;.
-              Otherwise, select your home timezone so we can convert times to
-              each observation&apos;s local time.
-            </p>
-          </div>
+          <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <Upload size={20} className="mr-2" />
+                Import from eBird CSV
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Import from eBird CSV</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Choose your eBird profile timezone before selecting your CSV file.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
 
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => importFileRef.current?.click()}
-          >
-            <Upload size={20} className="mr-2" />
-            Import from eBird CSV
-          </Button>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <GlobeHemisphereWest size={14} />
+                    eBird profile timezone
+                  </label>
+                  <Select value={profileTimezone} onValueChange={setProfileTimezone}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/Los_Angeles">Pacific (PST/PDT)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain (MST/MDT)</SelectItem>
+                      <SelectItem value="America/Chicago">Central (CST/CDT)</SelectItem>
+                      <SelectItem value="America/New_York">Eastern (EST/EDT)</SelectItem>
+                      <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
+                      <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
+                      <SelectItem value="America/Puerto_Rico">Atlantic (AST)</SelectItem>
+                      <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                      <SelectItem value="Europe/Paris">Central Europe (CET/CEST)</SelectItem>
+                      <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
+                      <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
+                      <SelectItem value="Asia/Taipei">Taipei (CST)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
+                      <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
+                      <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
+                      <SelectItem value="observation-local">None (times already local)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  eBird records times in the timezone of the device that submitted
+                  the checklist &mdash; typically your phone&apos;s home timezone.
+                  This includes Merlin: if you ID photos from a trip abroad at
+                  home, Merlin maps the photo&apos;s time to your device&apos;s
+                  timezone. If you only bird locally, choose &ldquo;None&rdquo;.
+                  Otherwise, select your home timezone so we can convert times to
+                  each observation&apos;s local time.
+                </p>
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setShowImportDialog(false)
+                    importFileRef.current?.click()
+                  }}
+                >
+                  Choose CSV File
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <Button
             variant="outline"
