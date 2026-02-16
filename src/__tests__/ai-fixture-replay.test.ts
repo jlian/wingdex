@@ -89,14 +89,9 @@ describe('LLM fixture replay', () => {
 
   // ── Sanity: fixtures exist and are well-formed ──────────
 
-  it('has at least 6 fixtures', () => {
+  it('all fixtures have required fields', () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(6)
-  })
-
-  it.each(fixtures.map(f => [f.imageFile, f]))(
-    'fixture %s has required fields',
-    (_name, fixture) => {
-      const f = fixture as Fixture
+    for (const f of fixtures) {
       expect(f.rawResponse).toBeTruthy()
       expect(f.parsed).toBeTruthy()
       expect(Array.isArray(f.parsed.candidates)).toBe(true)
@@ -107,7 +102,7 @@ describe('LLM fixture replay', () => {
         expect(f.context.lon).toBeTypeOf('number')
       }
     }
-  )
+  })
 
   // ── safeParseJSON on real LLM output ────────────────────
 
@@ -209,25 +204,20 @@ describe('LLM fixture replay', () => {
   // ── Crop box derivation ─────────────────────────────────
 
   describe('crop box derivation from fixtures', () => {
-    const fixturesWithCenter = fixtures.filter(
-      f => f.parsed.birdCenter && f.parsed.birdSize
-    )
-
-    it.each(fixturesWithCenter.map(f => [f.imageFile, f]))(
-      '%s produces a valid crop box',
-      async (_name, fixture) => {
-        const f = fixture as Fixture
+    it('all fixtures with birdCenter produce valid crop boxes', async () => {
+      const fixturesWithCenter = fixtures.filter(
+        f => f.parsed.birdCenter && f.parsed.birdSize
+      )
+      expect(fixturesWithCenter.length).toBeGreaterThan(0)
+      for (const f of fixturesWithCenter) {
         replayFixture(f)
-
         const result = await identifyBirdInPhoto(
           'data:image/jpeg;base64,test',
           fixtureLocation(f),
           f.context.month,
         )
-
         expect(result.cropBox).toBeDefined()
         const { x, y, width, height } = result.cropBox!
-        // All values should be percentages 0-100
         expect(x).toBeGreaterThanOrEqual(0)
         expect(x).toBeLessThanOrEqual(100)
         expect(y).toBeGreaterThanOrEqual(0)
@@ -236,22 +226,18 @@ describe('LLM fixture replay', () => {
         expect(width).toBeLessThanOrEqual(100)
         expect(height).toBeGreaterThan(0)
         expect(height).toBeLessThanOrEqual(100)
-        // Crop should not exceed image bounds
         expect(x + width).toBeLessThanOrEqual(100)
         expect(y + height).toBeLessThanOrEqual(100)
       }
-    )
+    })
 
     it('small bird gets ~40% crop size', async () => {
-      // Use a fixture with birdSize="small"
       const smallFixture = fixtures.find(f => f.parsed.birdSize === 'small')
       if (!smallFixture) return
       replayFixture(smallFixture)
 
       const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
       expect(result.cropBox).toBeDefined()
-      // On a 800x600 image (mock), shortSide=600, 40% = 240px
-      // wPct = 240/800*100 = 30, hPct = 240/600*100 = 40
       expect(result.cropBox!.height).toBe(40)
       expect(result.cropBox!.width).toBe(30)
     })
@@ -263,7 +249,6 @@ describe('LLM fixture replay', () => {
 
       const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
       expect(result.cropBox).toBeDefined()
-      // 55% of 600 = 330px → wPct=330/800*100≈41, hPct=330/600*100=55
       expect(result.cropBox!.height).toBe(55)
       expect(result.cropBox!.width).toBe(41)
     })
@@ -271,59 +256,27 @@ describe('LLM fixture replay', () => {
 
   // ── Candidate ranking contract ──────────────────────────
 
-  describe('candidate ranking and filtering', () => {
-    it.each(fixtures.map(f => [f.imageFile, f]))(
-      '%s: candidates sorted by confidence descending',
-      async (_name, fixture) => {
-        const f = fixture as Fixture
-        replayFixture(f)
+  it('all fixtures: candidates sorted, filtered ≥ 0.3, at most 5', async () => {
+    for (const f of fixtures) {
+      replayFixture(f)
+      const result = await identifyBirdInPhoto(
+        'data:image/jpeg;base64,test',
+        fixtureLocation(f),
+        f.context.month,
+      )
 
-        const result = await identifyBirdInPhoto(
-          'data:image/jpeg;base64,test',
-          fixtureLocation(f),
-          f.context.month,
-        )
-
-        for (let i = 1; i < result.candidates.length; i++) {
-          expect(result.candidates[i - 1].confidence)
-            .toBeGreaterThanOrEqual(result.candidates[i].confidence)
-        }
+      // Sorted by confidence descending
+      for (let i = 1; i < result.candidates.length; i++) {
+        expect(result.candidates[i - 1].confidence)
+          .toBeGreaterThanOrEqual(result.candidates[i].confidence)
       }
-    )
-
-    it.each(fixtures.map(f => [f.imageFile, f]))(
-      '%s: all candidates have confidence >= 0.3',
-      async (_name, fixture) => {
-        const f = fixture as Fixture
-        replayFixture(f)
-
-        const result = await identifyBirdInPhoto(
-          'data:image/jpeg;base64,test',
-          fixtureLocation(f),
-          f.context.month,
-        )
-
-        for (const c of result.candidates) {
-          expect(c.confidence).toBeGreaterThanOrEqual(0.3)
-        }
+      // All candidates ≥ 0.3
+      for (const c of result.candidates) {
+        expect(c.confidence).toBeGreaterThanOrEqual(0.3)
       }
-    )
-
-    it.each(fixtures.map(f => [f.imageFile, f]))(
-      '%s: at most 5 candidates',
-      async (_name, fixture) => {
-        const f = fixture as Fixture
-        replayFixture(f)
-
-        const result = await identifyBirdInPhoto(
-          'data:image/jpeg;base64,test',
-          fixtureLocation(f),
-          f.context.month,
-        )
-
-        expect(result.candidates.length).toBeLessThanOrEqual(5)
-      }
-    )
+      // At most 5
+      expect(result.candidates.length).toBeLessThanOrEqual(5)
+    }
   })
 
   // ── Specific species assertions ─────────────────────────
