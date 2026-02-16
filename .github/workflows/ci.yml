@@ -7,11 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  classify:
     runs-on: ubuntu-latest
+    outputs:
+      run_full: ${{ steps.decision.outputs.run_full }}
+      reason: ${{ steps.decision.outputs.reason }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Detect docs-only changes
         if: github.event_name == 'pull_request'
         id: changes
@@ -26,61 +27,72 @@ jobs:
               - '!**/*.md'
               - '!docs/**'
 
-      - name: Determine fast-path mode
-        id: fastpath
+      - name: Classify CI mode
+        id: decision
         shell: bash
         run: |
-          should_skip=false
-          reasons=()
+          run_full=true
+          reason="full CI"
 
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.head_ref }}" == release-please--* ]]; then
-            should_skip=true
-            reasons+=("release-please branch")
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            if [[ "${{ github.head_ref }}" == release-please--* ]]; then
+              run_full=false
+              reason="release-please branch"
+            elif [[ "${{ steps.changes.outputs.docs }}" == "true" && "${{ steps.changes.outputs.non_docs }}" != "true" ]]; then
+              run_full=false
+              reason="docs-only changes"
+            fi
           fi
 
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ steps.changes.outputs.docs }}" == "true" && "${{ steps.changes.outputs.non_docs }}" != "true" ]]; then
-            should_skip=true
-            reasons+=("docs-only changes")
-          fi
-
-          reason="${reasons[*]}"
-          echo "should_skip=$should_skip" >> "$GITHUB_OUTPUT"
+          echo "run_full=$run_full" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
 
-      - name: Fast-path CI
-        if: steps.fastpath.outputs.should_skip == 'true'
-        run: echo "Skipping heavy CI for ${{ steps.fastpath.outputs.reason }}"
-
+  full-ci:
+    needs: classify
+    if: needs.classify.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        if: steps.fastpath.outputs.should_skip != 'true'
         with:
           node-version: 22
           cache: npm
 
       - name: Pin npm version
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm install -g npm@10.9.2
 
       - name: Install dependencies
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm ci --workspaces=false
 
       - name: Type check
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npx tsc -b --noCheck
 
       - name: Unit tests
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run test:unit
 
       - name: Install Playwright browser
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run test:e2e
 
       - name: Build
-        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run build
+
+  ci:
+    needs: [classify, full-ci]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize CI result
+        shell: bash
+        run: |
+          if [[ "${{ needs.classify.outputs.run_full }}" == "true" ]]; then
+            [[ "${{ needs.full-ci.result }}" == "success" ]] || {
+              echo "Full CI was required but did not succeed"
+              exit 1
+            }
+            echo "Full CI completed successfully"
+          else
+            echo "Fast-path CI completed successfully (${{ needs.classify.outputs.reason }})"
+          fi
