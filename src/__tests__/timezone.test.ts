@@ -9,6 +9,8 @@ import {
   getUtcOffsetString,
   convertTimezones,
   getTimezoneAbbreviation,
+  parseStoredTime,
+  formatStoredTimeWithTZ,
 } from '@/lib/timezone'
 
 describe('timezone utilities', () => {
@@ -433,6 +435,213 @@ describe('timezone utilities', () => {
 
     it('returns empty string for invalid date', () => {
       expect(getTimezoneAbbreviation('not-a-date')).toBe('')
+    })
+  })
+
+  // ─── parseStoredTime ───────────────────────────────────────
+
+  describe('parseStoredTime', () => {
+    it('parses offset-aware ISO string', () => {
+      const { date } = parseStoredTime('2024-12-18T17:16:00-10:00')
+      // -10:00 means UTC is Dec 19 03:16
+      expect(date.toISOString()).toBe('2024-12-19T03:16:00.000Z')
+    })
+
+    it('parses Z-suffix ISO string (legacy)', () => {
+      const { date } = parseStoredTime('2024-12-18T19:16:00.000Z')
+      expect(date.toISOString()).toBe('2024-12-18T19:16:00.000Z')
+    })
+
+    it('parses naive datetime string (legacy)', () => {
+      const { date } = parseStoredTime('2024-12-18 17:00:00')
+      expect(date).toBeInstanceOf(Date)
+      expect(isNaN(date.getTime())).toBe(false)
+    })
+  })
+
+  // ─── formatStoredTimeWithTZ ────────────────────────────────
+
+  describe('formatStoredTimeWithTZ', () => {
+    it('appends HST for Hawaii time', () => {
+      const result = formatStoredTimeWithTZ('2024-12-18T17:16:00-10:00')
+      expect(result).toMatch(/05:16|5:16/)
+      expect(result).toContain('HST')
+    })
+
+    it('appends PST for Pacific winter time', () => {
+      const result = formatStoredTimeWithTZ('2025-01-15T11:07:00-08:00')
+      expect(result).toMatch(/11:07/)
+      expect(result).toContain('PST')
+    })
+
+    it('appends PDT for Pacific summer time', () => {
+      const result = formatStoredTimeWithTZ('2025-06-01T11:07:00-07:00')
+      expect(result).toMatch(/11:07/)
+      expect(result).toContain('PDT')
+    })
+
+    it('shows time without abbreviation for legacy Z-suffix strings', () => {
+      const result = formatStoredTimeWithTZ('2025-01-15T11:07:00.000Z')
+      expect(result).toBeTruthy()
+      // No TZ abbreviation appended — legacy path
+      expect(result).not.toMatch(/[A-Z]{3,4}$/)
+    })
+
+    it('shows time without abbreviation for naive strings', () => {
+      const result = formatStoredTimeWithTZ('2025-01-15 11:07:00')
+      expect(result).toBeTruthy()
+    })
+  })
+
+  // ─── Merlin travel scenario (end-to-end in timezone module) ─
+
+  describe('Merlin travel scenario', () => {
+    // User takes photo at 5:00 PM in Taipei (UTC+8).
+    // Merlin on a phone set to Seattle/Pacific maps the EXIF time to
+    // the device timezone: 5:00 PM Taipei = 1:00 AM Pacific (PST).
+    // eBird records "01:00 AM" in the CSV with Taipei GPS coords.
+    // convertTimezones must recover the original Taipei local time.
+
+    it('recovers 5 PM Taipei from 1 AM Pacific (winter PST)', () => {
+      const result = convertTimezones(
+        '2025-01-15T01:00:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157, // Taipei
+      )
+      expect(result).toBe('2025-01-15T17:00:00+08:00')
+    })
+
+    it('recovers 5 PM Taipei from 2 AM Pacific (summer PDT)', () => {
+      // PDT is UTC-7, Taipei is UTC+8, difference is 15 hours
+      // 5 PM Taipei = 09:00 UTC = 2 AM PDT
+      const result = convertTimezones(
+        '2025-06-15T02:00:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157, // Taipei
+      )
+      expect(result).toBe('2025-06-15T17:00:00+08:00')
+    })
+
+    it('recovers morning time in Taipei from previous-day evening Pacific', () => {
+      // 8 AM Taipei = midnight UTC = 4 PM PST (previous day)
+      const result = convertTimezones(
+        '2025-01-14T16:00:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157,
+      )
+      expect(result).toBe('2025-01-15T08:00:00+08:00')
+    })
+
+    it('handles Merlin in Kolkata (UTC+5:30) from Seattle phone', () => {
+      // 3:30 PM IST = 10:00 UTC = 2:00 AM PST
+      const result = convertTimezones(
+        '2025-01-15T02:00:00',
+        'America/Los_Angeles',
+        28.6139, 77.2090, // Delhi
+      )
+      expect(result).toBe('2025-01-15T15:30:00+05:30')
+    })
+  })
+
+  // ─── convertTimezones with non-Pacific source ──────────────
+
+  describe('convertTimezones with non-Pacific source timezone', () => {
+    it('Eastern → Hawaii (EST → HST)', () => {
+      // 7 PM EST = midnight UTC = 2 PM HST
+      const result = convertTimezones(
+        '2025-01-15T19:00:00',
+        'America/New_York',
+        20.682568, -156.442741,
+      )
+      expect(result).toBe('2025-01-15T14:00:00-10:00')
+    })
+
+    it('Eastern → Taipei (EST → CST+8)', () => {
+      // 3 PM EST = 8 PM UTC = next day 4 AM Taipei
+      const result = convertTimezones(
+        '2025-01-15T15:00:00',
+        'America/New_York',
+        24.99591, 121.588157,
+      )
+      expect(result).toBe('2025-01-16T04:00:00+08:00')
+    })
+
+    it('Central European → Seattle (CET → PST)', () => {
+      // 6 PM CET = 5 PM UTC = 9 AM PST
+      const result = convertTimezones(
+        '2025-01-15T18:00:00',
+        'Europe/Paris',
+        47.6, -122.4,
+      )
+      expect(result).toBe('2025-01-15T09:00:00-08:00')
+    })
+
+    it('Japan → Hawaii (JST → HST)', () => {
+      // 3 PM JST = 6 AM UTC = 8 PM prev day HST
+      const result = convertTimezones(
+        '2025-01-15T15:00:00',
+        'Asia/Tokyo',
+        20.682568, -156.442741,
+      )
+      expect(result).toBe('2025-01-14T20:00:00-10:00')
+    })
+  })
+
+  // ─── convertTimezones DST at source ─────────────────────────
+
+  describe('convertTimezones with DST at source timezone', () => {
+    it('PDT source (summer) → Taipei', () => {
+      // 10 AM PDT = 5 PM UTC = next day 1 AM Taipei
+      const result = convertTimezones(
+        '2025-06-15T10:00:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157,
+      )
+      expect(result).toBe('2025-06-16T01:00:00+08:00')
+    })
+
+    it('PST source (winter) → Taipei at same wall time gives different result', () => {
+      // 10 AM PST = 6 PM UTC = next day 2 AM Taipei
+      const result = convertTimezones(
+        '2025-01-15T10:00:00',
+        'America/Los_Angeles',
+        24.99591, 121.588157,
+      )
+      expect(result).toBe('2025-01-16T02:00:00+08:00')
+    })
+
+    it('EDT source (summer) → Hawaii', () => {
+      // 2 PM EDT = 6 PM UTC = 8 AM HST
+      const result = convertTimezones(
+        '2025-06-15T14:00:00',
+        'America/New_York',
+        20.682568, -156.442741,
+      )
+      expect(result).toBe('2025-06-15T08:00:00-10:00')
+    })
+
+    it('CEST source (summer) → Hawaii', () => {
+      // 8 PM CEST = 6 PM UTC = 8 AM HST
+      const result = convertTimezones(
+        '2025-06-15T20:00:00',
+        'Europe/Paris',
+        20.682568, -156.442741,
+      )
+      expect(result).toBe('2025-06-15T08:00:00-10:00')
+    })
+  })
+
+  // ─── convertTimezones missing GPS graceful fallback ────────
+
+  describe('convertTimezones with missing GPS', () => {
+    it('falls back to dateToLocalISOWithOffset when lat/lon are undefined', () => {
+      // Without GPS coords, dateToLocalISOWithOffset uses browser-local TZ
+      const result = convertTimezones(
+        '2025-01-15T10:00:00',
+        'America/Los_Angeles',
+      )
+      // Should still be a valid ISO string (browser-local offset)
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     })
   })
 })
