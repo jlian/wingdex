@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
 
+## [1.2.2](https://github.com/jlian/birddex/compare/v1.2.1...v1.2.2) (2026-02-16)
+
+
+### Bug Fixes
+
+* reduce expected 404 noise in Spark KV + Wikimedia fallbacks ([#75](https://github.com/jlian/birddex/issues/75)) ([d92fcbf](https://github.com/jlian/birddex/commit/d92fcbf873cec805e365e3d9170cde75851135c1))
+
 ## [1.2.1](https://github.com/jlian/birddex/compare/v1.2.0...v1.2.1) (2026-02-16)
 
 
