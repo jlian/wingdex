@@ -12,28 +12,75 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect docs-only changes
+        if: github.event_name == 'pull_request'
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            non_docs:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+
+      - name: Determine fast-path mode
+        id: fastpath
+        shell: bash
+        run: |
+          should_skip=false
+          reasons=()
+
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.head_ref }}" == release-please--* ]]; then
+            should_skip=true
+            reasons+=("release-please branch")
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ steps.changes.outputs.docs }}" == "true" && "${{ steps.changes.outputs.non_docs }}" != "true" ]]; then
+            should_skip=true
+            reasons+=("docs-only changes")
+          fi
+
+          reason="${reasons[*]}"
+          echo "should_skip=$should_skip" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Fast-path CI
+        if: steps.fastpath.outputs.should_skip == 'true'
+        run: echo "Skipping heavy CI for ${{ steps.fastpath.outputs.reason }}"
+
       - uses: actions/setup-node@v4
+        if: steps.fastpath.outputs.should_skip != 'true'
         with:
           node-version: 22
           cache: npm
 
       - name: Pin npm version
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm install -g npm@10.9.2
 
       - name: Install dependencies
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm ci --workspaces=false
 
       - name: Type check
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npx tsc -b --noCheck
 
       - name: Unit tests
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run test:unit
 
       - name: Install Playwright browser
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run test:e2e
 
       - name: Build
+        if: steps.fastpath.outputs.should_skip != 'true'
         run: npm run build
