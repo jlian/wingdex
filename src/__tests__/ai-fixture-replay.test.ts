@@ -14,7 +14,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { findBestMatch } from '@/lib/taxonomy'
 
 // ── Fixture loading ─────────────────────────────────────────
@@ -33,6 +34,7 @@ interface Fixture {
   capturedAt: string
 }
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const FIXTURE_DIR = join(__dirname, 'fixtures', 'llm-responses')
 const fixtures: Fixture[] = readdirSync(FIXTURE_DIR)
   .filter(f => f.endsWith('.json'))
@@ -70,7 +72,7 @@ function replayFixture(fixture: Fixture) {
 function fixtureLocation(f: Fixture) {
   return f.context.lat != null && f.context.lon != null
     ? { lat: f.context.lat, lon: f.context.lon }
-    : null
+    : undefined
 }
 
 // ── Tests ───────────────────────────────────────────────────
