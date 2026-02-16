@@ -105,6 +105,8 @@ function parseOffsetMs(offset: string): number {
 
 /**
  * Get the correct UTC offset for a given local wall time in a timezone.
+ *
+ * `monthIndex` is zero-based (0=Jan, 11=Dec), matching JS Date APIs.
  * Uses an iterative approach to handle DST transitions correctly:
  * the naive Date.UTC guess may land on the wrong side of a DST boundary,
  * so we correct by computing the actual UTC instant from the first offset
@@ -112,11 +114,11 @@ function parseOffsetMs(offset: string): number {
  */
 export function getOffsetForLocalWallTime(
   timezone: string,
-  year: number, month: number, day: number,
+  year: number, monthIndex: number, day: number,
   hour: number = 0, minute: number = 0, second: number = 0,
 ): string {
   // First guess: treat wall-time components as UTC
-  const wallAsUtc = Date.UTC(year, month, day, hour, minute, second)
+  const wallAsUtc = Date.UTC(year, monthIndex, day, hour, minute, second)
   const offset1 = getUtcOffsetString(timezone, new Date(wallAsUtc))
   const offsetMs1 = parseOffsetMs(offset1)
 
