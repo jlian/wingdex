@@ -80,7 +80,7 @@ describe('eBird CSV utilities', () => {
 
     const previews = parseEBirdCSV(csv)
     expect(previews).toHaveLength(1)
-    expect(previews[0].speciesName).toBe('Northern Pintail (Anas acuta)')
+      expect(previews[0].speciesName).toBe('Northern Pintail')
     expect(previews[0].location).toBe('Lagoon')
   })
 
@@ -726,7 +726,7 @@ describe('eBird CSV utilities', () => {
         {
           id: 'obs_1',
           outingId: 'o1',
-          speciesName: 'Chukar Partridge (Alectoris chukar)',
+          speciesName: 'Chukar (Alectoris chukar)',
           count: 1,
           certainty: 'confirmed',
           notes: '',
@@ -747,16 +747,17 @@ describe('eBird CSV utilities', () => {
   /* ---------- taxonomy normalization during import ---------- */
 
   describe('taxonomy normalization during CSV import', () => {
-    it('normalizes Chukar to Chukar Partridge using scientific name', () => {
-      // The eBird CSV has "Chukar" as the common name, but the taxonomy
-      // calls this species "Chukar Partridge" (Alectoris chukar).
+    it('preserves eBird species names as-is from CSV', () => {
+      // The eBird CSV has "Chukar" as the common name — our taxonomy
+      // matches eBird so it should stay as "Chukar" (not "Chukar Partridge").
+      // Wikipedia lookup uses WIKI_OVERRIDES to find the right article.
       const csv = ebirdCSV([
         'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
       const previews = parseEBirdCSV(csv)
       expect(previews).toHaveLength(1)
-      expect(previews[0].speciesName).toBe('Chukar Partridge (Alectoris chukar)')
+      expect(previews[0].speciesName).toBe('Chukar (Alectoris chukar)')
     })
 
     it('keeps canonical names unchanged', () => {
@@ -782,8 +783,8 @@ describe('eBird CSV utilities', () => {
       for (const p of previews) {
         expect(p.speciesName).toMatch(/^.+\(.+\)$/)
       }
-      // Chukar should be normalized to Chukar Partridge
-      expect(previews[0].speciesName).toBe('Chukar Partridge (Alectoris chukar)')
+      // Chukar stays as Chukar (matching eBird taxonomy)
+      expect(previews[0].speciesName).toBe('Chukar (Alectoris chukar)')
       // Rock Pigeon should stay as Rock Pigeon
       expect(previews[1].speciesName).toBe('Rock Pigeon (Columba livia)')
     })

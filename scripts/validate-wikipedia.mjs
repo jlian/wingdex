@@ -30,11 +30,12 @@ const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : Infinity
  * Must stay in sync with WIKI_OVERRIDES in src/lib/wikimedia.ts.
  */
 const WIKI_OVERRIDES = {
-  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
-  'Black-hooded Antthrush': 'Black-faced antthrush',
-  'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
-  'Rose-bellied Chat': 'Rose-breasted chat',
   'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
+  'Black-hooded Antthrush': 'Black-faced antthrush',
+  'Chukar': 'Chukar partridge',
+  'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
+  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
+  'Rose-bellied Chat': 'Rose-breasted chat',
 }
 
 /**

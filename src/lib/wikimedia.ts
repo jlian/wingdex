@@ -16,6 +16,7 @@ const summaryCache = new Map<string, WikiSummary>()
 const WIKI_OVERRIDES: Record<string, string> = {
   'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
   'Black-hooded Antthrush': 'Black-faced antthrush',
+  'Chukar': 'Chukar partridge',
   'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
   'Merlin': 'Merlin (bird)',
   'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',

@@ -1,7 +1,6 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
 import { getTimezoneFromCoords, getOffsetForLocalWallTime } from './timezone'
-import { findBestMatch } from './taxonomy'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -244,16 +243,9 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
       // "X" means species present but not counted — treat as 1
       const count = rawCount.toUpperCase() === 'X' ? 1 : parseInt(rawCount || '1', 10)
 
-      const rawName = scientificName && !speciesName.includes('(')
+      const fullName = scientificName && !speciesName.includes('(')
         ? `${speciesName} (${scientificName})`
         : speciesName
-
-      // Normalize against taxonomy so CSV names like "Chukar" become
-      // "Chukar Partridge (Alectoris chukar)" matching the canonical taxonomy.
-      const taxonMatch = findBestMatch(rawName)
-      const fullName = taxonMatch
-        ? `${taxonMatch.common} (${taxonMatch.scientific})`
-        : rawName
 
       previews.push({
         speciesName: fullName,
