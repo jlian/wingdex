@@ -1,0 +1,26 @@
+{
+  "imageFile": "Pigeons_near_Museumplein_Amsterdam.jpg",
+  "context": {
+    "lat": 52.3579,
+    "lon": 4.8815,
+    "month": 4,
+    "locationName": "Museumplein, Amsterdam, Netherlands"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Rock Pigeon (Columba livia)\",\"confidence\":0.90}],\"birdCenter\":[75,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Rock Pigeon (Columba livia)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      75,
+      65
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:49.817Z"
+}

@@ -1,0 +1,26 @@
+{
+  "imageFile": "Chukar_partridge_near_Haleakala_summit_Maui.jpg",
+  "context": {
+    "lat": 20.7204,
+    "lon": -156.1552,
+    "month": 11,
+    "locationName": "Haleakala, Maui, HI"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Chukar (Alectoris chukar)\",\"confidence\":0.90}],\"birdCenter\":[75,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Chukar (Alectoris chukar)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      75,
+      60
+    ],
+    "birdSize": "medium",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:19.167Z"
+}

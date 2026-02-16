@@ -1,0 +1,26 @@
+{
+  "imageFile": "American_goldfinch_in_maple_at_Union_Bay_Natural_Area.jpg",
+  "context": {
+    "lat": 47.6564,
+    "lon": -122.2924,
+    "month": 8,
+    "locationName": "Union Bay Natural Area, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"American Goldfinch (Spinus tristis)\",\"confidence\":0.85}],\"birdCenter\":[45,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "American Goldfinch (Spinus tristis)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      45,
+      55
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:07.338Z"
+}
