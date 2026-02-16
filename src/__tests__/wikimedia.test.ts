@@ -117,6 +117,18 @@ describe('getWikimediaImage', () => {
     // Only 2 calls: common name → common name + " bird" (no scientific name)
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
+
+  it('tries dehyphenated common name before the hyphenated title', async () => {
+    mockWikiResponse(wikiData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-dehyphenated.jpg' },
+      originalimage: undefined,
+    }))
+
+    const result = await getWikimediaImage('Unique-Hyphenated Bird M')
+    expect(result).toContain('dehyphenated.jpg')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Hyphenated_Bird_M')
+  })
 })
 
 // ── getWikimediaSummary ─────────────────────────────────────
@@ -195,5 +207,18 @@ describe('getWikimediaSummary', () => {
 
     const result = await getWikimediaSummary('Unique Dove L')
     expect(result).toBeUndefined()
+  })
+
+  it('tries dehyphenated common name first for summary lookups', async () => {
+    mockWikiResponse(wikiData({
+      title: 'Unique Hyphenated Bird M',
+      extract: 'Found via dehyphenated title.',
+    }))
+
+    const result = await getWikimediaSummary('Unique-Hyphenated Bird M')
+    expect(result).toBeDefined()
+    expect(result!.extract).toContain('dehyphenated')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Hyphenated_Bird_M')
   })
 })

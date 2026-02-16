@@ -38,6 +38,9 @@ async function fetchSummary(title: string): Promise<{ thumbnail?: { source: stri
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
       { headers: { 'Api-User-Agent': 'BirdDex/1.0 (bird identification app)' } }
     )
+    if (!res.ok && typeof res.status === 'number' && res.status > 0 && res.status !== 404) {
+      console.warn(`[wikimedia] Unexpected summary response ${res.status} for "${title}"`)
+    }
     if (!res.ok) return null
     return await res.json()
   } catch {
@@ -72,6 +75,7 @@ export async function getWikimediaImage(
   size = 300
 ): Promise<string | undefined> {
   const { common, scientific } = parseSpeciesName(speciesName)
+  const dehyphenated = common.includes('-') ? common.replace(/-/g, ' ') : undefined
   const cacheKey = common.toLowerCase()
 
   if (imageCache.has(cacheKey)) {
@@ -83,37 +87,36 @@ export async function getWikimediaImage(
   let data = override ? await fetchSummary(override) : null
   let imageUrl = data ? extractImageUrl(data, size) : undefined
 
-  // Strategy 1: Try common name directly
+  // Strategy 1: Try dehyphenated variant first (Wikipedia often uses spaces)
+  if (!imageUrl && dehyphenated) {
+    data = await fetchSummary(dehyphenated)
+    imageUrl = data ? extractImageUrl(data, size) : undefined
+  }
+
+  // Strategy 2: Try common name directly
   if (!imageUrl) {
     data = await fetchSummary(common)
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
-  // Strategy 2: Try scientific name if common name had no image
+  // Strategy 3: Try scientific name if common name had no image
   if (!imageUrl && scientific) {
     data = await fetchSummary(scientific)
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
-  // Strategy 3: Try common name + " bird" (disambiguates e.g. "Robin")
+  // Strategy 4: Try common name + " bird" (disambiguates e.g. "Robin")
   if (!imageUrl) {
     data = await fetchSummary(`${common} bird`)
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
-  // Strategy 4: Try Gray↔Grey swap (eBird uses "Gray", Wikipedia often has "Grey")
+  // Strategy 5: Try Gray↔Grey swap (eBird uses "Gray", Wikipedia often has "Grey")
   if (!imageUrl && /gray|grey/i.test(common)) {
     const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
       === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
       : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
     data = await fetchSummary(swapped)
-    imageUrl = data ? extractImageUrl(data, size) : undefined
-  }
-
-  // Strategy 5: Try dehyphenated (eBird: "Storm-Petrel", Wikipedia: "storm petrel")
-  if (!imageUrl && common.includes('-')) {
-    const dehyphenated = common.replace(/-/g, ' ')
-    data = await fetchSummary(dehyphenated)
     imageUrl = data ? extractImageUrl(data, size) : undefined
   }
 
@@ -131,6 +134,7 @@ export async function getWikimediaSummary(
   speciesName: string
 ): Promise<WikiSummary | undefined> {
   const { common, scientific } = parseSpeciesName(speciesName)
+  const dehyphenated = common.includes('-') ? common.replace(/-/g, ' ') : undefined
   const cacheKey = common.toLowerCase()
 
   if (summaryCache.has(cacheKey)) {
@@ -139,19 +143,15 @@ export async function getWikimediaSummary(
 
   // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
   const override = WIKI_OVERRIDES[common]
-  const candidates = [override, common, scientific, `${common} bird`].filter(Boolean) as string[]
+  const candidates = [override, dehyphenated, common, scientific, `${common} bird`].filter(Boolean) as string[]
   if (/gray|grey/i.test(common)) {
     const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
       === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
       : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
     candidates.push(swapped)
   }
-  // eBird uses hyphens (Storm-Petrel, Fish-Owl) but Wikipedia often doesn't
-  if (common.includes('-')) {
-    candidates.push(common.replace(/-/g, ' '))
-  }
 
-  for (const candidate of candidates) {
+  for (const candidate of [...new Set(candidates)]) {
     const data = await fetchSummary(candidate)
     if (data?.extract) {
       const summary: WikiSummary = {
