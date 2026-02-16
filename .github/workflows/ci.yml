@@ -14,33 +14,32 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Detect non-doc changes
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          predicate-quantifier: every
           filters: |
-            non_docs:
+            changed:
               - '**'
-              - '!**/*.md'
-              - '!docs/**'
-
-      - uses: actions/checkout@v4
-        if: steps.filter.outputs.non_docs == 'true'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
 
       - uses: actions/setup-node@v4
-        if: steps.filter.outputs.non_docs == 'true'
+        if: steps.filter.outputs.changed_count != steps.filter.outputs.docs_count
         with:
           node-version: 22
           cache: npm
 
       - name: Install and run verify
-        if: steps.filter.outputs.non_docs == 'true'
+        if: steps.filter.outputs.changed_count != steps.filter.outputs.docs_count
         run: |
           npm install -g npm@10.9.2
           npm ci --workspaces=false
           npm run verify
 
       - name: Skip docs-only changes
-        if: steps.filter.outputs.non_docs != 'true'
+        if: steps.filter.outputs.changed_count == steps.filter.outputs.docs_count
         run: echo "Docs-only changes detected, skipping full CI"
