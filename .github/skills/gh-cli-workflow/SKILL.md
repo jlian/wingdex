@@ -82,8 +82,39 @@ gh run view <run-id> --repo owner/repo
 gh run view <run-id> --repo owner/repo --log-failed
 ```
 
-## 6) Advanced query patterns
-Use JSON output + `--jq` for scripting and concise summaries.
+## 6) Review comments workflow (no jq)
+Use these commands when you want to triage/reply/resolve review comments without `jq` parsing.
+
+```bash
+gh pr view 75 --repo jlian/birddex --comments
+gh pr view 75 --repo jlian/birddex --web
+```
+
+Notes:
+- `gh pr view --comments` is useful for PR conversation context, but not reliable for full inline review-thread management.
+- For reply/resolve workflows, query `reviewThreads` via GraphQL to get thread IDs.
+
+List review threads (with IDs, path, unresolved flag):
+
+```bash
+gh api graphql -f query='query { repository(owner:"jlian", name:"birddex") { pullRequest(number:75) { reviewThreads(first:100) { nodes { id isResolved path comments(last:1){nodes{url body author{login}}} } } } } }'
+```
+
+Quick unresolved check without `jq`:
+
+```bash
+gh api graphql -f query='query { repository(owner:"jlian", name:"birddex") { pullRequest(number:75) { reviewThreads(first:100) { nodes { id isResolved } } } } }' | grep '"isResolved": false' || true
+```
+
+Reply to a review thread and resolve it (CLI):
+
+```bash
+gh api graphql -f query='mutation($threadId:ID!, $body:String!) { addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId, body:$body}) { comment { url } } }' -f threadId='<thread_id>' -f body='Addressed in <commit_sha>.'
+gh api graphql -f query='mutation($threadId:ID!) { resolveReviewThread(input:{threadId:$threadId}) { thread { isResolved } } }' -f threadId='<thread_id>'
+```
+
+## 7) Advanced query patterns (optional jq)
+Use JSON output for scripts; add `--jq` only when you want filtered one-liners.
 
 ```bash
 gh api repos/owner/repo/pulls/55 --jq '.title, .state, .user.login'
