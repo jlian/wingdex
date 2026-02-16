@@ -257,12 +257,6 @@ function SpeciesDetail({
 
         {/* External links */}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <a href={ebirdUrl} target="_blank" rel="noopener noreferrer">
-              <ArrowSquareOut size={14} className="mr-1.5" />
-              eBird
-            </a>
-          </Button>
           {summary?.pageUrl && (
             <Button variant="outline" size="sm" asChild>
               <a href={summary.pageUrl} target="_blank" rel="noopener noreferrer">
@@ -271,6 +265,12 @@ function SpeciesDetail({
               </a>
             </Button>
           )}
+          <Button variant="outline" size="sm" asChild>
+            <a href={ebirdUrl} target="_blank" rel="noopener noreferrer">
+              <ArrowSquareOut size={14} className="mr-1.5" />
+              eBird
+            </a>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <a
               href={`https://www.allaboutbirds.org/guide/${encodeURIComponent(displayName.replace(/ /g, '_'))}`}
