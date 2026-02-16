@@ -79,6 +79,15 @@ For reproducible installs and stable lockfile output, use `Node 22.16.x` and `np
 | `npm run lint` | Lint with ESLint |
 | `npm run preview` | Preview production build |
 
+### Releases (automated semver + tags)
+
+- PR titles must follow semantic commit style (for example `feat: add outing merge UX` or `fix: handle wiki 404 fallback`).
+- On push to `main`, Release Please opens/updates a release PR and calculates the next semantic version:
+	- `feat` → minor
+	- `fix`/`perf`/`refactor` and other non-breaking types → patch
+	- `!` or `BREAKING CHANGE:` → major
+- Merging the release PR updates `package.json`, updates `CHANGELOG.md`, and creates the Git tag/release (for example `v1.3.0`).
+
 ## Security notes
 
 - BirdDex is designed for **low-sensitivity personal birding data** (outings, observations, notes).
