@@ -994,3 +994,137 @@ describe('eBird CSV utilities', () => {
       expect(fields[9]).toBe('11:07')
     })
   })
+  /* ---------- Merlin travel scenario ---------- */
+
+  describe('Merlin travel scenario (CSV import)', () => {
+    // User photographs bird at 5:00 PM in Taipei. Merlin (on a Seattle phone)
+    // maps the EXIF time to the device timezone: 5 PM CST+8 → 1 AM PST.
+    // eBird records "01:00 AM" in the CSV with Taipei GPS coords.
+    // Import with profile TZ "America/Los_Angeles" should recover 5 PM Taipei.
+
+    it('recovers 5 PM Taipei local from Merlin 1 AM Pacific (winter)', () => {
+      const csv = ebirdCSV([
+        'S1,Light-vented Bulbul,Pycnonotus sinensis,3050,1,TW-TPE,,L1,Taipei,24.99591,121.588157,2025-01-15,01:00 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2025-01-15T17:00:00+08:00')
+    })
+
+    it('recovers 5 PM Taipei local from Merlin 2 AM Pacific (summer PDT)', () => {
+      const csv = ebirdCSV([
+        'S2,Light-vented Bulbul,Pycnonotus sinensis,3050,1,TW-TPE,,L1,Taipei,24.99591,121.588157,2025-06-15,02:00 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // 2 AM PDT = 9 AM UTC = 5 PM Taipei
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2025-06-15T17:00:00+08:00')
+    })
+
+    it('Merlin scenario: full roundtrip import → group → export', () => {
+      const csv = ebirdCSV([
+        'S1,Light-vented Bulbul,Pycnonotus sinensis,3050,1,TW-TPE,,L1,Taipei,24.99591,121.588157,2025-01-15,01:00 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
+      expect(previews[0].date).toBe('2025-01-15T17:00:00+08:00')
+
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+      expect(outings).toHaveLength(1)
+
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const fields = parseCSVLineForTest(exportCsv)
+      // Export should use the recovered Taipei local time
+      expect(fields[8]).toBe('01/15/2025')
+      expect(fields[9]).toBe('17:00')
+    })
+
+    it('Merlin scenario: Kolkata photo from Seattle phone', () => {
+      const csv = ebirdCSV([
+        'S3,House Crow,Corvus splendens,2950,2,IN-DL,,L1,Delhi,28.6139,77.2090,2025-01-15,02:00 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // 2 AM PST = 10 AM UTC = 3:30 PM IST
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2025-01-15T15:30:00+05:30')
+    })
+  })
+
+  /* ---------- non-Pacific profile timezone ---------- */
+
+  describe('non-Pacific profile timezone import', () => {
+    it('Eastern profile TZ → Hawaii observation', () => {
+      const csv = ebirdCSV([
+        'S1,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L1,Maui,20.682568,-156.442741,2025-01-15,07:00 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // 7 PM EST = midnight UTC = 2 PM HST
+      const p = parseEBirdCSV(csv, 'America/New_York')[0]
+      expect(p.date).toBe('2025-01-15T14:00:00-10:00')
+    })
+
+    it('Central European profile TZ → Seattle observation', () => {
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-01-15,06:00 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // 6 PM CET = 5 PM UTC = 9 AM PST
+      const p = parseEBirdCSV(csv, 'Europe/Paris')[0]
+      expect(p.date).toBe('2025-01-15T09:00:00-08:00')
+    })
+
+    it('Japan profile TZ → Hawaii observation', () => {
+      const csv = ebirdCSV([
+        'S1,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L1,Maui,20.682568,-156.442741,2025-01-15,03:00 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // 3 PM JST = 6 AM UTC = 8 PM prev day HST
+      const p = parseEBirdCSV(csv, 'Asia/Tokyo')[0]
+      expect(p.date).toBe('2025-01-14T20:00:00-10:00')
+    })
+  })
+
+  /* ---------- multi-timezone single CSV import ---------- */
+
+  describe('multi-timezone observations in single CSV', () => {
+    it('correctly converts each observation to its own local timezone', () => {
+      const csv = ebirdCSV([
+        // Hawaii observation at 5:16 PM Pacific time
+        'S1,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L1,Maui,20.682568,-156.442741,2024-12-18,05:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+        // Taipei observation at 3:06 PM Pacific time
+        'S2,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L2,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1,,,,',
+        // Seattle observation at 11:07 AM Pacific time
+        'S3,Mallard,Anas platyrhynchos,545,X,US-WA,King,L3,Park,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+        // Delhi observation at 2:00 AM Pacific time
+        'S4,House Crow,Corvus splendens,2950,2,IN-DL,,L4,Delhi,28.6139,77.2090,2025-01-15,02:00 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
+
+      // Hawaii: 5:16 PM PST → 3:16 PM HST
+      expect(previews[0].date).toBe('2024-12-18T15:16:00-10:00')
+      // Taipei: 3:06 PM PST → next day 7:06 AM CST+8
+      expect(previews[1].date).toBe('2025-12-28T07:06:00+08:00')
+      // Seattle: unchanged (same TZ), summer PDT
+      expect(previews[2].date).toBe('2025-06-01T11:07:00-07:00')
+      // Delhi: 2 AM PST → 3:30 PM IST
+      expect(previews[3].date).toBe('2025-01-15T15:30:00+05:30')
+    })
+  })
+
+  /* ---------- missing GPS with profile timezone ---------- */
+
+  describe('missing GPS with profile timezone', () => {
+    it('falls back gracefully when lat/lon are missing', () => {
+      const csv = ebirdCSV([
+        // No lat/lon — some eBird exports can have empty coordinates
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,,,2025-01-15,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
+      // Should still import without crashing; time treated as observation-local
+      expect(previews).toHaveLength(1)
+      expect(previews[0].date).toContain('2025-01-15')
+      expect(previews[0].date).toContain('11:07')
+    })
+  })
