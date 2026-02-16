@@ -75,9 +75,12 @@ For reproducible installs and stable lockfile output, use `Node 22.16.x` and `np
 | `npm run test` | Run all tests (Vitest) |
 | `npm run test:unit` | Run unit tests only |
 | `npm run test:e2e` | Run end-to-end tests (Playwright) |
+| `npm run setup:playwright` | Install Playwright Chromium + Linux deps |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run lint` | Lint with ESLint |
 | `npm run preview` | Preview production build |
+
+In Codespaces, `.vscode/tasks.json` runs `bootstrap-workspace` on folder open to bootstrap ephemeral environments. It installs Playwright dependencies and only starts `npm run dev` when nothing is already serving `http://localhost:5000`. If prompted, allow automatic tasks for this workspace.
 
 ## Security notes
 

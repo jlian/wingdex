@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "setup-playwright",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "setup:playwright"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ensure-app-on-5000",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo 'App already available on :5000'; else echo 'No app on :5000, starting npm run dev'; nohup npm run dev >/tmp/birddex-dev.log 2>&1 & fi"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "bootstrap-playwright-mcp",
+      "dependsOn": [
+        "setup-playwright"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "bootstrap-workspace",
+      "dependsOn": [
+        "setup-playwright",
+        "ensure-app-on-5000"
+      ],
+      "dependsOrder": "sequence",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

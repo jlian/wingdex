@@ -59,3 +59,10 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Codespace Runtime Assumptions
+
+- In this Spark Codespace, assume the app is already running at `http://localhost:5000` unless a user says otherwise.
+- Before starting any dev server, first verify whether `http://localhost:5000` is already available.
+- Do not start an additional `npm run dev` process if port 5000 is already serving the app.
+- For Playwright/e2e checks, target the existing server on port 5000 by default.
