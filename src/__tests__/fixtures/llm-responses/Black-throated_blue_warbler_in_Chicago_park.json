@@ -1,0 +1,26 @@
+{
+  "imageFile": "Black-throated_blue_warbler_in_Chicago_park.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Montrose Point, Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Black-throated Blue Warbler (Setophaga caerulescens)\",\"confidence\":0.85}],\"birdCenter\":[50,75],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Black-throated Blue Warbler (Setophaga caerulescens)",
+        "confidence": 0.85
+      }
+    ],
+    "birdCenter": [
+      50,
+      75
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:08.337Z"
+}

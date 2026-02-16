@@ -1,0 +1,26 @@
+{
+  "imageFile": "Mallard_drake_on_Union_Bay_Natural_Area.jpg",
+  "context": {
+    "lat": 47.6543,
+    "lon": -122.2952,
+    "month": 10,
+    "locationName": "Union Bay Natural Area, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.95}],\"birdCenter\":[40,45],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Mallard (Anas platyrhynchos)",
+        "confidence": 0.95
+      }
+    ],
+    "birdCenter": [
+      40,
+      45
+    ],
+    "birdSize": "medium",
+    "multipleBirds": true
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:47.413Z"
+}

@@ -1,0 +1,26 @@
+{
+  "imageFile": "Palm_warbler_on_Lake_Michigan_shore_Chicago.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Lake Michigan shore, Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Waterthrush (Parkesia noveboracensis)\",\"confidence\":0.80}],\"birdCenter\":[50,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Northern Waterthrush (Parkesia noveboracensis)",
+        "confidence": 0.8
+      }
+    ],
+    "birdCenter": [
+      50,
+      70
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:26.006Z"
+}

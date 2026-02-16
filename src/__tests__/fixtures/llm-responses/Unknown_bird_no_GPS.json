@@ -1,0 +1,21 @@
+{
+  "imageFile": "Unknown_bird_no_GPS.jpeg",
+  "context": {},
+  "rawResponse": "{\"candidates\":[{\"species\":\"Bushtit (Psaltriparus minimus)\",\"confidence\":0.80}],\"birdCenter\":[44,52],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Bushtit (Psaltriparus minimus)",
+        "confidence": 0.8
+      }
+    ],
+    "birdCenter": [
+      44,
+      52
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:24:02.513Z"
+}

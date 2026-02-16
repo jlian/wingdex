@@ -1,0 +1,26 @@
+{
+  "imageFile": "Female_northern_cardinal_in_Chicago_park.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Cardinal (Cardinalis cardinalis)\",\"confidence\":0.90}],\"birdCenter\":[40,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Northern Cardinal (Cardinalis cardinalis)",
+        "confidence": 0.9
+      }
+    ],
+    "birdCenter": [
+      40,
+      60
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:13.585Z"
+}

@@ -150,7 +150,7 @@ test.describe('App smoke tests', () => {
 
     // Upload a test image
     const fileInput = page.getByRole('dialog').locator('input[type="file"]');
-    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+    await fileInput.setInputFiles(path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg'));
 
     // Should show the extracting step with progress
     await expect(
@@ -176,7 +176,7 @@ test.describe('App smoke tests', () => {
     // Upload multiple test images
     const fileInput = page.getByRole('dialog').locator('input[type="file"]');
     await fileInput.setInputFiles([
-      path.resolve('src/assets/images/bird-test.jpeg'),
+      path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg'),
       path.resolve('src/assets/images/Stellers_Jay_eating_cherries_Seattle_backyard.jpg'),
     ]);
 
@@ -197,7 +197,7 @@ test.describe('App smoke tests', () => {
 
     // Upload a file to move past the initial 'upload' step
     const fileInput = page.getByRole('dialog').locator('input[type="file"]');
-    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+    await fileInput.setInputFiles(path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg'));
 
     // Wait for the wizard to advance past the upload step
     await expect(
@@ -227,7 +227,7 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
 
     const fileInput = page.getByRole('dialog').locator('input[type="file"]');
-    await fileInput.setInputFiles(path.resolve('src/assets/images/bird-test.jpeg'));
+    await fileInput.setInputFiles(path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg'));
 
     await expect(
       page.getByText('Reading Photos...').or(page.getByText('Review Outing'))

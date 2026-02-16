@@ -28,7 +28,7 @@ const TEST_IMAGES: Array<{
   toleranceKm: number
 }> = [
   {
-    file: 'bird-test.jpeg',
+    file: 'Common_kingfisher_at_Taipei_Zoo.jpeg',
     species: 'Common Kingfisher',
     date: '2025-12-27',
     lat: 24.998, lon: 121.581,
@@ -77,8 +77,8 @@ const TEST_IMAGES: Array<{
   },
 ]
 
-describe('EXIF extraction from bird-test.jpeg', () => {
-  const imagePath = resolve(__dirname, '../assets/images/bird-test.jpeg')
+describe('EXIF extraction from Common_kingfisher_at_Taipei_Zoo.jpeg', () => {
+  const imagePath = resolve(__dirname, '../assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg')
   const view = loadExifView(imagePath)
   const exif = parseEXIF(view)
 
