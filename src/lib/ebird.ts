@@ -1,6 +1,6 @@
 import type { Outing, Observation, ImportPreview, DexEntry } from './types'
 import { getDisplayName, getScientificName } from './utils'
-import { getTimezoneFromCoords, getOffsetForLocalWallTime, dateToLocalISOWithOffset } from './timezone'
+import { getTimezoneFromCoords, getOffsetForLocalWallTime, dateToLocalISOWithOffset, convertTimezones } from './timezone'
 
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
@@ -213,7 +213,7 @@ export function exportOutingToEBirdCSV(
   return csv
 }
 
-export function parseEBirdCSV(csvContent: string): ImportPreview[] {
+export function parseEBirdCSV(csvContent: string, profileTimezone?: string): ImportPreview[] {
   const lines = csvContent.split('\n').filter(line => line.trim())
   if (lines.length === 0) return []
 
@@ -242,7 +242,7 @@ export function parseEBirdCSV(csvContent: string): ImportPreview[] {
     const checklistNotes = row['checklist comments'] || row['submission comments'] || ''
     
     if (speciesName && date) {
-      const normalizedDate = normalizeDate(date, time, isNaN(lat) ? undefined : lat, isNaN(lon) ? undefined : lon)
+      const normalizedDate = normalizeDate(date, time, isNaN(lat) ? undefined : lat, isNaN(lon) ? undefined : lon, profileTimezone)
       if (!normalizedDate) continue
 
       // "X" means species present but not counted — treat as 1
@@ -299,7 +299,13 @@ function parseCSVLine(line: string): string[] {
   return values
 }
 
-function normalizeDate(dateStr: string, timeStr?: string, lat?: number, lon?: number): string | null {
+function normalizeDate(
+  dateStr: string,
+  timeStr?: string,
+  lat?: number,
+  lon?: number,
+  profileTimezone?: string,
+): string | null {
   try {
     // Parse date components to construct a local-time Date.
     // new Date("2024-01-15") treats the string as UTC, but eBird dates are
@@ -328,15 +334,22 @@ function normalizeDate(dateStr: string, timeStr?: string, lat?: number, lon?: nu
       }
     }
 
-    // Build a local datetime string and attach timezone offset (#59)
     const pad = (n: number) => String(n).padStart(2, '0')
-    const localStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`
+    const naiveStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`
 
+    if (profileTimezone && lat != null && lon != null) {
+      // eBird "Download My Data" exports times in the user's profile timezone,
+      // not the observation-local timezone. Convert from profile TZ to
+      // observation-local TZ via UTC. (#59)
+      return convertTimezones(naiveStr, profileTimezone, lat, lon)
+    }
+
+    // Fallback: treat time as observation-local (legacy / no profile TZ)
     const timezone = (lat != null && lon != null)
       ? getTimezoneFromCoords(lat, lon)
       : Intl.DateTimeFormat().resolvedOptions().timeZone
     const offset = getOffsetForLocalWallTime(timezone, year, month, day, hours, minutes)
-    return `${localStr}${offset}`
+    return `${naiveStr}${offset}`
   } catch {
     
   }

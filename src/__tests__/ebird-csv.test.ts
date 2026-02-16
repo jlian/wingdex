@@ -710,17 +710,18 @@ describe('eBird CSV utilities', () => {
     })
 
     it('preserves local time from offset-aware ISO startTime (not browser TZ)', () => {
-      // Outing observed in Hawaii (UTC-10) at 7:16 PM local time
+      // Outing observed in Hawaii (UTC-10) at 5:16 PM local time
+      // (CSV said 7:16 PM but that was Pacific time; actual local = 5:16 PM HST)
       const outing: Outing = {
         id: 'o1',
         userId: 'u1',
-        startTime: '2024-12-18T19:16:00-10:00',
-        endTime: '2024-12-18T20:16:00-10:00',
+        startTime: '2024-12-18T17:16:00-10:00',
+        endTime: '2024-12-18T18:16:00-10:00',
         locationName: 'Maui',
         lat: 20.682568,
         lon: -156.442741,
         notes: '',
-        createdAt: '2024-12-18T19:16:00-10:00',
+        createdAt: '2024-12-18T17:16:00-10:00',
       }
       const observations: Observation[] = [
         {
@@ -737,8 +738,8 @@ describe('eBird CSV utilities', () => {
       const fields = parseCSVLineForTest(csv)
       // Date (col 8) should be 12/18/2024 (local), not 12/19 (UTC)
       expect(fields[8]).toBe('12/18/2024')
-      // Time (col 9) should be 19:16 (local), not 05:16 (UTC)
-      expect(fields[9]).toBe('19:16')
+      // Time (col 9) should be 17:16 (local HST), not 19:16 (was Pacific)
+      expect(fields[9]).toBe('17:16')
     })
   })
 
@@ -793,40 +794,61 @@ describe('eBird CSV utilities', () => {
   /* ---------- timezone-aware date handling ---------- */
 
   describe('timezone-aware date handling', () => {
-    it('produces correct offset for Hawaii observation (UTC-10, no DST)', () => {
+    it('converts Hawaii observation from profile TZ to observation-local (UTC-10)', () => {
       const csv = ebirdCSV([
         'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
-      const p = parseEBirdCSV(csv)[0]
-      // Hawaii is UTC-10, no DST
-      expect(p.date).toBe('2024-12-18T19:16:00-10:00')
+      // CSV "07:16 PM" is in the user's eBird profile timezone (Pacific).
+      // 7:16 PM PST (UTC-8) → 3:16 AM+1 UTC → 5:16 PM HST (UTC-10)
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2024-12-18T17:16:00-10:00')
     })
 
-    it('produces correct offset for Taipei observation (UTC+8, no DST)', () => {
+    it('converts Taipei observation from profile TZ to observation-local (UTC+8)', () => {
       const csv = ebirdCSV([
         'S290456247,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
-      const p = parseEBirdCSV(csv)[0]
-      // Taipei is UTC+8
-      expect(p.date).toBe('2025-12-27T15:06:00+08:00')
+      // CSV "03:06 PM" is PST. 3:06 PM PST → 11:06 PM UTC → next day 7:06 AM Taipei
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2025-12-28T07:06:00+08:00')
     })
 
-    it('produces correct offset for Seattle observation (UTC-7 in summer, UTC-8 in winter)', () => {
-      // Summer: PDT (UTC-7)
+    it('Seattle observation unchanged when profile TZ matches observation TZ', () => {
+      // Summer: PDT (UTC-7) — profile TZ is also Pacific, so no shift
       const csvSummer = ebirdCSV([
         'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
       ])
-      const summer = parseEBirdCSV(csvSummer)[0]
+      const summer = parseEBirdCSV(csvSummer, 'America/Los_Angeles')[0]
       expect(summer.date).toBe('2025-06-01T11:07:00-07:00')
 
       // Winter: PST (UTC-8)
       const csvWinter = ebirdCSV([
         'S2,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-01-15,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
       ])
-      const winter = parseEBirdCSV(csvWinter)[0]
+      const winter = parseEBirdCSV(csvWinter, 'America/Los_Angeles')[0]
       expect(winter.date).toBe('2025-01-15T11:07:00-08:00')
+    })
+
+    it('converts Chicago observation from Pacific to Central time', () => {
+      const csv = ebirdCSV([
+        'S276393806,Canada Goose,Branta canadensis,342,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,08:15 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      // CSV "08:15 AM" is PDT (UTC-7). 8:15 AM PDT → 3:15 PM UTC → 10:15 AM CDT (UTC-5)
+      const p = parseEBirdCSV(csv, 'America/Los_Angeles')[0]
+      expect(p.date).toBe('2025-09-28T10:15:00-05:00')
+    })
+
+    it('falls back to observation-local when no profileTimezone provided', () => {
+      // Without profileTimezone, CSV time is treated as observation-local
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const p = parseEBirdCSV(csv)[0]
+      expect(p.date).toBe('2025-06-01T11:07:00-07:00')
     })
   })
 
@@ -925,23 +947,21 @@ describe('eBird CSV utilities', () => {
         'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
-      // Import
-      const previews = parseEBirdCSV(csv)
-      expect(previews[0].date).toBe('2024-12-18T19:16:00-10:00')
+      // Import: CSV "07:16 PM" is Pacific time → converts to 5:16 PM HST
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
+      expect(previews[0].date).toBe('2024-12-18T17:16:00-10:00')
 
       // Group into outings
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
       expect(outings).toHaveLength(1)
-      // startTime should preserve local date
       expect(outings[0].startTime).toContain('2024-12-18')
 
       // Export
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
       const fields = parseCSVLineForTest(exportCsv)
-      // Date should be 12/18/2024 (local), not 12/19 (UTC)
       expect(fields[8]).toBe('12/18/2024')
-      // Time should be 19:16 (7:16 PM local)
-      expect(fields[9]).toBe('19:16')
+      // Time should be 17:16 (5:16 PM HST, the actual local time)
+      expect(fields[9]).toBe('17:16')
     })
 
     it('preserves Taipei observation date/time through import → group → export', () => {
@@ -949,13 +969,14 @@ describe('eBird CSV utilities', () => {
         'S290456247,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
-      const previews = parseEBirdCSV(csv)
+      // CSV "03:06 PM" is PST → 11:06 PM UTC → next day 7:06 AM Taipei
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[8]).toBe('12/27/2025')
-      expect(fields[9]).toBe('15:06')
+      expect(fields[8]).toBe('12/28/2025')
+      expect(fields[9]).toBe('07:06')
     })
 
     it('preserves Seattle summer observation through roundtrip', () => {
@@ -963,7 +984,8 @@ describe('eBird CSV utilities', () => {
         'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Greenlake,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 
-      const previews = parseEBirdCSV(csv)
+      // Profile TZ = observation TZ → no shift
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations)

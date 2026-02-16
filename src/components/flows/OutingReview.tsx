@@ -7,7 +7,7 @@ import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete
 import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } from '@phosphor-icons/react'
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
-import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTime } from '@/lib/timezone'
+import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
 import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
 import { toast } from 'sonner'
 
@@ -365,7 +365,7 @@ export default function OutingReview({
             return (
               <span>
                 {formatStoredDate(displayISO)} at{' '}
-                {formatStoredTime(displayISO)}
+                {formatStoredTimeWithTZ(displayISO)}
               </span>
             )
           })()}

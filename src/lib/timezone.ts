@@ -183,6 +183,118 @@ export function parseStoredTime(timeStr: string): { date: Date; timezone?: strin
 }
 
 /**
+ * Convert a naive datetime from one timezone to an offset-aware ISO string in
+ * the observation-local timezone (determined by GPS coords).
+ *
+ * Used by eBird CSV import where the exported time is in the user's profile
+ * timezone, not the observation's local timezone.
+ *
+ * Example: "2024-12-18T19:16:00" in "America/Los_Angeles" + Maui GPS
+ *   → UTC: 2024-12-19T03:16:00Z
+ *   → Maui local: "2024-12-18T17:16:00-10:00"
+ */
+export function convertTimezones(
+  naiveDatetime: string,
+  sourceTimezone: string,
+  lat?: number,
+  lon?: number,
+): string {
+  const match = naiveDatetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!match) return naiveDatetime
+
+  const year = Number(match[1])
+  const month = Number(match[2]) - 1
+  const day = Number(match[3])
+  const hour = Number(match[4])
+  const min = Number(match[5])
+  const sec = Number(match[6] ?? '0')
+
+  // Get the offset of the source timezone at this wall time
+  const sourceOffset = getOffsetForLocalWallTime(sourceTimezone, year, month, day, hour, min, sec)
+  const sourceOffsetMs = parseOffsetMs(sourceOffset)
+
+  // Compute the UTC instant: wall time - source offset
+  const wallAsUtc = Date.UTC(year, month, day, hour, min, sec)
+  const utcMs = wallAsUtc - sourceOffsetMs
+
+  // Now convert that UTC instant to the observation-local timezone
+  return dateToLocalISOWithOffset(new Date(utcMs), lat, lon)
+}
+
+/**
+ * Get a short timezone abbreviation for an offset-aware ISO string.
+ * e.g. "2024-12-18T17:16:00-10:00" → "HST"
+ *      "2025-06-01T11:07:00-07:00" → "PDT"
+ *      "2025-12-27T15:06:00+08:00" → "CST" (China Standard Time)
+ *
+ * Falls back to the numeric offset (e.g. "UTC-10") if no abbreviation is available.
+ */
+export function getTimezoneAbbreviation(timeStr: string): string {
+  const offsetMatch = timeStr.match(/([+-])(\d{2}):(\d{2})$/)
+  if (!offsetMatch) return ''
+
+  // Parse the date to get the UTC instant, then use Intl to get the abbreviation
+  const date = new Date(timeStr)
+  if (isNaN(date.getTime())) return ''
+
+  // Find the best IANA timezone for this offset at this instant
+  // We use the offset to narrow down, then check with Intl
+  const sign = offsetMatch[1] === '+' ? 1 : -1
+  const hrs = Number(offsetMatch[2])
+  const mins = Number(offsetMatch[3])
+  const totalMinutes = sign * (hrs * 60 + mins)
+
+  // Try to get abbreviation via Intl with 'short' timeZoneName
+  // We need a timezone that matches this offset — use a heuristic approach
+  // by trying common timezones
+  const commonTimezones: Record<number, string[]> = {
+    [-600]: ['Pacific/Honolulu'],
+    [-480]: ['America/Los_Angeles'],
+    [-420]: ['America/Los_Angeles'],   // PDT
+    [-360]: ['America/Chicago'],
+    [-300]: ['America/Chicago'],       // CDT
+    [480]: ['Asia/Taipei', 'Asia/Shanghai'],
+    [540]: ['Asia/Tokyo'],
+    [330]: ['Asia/Kolkata'],
+    [345]: ['Asia/Kathmandu'],
+    [0]: ['UTC'],
+    [60]: ['Europe/London'],           // BST
+    [120]: ['Europe/Paris'],
+  }
+
+  const candidates = commonTimezones[totalMinutes]
+  if (candidates) {
+    for (const tz of candidates) {
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          timeZoneName: 'short',
+        }).formatToParts(date)
+        const tzPart = parts.find(p => p.type === 'timeZoneName')
+        if (tzPart) {
+          // Verify this timezone actually has the right offset at this instant
+          const actualOffset = getUtcOffsetString(tz, date)
+          const actualMs = parseOffsetMs(actualOffset)
+          if (actualMs === totalMinutes * 60_000) {
+            return tzPart.value
+          }
+        }
+      } catch {
+        // skip
+      }
+    }
+  }
+
+  // Fallback: numeric offset
+  const sign2 = totalMinutes >= 0 ? '+' : '-'
+  const absHrs = Math.floor(Math.abs(totalMinutes) / 60)
+  const absMins = Math.abs(totalMinutes) % 60
+  return absMins > 0
+    ? `UTC${sign2}${absHrs}:${String(absMins).padStart(2, '0')}`
+    : `UTC${sign2}${absHrs}`
+}
+
+/**
  * Format a stored time string for display, respecting the original timezone offset.
  * For offset-aware strings, displays in the original local time.
  * For legacy strings, displays in browser local time.
@@ -247,4 +359,13 @@ export function formatStoredTime(
     minute: '2-digit',
     ...options,
   })
+}
+
+/**
+ * Format a stored time string with timezone abbreviation (e.g. "5:16 PM HST").
+ */
+export function formatStoredTimeWithTZ(timeStr: string): string {
+  const time = formatStoredTime(timeStr)
+  const tz = getTimezoneAbbreviation(timeStr)
+  return tz ? `${time} ${tz}` : time
 }
