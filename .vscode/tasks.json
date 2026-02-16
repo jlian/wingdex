@@ -2,6 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "disable-git-signing-local",
+      "type": "shell",
+      "command": "git",
+      "args": [
+        "config",
+        "--local",
+        "commit.gpgsign",
+        "false"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "setup-playwright",
       "type": "shell",
       "command": "npm",
@@ -32,6 +44,7 @@
     {
       "label": "bootstrap-workspace",
       "dependsOn": [
+        "disable-git-signing-local",
         "setup-playwright",
         "ensure-app-on-5000"
       ],
