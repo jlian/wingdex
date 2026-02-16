@@ -214,11 +214,12 @@ function AppContent({ user }: { user: UserInfo }) {
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" />
 
-      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
-        {/* ── Top header — non-sticky, scrolls with content ── */}
-        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-16">
+      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="gap-0">
+        {/* ── Top header — sticky, translucent with bottom fade ── */}
+        <header className="sticky top-0 z-40">
+          <div className="bg-background/80 backdrop-blur-xl">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6">
+              <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo — navigates to Home */}
               <button
                 onClick={() => navigate('home')}
@@ -259,8 +260,11 @@ function AppContent({ user }: { user: UserInfo }) {
                   </Avatar>
                 </button>
               </div>
+              </div>
             </div>
           </div>
+          {/* Bottom fade — softens the edge into content */}
+          <div className="h-4 bg-gradient-to-b from-background/60 to-transparent pointer-events-none" />
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
