@@ -1,13 +1,11 @@
 name: CI
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
-  pull_request:
-    branches: [main]
 
 jobs:
   build-and-test:
@@ -16,51 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect non-doc changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            changed:
-              - '**'
-            docs:
-              - '**/*.md'
-              - 'docs/**'
-
-      - name: Classify change
-        id: classify
-        run: |
-          # Release-please PR → skip entirely
-          if [[ "${{ github.event_name }}" == "pull_request" && \
-                "${{ github.head_ref }}" == release-please--* ]]; then
-            echo "mode=skip"
-          # Release commit on main → build only
-          elif [[ "${{ github.event_name }}" == "push" ]] && \
-               git log -1 --pretty=%s | grep -q '^chore(main): release '; then
-            echo "mode=build-only"
-          # Docs-only changes → skip
-          elif [[ "${{ steps.filter.outputs.changed_count }}" == "${{ steps.filter.outputs.docs_count }}" ]]; then
-            echo "mode=skip"
-          else
-            echo "mode=full"
-          fi >> "$GITHUB_OUTPUT"
-
       - uses: actions/setup-node@v4
-        if: steps.classify.outputs.mode != 'skip'
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
-        if: steps.classify.outputs.mode != 'skip'
         run: |
           npm install -g npm@10.9.2
           npm ci --workspaces=false
 
-      - name: Build only (release commit)
-        if: steps.classify.outputs.mode == 'build-only'
-        run: npm run build
-
-      - name: Full verify
-        if: steps.classify.outputs.mode == 'full'
+      - name: Verify
         run: npm run verify

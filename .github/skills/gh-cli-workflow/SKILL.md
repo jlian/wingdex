@@ -37,10 +37,6 @@ gh pr view --json number,title,url,body
 gh pr view --comments
 ```
 
-Auth note for Codespaces/CI shells:
-- If `gh` unexpectedly uses an injected `GITHUB_TOKEN`, run commands as `env -u GITHUB_TOKEN gh ...`.
-- For git pushes using GH credentials in the same session, run `env -u GITHUB_TOKEN gh auth setup-git` once.
-
 Create/update PRs:
 
 ```bash
@@ -69,7 +65,7 @@ If PR title check fails:
 - Update title quickly:
 
 ```bash
-env -u GITHUB_TOKEN gh pr edit <number> --title "fix(ci): short imperative summary"
+gh pr edit <number> --title "fix(ci): short imperative summary"
 ```
 
 ## 3) Issue workflow
