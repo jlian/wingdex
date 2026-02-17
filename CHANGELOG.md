@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/jlian/wingdex/compare/v1.3.2...v1.4.0) (2026-02-17)
+
+
+### Features
+
+* rename BirdDex to WingDex across app ([#129](https://github.com/jlian/wingdex/issues/129)) ([bacd237](https://github.com/jlian/wingdex/commit/bacd2374fbae125980c958270b5644e71ea03827))
+
 ## [1.3.2](https://github.com/jlian/birddex/compare/v1.3.1...v1.3.2) (2026-02-17)
 
 
