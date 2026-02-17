@@ -82,7 +82,20 @@ describe('getWikimediaImage', () => {
     }))
 
     const result = await getWikimediaImage('Unique Finch E')
-    expect(result).toContain('640px-bird.jpg')
+    expect(result).toBe('https://upload.wikimedia.org/thumb/100px-bird.jpg')
+  })
+
+  it('does not upsize thumbnail URL to avoid 404 on small originals (iOS regression)', async () => {
+    mockGetWikiTitle.mockReturnValue('Small Image Bird')
+    mockWikiResponse(wikiPageData({
+      thumbnail: { source: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/220px-Bird.jpg' },
+    }))
+
+    const result = await getWikimediaImage('Small Image Bird R')
+    // Must use the URL exactly as returned by Wikipedia — upsizing beyond the
+    // original image dimensions causes a 404 on Wikimedia servers, which
+    // breaks thumbnails on iOS Safari and other browsers.
+    expect(result).toBe('https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/220px-Bird.jpg')
   })
 
   it('caches results for subsequent calls', async () => {
