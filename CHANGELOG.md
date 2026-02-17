@@ -1,3 +1,18 @@
+## [1.4.1](https://github.com/jlian/wingdex/compare/v1.4.0...v1.4.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* address PR review feedback for perf tests and dialogs ([6a3c31f](https://github.com/jlian/wingdex/commit/6a3c31f19382ef45df5a88005d6a49a93cf573a7))
+* clean up auto-load listeners when pagination completes ([ef679af](https://github.com/jlian/wingdex/commit/ef679afef1060e1c13b85ba85fe74aa2d08f4eea))
+* complete issue [#105](https://github.com/jlian/wingdex/issues/105) P0 perf and seed taxonomy cleanup ([074fe8a](https://github.com/jlian/wingdex/commit/074fe8aa733e4cddffaa5dd7b4de8aa9a3f9fbe7))
+* prevent dialog scroll-lock header shift ([57d5918](https://github.com/jlian/wingdex/commit/57d591865f23a4a3bdc408674cf855201dc7b3d2))
+
+
+### Performance Improvements
+
+* lazy-load tabs and preserve list controls ([b22bf63](https://github.com/jlian/wingdex/commit/b22bf635dd4e0de1cc3624b956a72766d86a4245))
+
 # [1.4.0](https://github.com/jlian/wingdex/compare/v1.3.2...v1.4.0) (2026-02-17)
 
 
