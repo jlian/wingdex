@@ -13,6 +13,7 @@ type KVControls<T> = {
   value: T
   setValue: (next: T | ((prev: T) => T)) => void
   deleteValue: () => void
+  isLoading: boolean
 }
 
 function Harness<T>({
@@ -24,11 +25,11 @@ function Harness<T>({
   initialValue: T
   onChange: (controls: KVControls<T>) => void
 }) {
-  const [value, setValue, deleteValue] = useKV<T>(storageKey, initialValue)
+  const [value, setValue, deleteValue, isLoading] = useKV<T>(storageKey, initialValue)
 
   useEffect(() => {
-    onChange({ value, setValue, deleteValue })
-  }, [value, setValue, deleteValue, onChange])
+    onChange({ value, setValue, deleteValue, isLoading })
+  }, [value, setValue, deleteValue, isLoading, onChange])
 
   return null
 }
@@ -68,6 +69,7 @@ describe('useKV (Spark runtime)', () => {
 
     await waitFor(() => {
       expect(latest?.value).toEqual(['from-kv'])
+      expect(latest?.isLoading).toBe(false)
     })
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/__probe__'))).toBe(false)
 
@@ -80,6 +82,7 @@ describe('useKV (Spark runtime)', () => {
 
     await waitFor(() => {
       expect(latest?.value).toEqual(['from-kv'])
+      expect(latest?.isLoading).toBe(false)
     })
 
     const getCallsAfterRerender = fetchMock.mock.calls.filter(
@@ -131,6 +134,51 @@ describe('useKV (Spark runtime)', () => {
         ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'POST',
       )
       expect(postCalls.length).toBe(1)
+    })
+  })
+
+  it('reports loading true until initial Spark read settles', async () => {
+    const key = 'u1_spark_loading'
+    const keyUrlPart = `/${encodeURIComponent(key)}`
+
+    let resolveGet!: (value: Response) => void
+    const pendingGet = new Promise<Response>((resolve) => {
+      resolveGet = resolve
+    })
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+
+      if (url.includes(keyUrlPart) && method === 'GET') {
+        return pendingGet
+      }
+
+      return Promise.resolve(new Response('', { status: 404 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    let latest: KVControls<string[]> | null = null
+    render(
+      <Harness
+        storageKey={key}
+        initialValue={[]}
+        onChange={(controls) => {
+          latest = controls
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(latest).not.toBeNull()
+      expect(latest?.isLoading).toBe(true)
+    })
+
+    resolveGet(new Response(JSON.stringify(['loaded']), { status: 200 }))
+
+    await waitFor(() => {
+      expect(latest?.value).toEqual(['loaded'])
+      expect(latest?.isLoading).toBe(false)
     })
   })
 })

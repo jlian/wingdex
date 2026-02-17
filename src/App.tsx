@@ -7,7 +7,7 @@ import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useBirdDexData } from '@/hooks/use-birddex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
-import HomePage from '@/components/pages/HomePage'
+import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
 import BirdDexPage from '@/components/pages/BirdDexPage'
 import SettingsPage from '@/components/pages/SettingsPage'
@@ -176,41 +176,7 @@ function BootShell() {
       </header>
 
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
-        {/* Hero skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="h-12 w-20 rounded-md bg-muted animate-pulse" />
-            <div className="h-5 w-36 rounded-md bg-muted animate-pulse" />
-          </div>
-          <div className="h-12 w-24 rounded-xl bg-muted animate-pulse" />
-        </div>
-
-        {/* Recent Species skeleton */}
-        <div className="space-y-3 pt-2">
-          <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-          <div className="flex gap-3 overflow-hidden">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-28 flex-shrink-0 space-y-2">
-                <div className="aspect-square rounded-lg bg-muted animate-pulse" />
-                <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Outings skeleton */}
-        <div className="space-y-3 pt-2">
-          <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex gap-3 items-start py-3 border-b border-border last:border-0">
-              <div className="h-4 w-4 rounded-full bg-muted animate-pulse mt-0.5" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-                <div className="h-3 w-40 rounded bg-muted animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <HomeContentSkeleton />
       </div>
     </div>
   )

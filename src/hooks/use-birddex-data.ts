@@ -64,10 +64,11 @@ export function buildDexFromState(
 }
 
 export function useBirdDexData(userId: number) {
-  const [photos, setPhotos] = useKV<Photo[]>(getUserStorageKey(userId, 'photos'), [])
-  const [outings, setOutings] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
-  const [observations, setObservations] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])
-  const [dex, setDex] = useKV<DexEntry[]>(getUserStorageKey(userId, 'dex'), [])
+  const [photos, setPhotos, , photosLoading] = useKV<Photo[]>(getUserStorageKey(userId, 'photos'), [])
+  const [outings, setOutings, , outingsLoading] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
+  const [observations, setObservations, , observationsLoading] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])
+  const [dex, setDex, , dexLoading] = useKV<DexEntry[]>(getUserStorageKey(userId, 'dex'), [])
+  const isLoading = photosLoading || outingsLoading || observationsLoading || dexLoading
 
   const addPhotos = (newPhotos: Photo[]) => {
     setPhotos(current => [...(current || []), ...newPhotos])
@@ -341,6 +342,7 @@ export function useBirdDexData(userId: number) {
   }
 
   return {
+    isLoading,
     photos: photos || [],
     outings: outings || [],
     observations: observations || [],

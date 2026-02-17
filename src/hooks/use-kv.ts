@@ -97,7 +97,7 @@ function setLocalStorage<T>(key: string, value: T): void {
   } catch { /* ignore */ }
 }
 
-export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void] {
+export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void, boolean] {
   assertUserScopedKey(key)
 
   const sparkRuntime = isSparkHostedRuntime()
@@ -105,6 +105,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   const [value, setValue] = useState<T>(() => (
     sparkRuntime ? initialValue : getLocalStorage(key, initialValue)
   ))
+  const [isLoading, setIsLoading] = useState(sparkRuntime)
   const useSparkKv = useRef(false)
 
   // Keep the latest fallback value without making network effects depend on
@@ -117,10 +118,12 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   useEffect(() => {
     if (!sparkRuntime) {
       useSparkKv.current = false
+      setIsLoading(false)
       return
     }
 
     let cancelled = false
+    setIsLoading(true)
     ;(async () => {
       useSparkKv.current = true
       const stored = await sparkKvGet<T>(key)
@@ -129,8 +132,11 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
         setValue(stored)
       } else {
         await sparkKvSet(key, initialValueRef.current)
+        if (cancelled) return
         setValue(initialValueRef.current)
       }
+      if (cancelled) return
+      setIsLoading(false)
     })()
     return () => { cancelled = true }
   }, [key, sparkRuntime])
@@ -180,5 +186,5 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     }
   }, [key, sparkRuntime])
 
-  return [value, userSetValue, deleteValue]
+  return [value, userSetValue, deleteValue, isLoading]
 }
