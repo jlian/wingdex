@@ -7,15 +7,16 @@
 
 import rawTaxonomy from './taxonomy.json'
 
-export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string }
+export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string; wikiTitle?: string }
 
 // Build the flat list once on import
-// Taxonomy entries can be [common, scientific] or [common, scientific, ebirdCode]
+// Taxonomy entries can be [common, scientific] or [common, scientific, ebirdCode] or [common, scientific, ebirdCode, wikiTitle]
 const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map(
   (entry: any) => ({
     common: entry[0],
     scientific: entry[1],
     ...(entry[2] ? { ebirdCode: entry[2] } : {}),
+    ...(entry[3] ? { wikiTitle: entry[3] } : {}),
   })
 )
 
@@ -24,6 +25,17 @@ const lowerIndex = taxonomy.map(t => ({
   common: t.common.toLowerCase(),
   scientific: t.scientific.toLowerCase(),
 }))
+
+// Pre-compute lookup by common name (lowercased) for O(1) wiki title resolution
+const byCommonLower = new Map<string, TaxonEntry>()
+for (const t of taxonomy) {
+  byCommonLower.set(t.common.toLowerCase(), t)
+}
+
+/** Look up the pre-resolved Wikipedia article title for a species common name. */
+export function getWikiTitle(commonName: string): string | undefined {
+  return byCommonLower.get(commonName.toLowerCase())?.wikiTitle
+}
 
 /**
  * Search the taxonomy by prefix / substring match.

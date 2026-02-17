@@ -37,6 +37,7 @@
         "test:e2e": "npx playwright test",
         "test:watch": "vitest",
         "taxonomy:ebird": "node scripts/fetch-ebird-codes.mjs",
+        "taxonomy:hydrate-wiki": "node scripts/hydrate-wiki-titles.mjs",
         "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs"
     },
     "dependencies": {

@@ -27,7 +27,8 @@ const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : Infinity
 
 /**
  * Manual overrides for species whose eBird name doesn't match Wikipedia.
- * Must stay in sync with WIKI_OVERRIDES in src/lib/wikimedia.ts.
+ * Should match the overrides in scripts/hydrate-wiki-titles.mjs.
+ * After hydration, these are baked into taxonomy.json as the 4th element.
  */
 const WIKI_OVERRIDES = {
   'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
