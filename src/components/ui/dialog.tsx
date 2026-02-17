@@ -56,6 +56,7 @@ function DialogContent({
   className,
   children,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Content>) {
   const handleOpenAutoFocus: ComponentProps<
@@ -72,6 +73,18 @@ function DialogContent({
     target?.focus({ preventScroll: true })
   }
 
+  const handleCloseAutoFocus: ComponentProps<
+    typeof DialogPrimitive.Content
+  >["onCloseAutoFocus"] = (event) => {
+    onCloseAutoFocus?.(event)
+
+    if (event.defaultPrevented) {
+      return
+    }
+
+    event.preventDefault()
+  }
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -82,6 +95,7 @@ function DialogContent({
           className
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         {...props}
       >
         {children}

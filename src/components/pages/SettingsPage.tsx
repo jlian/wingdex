@@ -348,7 +348,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <AlertDialogAction
                   onClick={() => {
                     data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX)
-                    toast.success('Demo data loaded: 5 outings, 17 species')
+                    toast.success(`Demo data loaded: ${SEED_OUTINGS.length} outings, ${SEED_DEX.length} species`)
                   }}
                 >
                   Load Demo Data

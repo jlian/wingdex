@@ -273,10 +273,16 @@ export async function identifyBirdInPhoto(
   } catch (error) {
     console.error('❌ Bird ID error:', error)
     if (error instanceof Error) {
-      if (error.message.includes('413') || error.message.includes('too large'))
-        throw new Error('Image too large for API.')
-      if (error.message.includes('429') || error.message.includes('rate'))
-        throw new Error('AI rate limit reached. Please wait a minute before trying again.')
+      if (error.message.includes('413') || error.message.includes('too large')) {
+        const wrappedError = new Error('Image too large for API.') as Error & { cause?: unknown }
+        wrappedError.cause = error
+        throw wrappedError
+      }
+      if (error.message.includes('429') || error.message.includes('rate')) {
+        const wrappedError = new Error('AI rate limit reached. Please wait a minute before trying again.') as Error & { cause?: unknown }
+        wrappedError.cause = error
+        throw wrappedError
+      }
     }
     throw error
   }

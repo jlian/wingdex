@@ -28,10 +28,28 @@ type RestSummary = {
   content_urls?: { desktop?: { page?: string } }
 }
 
+const LIST_THUMBNAIL_TARGET_WIDTH_PX = 640
+
 type FetchResult =
   | { kind: 'hit'; data: RestSummary }
   | { kind: 'miss' }
   | { kind: 'error' }
+
+function upsizeThumbnailUrl(url: string): string {
+  if (!url.includes('/thumb/')) return url
+
+  const match = url.match(/\/(\d+)px-([^/?]+)(\?.*)?$/)
+  if (!match) return url
+
+  const currentWidth = Number(match[1])
+  if (!Number.isFinite(currentWidth)) return url
+
+  const filename = match[2]
+  const query = match[3] ?? ''
+  const target = Math.max(currentWidth, LIST_THUMBNAIL_TARGET_WIDTH_PX)
+
+  return url.replace(/\/(\d+)px-([^/?]+)(\?.*)?$/, `/${target}px-${filename}${query}`)
+}
 
 /** Fetch a Wikipedia page summary via the REST API. */
 async function fetchSummary(title: string): Promise<FetchResult> {
@@ -52,7 +70,9 @@ async function fetchSummary(title: string): Promise<FetchResult> {
 
 /** Extract thumbnail image URL (for list views). */
 function extractThumbnailUrl(data: RestSummary): string | undefined {
-  return data.thumbnail?.source ?? data.originalimage?.source
+  const thumbnail = data.thumbnail?.source
+  if (thumbnail) return upsizeThumbnailUrl(thumbnail)
+  return data.originalimage?.source
 }
 
 /** Extract full-resolution image URL (for detail views). */
