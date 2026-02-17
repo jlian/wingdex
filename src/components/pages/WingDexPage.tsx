@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,42 +15,107 @@ import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
-type SortField = 'date' | 'count' | 'name'
-type SortDir = 'asc' | 'desc'
+export type SortField = 'date' | 'count' | 'name'
+export type SortDir = 'asc' | 'desc'
+
+const INITIAL_VISIBLE_ITEMS = 40
+const LOAD_MORE_STEP = 40
 
 interface WingDexPageProps {
   data: WingDexDataStore
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
   onSelectOuting: (id: string) => void
+  searchQuery?: string
+  onSearchQueryChange?: (value: string) => void
+  sortField?: SortField
+  sortDir?: SortDir
+  onToggleSort?: (field: SortField) => void
 }
 
-export default function WingDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: WingDexPageProps) {
+export default function WingDexPage({
+  data,
+  selectedSpecies,
+  onSelectSpecies,
+  onSelectOuting,
+  searchQuery,
+  onSearchQueryChange,
+  sortField,
+  sortDir,
+  onToggleSort,
+}: WingDexPageProps) {
   const { dex } = data
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortField, setSortField] = useState<SortField>('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [internalSearchQuery, setInternalSearchQuery] = useState('')
+  const [internalSortField, setInternalSortField] = useState<SortField>('date')
+  const [internalSortDir, setInternalSortDir] = useState<SortDir>('desc')
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir(field === 'name' ? 'asc' : 'desc')
+  const effectiveSearchQuery = searchQuery ?? internalSearchQuery
+  const effectiveSortField = sortField ?? internalSortField
+  const effectiveSortDir = sortDir ?? internalSortDir
+
+  const handleSearchQueryChange = (value: string) => {
+    if (onSearchQueryChange) {
+      onSearchQueryChange(value)
+      return
     }
+    setInternalSearchQuery(value)
   }
 
-  const sortedList = [...dex].sort((a, b) => {
-    const dir = sortDir === 'asc' ? 1 : -1
-    if (sortField === 'name') return dir * a.speciesName.localeCompare(b.speciesName)
-    if (sortField === 'count') return dir * (a.totalCount - b.totalCount)
-    // date (default) — first seen
-    return dir * (new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime())
-  })
+  const handleToggleSort = (field: SortField) => {
+    if (onToggleSort) {
+      onToggleSort(field)
+      return
+    }
 
-  const filteredList = sortedList.filter(entry =>
-    entry.speciesName.toLowerCase().includes(searchQuery.toLowerCase())
+    if (effectiveSortField === field) {
+      setInternalSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setInternalSortField(field)
+    setInternalSortDir(field === 'name' ? 'asc' : 'desc')
+  }
+
+  const sortedList = useMemo(() => {
+    return [...dex].sort((a, b) => {
+      const dir = effectiveSortDir === 'asc' ? 1 : -1
+      if (effectiveSortField === 'name') return dir * a.speciesName.localeCompare(b.speciesName)
+      if (effectiveSortField === 'count') return dir * (a.totalCount - b.totalCount)
+      return dir * (new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime())
+    })
+  }, [dex, effectiveSortDir, effectiveSortField])
+
+  const filteredList = useMemo(() => {
+    const query = effectiveSearchQuery.toLowerCase()
+    return sortedList.filter(entry => entry.speciesName.toLowerCase().includes(query))
+  }, [sortedList, effectiveSearchQuery])
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_ITEMS)
+  }, [effectiveSearchQuery, effectiveSortField, effectiveSortDir])
+
+  const visibleList = useMemo(
+    () => filteredList.slice(0, visibleCount),
+    [filteredList, visibleCount]
   )
+
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node || visibleCount >= filteredList.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setVisibleCount((count) => Math.min(count + LOAD_MORE_STEP, filteredList.length))
+      },
+      { rootMargin: '240px 0px' }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [visibleCount, filteredList.length])
 
   if (dex.length === 0) {
     return (
@@ -103,22 +168,22 @@ export default function WingDexPage({ data, selectedSpecies, onSelectSpecies, on
           />
           <Input
             placeholder="Search species..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            value={effectiveSearchQuery}
+            onChange={e => handleSearchQueryChange(e.target.value)}
             className="pl-9 h-9 text-sm"
           />
         </div>
         <div className="flex items-center gap-1">
           {sortOptions.map(opt => {
-            const isActive = sortField === opt.key
-            const DirIcon = sortDir === 'asc' ? ArrowUp : ArrowDown
+            const isActive = effectiveSortField === opt.key
+            const DirIcon = effectiveSortDir === 'asc' ? ArrowUp : ArrowDown
             return (
               <Button
                 key={opt.key}
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="sm"
                 className="text-xs h-9 px-2.5"
-                onClick={() => toggleSort(opt.key)}
+                onClick={() => handleToggleSort(opt.key)}
               >
                 {opt.label}
                 {isActive && <DirIcon size={12} className="ml-0.5" />}
@@ -129,7 +194,7 @@ export default function WingDexPage({ data, selectedSpecies, onSelectSpecies, on
       </div>
 
       <div>
-        {filteredList.map((entry) => {
+        {visibleList.map((entry) => {
           return (
             <BirdRow
               key={entry.speciesName}
@@ -141,9 +206,18 @@ export default function WingDexPage({ data, selectedSpecies, onSelectSpecies, on
         })}
       </div>
 
-      {filteredList.length === 0 && searchQuery && (
+      {visibleList.length < filteredList.length && (
+        <div className="py-2">
+          <div ref={loadMoreRef} className="h-1" />
+          <p className="text-center text-xs text-muted-foreground">
+            Loading more… ({filteredList.length - visibleList.length} remaining)
+          </p>
+        </div>
+      )}
+
+      {filteredList.length === 0 && effectiveSearchQuery && (
         <div className="text-center py-8 text-muted-foreground">
-          No species found matching "{searchQuery}"
+          No species found matching "{effectiveSearchQuery}"
         </div>
       )}
     </div>

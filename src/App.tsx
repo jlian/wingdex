@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -6,12 +6,15 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
+import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
+import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
 import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
-import OutingsPage from '@/components/pages/OutingsPage'
-import WingDexPage from '@/components/pages/WingDexPage'
-import SettingsPage from '@/components/pages/SettingsPage'
-import AddPhotosFlow from '@/components/flows/AddPhotosFlow'
+
+const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
+const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
+const SettingsPage = lazy(() => import('@/components/pages/SettingsPage'))
+const AddPhotosFlow = lazy(() => import('@/components/flows/AddPhotosFlow'))
 
 interface UserInfo {
   login: string
@@ -198,8 +201,34 @@ function AuthErrorShell({ message }: { message: string }) {
 function AppContent({ user }: { user: UserInfo }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
+  const [wingDexSearchQuery, setWingDexSearchQuery] = useState('')
+  const [wingDexSortField, setWingDexSortField] = useState<WingDexSortField>('date')
+  const [wingDexSortDir, setWingDexSortDir] = useState<WingDexSortDir>('desc')
+  const [outingsSearchQuery, setOutingsSearchQuery] = useState('')
+  const [outingsSortField, setOutingsSortField] = useState<OutingSortField>('date')
+  const [outingsSortDir, setOutingsSortDir] = useState<OutingSortDir>('desc')
   const data = useWingDexData(user.id)
   const { resolvedTheme } = useTheme()
+
+  const toggleWingDexSort = useCallback((field: WingDexSortField) => {
+    if (wingDexSortField === field) {
+      setWingDexSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setWingDexSortField(field)
+    setWingDexSortDir(field === 'name' ? 'asc' : 'desc')
+  }, [wingDexSortField])
+
+  const toggleOutingsSort = useCallback((field: OutingSortField) => {
+    if (outingsSortField === field) {
+      setOutingsSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setOutingsSortField(field)
+    setOutingsSortDir('desc')
+  }, [outingsSortField])
 
   // Sync <meta name="theme-color"> with current theme (#17)
   useEffect(() => {
@@ -271,46 +300,72 @@ function AppContent({ user }: { user: UserInfo }) {
 
         {/* ── Main content ────────────────────────────────── */}
         <main className="w-full max-w-3xl mx-auto pb-8">
-          <TabsContent value="home" className="mt-0" forceMount hidden={tab !== 'home'}>
-            <HomePage
-              data={data}
-              onAddPhotos={() => setShowAddPhotos(true)}
-              onSelectOuting={(id) => navigate('outings', id)}
-              onSelectSpecies={(name) => navigate('wingdex', name)}
-              onNavigate={(tab) => navigate(tab)}
-            />
-          </TabsContent>
+          {tab === 'home' && (
+            <TabsContent value="home" className="mt-0">
+              <HomePage
+                data={data}
+                onAddPhotos={() => setShowAddPhotos(true)}
+                onSelectOuting={(id) => navigate('outings', id)}
+                onSelectSpecies={(name) => navigate('wingdex', name)}
+                onNavigate={(tab) => navigate(tab)}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="outings" className="mt-0" forceMount hidden={tab !== 'outings'}>
-            <OutingsPage
-              data={data}
-              selectedOutingId={tab === 'outings' ? (subId ?? null) : null}
-              onSelectOuting={(id) => navigate('outings', id ?? undefined)}
-              onSelectSpecies={(name) => navigate('wingdex', name)}
-            />
-          </TabsContent>
+          {tab === 'outings' && (
+            <TabsContent value="outings" className="mt-0">
+              <Suspense fallback={<ListPageLoadingFallback title="Your Outings" />}>
+                <OutingsPage
+                  data={data}
+                  selectedOutingId={subId ?? null}
+                  onSelectOuting={(id) => navigate('outings', id ?? undefined)}
+                  onSelectSpecies={(name) => navigate('wingdex', name)}
+                  searchQuery={outingsSearchQuery}
+                  onSearchQueryChange={setOutingsSearchQuery}
+                  sortField={outingsSortField}
+                  sortDir={outingsSortDir}
+                  onToggleSort={toggleOutingsSort}
+                />
+              </Suspense>
+            </TabsContent>
+          )}
 
-          <TabsContent value="wingdex" className="mt-0" forceMount hidden={tab !== 'wingdex'}>
-            <WingDexPage
-              data={data}
-              selectedSpecies={tab === 'wingdex' ? (subId ?? null) : null}
-              onSelectSpecies={(name) => navigate('wingdex', name ?? undefined)}
-              onSelectOuting={(id) => navigate('outings', id)}
-            />
-          </TabsContent>
+          {tab === 'wingdex' && (
+            <TabsContent value="wingdex" className="mt-0">
+              <Suspense fallback={<ListPageLoadingFallback title="WingDex" />}>
+                <WingDexPage
+                  data={data}
+                  selectedSpecies={subId ?? null}
+                  onSelectSpecies={(name) => navigate('wingdex', name ?? undefined)}
+                  onSelectOuting={(id) => navigate('outings', id)}
+                  searchQuery={wingDexSearchQuery}
+                  onSearchQueryChange={setWingDexSearchQuery}
+                  sortField={wingDexSortField}
+                  sortDir={wingDexSortDir}
+                  onToggleSort={toggleWingDexSort}
+                />
+              </Suspense>
+            </TabsContent>
+          )}
 
-          <TabsContent value="settings" className="mt-0" forceMount hidden={tab !== 'settings'}>
-            <SettingsPage data={data} user={user} />
-          </TabsContent>
+          {tab === 'settings' && (
+            <TabsContent value="settings" className="mt-0">
+              <Suspense fallback={<SettingsLoadingFallback />}>
+                <SettingsPage data={data} user={user} />
+              </Suspense>
+            </TabsContent>
+          )}
         </main>
       </Tabs>
 
       {showAddPhotos && (
-        <AddPhotosFlow
-          data={data}
-          onClose={() => setShowAddPhotos(false)}
-          userId={user.id}
-        />
+        <Suspense fallback={<FlowLoadingFallback />}>
+          <AddPhotosFlow
+            data={data}
+            onClose={() => setShowAddPhotos(false)}
+            userId={user.id}
+          />
+        </Suspense>
       )}
 
       {/* Footer */}
@@ -330,6 +385,49 @@ function AppContent({ user }: { user: UserInfo }) {
         </a>
       </div>
 
+    </div>
+  )
+}
+
+function ListPageLoadingFallback({ title }: { title: string }) {
+  return (
+    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
+      <div className="space-y-2">
+        <p className="font-serif text-2xl font-semibold text-foreground">{title}</p>
+        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="h-9 flex-1 rounded-md bg-muted animate-pulse" />
+        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
+        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
+        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
+      </div>
+
+      <div className="space-y-1">
+        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+      </div>
+    </div>
+  )
+}
+
+function SettingsLoadingFallback() {
+  return (
+    <div className="px-4 sm:px-6 py-6 space-y-3 max-w-3xl mx-auto">
+      <div className="h-7 w-32 rounded-md bg-muted animate-pulse" />
+      <div className="h-24 w-full rounded-lg bg-muted animate-pulse" />
+      <div className="h-16 w-full rounded-lg bg-muted animate-pulse" />
+    </div>
+  )
+}
+
+function FlowLoadingFallback() {
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="h-10 w-10 rounded-full border-2 border-muted border-t-primary animate-spin" />
     </div>
   )
 }
