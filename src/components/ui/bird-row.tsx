@@ -20,7 +20,7 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
     <img
       src={wikiImage}
       alt={displayName}
-      className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+      className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover object-[center_10%] bg-muted flex-shrink-0"
     />
   ) : (
     <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">

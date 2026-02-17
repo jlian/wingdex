@@ -193,45 +193,34 @@ function SpeciesDetail({
       </div>
 
       <div className="px-4 sm:px-6 space-y-6">
-        {/* Hero: image + name + stats */}
-        <div className="flex gap-5 sm:gap-6">
-          {/* Square image — placeholder bg, image crossfades in */}
-          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl bg-muted overflow-hidden flex-shrink-0 shadow-sm relative">
-            {heroImage ? (
-              <img
-                src={heroImage}
-                alt={displayName}
-                className="absolute inset-0 w-full h-full object-cover animate-fade-in"
-              />
-            ) : !summaryLoading ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Bird size={32} className="text-muted-foreground/40" />
-              </div>
-            ) : null}
-          </div>
+        {/* Hero: full-width image with overlaid name + stats */}
+        <div className="w-full aspect-[4/3] rounded-xl bg-muted overflow-hidden shadow-sm relative">
+          {heroImage ? (
+            <img
+              src={heroImage}
+              alt={displayName}
+              className="absolute inset-0 w-full h-full object-cover object-[center_10%] animate-fade-in"
+            />
+          ) : !summaryLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Bird size={48} className="text-muted-foreground/40" />
+            </div>
+          ) : null}
 
-          {/* Name + inline stats — always visible (data from dex entry) */}
-          <div className="min-w-0 flex-1 flex flex-col justify-center">
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground leading-tight">
+          {/* Gradient overlay + text at bottom */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-16 pb-4 px-4 sm:px-5">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-white leading-tight drop-shadow-md">
               {displayName}
             </h2>
             {scientificName && (
-              <p className="text-sm text-muted-foreground italic mt-1">
-                {scientificName}
-              </p>
+              <p className="text-sm text-white/75 italic mt-0.5 drop-shadow-sm">{scientificName}</p>
             )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3.5 text-sm text-muted-foreground">
-              <span>
-                <span className="font-semibold text-foreground">{entry.totalCount}</span> seen
-              </span>
-              <span className="text-border">·</span>
-              <span>
-                <span className="font-semibold text-foreground">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}
-              </span>
-              <span className="text-border">·</span>
-              <span>
-                First <span className="font-semibold text-foreground">{formatStoredDate(entry.firstSeenDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-white/70">
+              <span><span className="font-semibold text-white">{entry.totalCount}</span> seen</span>
+              <span className="text-white/40">·</span>
+              <span><span className="font-semibold text-white">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}</span>
+              <span className="text-white/40">·</span>
+              <span>First <span className="font-semibold text-white">{formatStoredDate(entry.firstSeenDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span></span>
             </div>
           </div>
         </div>
