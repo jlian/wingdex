@@ -50,6 +50,11 @@ export default function WingDexPage({
   const [internalSortDir, setInternalSortDir] = useState<SortDir>('desc')
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const visibleCountRef = useRef(visibleCount)
+
+  useEffect(() => {
+    visibleCountRef.current = visibleCount
+  }, [visibleCount])
 
   const effectiveSearchQuery = searchQuery ?? internalSearchQuery
   const effectiveSortField = sortField ?? internalSortField
@@ -103,11 +108,16 @@ export default function WingDexPage({
 
   useEffect(() => {
     const node = loadMoreRef.current
-    if (!node || visibleCount >= filteredList.length) return
+    if (!node || visibleCountRef.current >= filteredList.length) return
 
     const maybeLoadMore = () => {
       if (node.getBoundingClientRect().top > window.innerHeight + 240) return
-      setVisibleCount((count) => Math.min(count + LOAD_MORE_STEP, filteredList.length))
+      if (visibleCountRef.current >= filteredList.length) return
+      setVisibleCount((count) => {
+        const nextCount = Math.min(count + LOAD_MORE_STEP, filteredList.length)
+        visibleCountRef.current = nextCount
+        return nextCount
+      })
     }
 
     const observer = new IntersectionObserver(
@@ -129,7 +139,7 @@ export default function WingDexPage({
       window.removeEventListener('scroll', maybeLoadMore)
       window.removeEventListener('resize', maybeLoadMore)
     }
-  }, [visibleCount, filteredList.length])
+  }, [filteredList.length])
 
   if (dex.length === 0) {
     return (
