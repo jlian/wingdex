@@ -24,6 +24,10 @@ function mockWikiResponse(data: Record<string, unknown> | null) {
   }
 }
 
+function mockTransientError() {
+  mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+}
+
 function wikiPageData(overrides: Record<string, unknown> = {}) {
   return {
     title: 'Test Bird',
@@ -90,6 +94,22 @@ describe('getWikimediaImage', () => {
 
     expect(result1).toBe(result2)
     expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not cache transient errors so retries are possible', async () => {
+    mockGetWikiTitle.mockReturnValue('Retry Bird')
+    mockTransientError()
+
+    const result1 = await getWikimediaImage('Retry Bird G')
+    expect(result1).toBeUndefined()
+
+    // Second call should retry (not serve from cache)
+    mockWikiResponse(wikiPageData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/retry-bird.jpg' },
+    }))
+    const result2 = await getWikimediaImage('Retry Bird G')
+    expect(result2).toContain('retry-bird.jpg')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })
 

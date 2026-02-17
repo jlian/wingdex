@@ -41,7 +41,7 @@ async function fetchSummary(title: string): Promise<FetchResult> {
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
       { headers: { 'Api-User-Agent': 'BirdDex/1.0 (bird identification app)' } }
     )
-    if (!res.ok) return { kind: 'miss' }
+    if (!res.ok) return res.status === 404 ? { kind: 'miss' } : { kind: 'error' }
     const data = (await res.json()) as RestSummary
     if (!data.extract) return { kind: 'miss' }
     return { kind: 'hit', data }
