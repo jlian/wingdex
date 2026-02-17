@@ -69,9 +69,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 6. PR Review Hygiene
 
-**When working on an active PR, check and address review feedback before pushing.**
+**Before pushing commits** to a branch with an open PR:
 
-Before pushing commits to a branch with an open PR:
 - Fetch unresolved PR review comments/threads.
 - Address relevant feedback in code when in scope.
 - If feedback is stale or not applicable, reply with a concise rationale.
@@ -82,10 +81,7 @@ Goal: avoid pushing follow-up commits that miss existing reviewer feedback.
 ## 7. Repository Defaults (BirdDex)
 
 For repository-specific CLI commands in this workspace, use these defaults unless the user specifies otherwise:
+
 - Owner/repo: `jlian/birddex`
 - Default branch: `main`
-- Active PR checks may include semantic PR title validation requiring Conventional Commit style titles (e.g., `fix(ci): ...`).
-
-When running `gh` commands in this Codespace, if auth appears to be sourced from an injected `GITHUB_TOKEN`, prefer:
-- `env -u GITHUB_TOKEN gh ...`
-- `env -u GITHUB_TOKEN gh auth setup-git` before authenticated git push, when needed.
+- Active PR checks may include semantic PR title validation requiring Conventional Commit style titles (e.g., `fix: ...`).
