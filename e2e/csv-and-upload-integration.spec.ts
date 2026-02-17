@@ -121,7 +121,6 @@ test.describe('CSV import + photo upload integration', () => {
     // All 4 species from the CSV should be in the dex
     for (const species of ['Chukar', 'Hawaiian Goose', "Steller's Jay", 'Dark-eyed Junco']) {
       await wingdexSearch.fill(species)
-      await page.waitForTimeout(150)
       await expect(
         page.locator('p:visible', { hasText: species }).first()
       ).toBeVisible()
@@ -168,7 +167,6 @@ test.describe('CSV import + photo upload integration', () => {
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
-    await page.waitForTimeout(150)
 
     await expect(
       page.locator('p:visible', { hasText: 'Chukar' }).first()
@@ -192,7 +190,6 @@ test.describe('CSV import + photo upload integration', () => {
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
-    await page.waitForTimeout(150)
     await expect(page.locator('p:visible', { hasText: 'Chukar' }).first()).toBeVisible()
 
     // Now upload a Chukar photo — the same species should converge
@@ -226,7 +223,6 @@ test.describe('CSV import + photo upload integration', () => {
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
-    await page.waitForTimeout(150)
 
     // Count the Chukar entries — should be exactly 1 (not 2 separate entries)
     const chukarEntries = page.locator('p:visible', { hasText: /^Chukar/ })

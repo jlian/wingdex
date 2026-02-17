@@ -5,39 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { parseEBirdCSV, groupPreviewsIntoOutings } from '../src/lib/ebird'
 import type { Outing, Observation, DexEntry } from '../src/lib/types'
 
-const PRIVATE_LOCATION_PATTERNS = [/\bhome\b/i, /\bparent/i]
-const PRIVATE_COORDINATES = [
-  { lat: 47.639918, lon: -122.403887 }, // Home
-  { lat: 49.316781, lon: -122.864568 }, // Parent's
-]
-const PRIVATE_RADIUS_KM = 2
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const earthRadiusKm = 6371
-  const toRad = (deg: number) => deg * (Math.PI / 180)
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return earthRadiusKm * c
-}
-
-function isSensitiveRecord(location: string, lat?: number, lon?: number): boolean {
-  if (PRIVATE_LOCATION_PATTERNS.some((pattern) => pattern.test(location))) {
-    return true
-  }
-
-  if (typeof lat !== 'number' || typeof lon !== 'number') {
-    return false
-  }
-
-  return PRIVATE_COORDINATES.some((coord) =>
-    haversineKm(lat, lon, coord.lat, coord.lon) <= PRIVATE_RADIUS_KM
-  )
-}
-
 function buildDex(outings: Outing[], observations: Observation[]): DexEntry[] {
   const outingsById = new Map(outings.map((outing) => [outing.id, outing]))
   const grouped = new Map<string, Observation[]>()
@@ -81,10 +48,7 @@ function buildDex(outings: Outing[], observations: Observation[]): DexEntry[] {
 }
 
 /**
- * Builds localStorage seed entries from a sanitized eBird CSV fixture.
- *
- * Privacy filtering removes records with sensitive location names
- * (e.g. Home / Parent) and rows within 2km of known private coordinates.
+ * Builds localStorage seed entries from the eBird CSV fixture.
  *
  * Keyed for userId=1 (the dev-user fallback).
  */
@@ -94,11 +58,8 @@ export function buildSeedLocalStorage(): Record<string, string> {
   const fixturePath = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures', 'ebird-import.csv')
   const csv = readFileSync(fixturePath, 'utf8')
   const previews = parseEBirdCSV(csv)
-  const safePreviews = previews.filter((preview) =>
-    !isSensitiveRecord(preview.location, preview.lat, preview.lon)
-  )
 
-  const grouped = groupPreviewsIntoOutings(safePreviews, 'seed')
+  const grouped = groupPreviewsIntoOutings(previews, 'seed')
 
   const outings: Outing[] = grouped.outings.map((outing, index) => ({
     ...outing,

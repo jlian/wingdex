@@ -53,10 +53,8 @@ test.describe('App with seeded data', () => {
 
     // Known synthetic seed species should appear in the list
     await wingdexSearch.fill('bald eagle')
-    await page.waitForTimeout(150)
     await expect(page.locator('p:visible', { hasText: 'Bald Eagle' }).first()).toBeVisible()
     await wingdexSearch.fill('great blue heron')
-    await page.waitForTimeout(150)
     await expect(page.locator('p:visible', { hasText: 'Great Blue Heron' }).first()).toBeVisible()
   })
 
@@ -68,7 +66,6 @@ test.describe('App with seeded data', () => {
 
     // Search for "eagle"
     await page.getByPlaceholder('Search species...').fill('eagle')
-    await page.waitForTimeout(500)
 
     // Should show Bald Eagle but not unrelated species
     await expect(page.locator('p:visible', { hasText: 'Bald Eagle' }).first()).toBeVisible()
@@ -81,7 +78,6 @@ test.describe('App with seeded data', () => {
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('bald eagle')
-    await page.waitForTimeout(150)
 
     await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
     await page.waitForTimeout(1000)
@@ -98,7 +94,6 @@ test.describe('App with seeded data', () => {
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('bald eagle')
-    await page.waitForTimeout(150)
 
     await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
     await page.waitForTimeout(1000)
