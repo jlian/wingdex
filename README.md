@@ -4,7 +4,7 @@ A photo-first bird identification and life list tracker built on [GitHub Spark](
 
 **[Try it →](https://wingdex--jlian.github.app)**
 
-<img width="1133" height="913" alt="image" src="https://github.com/user-attachments/assets/86636186-bef4-45cb-becc-3760ff9951c2" />
+<img width="1232" height="1187" alt="image" src="https://github.com/user-attachments/assets/b0963b71-bec5-4210-b8b5-009b53e85359" />
 
 ## What is WingDex?
 
