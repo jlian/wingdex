@@ -8,7 +8,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 
 type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 
-const LS_PREFIX = 'birddex_kv_'
+const LS_PREFIX = 'wingdex_kv_'
 const KV_BASE = '/_spark/kv'
 const SPARK_KV_WRITE_RETRIES = 2
 const USER_SCOPED_KEY_PATTERN = /^u\d+_[a-zA-Z][a-zA-Z0-9_]*$/
@@ -101,6 +101,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
   assertUserScopedKey(key)
 
   const sparkRuntime = isSparkHostedRuntime()
+
   const initialValueRef = useRef(initialValue)
   const [value, setValue] = useState<T>(() => (
     sparkRuntime ? initialValue : getLocalStorage(key, initialValue)

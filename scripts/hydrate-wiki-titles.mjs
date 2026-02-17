@@ -51,7 +51,7 @@ async function fetchWikidataBirds() {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Accept': 'application/sparql-results+json',
-      'User-Agent': 'BirdDex/1.0 (taxonomy hydration; https://github.com/jlian/birddex)',
+      'User-Agent': 'WingDex/1.0 (taxonomy hydration; https://github.com/jlian/wingdex)',
     },
     body: `query=${encodeURIComponent(sparql)}`,
   })
@@ -103,7 +103,7 @@ async function tryWikipediaApi(common, scientific) {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`
     try {
       const res = await fetch(url, {
-        headers: { 'Api-User-Agent': 'BirdDex/1.0 (taxonomy hydration)' },
+        headers: { 'Api-User-Agent': 'WingDex/1.0 (taxonomy hydration)' },
       })
       if (res.ok) {
         const data = await res.json()

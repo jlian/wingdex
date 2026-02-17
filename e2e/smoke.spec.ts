@@ -9,8 +9,8 @@ test.describe('App smoke tests', () => {
     const header = page.locator('header');
     await expect(header).toBeVisible({ timeout: 10_000 });
 
-    // Header should have the BirdDex tab in nav
-    await expect(header.getByText('BirdDex')).toBeVisible();
+    // Header should have the WingDex tab in nav
+    await expect(header.getByText('WingDex')).toBeVisible();
   });
 
   test('renders top nav tabs', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('App smoke tests', () => {
     // On desktop (default viewport), nav tabs are in the header
     const header = page.locator('header');
     await expect(header.getByText('Outings')).toBeVisible();
-    await expect(header.getByText('BirdDex')).toBeVisible();
+    await expect(header.getByText('WingDex')).toBeVisible();
   });
 
   test('can navigate between tabs', async ({ page }) => {
@@ -33,10 +33,10 @@ test.describe('App smoke tests', () => {
       page.getByText('Your Outings').or(page.getByText('No outings yet'))
     ).toBeVisible({ timeout: 5_000 });
 
-    // Click BirdDex tab
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click();
+    // Click WingDex tab
+    await page.getByRole('tab', { name: 'WingDex' }).first().click();
     await expect(
-      page.getByText('Your BirdDex is empty').or(page.getByRole('heading', { name: 'BirdDex' }))
+      page.getByText('Your WingDex is empty').or(page.getByRole('heading', { name: 'WingDex' }))
     ).toBeVisible({ timeout: 5_000 });
 
     // Open Settings via avatar button

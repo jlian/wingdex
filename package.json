@@ -1,11 +1,11 @@
 {
-    "name": "birddex",
+    "name": "wingdex",
     "private": true,
     "version": "1.3.2",
-    "description": "Photo-first bird identification and BirdDex tracker, built on GitHub Spark",
+    "description": "Photo-first bird identification and WingDex tracker, built on GitHub Spark",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jlian/birddex.git"
+        "url": "https://github.com/jlian/wingdex.git"
     },
     "author": "John Lian",
     "license": "MIT",
@@ -25,7 +25,7 @@
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
-        "setup:playwright": "npx playwright install --with-deps chromium --quiet",
+        "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",

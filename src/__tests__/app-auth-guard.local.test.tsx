@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/hooks/use-birddex-data', () => ({
-  useBirdDexData: () => ({
+vi.mock('@/hooks/use-wingdex-data', () => ({
+  useWingDexData: () => ({
     photos: [],
     outings: [],
     observations: [],
@@ -45,8 +45,8 @@ vi.mock('@/components/pages/OutingsPage', () => ({
   default: () => <div>OutingsPage</div>,
 }))
 
-vi.mock('@/components/pages/BirdDexPage', () => ({
-  default: () => <div>BirdDexPage</div>,
+vi.mock('@/components/pages/WingDexPage', () => ({
+  default: () => <div>WingDexPage</div>,
 }))
 
 vi.mock('@/components/pages/SettingsPage', () => ({
