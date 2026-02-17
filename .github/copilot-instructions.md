@@ -78,10 +78,10 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Goal: avoid pushing follow-up commits that miss existing reviewer feedback.
 
-## 7. Repository Defaults (BirdDex)
+## 7. Repository Defaults (WingDex)
 
 For repository-specific CLI commands in this workspace, use these defaults unless the user specifies otherwise:
 
-- Owner/repo: `jlian/birddex`
+- Owner/repo: `jlian/wingdex`
 - Default branch: `main`
 - Active PR checks may include semantic PR title validation requiring Conventional Commit style titles (e.g., `fix: ...`).

@@ -12,20 +12,20 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { getEbirdUrl } from '@/lib/taxonomy'
 import { formatStoredDate } from '@/lib/timezone'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
 type SortField = 'date' | 'count' | 'name'
 type SortDir = 'asc' | 'desc'
 
-interface BirdDexPageProps {
-  data: BirdDexDataStore
+interface WingDexPageProps {
+  data: WingDexDataStore
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
   onSelectOuting: (id: string) => void
 }
 
-export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: BirdDexPageProps) {
+export default function WingDexPage({ data, selectedSpecies, onSelectSpecies, onSelectOuting }: WingDexPageProps) {
   const { dex } = data
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('date')
@@ -56,8 +56,8 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
     return (
       <EmptyState
         icon={Bird}
-        title="Your BirdDex is empty"
-        description="Upload photos and confirm species to start building your BirdDex"
+        title="Your WingDex is empty"
+        description="Upload photos and confirm species to start building your WingDex"
       />
     )
   }
@@ -88,7 +88,7 @@ export default function BirdDexPage({ data, selectedSpecies, onSelectSpecies, on
     <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto animate-fade-in">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
-          BirdDex
+          WingDex
         </h2>
         <p className="text-sm text-muted-foreground">
           {dex.length} species observed
@@ -159,7 +159,7 @@ function SpeciesDetail({
   onSelectOuting,
 }: {
   entry: DexEntry
-  data: BirdDexDataStore
+  data: WingDexDataStore
   onBack: () => void
   onSelectOuting: (id: string) => void
 }) {

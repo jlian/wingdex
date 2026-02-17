@@ -25,7 +25,7 @@ import { getDisplayName, getScientificName } from '@/lib/utils'
 import { toLocalISOWithOffset } from '@/lib/timezone'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import { Confetti } from '@/components/ui/confetti'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 import {
   needsCloseConfirmation,
@@ -38,7 +38,7 @@ import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 import { useBirdImage } from '@/hooks/use-bird-image'
 
 interface AddPhotosFlowProps {
-  data: BirdDexDataStore
+  data: WingDexDataStore
   onClose: () => void
   userId: number
 }
@@ -230,7 +230,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       if (newSpeciesCount > 0) {
         setShowConfetti(true)
         toast.success(
-          `🎉 ${newSpeciesCount} new species added to your BirdDex!`
+          `🎉 ${newSpeciesCount} new species added to your WingDex!`
         )
         setTimeout(() => setShowConfetti(false), 3500)
       }

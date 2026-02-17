@@ -46,7 +46,7 @@ const OLD_DUPES = [
 ]
 
 const HEADERS = {
-  'User-Agent': 'BirdDexPhotoDownloader/1.0 (https://github.com/jlian/birddex; birddex@example.com)',
+  'User-Agent': 'WingDexPhotoDownloader/1.0 (https://github.com/jlian/wingdex; wingdex@example.com)',
 }
 
 async function getOriginalUrl(filename) {

@@ -30,11 +30,11 @@ import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
 import { toast } from 'sonner'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Outing, Observation } from '@/lib/types'
 
 interface OutingsPageProps {
-  data: BirdDexDataStore
+  data: WingDexDataStore
   selectedOutingId: string | null
   onSelectOuting: (id: string | null) => void
   onSelectSpecies: (name: string) => void
@@ -218,7 +218,7 @@ function OutingDetail({
   onSelectSpecies,
 }: {
   outing: Outing
-  data: BirdDexDataStore
+  data: WingDexDataStore
   onBack: () => void
   onSelectSpecies: (name: string) => void
 }) {
@@ -273,7 +273,7 @@ function OutingDetail({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `birddex-outing-${new Date(outing.startTime).toISOString().split('T')[0]}.csv`
+    a.download = `wingdex-outing-${new Date(outing.startTime).toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Outing exported in eBird Record CSV format')

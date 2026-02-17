@@ -1,15 +1,15 @@
-# BirdDex: Photo-First Bird Identification
+# WingDex: Photo-First Bird Identification
 
-A mobile-first web application for **reverse birders** — people who take photos first and identify species later. Upload your bird photos, let AI do the identification, confirm with one tap, and build your BirdDex over time.
+A mobile-first web application for **reverse birders** — people who take photos first and identify species later. Upload your bird photos, let AI do the identification, confirm with one tap, and build your WingDex over time.
 
 **Experience Qualities**:
 1. **Photo-first** – The workflow starts with photos you already took. No checklists, no planning — just upload and go
 2. **Effortless** - Upload multiple photos at once and let AI do the heavy lifting of species identification, requiring only confirmation from the user
 3. **Scientific** - Precise data tracking with EXIF metadata extraction, GPS coordinates, timestamps, and eBird CSV compatibility for serious birding records
-4. **Delightful** - Celebrate birding achievements with a Merlin-inspired BirdDex that showcases bird photography (via Wikimedia Commons) and sighting milestones
+4. **Delightful** - Celebrate birding achievements with a Merlin-inspired WingDex that showcases bird photography (via Wikimedia Commons) and sighting milestones
 
 **Complexity Level**: Complex Application (advanced functionality, likely with multiple views)
-- Multi-screen workflow with photo upload, EXIF parsing, AI inference, data management, import/export, and synchronized state across multiple interconnected data models (Photos, Outings, Observations, BirdDex entries)
+- Multi-screen workflow with photo upload, EXIF parsing, AI inference, data management, import/export, and synchronized state across multiple interconnected data models (Photos, Outings, Observations, WingDex entries)
 
 ## Essential Features
 
@@ -46,25 +46,25 @@ A mobile-first web application for **reverse birders** — people who take photo
 - **Purpose**: Maintain data accuracy by requiring human confirmation while preserving AI suggestions for learning
 - **Trigger**: After species suggestions are generated
 - **Progression**: Suggestions displayed → Tap species to expand → View supporting photos → Tap "Confirm" / "Possible" / "Reject" → Adjust count if needed → Select best photo → Save outing
-- **Success criteria**: All confirmed species saved to outing; representative photos linked; counts accurate; rejected species not added to BirdDex
+- **Success criteria**: All confirmed species saved to outing; representative photos linked; counts accurate; rejected species not added to WingDex
 
-### 6. BirdDex Management (Merlin-like UX)
+### 6. WingDex Management (Merlin-like UX)
 - **Functionality**: Maintain per-user aggregate of all confirmed species with first seen date, last seen date, total sightings, total count; display Wikimedia Commons bird images for each species as reference photos (since user photos cannot persist in KV storage)
 - **Purpose**: Provide a beautiful, searchable record of birding accomplishments over time with real bird imagery
-- **Trigger**: Navigate to "BirdDex" tab
-- **Progression**: Tap BirdDex → Scrollable/searchable species list loads → Each entry shows species name + Wikipedia bird image + stats → Tap species → Detail view with timeline of all sightings
-- **Success criteria**: BirdDex updates in real-time as outings are saved; search filters species instantly; Wikipedia images load for recognized species; graceful fallback when images unavailable
+- **Trigger**: Navigate to "WingDex" tab
+- **Progression**: Tap WingDex → Scrollable/searchable species list loads → Each entry shows species name + Wikipedia bird image + stats → Tap species → Detail view with timeline of all sightings
+- **Success criteria**: WingDex updates in real-time as outings are saved; search filters species instantly; Wikipedia images load for recognized species; graceful fallback when images unavailable
 
 ### 7. eBird CSV Import
-- **Functionality**: Upload eBird "My eBird Data" export CSV; parse species, date, location, count columns; show preview with conflict resolution; merge into BirdDex
-- **Purpose**: Allow users to bring existing eBird history into BirdDex without re-entering data
+- **Functionality**: Upload eBird "My eBird Data" export CSV; parse species, date, location, count columns; show preview with conflict resolution; merge into WingDex
+- **Purpose**: Allow users to bring existing eBird history into WingDex without re-entering data
 - **Trigger**: User taps "Import from eBird" in settings/export screen
-- **Progression**: Import screen → Choose file → CSV parsed → Show preview table → Map columns if needed → Resolve conflicts (prefer newer dates, skip exact duplicates) → Confirm import → Data merged into BirdDex and Outings
-- **Success criteria**: Standard eBird CSV formats parsed correctly; BirdDex first/last dates updated; imported outings created; no data loss or duplication
+- **Progression**: Import screen → Choose file → CSV parsed → Show preview table → Map columns if needed → Resolve conflicts (prefer newer dates, skip exact duplicates) → Confirm import → Data merged into WingDex and Outings
+- **Success criteria**: Standard eBird CSV formats parsed correctly; WingDex first/last dates updated; imported outings created; no data loss or duplication
 
 ### 8. eBird CSV Export
 - **Functionality**: Export any outing in eBird Record Format CSV (one row per species with date, time, location, count, comments)
-- **Purpose**: Submit BirdDex sightings to eBird to maintain synchronized records across platforms
+- **Purpose**: Submit WingDex sightings to eBird to maintain synchronized records across platforms
 - **Trigger**: User taps "Export to eBird" on an outing detail screen
 - **Progression**: Outing detail → Tap export icon → Choose "eBird Format" → CSV generated → Download/share dialog → File saved/shared
 - **Success criteria**: Generated CSV matches eBird Record Format specification; imports successfully into eBird; all species, counts, and locations preserved
@@ -84,10 +84,10 @@ A mobile-first web application for **reverse birders** — people who take photo
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
 ### 11. Cloud Data Storage
-- **Functionality**: Structured data (outings, observations, BirdDex, saved spots) is stored via Spark's KV store, scoped per GitHub user ID; falls back to localStorage when KV is unavailable. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the BirdDex and outing views comes from Wikimedia Commons
+- **Functionality**: Structured data (outings, observations, WingDex, saved spots) is stored via Spark's KV store, scoped per GitHub user ID; falls back to localStorage when KV is unavailable. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the WingDex and outing views comes from Wikimedia Commons
 - **Purpose**: Zero-configuration cloud persistence for birding records; photo storage limitations are sidestepped by using public-domain reference images
 - **Trigger**: Automatic — no user action required
-- **Success criteria**: Outing/observation/BirdDex data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
+- **Success criteria**: Outing/observation/WingDex data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
 
 ## Implementation Status
 
@@ -98,9 +98,9 @@ A mobile-first web application for **reverse birders** — people who take photo
 | #3 Outing Clustering | ✅ Done | 8hr/10km thresholds, merge with existing outings |
 | #4 AI Species ID + Crop | ✅ Done | Single GPT-4.1 call returns candidates + bounding box |
 | #5 Observation Confirmation | ✅ Done | Confirm/Possible/Skip during wizard + post-save delete + manual species entry |
-| #6 BirdDex | ✅ Done | Display + search + sort + Wikimedia images + species detail with hero, stat cards, sighting history, Wikipedia/eBird/AllAboutBirds links |
-| #7 eBird Import | ⚠️ Basic | Parses CSV into BirdDex entries; doesn't create outings |
-| #8 eBird Export | ✅ Done | BirdDex CSV export + per-outing eBird CSV export from outing detail |
+| #6 WingDex | ✅ Done | Display + search + sort + Wikimedia images + species detail with hero, stat cards, sighting history, Wikipedia/eBird/AllAboutBirds links |
+| #7 eBird Import | ⚠️ Basic | Parses CSV into WingDex entries; doesn't create outings |
+| #8 eBird Export | ✅ Done | WingDex CSV export + per-outing eBird CSV export from outing detail |
 | #9 Saved Locations | ✅ Done | Add/delete spots with name, lat/lon, geolocation, Google Maps links, outing count in Settings |
 | #10 Outing Detail | ✅ Done | Tappable cards → species list, Wikimedia images, notes editing, manual add, per-outing export, delete |
 | #11 Cloud Storage | ✅ Done | Photo blobs stripped before KV persist; only metadata stored |
@@ -108,7 +108,7 @@ A mobile-first web application for **reverse birders** — people who take photo
 
 ## Upcoming Priorities
 
-1. **eBird import → outings** — Create outing records from imported eBird CSV checklists (currently imports to BirdDex only)
+1. **eBird import → outings** — Create outing records from imported eBird CSV checklists (currently imports to WingDex only)
 2. **Autocomplete for manual species entry** — eBird taxonomy or local search
 3. **Animations** — Staggered card reveals, new-species celebration, spring transitions
 
@@ -162,23 +162,23 @@ Typography should balance scientific precision with approachable readability, us
 
 ## Animations
 
-Animations should feel organic and nature-inspired, with gentle easing that mimics the movement of birds in flight. Use motion to guide attention during the multi-step upload workflow and celebrate BirdDex milestones.
+Animations should feel organic and nature-inspired, with gentle easing that mimics the movement of birds in flight. Use motion to guide attention during the multi-step upload workflow and celebrate WingDex milestones.
 
 Key animation moments:
 - Photo upload: Cards fade in with staggered timing (50ms offset), scale from 95% to 100%
 - Species suggestions: Slide up from bottom with spring physics, confidence bars animate in
-- BirdDex add: Confetti burst + gentle scale pulse when new species confirmed
+- WingDex add: Confetti burst + gentle scale pulse when new species confirmed
 - Outing transitions: Smooth page slides with momentum-based easing
 - Loading states: Organic pulse (not mechanical spin) with subtle scale variation
 
 ## Component Selection
 
 - **Components**:
-  - **Card**: Outing cards, species cards, BirdDex entries - add subtle shadow and hover lift effect
+  - **Card**: Outing cards, species cards, WingDex entries - add subtle shadow and hover lift effect
   - **Button**: Primary actions use solid accent color; secondary use outline style with primary color
   - **Dialog**: Outing review, species confirmation, import preview - full-height on mobile
   - **Sheet**: Bottom sheet for quick actions (merge outings, set location) - native feel on mobile
-  - **Tabs**: Main navigation (Home, Outings, BirdDex, Settings) - sticky header on mobile
+  - **Tabs**: Main navigation (Home, Outings, WingDex, Settings) - sticky header on mobile
   - **Input** + **Textarea**: Location name, notes, counts - large touch targets (min 44px)
   - **Badge**: Species status (Confirmed/Possible), new species indicator - use accent color
   - **Progress**: Upload progress, inference progress - organic appearance with gradient
@@ -209,7 +209,7 @@ Key animation moments:
   - Check: CheckCircle (confirm species)
   - Question: Question (mark as possible)
   - Close: X (reject species)
-  - List: List (BirdDex, outings list)
+  - List: List (WingDex, outings list)
   - Export: Download (export actions)
   - Import: Upload (import actions)
   - Settings: Gear (settings screen)

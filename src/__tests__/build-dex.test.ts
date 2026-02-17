@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDexFromState } from '@/hooks/use-birddex-data'
+import { buildDexFromState } from '@/hooks/use-wingdex-data'
 import type { Outing, Observation, DexEntry } from '@/lib/types'
 
 // ── Helpers ─────────────────────────────────────────────────

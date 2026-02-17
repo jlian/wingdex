@@ -113,8 +113,8 @@ test.describe('CSV import + photo upload integration', () => {
       page.locator('p:visible', { hasText: 'Discovery Park' }).first()
     ).toBeVisible()
 
-    // Navigate to BirdDex to verify species
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    // Navigate to WingDex to verify species
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     // All 4 species from the CSV should be in the dex
@@ -125,7 +125,7 @@ test.describe('CSV import + photo upload integration', () => {
     }
   })
 
-  test('full photo upload flow: upload → AI identify → confirm → saved to BirdDex', async ({ page }) => {
+  test('full photo upload flow: upload → AI identify → confirm → saved to WingDex', async ({ page }) => {
     await mockLLM(page, 'Chukar_partridge_near_Haleakala_summit_Maui')
     await mockNominatim(page, 'Haleakala National Park, Maui')
     await mockWikimedia(page)
@@ -161,8 +161,8 @@ test.describe('CSV import + photo upload integration', () => {
     // Wait for dialog to auto-close
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
-    // Navigate to BirdDex to verify the species was saved
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    // Navigate to WingDex to verify the species was saved
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     await expect(
@@ -184,7 +184,7 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(page.getByText(/Imported.*species/)).not.toBeVisible({ timeout: 10_000 })
 
     // Verify Chukar is in the dex from CSV
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await expect(page.locator('p:visible', { hasText: 'Chukar' }).first()).toBeVisible()
 
@@ -215,8 +215,8 @@ test.describe('CSV import + photo upload integration', () => {
     // Dialog auto-closes after species save
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 15_000 })
 
-    // Go to BirdDex — Chukar should still be there (converged, not duplicated)
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    // Go to WingDex — Chukar should still be there (converged, not duplicated)
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     // Count the Chukar entries — should be exactly 1 (not 2 separate entries)

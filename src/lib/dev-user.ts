@@ -1,4 +1,4 @@
-const DEV_USER_ID_KEY = 'birddex_dev_user_id'
+const DEV_USER_ID_KEY = 'wingdex_dev_user_id'
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
 

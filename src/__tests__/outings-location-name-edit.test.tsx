@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import OutingsPage from '@/components/pages/OutingsPage'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Outing } from '@/lib/types'
 import { toast } from 'sonner'
 
@@ -25,7 +25,7 @@ const baseOuting: Outing = {
   createdAt: '2026-02-10T21:42:00.000Z',
 }
 
-function createDataStore(): BirdDexDataStore {
+function createDataStore(): WingDexDataStore {
   return {
     isLoading: false,
     photos: [],

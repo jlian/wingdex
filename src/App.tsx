@@ -4,12 +4,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
-import { useBirdDexData } from '@/hooks/use-birddex-data'
+import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 
 import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
 import OutingsPage from '@/components/pages/OutingsPage'
-import BirdDexPage from '@/components/pages/BirdDexPage'
+import WingDexPage from '@/components/pages/WingDexPage'
 import SettingsPage from '@/components/pages/SettingsPage'
 import AddPhotosFlow from '@/components/flows/AddPhotosFlow'
 
@@ -43,7 +43,7 @@ function parseHash(): { tab: string; subId?: string } {
   if (!hash) return { tab: 'home' }
   const [segment, ...rest] = hash.split('/')
   const subId = rest.length > 0 ? decodeURIComponent(rest.join('/')) : undefined
-  if (['home', 'outings', 'birddex', 'settings'].includes(segment)) {
+  if (['home', 'outings', 'wingdex', 'settings'].includes(segment)) {
     return { tab: segment, subId }
   }
   return { tab: 'home' }
@@ -198,7 +198,7 @@ function AuthErrorShell({ message }: { message: string }) {
 function AppContent({ user }: { user: UserInfo }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
-  const data = useBirdDexData(user.id)
+  const data = useWingDexData(user.id)
   const { resolvedTheme } = useTheme()
 
   // Sync <meta name="theme-color"> with current theme (#17)
@@ -210,7 +210,7 @@ function AppContent({ user }: { user: UserInfo }) {
   }, [resolvedTheme])
 
   const navItems = [
-    { value: 'birddex', label: 'BirdDex', icon: Bird },
+    { value: 'wingdex', label: 'WingDex', icon: Bird },
     { value: 'outings', label: 'Outings', icon: MapPin },
   ]
 
@@ -232,7 +232,7 @@ function AppContent({ user }: { user: UserInfo }) {
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
 
-              {/* Nav tabs — BirdDex + Outings (Home via logo, Settings via avatar) */}
+              {/* Nav tabs — WingDex + Outings (Home via logo, Settings via avatar) */}
               <TabsList className="flex bg-transparent gap-1 h-auto p-0">
                 {navItems.map(item => (
                   <TabsTrigger
@@ -276,7 +276,7 @@ function AppContent({ user }: { user: UserInfo }) {
               data={data}
               onAddPhotos={() => setShowAddPhotos(true)}
               onSelectOuting={(id) => navigate('outings', id)}
-              onSelectSpecies={(name) => navigate('birddex', name)}
+              onSelectSpecies={(name) => navigate('wingdex', name)}
               onNavigate={(tab) => navigate(tab)}
             />
           </TabsContent>
@@ -286,15 +286,15 @@ function AppContent({ user }: { user: UserInfo }) {
               data={data}
               selectedOutingId={tab === 'outings' ? (subId ?? null) : null}
               onSelectOuting={(id) => navigate('outings', id ?? undefined)}
-              onSelectSpecies={(name) => navigate('birddex', name)}
+              onSelectSpecies={(name) => navigate('wingdex', name)}
             />
           </TabsContent>
 
-          <TabsContent value="birddex" className="mt-0" forceMount hidden={tab !== 'birddex'}>
-            <BirdDexPage
+          <TabsContent value="wingdex" className="mt-0" forceMount hidden={tab !== 'wingdex'}>
+            <WingDexPage
               data={data}
-              selectedSpecies={tab === 'birddex' ? (subId ?? null) : null}
-              onSelectSpecies={(name) => navigate('birddex', name ?? undefined)}
+              selectedSpecies={tab === 'wingdex' ? (subId ?? null) : null}
+              onSelectSpecies={(name) => navigate('wingdex', name ?? undefined)}
               onSelectOuting={(id) => navigate('outings', id)}
             />
           </TabsContent>
@@ -316,16 +316,16 @@ function AppContent({ user }: { user: UserInfo }) {
       {/* Footer */}
       <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
         <span>
-          BirdDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} by{' '}
+          WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} by{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
             John Lian
           </a>
         </span>
         <span>·</span>
-        <a href="https://github.com/jlian/birddex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
+        <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
           <GithubLogo size={14} />
         </a>
-        <a href="https://github.com/jlian/birddex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+        <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
           Report Issues
         </a>
       </div>

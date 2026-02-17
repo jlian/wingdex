@@ -42,7 +42,7 @@ describe('useKV (local runtime)', () => {
   })
 
   it('initializes from localStorage and does not hit Spark KV', async () => {
-    localStorage.setItem(`birddex_kv_${key}`, JSON.stringify(['saved']))
+    localStorage.setItem(`wingdex_kv_${key}`, JSON.stringify(['saved']))
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
     let latest: KVControls<string[]> | null = null
@@ -83,14 +83,14 @@ describe('useKV (local runtime)', () => {
       latest!.setValue(['a', 'b'])
     })
     await waitFor(() => {
-      expect(localStorage.getItem(`birddex_kv_${key}`)).toBe(JSON.stringify(['a', 'b']))
+      expect(localStorage.getItem(`wingdex_kv_${key}`)).toBe(JSON.stringify(['a', 'b']))
     })
 
     act(() => {
       latest!.deleteValue()
     })
     await waitFor(() => {
-      expect(localStorage.getItem(`birddex_kv_${key}`)).toBeNull()
+      expect(localStorage.getItem(`wingdex_kv_${key}`)).toBeNull()
       expect(latest?.value).toEqual([])
       expect(latest?.isLoading).toBe(false)
     })
@@ -115,7 +115,7 @@ describe('useKV (local runtime)', () => {
     act(() => {
       window.dispatchEvent(
         new StorageEvent('storage', {
-          key: `birddex_kv_${key}`,
+          key: `wingdex_kv_${key}`,
           newValue: JSON.stringify(['sync']),
         }),
       )
@@ -139,8 +139,8 @@ describe('useKV (local runtime)', () => {
   })
 
   it('keeps user-scoped keys isolated from each other', async () => {
-    localStorage.setItem('birddex_kv_u1_photos', JSON.stringify(['u1-photo']))
-    localStorage.setItem('birddex_kv_u2_photos', JSON.stringify(['u2-photo']))
+    localStorage.setItem('wingdex_kv_u1_photos', JSON.stringify(['u1-photo']))
+    localStorage.setItem('wingdex_kv_u2_photos', JSON.stringify(['u2-photo']))
 
     let userOne: KVControls<string[]> | null = null
     let userTwo: KVControls<string[]> | null = null
@@ -174,8 +174,8 @@ describe('useKV (local runtime)', () => {
     })
 
     await waitFor(() => {
-      expect(localStorage.getItem('birddex_kv_u1_photos')).toBe(JSON.stringify(['updated-u1']))
-      expect(localStorage.getItem('birddex_kv_u2_photos')).toBe(JSON.stringify(['u2-photo']))
+      expect(localStorage.getItem('wingdex_kv_u1_photos')).toBe(JSON.stringify(['updated-u1']))
+      expect(localStorage.getItem('wingdex_kv_u2_photos')).toBe(JSON.stringify(['u2-photo']))
       expect(userTwo?.value).toEqual(['u2-photo'])
     })
   })

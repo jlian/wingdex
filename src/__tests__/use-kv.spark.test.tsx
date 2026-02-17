@@ -1,6 +1,6 @@
 /**
  * @vitest-environment jsdom
- * @vitest-environment-options {"url":"https://birddex--jlian.github.app/"}
+ * @vitest-environment-options {"url":"https://wingdex--jlian.github.app/"}
  */
 
 import { render, waitFor } from '@testing-library/react'

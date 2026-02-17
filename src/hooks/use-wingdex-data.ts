@@ -2,7 +2,7 @@ import { useKV } from '@/hooks/use-kv'
 import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
 
-export type BirdDexDataStore = ReturnType<typeof useBirdDexData>
+export type WingDexDataStore = ReturnType<typeof useWingDexData>
 
 export function buildDexFromState(
   allOutings: Outing[],
@@ -63,7 +63,7 @@ export function buildDexFromState(
   return rebuilt.sort((a, b) => a.speciesName.localeCompare(b.speciesName))
 }
 
-export function useBirdDexData(userId: number) {
+export function useWingDexData(userId: number) {
   const [photos, setPhotos, , photosLoading] = useKV<Photo[]>(getUserStorageKey(userId, 'photos'), [])
   const [outings, setOutings, , outingsLoading] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
   const [observations, setObservations, , observationsLoading] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])

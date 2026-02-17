@@ -5,10 +5,10 @@ import {
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate } from '@/lib/timezone'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
 interface HomePageProps {
-  data: BirdDexDataStore
+  data: WingDexDataStore
   onAddPhotos: () => void
   onSelectOuting: (id: string) => void
   onSelectSpecies: (name: string) => void
@@ -101,7 +101,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
               Upload your pics, ID the birds, and build your
-              BirdDex. <em>Reverse birding</em> at its finest.
+              WingDex. <em>Reverse birding</em> at its finest.
             </p>
           </div>
           <Button
@@ -154,7 +154,7 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
               </h3>
               {dex.length > 6 && (
                 <button
-                  onClick={() => onNavigate('birddex')}
+                  onClick={() => onNavigate('wingdex')}
                   className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                 >
                   View all {dex.length}
