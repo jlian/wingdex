@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { searchSpecies, findBestMatch, normalizeSpeciesName, speciesCount } from '@/lib/taxonomy'
+import { searchSpecies, findBestMatch, normalizeSpeciesName, speciesCount, getWikiTitle } from '@/lib/taxonomy'
 
 describe('taxonomy', () => {
   describe('speciesCount', () => {
@@ -118,6 +118,25 @@ describe('taxonomy', () => {
 
     it('returns canonical name for exact matches', () => {
       expect(normalizeSpeciesName('Bald Eagle')).toBe('Bald Eagle')
+    })
+  })
+
+  describe('getWikiTitle', () => {
+    it('returns wiki title for a known species', () => {
+      const title = getWikiTitle('Northern Cardinal')
+      expect(title).toBe('Northern cardinal')
+    })
+
+    it('returns undefined for an unknown species', () => {
+      expect(getWikiTitle('Purple Sparkle Dragon')).toBeUndefined()
+    })
+
+    it('is case-insensitive', () => {
+      expect(getWikiTitle('bald eagle')).toBe(getWikiTitle('Bald Eagle'))
+    })
+
+    it('returns undefined for empty string', () => {
+      expect(getWikiTitle('')).toBeUndefined()
     })
   })
 })

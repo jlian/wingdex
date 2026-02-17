@@ -38,7 +38,8 @@ async function fetchSummary(title: string): Promise<FetchResult> {
   try {
     const encoded = encodeURIComponent(title.replace(/ /g, '_'))
     const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
+      { headers: { 'Api-User-Agent': 'BirdDex/1.0 (bird identification app)' } }
     )
     if (!res.ok) return { kind: 'miss' }
     const data = (await res.json()) as RestSummary

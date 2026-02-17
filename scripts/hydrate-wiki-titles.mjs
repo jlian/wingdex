@@ -3,7 +3,7 @@
  * Hydrate taxonomy.json with pre-resolved Wikipedia article titles.
  *
  * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name → article title).
- * Step 2: For misses, try the Wikipedia Action API with the same strategy chain as wikimedia.ts.
+ * Step 2: For misses, try the Wikipedia REST API with the same strategy chain as wikimedia.ts.
  * Step 3: Write taxonomy.json with [common, scientific, ebirdCode, wikiTitle | null].
  *
  * Run after any taxonomy update:
@@ -79,7 +79,7 @@ async function fetchWikidataBirds() {
 }
 
 /**
- * Try resolving a species against Wikipedia Action API.
+ * Try resolving a species against Wikipedia REST API.
  * Returns the Wikipedia article title if found, else null.
  */
 async function tryWikipediaApi(common, scientific) {
