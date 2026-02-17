@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/jlian/birddex/compare/v1.3.1...v1.3.2) (2026-02-17)
+
+
+### Bug Fixes
+
+* prevent home empty-state flash during Spark KV load ([#124](https://github.com/jlian/birddex/issues/124)) ([9ac485a](https://github.com/jlian/birddex/commit/9ac485aa0c7bff7d7353e5c167c36e3e1cc20553)), closes [#101](https://github.com/jlian/birddex/issues/101)
+
 # Changelog
 
 All notable changes to this project are documented in this file.
