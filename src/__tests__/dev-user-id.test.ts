@@ -14,7 +14,7 @@ function createStorage(initial: Record<string, string> = {}) {
 
 describe('getStableDevUserId', () => {
   test('uses existing persisted ID when valid', () => {
-    const storage = createStorage({ birddex_dev_user_id: '123456789' })
+    const storage = createStorage({ wingdex_dev_user_id: '123456789' })
     const id = getStableDevUserId({ storage, seed: 'example', random: () => 0.42 })
     expect(id).toBe(123456789)
   })
@@ -30,7 +30,7 @@ describe('getStableDevUserId', () => {
   })
 
   test('regenerates when persisted value is invalid', () => {
-    const storage = createStorage({ birddex_dev_user_id: 'not-a-number' })
+    const storage = createStorage({ wingdex_dev_user_id: 'not-a-number' })
     const id = getStableDevUserId({ storage, seed: 'example.com:/birds', random: () => 0.5 })
 
     expect(id).toBeGreaterThanOrEqual(100000000)

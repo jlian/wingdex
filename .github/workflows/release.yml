@@ -33,9 +33,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: |
-          npm install -g npm@10.9.2
-          npm ci --workspaces=false
+        run: npm ci
 
       - name: Run semantic-release
         env:

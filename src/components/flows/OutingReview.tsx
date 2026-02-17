@@ -8,7 +8,7 @@ import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } fr
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
 import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import { toast } from 'sonner'
 
 interface PhotoCluster {
@@ -21,7 +21,7 @@ interface PhotoCluster {
 
 interface OutingReviewProps {
   cluster: PhotoCluster
-  data: BirdDexDataStore
+  data: WingDexDataStore
   userId: number
   /** Pre-fill location from a previous outing (user can override) */
   defaultLocationName?: string

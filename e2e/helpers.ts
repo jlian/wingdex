@@ -10,7 +10,7 @@ export function buildSeedLocalStorage(): Record<string, string> {
   const now = Date.now()
   const day = 86400000
   const hour = 3600000
-  const prefix = 'birddex_kv_u1_'
+  const prefix = 'wingdex_kv_u1_'
 
   const outings = [
     { id: 'outing_seed_1', userId: 'seed', startTime: new Date(now - 2 * day).toISOString(), endTime: new Date(now - 2 * day + 2 * hour).toISOString(), locationName: 'Central Park, New York', lat: 40.7829, lon: -73.9654, notes: 'Beautiful morning walk along the lake.', createdAt: new Date(now - 2 * day).toISOString() },
@@ -100,11 +100,11 @@ export async function injectSeedData(page: Page) {
   await page.goto('/')
   await page.evaluate((data) => {
     // Force the dev user ID to 1 so it matches our seed key prefix (u1_)
-    localStorage.setItem('birddex_dev_user_id', '1')
+    localStorage.setItem('wingdex_dev_user_id', '1')
     for (const [key, value] of Object.entries(data)) {
       localStorage.setItem(key, value)
     }
   }, seedData)
   await page.reload()
-  await page.waitForSelector('text=BirdDex', { timeout: 10000 })
+  await page.waitForSelector('text=WingDex', { timeout: 10000 })
 }

@@ -1,7 +1,7 @@
 {
-  "name": "BirdDex",
-  "short_name": "BirdDex",
-  "description": "Upload bird photos, let AI identify the species, build your BirdDex.",
+  "name": "WingDex",
+  "short_name": "WingDex",
+  "description": "Upload bird photos, let AI identify the species, build your WingDex.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#e5ddd0",

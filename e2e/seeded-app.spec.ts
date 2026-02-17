@@ -44,10 +44,10 @@ test.describe('App with seeded data', () => {
     await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
 
-  test('birddex page lists species with count', async ({ page }) => {
+  test('wingdex page lists species with count', async ({ page }) => {
     await injectSeedData(page)
 
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     // Known seed species should appear in the list
@@ -55,10 +55,10 @@ test.describe('App with seeded data', () => {
     await expect(page.locator('p:visible', { hasText: 'Bald Eagle' }).first()).toBeVisible()
   })
 
-  test('birddex search filters species', async ({ page }) => {
+  test('wingdex search filters species', async ({ page }) => {
     await injectSeedData(page)
 
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     // Search for "hawk"
@@ -73,7 +73,7 @@ test.describe('App with seeded data', () => {
   test('clicking a species opens its detail view', async ({ page }) => {
     await injectSeedData(page)
 
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     await page.locator('p:visible', { hasText: 'Northern Cardinal' }).first().click()
@@ -88,7 +88,7 @@ test.describe('App with seeded data', () => {
   test('species detail view loads Wikipedia image', async ({ page }) => {
     await injectSeedData(page)
 
-    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
 
     await page.locator('p:visible', { hasText: 'Northern Cardinal' }).first().click()

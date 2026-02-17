@@ -16,6 +16,7 @@
       "type": "shell",
       "command": "npm",
       "args": [
+        "--silent",
         "run",
         "setup:playwright"
       ],

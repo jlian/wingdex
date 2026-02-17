@@ -17,10 +17,10 @@ import { textLLM } from '@/lib/ai-inference'
 import { toast } from 'sonner'
 import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
-import type { BirdDexDataStore } from '@/hooks/use-birddex-data'
+import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
 interface SettingsPageProps {
-  data: BirdDexDataStore
+  data: WingDexDataStore
   user: {
     id: number
     login: string
@@ -97,10 +97,10 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `birddex-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `wingdex-export-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('BirdDex exported')
+    toast.success('WingDex exported')
   }
 
   return (
@@ -147,7 +147,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Import & Export</h3>
           <p className="text-sm text-muted-foreground">
-            Import your eBird life list or export your BirdDex data
+            Import your eBird life list or export your WingDex data
           </p>
         </div>
 
@@ -233,7 +233,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             disabled={data.dex.length === 0}
           >
             <Download size={20} className="mr-2" />
-            Export BirdDex
+            Export WingDex
           </Button>
 
           <input
@@ -284,7 +284,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 </li>
               </ol>
               <p className="text-xs">
-                BirdDex will create outings grouped by date and location, with all your
+                WingDex will create outings grouped by date and location, with all your
                 species as confirmed observations.
               </p>
             </div>
@@ -340,7 +340,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <AlertDialogTitle>Load demo data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will replace all your current outings, observations,
-                  and BirdDex entries with demo data. This action cannot be undone.
+                  and WingDex entries with demo data. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -372,7 +372,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 <AlertDialogTitle>Delete all data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will permanently delete all your outings, observations,
-                  and BirdDex entries. This action cannot be undone.
+                  and WingDex entries. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

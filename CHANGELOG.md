@@ -1,15 +1,16 @@
-# Changelog
+# [1.4.0](https://github.com/jlian/wingdex/compare/v1.3.2...v1.4.0) (2026-02-17)
 
-All notable changes to this project are documented in this file.
 
-Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
+### Features
+
+* rename BirdDex to WingDex across app ([#129](https://github.com/jlian/wingdex/issues/129)) ([bacd237](https://github.com/jlian/wingdex/commit/bacd2374fbae125980c958270b5644e71ea03827))
 
 ## [1.3.2](https://github.com/jlian/birddex/compare/v1.3.1...v1.3.2) (2026-02-17)
 
 
 ### Bug Fixes
 
-* prevent home empty-state flash during Spark KV load ([#124](https://github.com/jlian/birddex/issues/124)) ([9ac485a](https://github.com/jlian/birddex/commit/9ac485aa0c7bff7d7353e5c167c36e3e1cc20553))
+* prevent home empty-state flash during Spark KV load ([#124](https://github.com/jlian/birddex/issues/124)) ([9ac485a](https://github.com/jlian/birddex/commit/9ac485aa0c7bff7d7353e5c167c36e3e1cc20553)), closes [#101](https://github.com/jlian/birddex/issues/101)
 
 ## [1.3.1](https://github.com/jlian/birddex/compare/v1.3.0...v1.3.1) (2026-02-17)
 
@@ -52,7 +53,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 
 * use plain v tags for release-please ([#85](https://github.com/jlian/birddex/issues/85)) ([ab4a2da](https://github.com/jlian/birddex/commit/ab4a2da3df3de4abb6e16589010b1a48f70bcd4f))
 
-## 1.2.0 (2026-02-16)
+## [1.2.0](https://github.com/jlian/birddex/compare/v1.1.0...v1.2.0) (2026-02-16)
 
 ### Features
 - replace stat cards with compact inline stats on homepage ([3908041](https://github.com/jlian/birddex/commit/3908041))
@@ -141,7 +142,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 - Load PWA manifest from bundled asset to avoid Spark 404 ([0299465](https://github.com/jlian/birddex/commit/0299465))
 - Harden iOS home-screen icon metadata and cache-bust touch icon ([7bdb77e](https://github.com/jlian/birddex/commit/7bdb77e))
 
-## 1.1.0 (2026-02-15)
+## [1.1.0](https://github.com/jlian/birddex/compare/v1.0.2...v1.1.0) (2026-02-15)
 
 ### Features
 - extract saved locations from eBird CSV import ([3cd4b05](https://github.com/jlian/birddex/commit/3cd4b05))
@@ -170,12 +171,12 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 - Pass location name to bird ID prompt for regional species accuracy (#30) ([30c7b03](https://github.com/jlian/birddex/commit/30c7b03))
 - Replace saved locations with outing name autocomplete (#41) ([dfe28f7](https://github.com/jlian/birddex/commit/dfe28f7))
 
-## 1.0.2 (2026-02-13)
+## [1.0.2](https://github.com/jlian/birddex/compare/v1.0.1...v1.0.2) (2026-02-13)
 
 ### Bug Fixes
 - eBird links, taxonomy grounding, and Wikipedia coverage ([5b1cb31](https://github.com/jlian/birddex/commit/5b1cb31))
 
-## 1.0.1 (2026-02-13)
+## [1.0.1](https://github.com/jlian/birddex/compare/v1.0.0...v1.0.1) (2026-02-13)
 
 ### Features
 - harden user isolation and auth guard ([79cbee7](https://github.com/jlian/birddex/commit/79cbee7))
@@ -190,7 +191,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 - stabilize spark resolution and CI install mode ([f93cc93](https://github.com/jlian/birddex/commit/f93cc93))
 - sync settings version from package.json ([3cf43aa](https://github.com/jlian/birddex/commit/3cf43aa))
 
-## 1.0.0 (2026-02-13)
+## [1.0.0](https://github.com/jlian/birddex/compare/v0.9.0...v1.0.0) (2026-02-13)
 
 ### Highlights
 - Reached first stable major release with core BirdDex flows: dark mode, outing title editing, and eBird record-format export.
@@ -260,7 +261,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 
 </details>
 
-## 0.9.0 (2026-02-13)
+## [0.9.0](https://github.com/jlian/birddex/compare/v0.8.0...v0.9.0) (2026-02-13)
 
 ### Features
 - Add eBird taxonomy for species autocomplete and AI grounding ([e2990d8](https://github.com/jlian/birddex/commit/e2990d8))
@@ -283,7 +284,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 ### Continuous Integration
 - run all tests instead of hardcoded subset ([4c9ec46](https://github.com/jlian/birddex/commit/4c9ec46))
 
-## 0.8.0 (2026-02-13)
+## [0.8.0](https://github.com/jlian/birddex/compare/v0.7.0...v0.8.0) (2026-02-13)
 
 ### Bug Fixes
 - align react-dom version with react to fix #527 mismatch error ([8c2b23b](https://github.com/jlian/birddex/commit/8c2b23b))
@@ -297,12 +298,12 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 - Bump react-resizable-panels from 2.1.9 to 4.6.2 (#2) ([d7d56e2](https://github.com/jlian/birddex/commit/d7d56e2))
 - Bump eslint-plugin-react-hooks from 5.2.0 to 7.0.1 (#3) ([0c813b2](https://github.com/jlian/birddex/commit/0c813b2))
 
-## 0.7.0 (2026-02-13)
+## [0.7.0](https://github.com/jlian/birddex/compare/v0.6.0...v0.7.0) (2026-02-13)
 
 ### Miscellaneous Chores
 - eBird import creates outings, add import instructions, confetti on new species ([936e4e8](https://github.com/jlian/birddex/commit/936e4e8))
 
-## 0.6.0 (2026-02-13)
+## [0.6.0](https://github.com/jlian/birddex/compare/v0.5.0...v0.6.0) (2026-02-13)
 
 ### Code Refactoring
 - extract shared utilities, remove dead code ([cc491d3](https://github.com/jlian/birddex/commit/cc491d3))
@@ -314,7 +315,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 - Polish detail pages, fix nav bug, reorder settings, clean up stale files ([b838f76](https://github.com/jlian/birddex/commit/b838f76))
 - Update docs, fix CI console error filter, remove UX_FIXES.md ([ac4d5f1](https://github.com/jlian/birddex/commit/ac4d5f1))
 
-## 0.5.0 (2026-02-13)
+## [0.5.0](https://github.com/jlian/birddex/compare/v0.4.0...v0.5.0) (2026-02-13)
 
 ### Features
 - consistent cards, animations, seed data, delete data ([59906bd](https://github.com/jlian/birddex/commit/59906bd))
@@ -325,7 +326,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 ### Miscellaneous Chores
 - Compact Merlin-style rows, sorting, tighter spacing, logo nav ([e4aacae](https://github.com/jlian/birddex/commit/e4aacae))
 
-## 0.4.0 (2026-02-13)
+## [0.4.0](https://github.com/jlian/birddex/compare/v0.3.0...v0.4.0) (2026-02-13)
 
 ### Features
 - outing detail view, saved locations UI, title/favicon, PRD updates ([1750b7a](https://github.com/jlian/birddex/commit/1750b7a))
@@ -334,7 +335,7 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 ### Miscellaneous Chores
 - add implementation status + priorities; stop persisting photo blobs to KV ([1371660](https://github.com/jlian/birddex/commit/1371660))
 
-## 0.3.0 (2026-02-13)
+## [0.3.0](https://github.com/jlian/birddex/compare/v0.2.0...v0.3.0) (2026-02-13)
 
 ### Features
 - Add Playwright smoke tests (7 tests: load, nav, dialog, mobile viewport) ([11161ea](https://github.com/jlian/birddex/commit/11161ea))
@@ -342,14 +343,14 @@ Historical entries through v1.2.0 were backfilled from git tag ranges. New entri
 ### Miscellaneous Chores
 - UX overhaul: reverse-birding identity, Wikimedia images, outing merging, 8hr clustering ([70623fa](https://github.com/jlian/birddex/commit/70623fa))
 
-## 0.2.0 (2026-02-13)
+## [0.2.0](https://github.com/jlian/birddex/compare/v0.1.0...v0.2.0) (2026-02-13)
 
 ### Bug Fixes
 - Fix mobile crop, rework bird ID flow, add AI zoom, add tests ([ed04cbc](https://github.com/jlian/birddex/commit/ed04cbc))
 - Fix 11 UX issues: crop overlay, back nav, accessibility, error handling ([a8a4c9a](https://github.com/jlian/birddex/commit/a8a4c9a))
 - Fix AI zoom: use canvas crop instead of broken CSS percentage math ([b61dbc8](https://github.com/jlian/birddex/commit/b61dbc8))
 
-## 0.1.0 (2026-02-12)
+## [0.1.0](https://github.com/jlian/birddex/releases/tag/v0.1.0) (2026-02-12)
 
 ### Highlights
 - Bootstrapped the first working BirdDex prototype in Spark, including initial app structure and storage setup.

@@ -1,4 +1,4 @@
-# Contributing to BirdDex
+# Contributing to WingDex
 
 Thanks for your interest in contributing! Here's how to get started.
 
@@ -6,8 +6,8 @@ Thanks for your interest in contributing! Here's how to get started.
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/jlian/birddex.git
-   cd birddex
+   git clone https://github.com/jlian/wingdex.git
+   cd wingdex
    npm ci
    ```
 
@@ -59,7 +59,7 @@ Key areas:
 
 ## Reporting Issues
 
-- Use [GitHub Issues](https://github.com/jlian/birddex/issues) to report bugs or suggest features
+- Use [GitHub Issues](https://github.com/jlian/wingdex/issues) to report bugs or suggest features
 - Include steps to reproduce for bugs
 - Screenshots are welcome
 
