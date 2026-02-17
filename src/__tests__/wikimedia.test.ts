@@ -13,18 +13,13 @@ vi.mock('@/lib/taxonomy', async (importOriginal) => {
 // Import after mocking
 const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
-function mockWikiResponse(pageData: Record<string, unknown> | null | 'missing') {
-  if (pageData === null) {
+function mockWikiResponse(data: Record<string, unknown> | null) {
+  if (data === null) {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
-  } else if (pageData === 'missing') {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ query: { pages: [{ missing: true }] } }),
-    })
   } else {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ query: { pages: [pageData] } }),
+      json: async () => data,
     })
   }
 }
@@ -34,8 +29,8 @@ function wikiPageData(overrides: Record<string, unknown> = {}) {
     title: 'Test Bird',
     extract: 'A small bird.',
     thumbnail: { source: 'https://upload.wikimedia.org/thumb/100px-bird.jpg' },
-    original: { source: 'https://upload.wikimedia.org/bird.jpg' },
-    fullurl: 'https://en.wikipedia.org/wiki/Test_Bird',
+    originalimage: { source: 'https://upload.wikimedia.org/bird.jpg' },
+    content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Test_Bird' } },
     ...overrides,
   }
 }
@@ -68,7 +63,7 @@ describe('getWikimediaImage', () => {
 
   it('returns undefined when wiki page has no image', async () => {
     mockGetWikiTitle.mockReturnValue('Imageless Bird')
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
+    mockWikiResponse(wikiPageData({ thumbnail: undefined, originalimage: undefined }))
 
     const result = await getWikimediaImage('Unique Warbler B2')
     expect(result).toBeUndefined()
@@ -79,10 +74,10 @@ describe('getWikimediaImage', () => {
     mockGetWikiTitle.mockReturnValue('Unique Finch')
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/100px-bird.jpg' },
-      original: { source: 'https://upload.wikimedia.org/original-bird.jpg' },
+      originalimage: { source: 'https://upload.wikimedia.org/original-bird.jpg' },
     }))
 
-    const result = await getWikimediaImage('Unique Finch E', 500)
+    const result = await getWikimediaImage('Unique Finch E')
     expect(result).toContain('100px-bird.jpg')
   })
 
@@ -126,8 +121,8 @@ describe('getWikimediaSummary', () => {
     mockWikiResponse(wikiPageData({
       title: 'Northern Cardinal',
       extract: 'The northern cardinal is a songbird.',
-      original: { source: 'https://upload.wikimedia.org/cardinal.jpg' },
-      fullurl: 'https://en.wikipedia.org/wiki/Northern_Cardinal',
+      originalimage: { source: 'https://upload.wikimedia.org/cardinal.jpg' },
+      content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Northern_Cardinal' } },
     }))
 
     const result = await getWikimediaSummary('Unique Cardinal H')
