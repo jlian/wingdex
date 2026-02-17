@@ -2,10 +2,9 @@
  * Fetch bird images and summaries from Wikipedia Action API.
  * Uses pre-resolved Wikipedia article titles from taxonomy.json (hydrated at build time
  * by scripts/hydrate-wiki-titles.mjs) for a single-fetch lookup per species.
- * Falls back to common name for species not in the taxonomy.
  * No API key required.
  */
-import { getDisplayName, getScientificName } from './utils'
+import { getDisplayName } from './utils'
 import { getWikiTitle } from './taxonomy'
 
 const imageCache = new Map<string, string | null>()
@@ -88,27 +87,9 @@ function extractImageUrl(data: WikiSummaryPayload, _size: number): string | unde
   return undefined
 }
 
-/**
- * Parse common and scientific names from a species string like "Northern Cardinal (Cardinalis cardinalis)"
- */
-function parseSpeciesName(speciesName: string): { common: string; scientific?: string } {
-  return { common: getDisplayName(speciesName), scientific: getScientificName(speciesName) }
-}
-
-/**
- * Build ordered list of Wikipedia title candidates for a species.
- * If a pre-resolved wikiTitle exists in taxonomy, it is the sole candidate.
- * Otherwise falls back to common name → scientific name → common + " bird".
- */
-function getCandidates(common: string, scientific?: string): string[] {
-  const wikiTitle = getWikiTitle(common)
-  if (wikiTitle) return [wikiTitle]
-
-  // Fallback for species not in taxonomy or without a hydrated wiki title
-  const candidates = [common]
-  if (scientific) candidates.push(scientific)
-  candidates.push(`${common} bird`)
-  return candidates
+/** Extract the common name from a species string like "Northern Cardinal (Cardinalis cardinalis)" */
+function getCommonName(speciesName: string): string {
+  return getDisplayName(speciesName)
 }
 
 /**
@@ -119,8 +100,10 @@ export async function getWikimediaImage(
   speciesName: string,
   size = 300
 ): Promise<string | undefined> {
-  const { common, scientific } = parseSpeciesName(speciesName)
+  const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
+  const wikiTitle = getWikiTitle(common)
+  if (!wikiTitle) return undefined
 
   if (imageCache.has(cacheKey)) {
     const cached = imageCache.get(cacheKey)
@@ -131,22 +114,12 @@ export async function getWikimediaImage(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<string | undefined> => {
-    let hadTransientError = false
-    let imageUrl: string | undefined
-
-    for (const candidate of getCandidates(common, scientific)) {
-      const result = await fetchSummary(candidate)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
-        if (imageUrl) break
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
+    const result = await fetchSummary(wikiTitle)
+    const imageUrl = result.kind === 'hit' ? extractImageUrl(result.data, size) : undefined
 
     if (imageUrl) {
       imageCache.set(cacheKey, imageUrl)
-    } else if (!hadTransientError) {
+    } else if (result.kind !== 'error') {
       imageCache.set(cacheKey, null)
     }
     return imageUrl
@@ -167,8 +140,10 @@ export async function getWikimediaImage(
 export async function getWikimediaSummary(
   speciesName: string
 ): Promise<WikiSummary | undefined> {
-  const { common, scientific } = parseSpeciesName(speciesName)
+  const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
+  const wikiTitle = getWikiTitle(common)
+  if (!wikiTitle) return undefined
 
   if (summaryCache.has(cacheKey)) {
     const cached = summaryCache.get(cacheKey)
@@ -179,28 +154,20 @@ export async function getWikimediaSummary(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<WikiSummary | undefined> => {
-    let hadTransientError = false
+    const result = await fetchSummary(wikiTitle)
 
-    for (const candidate of getCandidates(common, scientific)) {
-      const result = await fetchSummary(candidate)
-      if (result.kind === 'error') {
-        hadTransientError = true
-        continue
+    if (result.kind === 'hit' && result.data.extract) {
+      const summary: WikiSummary = {
+        title: result.data.title || common,
+        extract: result.data.extract,
+        imageUrl: extractImageUrl(result.data, 800),
+        pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
       }
-
-      if (result.kind === 'hit' && result.data.extract) {
-        const summary: WikiSummary = {
-          title: result.data.title || common,
-          extract: result.data.extract,
-          imageUrl: extractImageUrl(result.data, 800),
-          pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
-        }
-        summaryCache.set(cacheKey, summary)
-        return summary
-      }
+      summaryCache.set(cacheKey, summary)
+      return summary
     }
 
-    if (!hadTransientError) {
+    if (result.kind !== 'error') {
       summaryCache.set(cacheKey, null)
     }
     return undefined

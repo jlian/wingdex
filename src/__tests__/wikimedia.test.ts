@@ -60,56 +60,23 @@ describe('getWikimediaImage', () => {
     expect(mockFetch.mock.calls[0][0]).toContain('Ruby-throated_hummingbird')
   })
 
-  it('returns image URL from common name when no wiki title (fallback)', async () => {
-    mockWikiResponse(wikiPageData())
-    const result = await getWikimediaImage('Unique Sparrow A')
-    expect(result).toContain('upload.wikimedia.org')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Sparrow_A')
-  })
-
-  it('falls back to scientific name when common name has no image', async () => {
-    // common name — no image
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // scientific name — has image
-    mockWikiResponse(wikiPageData({
-      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-sci.jpg' },
-      original: undefined,
-    }))
-
-    const result = await getWikimediaImage('Unique Warbler B (Scientificus nameicus)')
-    expect(result).toContain('sci.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-  })
-
-  it('falls back to common name + " bird" when common and scientific fail', async () => {
-    // common name: no image
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // scientific name: 404
-    mockWikiResponse(null)
-    // common name + " bird": has image
-    mockWikiResponse(wikiPageData({
-      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' },
-      original: undefined,
-    }))
-
-    const result = await getWikimediaImage('Unique Robin C (Turdus uniqueus)')
-    expect(result).toContain('fallback.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(mockFetch.mock.calls[1][0]).toContain('Turdus_uniqueus')
-    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Robin_C_bird')
-  })
-
-  it('returns undefined when all fallback strategies fail', async () => {
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    mockWikiResponse('missing')
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-
-    const result = await getWikimediaImage('Nonexistent Flycatcher D')
+  it('returns undefined when species has no wiki title', async () => {
+    const result = await getWikimediaImage('Unknown Bird X')
     expect(result).toBeUndefined()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('returns undefined when wiki page has no image', async () => {
+    mockGetWikiTitle.mockReturnValue('Imageless Bird')
+    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
+
+    const result = await getWikimediaImage('Unique Warbler B2')
+    expect(result).toBeUndefined()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('prefers thumbnail URL when available', async () => {
+    mockGetWikiTitle.mockReturnValue('Unique Finch')
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/100px-bird.jpg' },
       original: { source: 'https://upload.wikimedia.org/original-bird.jpg' },
@@ -120,6 +87,7 @@ describe('getWikimediaImage', () => {
   })
 
   it('caches results for subsequent calls', async () => {
+    mockGetWikiTitle.mockReturnValue('Unique Owl')
     mockWikiResponse(wikiPageData())
 
     const result1 = await getWikimediaImage('Unique Owl F')
@@ -127,20 +95,6 @@ describe('getWikimediaImage', () => {
 
     expect(result1).toBe(result2)
     expect(mockFetch).toHaveBeenCalledTimes(1)
-  })
-
-  it('skips scientific name fallback when none is provided', async () => {
-    // common name: no image
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // common name + " bird"
-    mockWikiResponse(wikiPageData({
-      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-bird-suffix.jpg' },
-      original: undefined,
-    }))
-
-    const result = await getWikimediaImage('Unique Heron G')
-    expect(result).toContain('bird-suffix.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -168,6 +122,7 @@ describe('getWikimediaSummary', () => {
   })
 
   it('returns summary with title, extract, imageUrl, and pageUrl', async () => {
+    mockGetWikiTitle.mockReturnValue('Northern Cardinal')
     mockWikiResponse(wikiPageData({
       title: 'Northern Cardinal',
       extract: 'The northern cardinal is a songbird.',
@@ -183,44 +138,23 @@ describe('getWikimediaSummary', () => {
     expect(result!.pageUrl).toContain('Northern_Cardinal')
   })
 
-  it('returns undefined when all strategies fail', async () => {
-    mockWikiResponse(wikiPageData({ extract: undefined }))
-    mockWikiResponse(null)
-    mockWikiResponse(wikiPageData({ extract: undefined }))
-
-    const result = await getWikimediaSummary('Nonexistent Bird I')
+  it('returns undefined when species has no wiki title', async () => {
+    const result = await getWikimediaSummary('Unknown Bird Y')
     expect(result).toBeUndefined()
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
-  it('tries scientific name when common name lacks extract', async () => {
+  it('returns undefined when wiki page has no extract', async () => {
+    mockGetWikiTitle.mockReturnValue('Empty Bird')
     mockWikiResponse(wikiPageData({ extract: undefined }))
-    mockWikiResponse(wikiPageData({
-      title: 'Cyanocitta cristata',
-      extract: 'A corvid native to eastern North America.',
-    }))
 
-    const result = await getWikimediaSummary('Unique Jay J (Cyanocitta cristata)')
-    expect(result).toBeDefined()
-    expect(result!.extract).toContain('corvid')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-  })
-
-  it('falls back to scientific name when common summary is missing', async () => {
-    mockWikiResponse(wikiPageData({ extract: undefined }))
-    mockWikiResponse(wikiPageData({
-      title: 'Unique Jay J',
-      extract: 'Found via common name fallback.',
-    }))
-
-    const result = await getWikimediaSummary('Unique Jay J2 (Cyanocitta cristata2)')
-    expect(result).toBeDefined()
-    expect(result!.extract).toContain('common name fallback')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique_Jay_J2')
-    expect(mockFetch.mock.calls[1][0]).toContain('Cyanocitta_cristata2')
+    const result = await getWikimediaSummary('Unique Empty Z')
+    expect(result).toBeUndefined()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('caches results for subsequent calls', async () => {
+    mockGetWikiTitle.mockReturnValue('Unique Wren')
     mockWikiResponse(wikiPageData({ extract: 'Cached bird.' }))
 
     const result1 = await getWikimediaSummary('Unique Wren K')
@@ -231,7 +165,7 @@ describe('getWikimediaSummary', () => {
   })
 
   it('handles fetch errors gracefully', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'))
+    mockGetWikiTitle.mockReturnValue('Unique Dove')
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
     const result = await getWikimediaSummary('Unique Dove L')
