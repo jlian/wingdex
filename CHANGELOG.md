@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
 
+## [1.3.0](https://github.com/jlian/birddex/compare/v1.2.3...v1.3.0) (2026-02-17)
+
+
+### Features
+
+* enlarge bird detail hero image with overlay text and top-biased crop ([#94](https://github.com/jlian/birddex/issues/94)) ([495fff3](https://github.com/jlian/birddex/commit/495fff37f88b89a8047b0c1fd2ba73e2c441c8a4)), closes [#92](https://github.com/jlian/birddex/issues/92)
+
+
+### Bug Fixes
+
+* apply top-biased crop to homepage species cards ([e5c401a](https://github.com/jlian/birddex/commit/e5c401a7c3c0b9d50d276dd311e1fa8abed1220e))
+
 ## [1.2.3](https://github.com/jlian/birddex/compare/v1.2.2...v1.2.3) (2026-02-16)
 
 
