@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,34 +38,72 @@ interface OutingsPageProps {
   selectedOutingId: string | null
   onSelectOuting: (id: string | null) => void
   onSelectSpecies: (name: string) => void
+  searchQuery?: string
+  onSearchQueryChange?: (value: string) => void
+  sortField?: OutingSortField
+  sortDir?: SortDir
+  onToggleSort?: (field: OutingSortField) => void
 }
 
-type OutingSortField = 'date' | 'species'
-type SortDir = 'asc' | 'desc'
+export type OutingSortField = 'date' | 'species'
+export type SortDir = 'asc' | 'desc'
+
+const INITIAL_VISIBLE_ITEMS = 40
+const LOAD_MORE_STEP = 40
 
 const outingSortOptions: { key: OutingSortField; label: string }[] = [
   { key: 'date', label: 'Date' },
   { key: 'species', label: 'Species' },
 ]
 
-export default function OutingsPage({ data, selectedOutingId, onSelectOuting, onSelectSpecies }: OutingsPageProps) {
+export default function OutingsPage({
+  data,
+  selectedOutingId,
+  onSelectOuting,
+  onSelectSpecies,
+  searchQuery,
+  onSearchQueryChange,
+  sortField,
+  sortDir,
+  onToggleSort,
+}: OutingsPageProps) {
   const { outings } = data
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortField, setSortField] = useState<OutingSortField>('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [internalSearchQuery, setInternalSearchQuery] = useState('')
+  const [internalSortField, setInternalSortField] = useState<OutingSortField>('date')
+  const [internalSortDir, setInternalSortDir] = useState<SortDir>('desc')
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const toggleSort = (field: OutingSortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('desc')
+  const effectiveSearchQuery = searchQuery ?? internalSearchQuery
+  const effectiveSortField = sortField ?? internalSortField
+  const effectiveSortDir = sortDir ?? internalSortDir
+
+  const handleSearchQueryChange = (value: string) => {
+    if (onSearchQueryChange) {
+      onSearchQueryChange(value)
+      return
     }
+    setInternalSearchQuery(value)
+  }
+
+  const handleToggleSort = (field: OutingSortField) => {
+    if (onToggleSort) {
+      onToggleSort(field)
+      return
+    }
+
+    if (effectiveSortField === field) {
+      setInternalSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setInternalSortField(field)
+    setInternalSortDir('desc')
   }
 
   const sortedOutings = useMemo(() => {
-    const dir = sortDir === 'asc' ? 1 : -1
-    if (sortField === 'species') {
+    const dir = effectiveSortDir === 'asc' ? 1 : -1
+    if (effectiveSortField === 'species') {
       const countMap = new Map<string, number>()
       for (const o of outings) {
         countMap.set(o.id, data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length)
@@ -76,11 +114,36 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
     return [...outings].sort((a, b) =>
       dir * (new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
     )
-  }, [outings, sortField, sortDir, data])
+  }, [outings, effectiveSortField, effectiveSortDir, data])
 
   const filteredOutings = sortedOutings.filter(outing =>
-    (outing.locationName || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (outing.locationName || '').toLowerCase().includes(effectiveSearchQuery.toLowerCase())
   )
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_ITEMS)
+  }, [effectiveSearchQuery, effectiveSortField, effectiveSortDir])
+
+  const visibleOutings = useMemo(
+    () => filteredOutings.slice(0, visibleCount),
+    [filteredOutings, visibleCount]
+  )
+
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node || visibleCount >= filteredOutings.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setVisibleCount((count) => Math.min(count + LOAD_MORE_STEP, filteredOutings.length))
+      },
+      { rootMargin: '240px 0px' }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [visibleCount, filteredOutings.length])
 
   if (outings.length === 0) {
     return (
@@ -127,22 +190,22 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
           />
           <Input
             placeholder="Search outings..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            value={effectiveSearchQuery}
+            onChange={e => handleSearchQueryChange(e.target.value)}
             className="pl-9 h-9 text-sm"
           />
         </div>
         <div className="flex items-center gap-1">
           {outingSortOptions.map(opt => {
-            const isActive = sortField === opt.key
-            const DirIcon = sortDir === 'asc' ? ArrowUp : ArrowDown
+            const isActive = effectiveSortField === opt.key
+            const DirIcon = effectiveSortDir === 'asc' ? ArrowUp : ArrowDown
             return (
               <Button
                 key={opt.key}
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="sm"
                 className="text-xs h-9 px-2.5"
-                onClick={() => toggleSort(opt.key)}
+                onClick={() => handleToggleSort(opt.key)}
               >
                 {opt.label}
                 {isActive && <DirIcon size={12} className="ml-0.5" />}
@@ -153,7 +216,7 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
       </div>
       
       <div>
-        {filteredOutings.map((outing) => {
+        {visibleOutings.map((outing) => {
           const observations = data.getOutingObservations(outing.id)
           const confirmed = observations.filter(obs => obs.certainty === 'confirmed')
 
@@ -168,9 +231,18 @@ export default function OutingsPage({ data, selectedOutingId, onSelectOuting, on
         })}
       </div>
 
-      {filteredOutings.length === 0 && searchQuery && (
+      {visibleOutings.length < filteredOutings.length && (
+        <div className="py-2">
+          <div ref={loadMoreRef} className="h-1" />
+          <p className="text-center text-xs text-muted-foreground">
+            Loading more… ({filteredOutings.length - visibleOutings.length} remaining)
+          </p>
+        </div>
+      )}
+
+      {filteredOutings.length === 0 && effectiveSearchQuery && (
         <div className="text-center py-8 text-muted-foreground">
-          No outings found matching "{searchQuery}"
+          No outings found matching "{effectiveSearchQuery}"
         </div>
       )}
     </div>
