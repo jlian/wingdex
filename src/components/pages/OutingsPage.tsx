@@ -133,10 +133,11 @@ export default function OutingsPage({
     () => filteredOutings.slice(0, visibleCount),
     [filteredOutings, visibleCount]
   )
+  const hasMore = visibleCount < filteredOutings.length
 
   useEffect(() => {
     const node = loadMoreRef.current
-    if (!node || visibleCountRef.current >= filteredOutings.length) return
+    if (!node || !hasMore) return
 
     const maybeLoadMore = () => {
       if (node.getBoundingClientRect().top > window.innerHeight + 240) return
@@ -167,7 +168,7 @@ export default function OutingsPage({
       window.removeEventListener('scroll', maybeLoadMore)
       window.removeEventListener('resize', maybeLoadMore)
     }
-  }, [filteredOutings.length])
+  }, [filteredOutings.length, hasMore])
 
   if (outings.length === 0) {
     return (
@@ -255,7 +256,7 @@ export default function OutingsPage({
         })}
       </div>
 
-      {visibleOutings.length < filteredOutings.length && (
+      {hasMore && (
         <div className="py-2">
           <div ref={loadMoreRef} className="h-1" />
           <p className="text-center text-xs text-muted-foreground">
