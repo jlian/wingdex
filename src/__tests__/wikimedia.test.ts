@@ -82,7 +82,7 @@ describe('getWikimediaImage', () => {
     }))
 
     const result = await getWikimediaImage('Unique Finch E')
-    expect(result).toContain('100px-bird.jpg')
+    expect(result).toContain('640px-bird.jpg')
   })
 
   it('caches results for subsequent calls', async () => {

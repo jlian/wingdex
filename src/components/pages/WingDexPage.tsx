@@ -105,16 +105,30 @@ export default function WingDexPage({
     const node = loadMoreRef.current
     if (!node || visibleCount >= filteredList.length) return
 
+    const maybeLoadMore = () => {
+      if (node.getBoundingClientRect().top > window.innerHeight + 240) return
+      setVisibleCount((count) => Math.min(count + LOAD_MORE_STEP, filteredList.length))
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return
-        setVisibleCount((count) => Math.min(count + LOAD_MORE_STEP, filteredList.length))
+        maybeLoadMore()
       },
       { rootMargin: '240px 0px' }
     )
 
     observer.observe(node)
-    return () => observer.disconnect()
+    const rafId = requestAnimationFrame(maybeLoadMore)
+    window.addEventListener('scroll', maybeLoadMore, { passive: true })
+    window.addEventListener('resize', maybeLoadMore, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('scroll', maybeLoadMore)
+      window.removeEventListener('resize', maybeLoadMore)
+    }
   }, [visibleCount, filteredList.length])
 
   if (dex.length === 0) {

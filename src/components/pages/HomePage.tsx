@@ -10,6 +10,7 @@ import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 interface HomePageProps {
   data: WingDexDataStore
   onAddPhotos: () => void
+  onAddPhotosIntent?: () => void
   onSelectOuting: (id: string) => void
   onSelectSpecies: (name: string) => void
   onNavigate: (tab: string) => void
@@ -57,7 +58,7 @@ export function HomeContentSkeleton() {
   )
 }
 
-export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
+export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
 
   const recentOutings = outings
@@ -107,6 +108,10 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           <Button
             size="lg"
             onClick={onAddPhotos}
+            onPointerDown={onAddPhotosIntent}
+            onMouseEnter={onAddPhotosIntent}
+            onFocus={onAddPhotosIntent}
+            onTouchStart={onAddPhotosIntent}
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
           >
             <Camera size={20} className="mr-2" weight="bold" />
@@ -132,6 +137,10 @@ export default function HomePage({ data, onAddPhotos, onSelectOuting, onSelectSp
           </div>
           <button
             onClick={onAddPhotos}
+            onPointerDown={onAddPhotosIntent}
+            onMouseEnter={onAddPhotosIntent}
+            onFocus={onAddPhotosIntent}
+            onTouchStart={onAddPhotosIntent}
             className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
               bg-gradient-to-r from-emerald-600 to-teal-500
               text-white text-base

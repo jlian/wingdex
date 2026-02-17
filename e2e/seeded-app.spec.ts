@@ -13,8 +13,8 @@ test.describe('App with seeded data', () => {
     await injectSeedData(page)
 
     await expect(page.getByText('Recent Species')).toBeVisible({ timeout: 5_000 })
-    // A known recent species from the full fixture should appear
-    await expect(page.getByRole('button', { name: 'Common Goldeneye' }).first()).toBeVisible()
+    // Recent species carousel should render at least one clickable species card
+    await expect(page.locator('section').filter({ hasText: 'Recent Species' }).locator('button').first()).toBeVisible()
   })
 
   test('outings page lists seeded outings', async ({ page }) => {
@@ -23,9 +23,9 @@ test.describe('App with seeded data', () => {
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
 
-    // Should show location names from sanitized seed data
+    // Should show location names from synthetic seed data
     await expect(page.locator('p:visible', { hasText: 'Discovery Park' }).first()).toBeVisible()
-    await expect(page.locator('p:visible', { hasText: 'Union Bay' }).first()).toBeVisible()
+    await expect(page.locator('p:visible', { hasText: 'Hyde Park, London' }).first()).toBeVisible()
   })
 
   test('clicking an outing opens its detail view', async ({ page }) => {
@@ -34,12 +34,12 @@ test.describe('App with seeded data', () => {
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
 
-    // Click a known outing from the seed fixture
-    await page.locator('p:visible', { hasText: 'Montrose Point' }).first().click()
+    // Click a known outing from the synthetic fixture
+    await page.locator('p:visible', { hasText: 'Discovery Park' }).first().click()
     await page.waitForTimeout(1000)
 
     // Detail view should show a heading with the location name
-    await expect(page.getByRole('heading', { name: 'Montrose Point' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Discovery Park' })).toBeVisible()
     // Should show species from that outing
     await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
@@ -49,10 +49,15 @@ test.describe('App with seeded data', () => {
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    const wingdexSearch = page.getByPlaceholder('Search species...')
 
-    // Known seed species should appear in the list
-    await expect(page.locator('p:visible', { hasText: 'Common Goldeneye' }).first()).toBeVisible()
-    await expect(page.locator('p:visible', { hasText: 'Golden-crowned Kinglet' }).first()).toBeVisible()
+    // Known synthetic seed species should appear in the list
+    await wingdexSearch.fill('bald eagle')
+    await page.waitForTimeout(150)
+    await expect(page.locator('p:visible', { hasText: 'Bald Eagle' }).first()).toBeVisible()
+    await wingdexSearch.fill('great blue heron')
+    await page.waitForTimeout(150)
+    await expect(page.locator('p:visible', { hasText: 'Great Blue Heron' }).first()).toBeVisible()
   })
 
   test('wingdex search filters species', async ({ page }) => {
@@ -75,12 +80,14 @@ test.describe('App with seeded data', () => {
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await page.getByPlaceholder('Search species...').fill('bald eagle')
+    await page.waitForTimeout(150)
 
-    await page.locator('p:visible', { hasText: 'Common Goldeneye' }).first().click()
+    await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
     await page.waitForTimeout(1000)
 
     // Detail view should show species info
-    await expect(page.getByRole('heading', { name: 'Common Goldeneye' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible()
     // Should show a back button
     await expect(page.getByRole('button', { name: /back/i })).toBeVisible()
   })
@@ -90,14 +97,16 @@ test.describe('App with seeded data', () => {
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await page.getByPlaceholder('Search species...').fill('bald eagle')
+    await page.waitForTimeout(150)
 
-    await page.locator('p:visible', { hasText: 'Common Goldeneye' }).first().click()
+    await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
     await page.waitForTimeout(1000)
 
-    await expect(page.getByRole('heading', { name: 'Common Goldeneye' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible()
 
     // Wikipedia image should load in the detail hero area
-    const heroImg = page.getByRole('img', { name: 'Common Goldeneye' })
+    const heroImg = page.getByRole('img', { name: 'Bald Eagle' })
     await expect(heroImg).toBeVisible({ timeout: 10_000 })
     // Verify it loaded a real image (not a placeholder)
     const src = await heroImg.getAttribute('src')

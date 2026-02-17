@@ -14,7 +14,8 @@ import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
 const SettingsPage = lazy(() => import('@/components/pages/SettingsPage'))
-const AddPhotosFlow = lazy(() => import('@/components/flows/AddPhotosFlow'))
+const loadAddPhotosFlow = () => import('@/components/flows/AddPhotosFlow')
+const AddPhotosFlow = lazy(loadAddPhotosFlow)
 
 interface UserInfo {
   login: string
@@ -210,6 +211,13 @@ function AppContent({ user }: { user: UserInfo }) {
   const data = useWingDexData(user.id)
   const { resolvedTheme } = useTheme()
 
+  const prefetchAddPhotosFlow = useCallback(() => {
+    void loadAddPhotosFlow()
+    void import('@/lib/photo-utils')
+    void import('@/lib/clustering')
+    void import('@/lib/ai-inference')
+  }, [])
+
   const toggleWingDexSort = useCallback((field: WingDexSortField) => {
     if (wingDexSortField === field) {
       setWingDexSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
@@ -237,6 +245,30 @@ function AppContent({ user }: { user: UserInfo }) {
       meta.setAttribute('content', resolvedTheme === 'dark' ? '#262e29' : '#e5ddd0')
     }
   }, [resolvedTheme])
+
+  useEffect(() => {
+    let idleCallbackId: number | null = null
+    let timeoutId: number | null = null
+
+    if (typeof window.requestIdleCallback === 'function') {
+      idleCallbackId = window.requestIdleCallback(() => {
+        prefetchAddPhotosFlow()
+      })
+    } else {
+      timeoutId = window.setTimeout(() => {
+        prefetchAddPhotosFlow()
+      }, 300)
+    }
+
+    return () => {
+      if (idleCallbackId !== null && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleCallbackId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [prefetchAddPhotosFlow])
 
   const navItems = [
     { value: 'wingdex', label: 'WingDex', icon: Bird },
@@ -305,6 +337,7 @@ function AppContent({ user }: { user: UserInfo }) {
               <HomePage
                 data={data}
                 onAddPhotos={() => setShowAddPhotos(true)}
+                onAddPhotosIntent={prefetchAddPhotosFlow}
                 onSelectOuting={(id) => navigate('outings', id)}
                 onSelectSpecies={(name) => navigate('wingdex', name)}
                 onNavigate={(tab) => navigate(tab)}
@@ -359,7 +392,7 @@ function AppContent({ user }: { user: UserInfo }) {
       </Tabs>
 
       {showAddPhotos && (
-        <Suspense fallback={<FlowLoadingFallback />}>
+        <Suspense fallback={null}>
           <AddPhotosFlow
             data={data}
             onClose={() => setShowAddPhotos(false)}
@@ -420,14 +453,6 @@ function SettingsLoadingFallback() {
       <div className="h-7 w-32 rounded-md bg-muted animate-pulse" />
       <div className="h-24 w-full rounded-lg bg-muted animate-pulse" />
       <div className="h-16 w-full rounded-lg bg-muted animate-pulse" />
-    </div>
-  )
-}
-
-function FlowLoadingFallback() {
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="h-10 w-10 rounded-full border-2 border-muted border-t-primary animate-spin" />
     </div>
   )
 }

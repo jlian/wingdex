@@ -53,6 +53,7 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: ComponentProps<typeof AlertDialogPrimitive.Content>) {
   const handleOpenAutoFocus: ComponentProps<
@@ -69,6 +70,18 @@ function AlertDialogContent({
     target?.focus({ preventScroll: true })
   }
 
+  const handleCloseAutoFocus: ComponentProps<
+    typeof AlertDialogPrimitive.Content
+  >["onCloseAutoFocus"] = (event) => {
+    onCloseAutoFocus?.(event)
+
+    if (event.defaultPrevented) {
+      return
+    }
+
+    event.preventDefault()
+  }
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -79,6 +92,7 @@ function AlertDialogContent({
           className
         )}
         onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         {...props}
       />
     </AlertDialogPortal>

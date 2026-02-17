@@ -1,139 +1,91 @@
 Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),Number of Observers,Breeding Code,Observation Details,Checklist Comments,ML Catalog Numbers
-S276393806,Canada Goose,Branta canadensis,342,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,08:15 AM,eBird - Casual Observation,,0,,,1
-S285218369,Northern Shoveler,Spatula clypeata,501,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,09:46 AM,eBird - Casual Observation,,0,,,1
-S283527614,Northern Shoveler,Spatula clypeata,501,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,09:48 AM,eBird - Casual Observation,,0,,,1
-S276396635,Mallard,Anas platyrhynchos,545,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1
-S285217965,Lesser Scaup,Aythya affinis,700,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,10:42 AM,eBird - Casual Observation,,0,,,1
-S294744624,Common Goldeneye,Bucephala clangula,743,X,US-WA,King,L57329348,Discovery Park,47.660031,-122.428742,2026-01-17,10:21 AM,eBird - Casual Observation,,0,,,1
-S285218279,Hooded Merganser,Lophodytes cucullatus,754,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,09:37 AM,eBird - Casual Observation,,0,,,1
-S276514069,Sooty Grouse,Dendragapus fuliginosus,1320,X,US-WA,Pierce,L53474251,Mt Rainier,46.787692,-121.734422,2023-07-30,01:09 PM,eBird - Casual Observation,,0,,,1
-S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1
-S276512830,Rock Pigeon,Columba livia,1853,X,CN-21,,L53473988,Dalian,39.063208,122.057679,2016-06-06,10:50 PM,eBird - Casual Observation,,0,,,1
-S290456247,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,03:06 PM,eBird - Casual Observation,,0,,,1
-S276397056,Pink-necked Green-Pigeon,Treron vernans,2484,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-10,04:43 PM,eBird - Casual Observation,,0,,,1
-S293932296,Eurasian Moorhen,Gallinula chloropus,5462,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-27,08:51 PM,eBird - Casual Observation,,0,,,1
-S276516277,Eurasian Coot,Fulica atra,5487,X,NL-NH,,L53474295,Amsterdam,52.358065,4.882611,2023-12-02,06:20 AM,eBird - Casual Observation,,0,,,1
-S276396984,Gray-headed Swamphen,Porphyrio poliocephalus,5533,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,10:07 PM,eBird - Casual Observation,,0,,,1
-S293929182,White-breasted Waterhen,Amaurornis phoenicurus,5552,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-29,01:01 AM,eBird - Casual Observation,,0,,,1
-S276513096,Black-necked Stilt,Himantopus mexicanus,5770,X,US-HI,Honolulu,L53474071,Kailua,21.397611,-157.726686,2020-11-27,11:34 AM,eBird - Casual Observation,,0,,,1
-S277677804,Black Oystercatcher,Haematopus bachmani,5806,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,12:08 PM,eBird - Casual Observation,,0,,,1
-S277677727,Killdeer,Charadrius vociferus,5827,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:49 AM,eBird - Casual Observation,,0,,,1
-S276392230,Semipalmated Plover,Charadrius semipalmatus,5834,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,05:50 AM,eBird - Casual Observation,,0,,,1
-S276397261,Red-wattled Lapwing,Vanellus indicus,5883,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,02:54 AM,eBird - Casual Observation,,0,,,1
-S276392369,Sanderling,Calidris alba,6189,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,05:50 AM,eBird - Casual Observation,,0,,,1
-S276513349,Western Sandpiper,Calidris mauri,6231,X,US-WA,Whatcom,L53474124,Lummi,48.733054,-122.670293,2021-07-17,02:06 PM,eBird - Casual Observation,,0,,,1
-S276395380,Rhinoceros Auklet,Cerorhinca monocerata,6377,X,US-WA,Island,L53452489,Smith Island,48.320427,-122.83517,2025-08-16,05:35 PM,eBird - Casual Observation,,0,,,1
-S276395334,Tufted Puffin,Fratercula cirrhata,6378,X,US-WA,Island,L53452489,Smith Island,48.320427,-122.83517,2025-08-16,05:38 PM,eBird - Casual Observation,,0,,,1
-S276395431,Pigeon Guillemot,Cepphus columba,6404,X,US-WA,Island,L53452489,Smith Island,48.320427,-122.83517,2025-08-16,06:53 PM,eBird - Casual Observation,,0,,,1
-S276514302,Black-headed Gull,Chroicocephalus ridibundus,6474,X,NL-NH,,L53474295,Amsterdam,52.358065,4.882611,2023-12-03,12:35 AM,eBird - Casual Observation,,0,,,1
-S276027593,American Herring Gull,Larus smithsonianus,6539,X,US-IL,Cook,L53381605,Magic Marsh,41.963178,-87.634154,2025-09-28,08:35 AM,eBird - Casual Observation,,0,,,1
-S276394191,American Herring Gull,Larus smithsonianus,6539,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,05:25 AM,eBird - Casual Observation,,0,,,1
-S277677237,Glaucous-winged Gull,Larus glaucescens,6596,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:26 AM,eBird - Casual Observation,,0,,,1
-S277678036,Glaucous-winged Gull,Larus glaucescens,6596,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,12:03 PM,eBird - Casual Observation,,0,,,1
-S276397903,Caspian Tern,Hydroprogne caspia,6718,X,US-WA,King,L53452612,Ballard Locks,47.665181,-122.399377,2025-06-28,09:57 AM,eBird - Casual Observation,,0,,,1
-S293930289,Little Grebe,Tachybaptus ruficollis,6827,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:08 PM,eBird - Casual Observation,,0,,,1
-S276395947,Pied-billed Grebe,Podilymbus podiceps,6855,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,10:36 AM,eBird - Casual Observation,,0,,,1
-S277677941,Pacific Loon,Gavia pacifica,6931,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,12:17 PM,eBird - Casual Observation,,0,,,1
-S276514851,Great Cormorant,Phalacrocorax carbo,7397,X,IT-25,,L53452801,Como,45.80968,9.084566,2024-09-20,06:01 AM,eBird - Casual Observation,,0,,,1
-S293931471,Great Cormorant,Phalacrocorax carbo,7397,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:23 PM,eBird - Casual Observation,,0,,,1
-S276395274,Double-crested Cormorant,Nannopterum auritum,7424,X,US-WA,Island,L53452489,Smith Island,48.320427,-122.83517,2025-08-16,05:55 PM,eBird - Casual Observation,,0,,,1
-S277677879,Double-crested Cormorant,Nannopterum auritum,7424,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:31 AM,eBird - Casual Observation,,0,,,1
-S276409197,Black-crowned Night Heron,Nycticorax nycticorax,7600,X,US-CA,Los Angeles,L53455556,Santa Monica,34.008543,-118.498303,2015-04-29,03:26 PM,eBird - Casual Observation,,0,,,1
-S276511875,Black-crowned Night Heron,Nycticorax nycticorax,7600,X,US-CA,Los Angeles,L53455556,Santa Monica,34.008543,-118.498303,2015-04-29,03:26 PM,eBird - Casual Observation,,0,,,1
-S293929577,Black-crowned Night Heron,Nycticorax nycticorax,7600,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-27,08:45 PM,eBird - Casual Observation,,0,,,1
-S293929237,Black-crowned Night Heron,Nycticorax nycticorax,7600,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-29,12:58 AM,eBird - Casual Observation,,0,,,1
-S276397502,Little Egret,Egretta garzetta,7650,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2015-07-11,03:06 AM,eBird - Casual Observation,,0,,,1
-S293931966,Little Egret,Egretta garzetta,7650,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:25 PM,eBird - Casual Observation,,0,,,1
-S293929942,Chinese Pond-Heron,Ardeola bacchus,7717,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:48 PM,eBird - Casual Observation,,0,,,1
-S276515063,Western Cattle-Egret,Ardea ibis,7724,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-17,06:17 PM,eBird - Casual Observation,,0,,,1
-S293929699,Great Egret,Ardea alba,7729,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,09:01 PM,eBird - Casual Observation,,0,,,1
-S290449408,Medium Egret,Ardea intermedia,7737,X,TW-TPE,,L56387535,Taipei,24.99591,121.588157,2025-12-27,12:45 PM,eBird - Casual Observation,,0,,,1
-S293929306,Medium Egret,Ardea intermedia,7737,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-29,12:53 AM,eBird - Casual Observation,,0,,,1
-S293928998,Gray Heron,Ardea cinerea,7745,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-29,01:16 AM,eBird - Casual Observation,,0,,,1
-S276395818,Great Blue Heron,Ardea herodias,7753,X,US-WA,King,L53452612,Ballard Locks,47.665181,-122.399377,2025-06-28,11:50 AM,eBird - Casual Observation,,0,,,1
-S277677524,Great Blue Heron,Ardea herodias,7753,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:37 AM,eBird - Casual Observation,,0,,,1
-S276512431,Brown Pelican,Pelecanus occidentalis,7792,X,MX-JAL,Puerto Vallarta,L53473923,Puerto Vallarta,20.600572,-105.239136,2016-01-26,11:41 AM,eBird - Casual Observation,,0,,,1
-S276394473,Turkey Vulture,Cathartes aura,7815,X,US-WA,Whatcom,L53452292,Cain Lake,48.650997,-122.326887,2025-08-23,11:10 AM,eBird - Casual Observation,,0,,,1
-S276394619,Osprey,Pandion haliaetus,7832,X,US-WA,Whatcom,L53452292,Cain Lake,48.650997,-122.326887,2025-08-23,01:07 PM,eBird - Casual Observation,,0,,,1
-S293382600,Black Kite,Milvus migrans,8345,X,JP-13,Minato City,L57039811,Strings,35.6279,139.741049,2026-01-10,01:43 PM,eBird - Casual Observation,,0,,,1
-S276395994,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,10:24 AM,eBird - Casual Observation,,0,,,1
-S277677465,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:32 AM,eBird - Casual Observation,,0,,,1
-S293932056,Eastern Buzzard,Buteo japonicus,8566,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:52 PM,eBird - Casual Observation,,0,,,1
-S276512178,Great Horned Owl,Bubo virginianus,8910,X,US-MN,Hennepin,L53473877,Lake Hiawatha Park,44.917402,-93.233916,2016-03-21,09:25 AM,eBird - Casual Observation,,0,,,1
-S276398203,Barred Owl,Strix varia,9219,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,09:04 AM,eBird - Casual Observation,,0,,,1
-S276396923,Orange-breasted Trogon,Harpactes oreskios,9463,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-10,07:21 PM,eBird - Casual Observation,,0,,,1
-S276515607,White-throated Kingfisher,Halcyon smyrnensis,10076,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2025-06-11,,eBird - Casual Observation,,0,,,1
-S276514632,Belted Kingfisher,Megaceryle alcyon,10306,X,US-WA,King,L53452612,Ballard Locks,47.665181,-122.399377,2024-08-10,12:32 PM,eBird - Casual Observation,,0,,,1
-S276394559,Belted Kingfisher,Megaceryle alcyon,10306,X,US-WA,Whatcom,L53452292,Cain Lake,48.650997,-122.326887,2025-08-23,11:24 AM,eBird - Casual Observation,,0,,,1
-S276393541,Downy Woodpecker,Dryobates pubescens,11400,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,08:51 AM,eBird - Casual Observation,,0,,,1
-S276396183,Downy Woodpecker,Dryobates pubescens,11400,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2024-08-10,10:08 AM,eBird - Casual Observation,,0,,,1
-S276394977,Hairy Woodpecker,Leuconotopicus villosus,11427,X,US-WA,Whatcom,L53452292,Cain Lake,48.650997,-122.326887,2025-08-23,08:47 AM,eBird - Casual Observation,,0,,,1
-S276392924,Northern Flicker,Colaptes auratus,11900,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:10 AM,eBird - Casual Observation,,0,,,1
-S277677585,Northern Flicker,Colaptes auratus,11900,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:38 AM,eBird - Casual Observation,,0,,,1
-S276391486,Merlin,Falco columbarius,12062,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,,eBird - Casual Observation,,0,,,1
-S276397335,Red-breasted Parakeet,Psittacula alexandri,12370,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,02:26 AM,eBird - Casual Observation,,0,,,1
-S276513779,Monk Parakeet,Myiopsitta monachus,12819,X,IT-62,,L53474200,Rome,41.905655,12.484401,2023-04-29,05:08 AM,eBird - Casual Observation,,0,,,1
-S293928668,Scarlet Minivet,Pericrocotus speciosus,18614,X,CN-35,,L57157086,Zhangzhou,24.61835,117.87436,2025-12-30,07:21 PM,eBird - Casual Observation,,0,,,1
-S276397213,Bronzed Drongo,Dicrurus aeneus,20470,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,03:32 AM,eBird - Casual Observation,,0,,,1
-S276397169,Bronzed Drongo,Dicrurus aeneus,20470,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,04:00 AM,eBird - Casual Observation,,0,,,1
-S276397675,Canada Jay,Perisoreus canadensis,21181,X,US-WA,King,L53452965,Hiking,47.757214,-121.291307,2017-02-12,10:57 AM,eBird - Casual Observation,,0,,,1
-S276513552,Canada Jay,Perisoreus canadensis,21181,X,CA-BC,Squamish-Lillooet,L53474165,Whistler,50.103744,-122.954249,2022-01-09,11:11 AM,eBird - Casual Observation,,0,,,1
-S276393147,Blue Jay,Cyanocitta cristata,21294,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:08 AM,eBird - Casual Observation,,0,,,1
-S276512712,Oriental Magpie,Pica serica,21466,X,CN-21,,L53473988,Dalian,39.063208,122.057679,2016-06-08,12:15 AM,eBird - Casual Observation,,0,,,1
-S293929366,Oriental Magpie,Pica serica,21466,X,TW-TPE,,L57157149,Taipei,25.031501,121.534837,2025-12-29,12:34 AM,eBird - Casual Observation,,0,,,1
-S276396593,American Crow,Corvus brachyrhynchos,21557,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2025-08-09,12:13 PM,eBird - Casual Observation,,0,,,1
-S276516054,Hooded Crow,Corvus cornix,21578,X,IT-62,,L53474200,Rome,41.905655,12.484401,2023-04-28,05:10 AM,eBird - Casual Observation,,0,,,1
-S293384060,Large-billed Crow,Corvus macrorhynchos,21586,X,JP-13,Minato City,L57039811,Strings,35.6279,139.741049,2026-01-10,02:19 PM,eBird - Casual Observation,,0,,,1
-S276396120,Common Raven,Corvus corax,21624,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,08:33 AM,eBird - Casual Observation,,0,,,1
-S276398112,Black-capped Chickadee,Poecile atricapillus,22065,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2025-06-01,10:41 AM,eBird - Casual Observation,,0,,,1
-S276395625,Black-capped Chickadee,Poecile atricapillus,22065,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2025-07-19,10:22 AM,eBird - Casual Observation,,0,,,1
-S276397115,Rufescent Prinia,Prinia rufescens,23226,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-09,05:41 PM,eBird - Casual Observation,,0,,,1
-S293931624,Yellow-bellied Prinia,Prinia flaviventris,23263,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,07:45 PM,eBird - Casual Observation,,0,,,1
-S293931807,Yellow-bellied Prinia,Prinia flaviventris,23263,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,07:45 PM,eBird - Casual Observation,,0,,,1
-S276516806,Barn Swallow,Hirundo rustica,24187,X,US-WA,Island,L53452489,Smith Island,48.320427,-122.83517,2025-08-16,03:46 PM,eBird - Casual Observation,,0,,,1
-S293930775,Light-vented Bulbul,Pycnonotus sinensis,24711,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,07:47 PM,eBird - Casual Observation,,0,,,1
-S293928914,Light-vented Bulbul,Pycnonotus sinensis,24711,X,CN-35,,L57157086,Zhangzhou,24.61835,117.87436,2025-12-30,12:08 AM,eBird - Casual Observation,,0,,,1
-S293928837,Red-whiskered Bulbul,Pycnonotus jocosus,24733,X,CN-35,,L57157086,Zhangzhou,24.61835,117.87436,2025-12-30,12:33 AM,eBird - Casual Observation,,0,,,1
-S277677385,Bushtit,Psaltriparus minimus,25253,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:29 AM,eBird - Casual Observation,,0,,,1
-S293930344,Swinhoe's White-eye,Zosterops simplex,25619,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,07:50 PM,eBird - Casual Observation,,0,,,1
-S293929793,Masked Laughingthrush,Pterorhinus perspicillatus,26805,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:54 PM,eBird - Casual Observation,,0,,,1
-S276392983,Ruby-crowned Kinglet,Corthylio calendula,26844,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:46 AM,eBird - Casual Observation,,0,,,1
-S294757173,Golden-crowned Kinglet,Regulus satrapa,26848,X,US-WA,King,L57329348,Discovery Park,47.660031,-122.428742,2026-01-17,11:13 AM,eBird - Casual Observation,,0,,,1
-S276393079,Brown Creeper,Certhia americana,27026,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:50 AM,eBird - Casual Observation,,0,,,1
-S285218217,Marsh Wren,Cistothorus palustris,27329,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,10:15 AM,eBird - Casual Observation,,0,,,1
-S293932425,White-cheeked Starling,Spodiopsar cineraceus,27858,X,JP-13,Koto City,L57157065,Toyoda,35.649402,139.789978,2026-01-08,08:03 PM,eBird - Casual Observation,,0,,,1
-S276514464,Common Myna,Acridotheres tristis,27859,X,SG-,,L53474324,Singapore,1.291305,103.854641,2024-02-16,09:24 PM,eBird - Casual Observation,,0,,,1
-S276392521,Gray Catbird,Dumetella carolinensis,28000,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:16 AM,eBird - Casual Observation,,0,,,1
-S276392624,Swainson's Thrush,Catharus ustulatus,28324,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:29 AM,eBird - Casual Observation,,0,,,1
-S276393366,Swainson's Thrush,Catharus ustulatus,28324,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:50 AM,eBird - Casual Observation,,0,,,1
-S276394274,American Robin,Turdus migratorius,28633,X,US-IL,Cook,L53452249,Park Ridge,42.008916,-87.830993,2025-09-27,02:57 PM,eBird - Casual Observation,,0,,,1
-S276394674,American Robin,Turdus migratorius,28633,X,US-WA,Whatcom,L53452292,Cain Lake,48.650997,-122.326887,2025-08-23,08:36 AM,eBird - Casual Observation,,0,,,1
-S293930055,Oriental Magpie-Robin,Copsychus saularis,28997,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:40 PM,eBird - Casual Observation,,0,,,1
-S276397404,White-rumped Shama,Copsychus malabaricus,29014,X,VN-39,,L53452830,Cat Tien Park,11.350533,107.144595,2015-06-08,09:03 PM,eBird - Casual Observation,,0,,,1
-S293930844,Daurian Redstart,Phoenicurus auroreus,29630,X,CN-35,,L57157086,Zhangzhou,24.61835,117.87436,2025-12-31,05:59 PM,eBird - Casual Observation,,0,,,1
-S293931084,Fork-tailed Sunbird,Aethopyga christinae,30563,X,CN-35,,L57157086,Zhangzhou,24.61835,117.87436,2025-12-31,06:16 PM,eBird - Casual Observation,,0,,,1
-S276394328,House Sparrow,Passer domesticus,31534,X,US-IL,Cook,L53452249,Park Ridge,42.008916,-87.830993,2025-09-27,03:31 PM,eBird - Casual Observation,,0,,,1
-S276396766,Italian Sparrow,Passer italiae,31549,X,IT-25,,L53452801,Como,45.80968,9.084566,2024-09-20,05:11 AM,eBird - Casual Observation,,0,,,1
-S293928516,Eurasian Tree Sparrow,Passer montanus,31603,X,JP-13,Koto City,L57157065,Toyoda,35.649402,139.789978,2026-01-08,06:37 PM,eBird - Casual Observation,,0,,,1
-S293373639,White Wagtail,Motacilla alba,31720,X,JP-13,Chiyoda City,L57037605,Palace,35.685502,139.757274,2026-01-10,11:11 AM,eBird - Casual Observation,,0,,,1
-S276393895,American Goldfinch,Spinus tristis,32617,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:31 AM,eBird - Casual Observation,,0,,,1
-S276398003,American Goldfinch,Spinus tristis,32617,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2025-07-19,10:38 AM,eBird - Casual Observation,,0,,,1
-S285218031,American Goldfinch,Spinus tristis,32617,X,US-WA,King,L54917772,Union Bay,47.654268,-122.295243,2025-11-08,09:45 AM,eBird - Casual Observation,,0,,,1
-S293930196,Black-faced Bunting,Emberiza spodocephala,32835,X,CN-35,,L53452931,Xiamen,24.43819,118.094726,2026-01-01,08:10 PM,eBird - Casual Observation,,0,,,1
-S276393214,Dark-eyed Junco,Junco hyemalis,33124,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:12 AM,eBird - Casual Observation,,0,,,1
-S276398056,Dark-eyed Junco,Junco hyemalis,33124,X,US-WA,King,L53452562,Carkeek Park,47.711883,-122.374287,2025-06-01,09:52 AM,eBird - Casual Observation,,0,,,1
-S277677311,White-crowned Sparrow,Zonotrichia leucophrys,33187,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:28 AM,eBird - Casual Observation,,0,,,1
-S276391631,White-throated Sparrow,Zonotrichia albicollis,33201,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,04:59 AM,eBird - Casual Observation,,0,,,1
-S276393291,White-throated Sparrow,Zonotrichia albicollis,33201,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,07:20 AM,eBird - Casual Observation,,0,,,1
-S276394104,Savannah Sparrow,Passerculus sandwichensis,33244,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,05:56 AM,eBird - Casual Observation,,0,,,1
-S277677645,Savannah Sparrow,Passerculus sandwichensis,33244,X,US-WA,Whatcom,L53705864,Semiahmoo Park,48.978404,-122.791328,2025-10-05,11:47 AM,eBird - Casual Observation,,0,,,1
-S276397949,Song Sparrow,Melospiza melodia,33277,X,US-WA,King,L53452637,The Arboretum,47.642651,-122.288885,2025-06-01,11:28 AM,eBird - Casual Observation,,0,,,1
-S276027296,Nashville Warbler,Leiothlypis ruficapilla,33981,X,US-IL,Cook,L53381605,Magic Marsh,41.963178,-87.634154,2025-09-28,08:28 AM,eBird - Casual Observation,,0,,,1
-S276391838,Magnolia Warbler,Setophaga magnolia,34079,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,,eBird - Casual Observation,,0,,,1
-S276084867,Black-throated Blue Warbler,Setophaga caerulescens,34141,X,US-IL,Cook,L53381605,Magic Marsh,41.963178,-87.634154,2025-09-28,11:06 AM,eBird - Casual Observation,,0,,,1
-S276392099,Palm Warbler,Setophaga palmarum,34148,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,,eBird - Casual Observation,,0,,,1
-S276391972,Palm Warbler,Setophaga palmarum,34148,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,05:21 AM,eBird - Casual Observation,,0,,,1
-S276394011,Palm Warbler,Setophaga palmarum,34148,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:00 AM,eBird - Casual Observation,,0,,,1
-S276392824,Yellow-rumped Warbler,Setophaga coronata,34159,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,06:19 AM,eBird - Casual Observation,,0,,,1
-S276393415,Northern Cardinal,Cardinalis cardinalis,34515,X,US-IL,Cook,L53451695,Montrose Point,41.963254,-87.631954,2025-09-28,,eBird - Casual Observation,,0,,,1
-S276515323,Saffron Finch,Sicalis flaveola,35477,X,US-HI,Honolulu,L53474521,Haleiwa,21.585487,-158.112981,2025-05-06,02:39 PM,eBird - Casual Observation,,0,,,1
+S410100001,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Great Blue Heron,Ardea herodias,7753,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Mallard,Anas platyrhynchos,545,14,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Song Sparrow,Melospiza melodia,33277,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Black-capped Chickadee,Poecile atricapillus,22065,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Blue Jay,Cyanocitta cristata,21294,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Northern Cardinal,Cardinalis cardinalis,34515,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Steller's Jay,Cyanocitta stelleri,21304,3,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100001,Dark-eyed Junco,Junco hyemalis,33124,X,US-WA,King,L90010001,Discovery Park,47.6587,-122.4050,2026-01-12,08:10 AM,eBird - Traveling Count,82,1,2.6,,2,,,Winter shoreline and meadow loop.,
+S410100002,Chukar,Alectoris chukar,1765,2,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Hawaiian Goose,Branta sandvicensis,347,6,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Hawaii Amakihi,Chlorodrepanis virens,30749,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Apapane,Himatione sanguinea,30826,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Pacific Golden-Plover,Pluvialis fulva,5868,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Warbling White-eye,Zosterops japonicus,25528,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Northern Cardinal,Cardinalis cardinalis,34515,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,House Finch,Haemorhous mexicanus,32598,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100002,Eurasian Skylark,Alauda arvensis,22705,X,US-HI,Maui,L90010002,Haleakala National Park Summit,20.7097,-156.2536,2026-01-18,07:05 AM,eBird - Traveling Count,74,1,1.8,,2,,,High-elevation scrub and crater overlooks.,
+S410100003,Northern Cardinal,Cardinalis cardinalis,34515,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Blue Jay,Cyanocitta cristata,21294,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Mallard,Anas platyrhynchos,545,22,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Great Blue Heron,Ardea herodias,7753,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Song Sparrow,Melospiza melodia,33277,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Osprey,Pandion haliaetus,7832,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,American Black Duck,Anas rubripes,540,7,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Mute Swan,Cygnus olor,385,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100003,Double-crested Cormorant,Nannopterum auritum,7424,X,US-NY,Queens,L90010003,Jamaica Bay Wildlife Refuge,40.6155,-73.8227,2026-01-24,09:15 AM,eBird - Traveling Count,96,1,3.1,,3,,,Saltmarsh pools and East Pond trail.,
+S410100004,Sandhill Crane,Antigone canadensis,5602,120,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Snow Goose,Anser caerulescens,362,240,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Northern Pintail,Anas acuta,508,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,American Wigeon,Mareca americana,492,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Bald Eagle,Haliaeetus leucocephalus,8367,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Mallard,Anas platyrhynchos,545,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Northern Harrier,Circus hudsonius,8194,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Great Blue Heron,Ardea herodias,7753,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100004,Red-winged Blackbird,Agelaius phoeniceus,35090,X,US-NM,Socorro,L90010004,Bosque del Apache NWR,33.8040,-106.8917,2026-01-29,06:55 AM,eBird - Traveling Count,110,1,4.2,,2,,,Farm loop and impoundments at dawn.,
+S410100005,Anhinga,Anhinga anhinga,7446,12,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Great Egret,Ardea alba,7729,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Snowy Egret,Egretta thula,7665,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Little Blue Heron,Egretta caerulea,7673,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,White Ibis,Eudocimus albus,7516,17,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Purple Gallinule,Porphyrio martinica,5524,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Common Gallinule,Gallinula galeata,5468,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Osprey,Pandion haliaetus,7832,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100005,Black Vulture,Coragyps atratus,7807,X,US-FL,Miami-Dade,L90010005,"Anhinga Trail, Everglades NP",25.3948,-80.6078,2026-02-02,08:02 AM,eBird - Traveling Count,68,1,1.4,,2,,,Boardwalk survey with calm weather.,
+S410100006,Anna's Hummingbird,Calypte anna,9760,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Chestnut-backed Chickadee,Poecile rufescens,22097,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Song Sparrow,Melospiza melodia,33277,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,California Towhee,Melozone crissalis,33295,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Mallard,Anas platyrhynchos,545,11,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Great Blue Heron,Ardea herodias,7753,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Red-tailed Hawk,Buteo jamaicensis,8602,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Black Phoebe,Sayornis nigricans,14680,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100006,Steller's Jay,Cyanocitta stelleri,21304,X,US-CA,San Francisco,L90010006,"Presidio, San Francisco",37.7989,-122.4662,2026-02-05,07:48 AM,eBird - Traveling Count,73,1,2.3,,1,,,Coastal scrub and cypress groves.,
+S410100007,Mallard,Anas platyrhynchos,545,16,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Great Tit,Parus major,22148,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Eurasian Blue Tit,Cyanistes caeruleus,22164,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,European Robin,Erithacus rubecula,29412,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Eurasian Coot,Fulica atra,5487,10,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Mute Swan,Cygnus olor,385,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Common Wood-Pigeon,Columba palumbus,1904,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Carrion Crow,Corvus corone,21574,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100007,Great Cormorant,Phalacrocorax carbo,7397,X,GB-ENG,Greater London,L90010007,"Hyde Park, London",51.5074,-0.1657,2026-02-08,10:22 AM,eBird - Traveling Count,64,1,1.9,,2,,,Lakeside walk and open lawns.,
+S410100008,Eastern Spot-billed Duck,Anas zonorhyncha,552,18,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Large-billed Crow,Corvus macrorhynchos,21586,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Brown-eared Bulbul,Hypsipetes amaurotis,24658,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Asian Tit,Parus cinereus,22153,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,White-cheeked Starling,Spodiopsar cineraceus,27858,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Eurasian Tree Sparrow,Passer montanus,31603,22,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Oriental Turtle-Dove,Streptopelia orientalis,2022,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Black-crowned Night Heron,Nycticorax nycticorax,7600,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100008,Great Cormorant,Phalacrocorax carbo,7397,X,JP-13,Taito,L90010008,"Ueno Park, Tokyo",35.7148,139.7731,2026-02-10,08:40 AM,eBird - Traveling Count,71,1,2.0,,1,,,Pond edges and temple groves.,
+S410100009,Bald Eagle,Haliaeetus leucocephalus,8367,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Great Blue Heron,Ardea herodias,7753,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Black-capped Chickadee,Poecile atricapillus,22065,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Song Sparrow,Melospiza melodia,33277,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Mallard,Anas platyrhynchos,545,19,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,American Crow,Corvus brachyrhynchos,21557,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Northern Flicker,Colaptes auratus,11900,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Glaucous-winged Gull,Larus glaucescens,6596,9,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100009,Bushtit,Psaltriparus minimus,25253,X,CA-BC,Metro Vancouver,L90010009,"Stanley Park, Vancouver",49.3043,-123.1443,2026-02-11,07:30 AM,eBird - Traveling Count,88,1,3.4,,2,,,Seawall and interior forest trail.,
+S410100010,Rufous-bellied Thrush,Turdus rufiventris,28670,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Southern Lapwing,Vanellus chilensis,5895,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Great Kiskadee,Pitangus sulphuratus,15034,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Saffron Finch,Sicalis flaveola,35477,5,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Chalk-browed Mockingbird,Mimus saturninus,28122,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Eared Dove,Zenaida auriculata,1943,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Neotropic Cormorant,Nannopterum brasilianum,7419,7,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,House Sparrow,Passer domesticus,31534,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
+S410100010,Rufous Hornero,Furnarius rufus,13253,X,BR-SP,Sao Paulo,L90010010,"Parque Ibirapuera, Sao Paulo",-23.5873,-46.6576,2026-02-12,06:58 AM,eBird - Traveling Count,77,1,2.7,,2,,,Urban lake circuit at sunrise.,
