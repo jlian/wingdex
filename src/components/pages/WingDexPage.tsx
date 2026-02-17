@@ -105,10 +105,11 @@ export default function WingDexPage({
     () => filteredList.slice(0, visibleCount),
     [filteredList, visibleCount]
   )
+  const hasMore = visibleCount < filteredList.length
 
   useEffect(() => {
     const node = loadMoreRef.current
-    if (!node || visibleCountRef.current >= filteredList.length) return
+    if (!node || !hasMore) return
 
     const maybeLoadMore = () => {
       if (node.getBoundingClientRect().top > window.innerHeight + 240) return
@@ -139,7 +140,7 @@ export default function WingDexPage({
       window.removeEventListener('scroll', maybeLoadMore)
       window.removeEventListener('resize', maybeLoadMore)
     }
-  }, [filteredList.length])
+  }, [filteredList.length, hasMore])
 
   if (dex.length === 0) {
     return (
@@ -230,7 +231,7 @@ export default function WingDexPage({
         })}
       </div>
 
-      {visibleList.length < filteredList.length && (
+      {hasMore && (
         <div className="py-2">
           <div ref={loadMoreRef} className="h-1" />
           <p className="text-center text-xs text-muted-foreground">
