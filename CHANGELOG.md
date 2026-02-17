@@ -1,9 +1,3 @@
-# Changelog
-
-All notable changes to this project are documented in this file.
-
-Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by [semantic-release](https://github.com/semantic-release/semantic-release).
-
 ## [1.3.2](https://github.com/jlian/birddex/compare/v1.3.1...v1.3.2) (2026-02-17)
 
 
