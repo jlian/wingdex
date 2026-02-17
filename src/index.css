@@ -105,18 +105,23 @@
 
 html {
   overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 body {
   font-family: var(--font-sans);
 }
 
-/* react-remove-scroll-bar sets overflow:hidden + margin-right on body
-   to compensate for the removed scrollbar. Instead, keep the scrollbar
-   visible so there's no layout shift. The JS event handlers in
-   react-remove-scroll still prevent actual background scrolling. */
-body[data-scroll-locked] {
-  overflow-y: scroll !important;
+/* react-remove-scroll mutates body overflow/position while dialogs are open.
+  Keep body as a non-scroll container so sticky header positioning remains
+  stable and desktop layout doesn't shift when scroll lock toggles. */
+html body[data-scroll-locked] {
+  overflow: visible !important;
+  overflow-y: visible !important;
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
   margin-right: 0 !important;
 }
 
