@@ -1,86 +1,118 @@
 import type { Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parseEBirdCSV, groupPreviewsIntoOutings } from '../src/lib/ebird'
+import type { Outing, Observation, DexEntry } from '../src/lib/types'
+
+const PRIVATE_LOCATION_PATTERNS = [/\bhome\b/i, /\bparent/i]
+const PRIVATE_COORDINATES = [
+  { lat: 47.639918, lon: -122.403887 }, // Home
+  { lat: 49.316781, lon: -122.864568 }, // Parent's
+]
+const PRIVATE_RADIUS_KM = 2
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const earthRadiusKm = 6371
+  const toRad = (deg: number) => deg * (Math.PI / 180)
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+function isSensitiveRecord(location: string, lat?: number, lon?: number): boolean {
+  if (PRIVATE_LOCATION_PATTERNS.some((pattern) => pattern.test(location))) {
+    return true
+  }
+
+  if (typeof lat !== 'number' || typeof lon !== 'number') {
+    return false
+  }
+
+  return PRIVATE_COORDINATES.some((coord) =>
+    haversineKm(lat, lon, coord.lat, coord.lon) <= PRIVATE_RADIUS_KM
+  )
+}
+
+function buildDex(outings: Outing[], observations: Observation[]): DexEntry[] {
+  const outingsById = new Map(outings.map((outing) => [outing.id, outing]))
+  const grouped = new Map<string, Observation[]>()
+
+  for (const observation of observations) {
+    if (observation.certainty !== 'confirmed') continue
+    const existing = grouped.get(observation.speciesName)
+    if (existing) {
+      existing.push(observation)
+    } else {
+      grouped.set(observation.speciesName, [observation])
+    }
+  }
+
+  const entries: DexEntry[] = []
+  for (const [speciesName, group] of grouped.entries()) {
+    const speciesOutings = group
+      .map((obs) => outingsById.get(obs.outingId))
+      .filter((outing): outing is Outing => !!outing)
+    if (speciesOutings.length === 0) continue
+
+    const firstSeen = speciesOutings.reduce((min, current) =>
+      new Date(current.startTime) < new Date(min.startTime) ? current : min
+    )
+    const lastSeen = speciesOutings.reduce((max, current) =>
+      new Date(current.startTime) > new Date(max.startTime) ? current : max
+    )
+
+    entries.push({
+      speciesName,
+      firstSeenDate: firstSeen.startTime,
+      lastSeenDate: lastSeen.startTime,
+      addedDate: firstSeen.startTime,
+      totalOutings: new Set(group.map((obs) => obs.outingId)).size,
+      totalCount: group.reduce((sum, obs) => sum + obs.count, 0),
+      notes: '',
+    })
+  }
+
+  return entries.sort((a, b) => a.speciesName.localeCompare(b.speciesName))
+}
 
 /**
- * Builds a full set of localStorage entries that seed the app with
- * realistic bird-watching data (5 outings, 18 species, ~30 observations).
+ * Builds localStorage seed entries from a sanitized eBird CSV fixture.
+ *
+ * Privacy filtering removes records with sensitive location names
+ * (e.g. Home / Parent) and rows within 2km of known private coordinates.
  *
  * Keyed for userId=1 (the dev-user fallback).
  */
 export function buildSeedLocalStorage(): Record<string, string> {
-  const now = Date.now()
-  const day = 86400000
-  const hour = 3600000
   const prefix = 'wingdex_kv_u1_'
 
-  const outings = [
-    { id: 'outing_seed_1', userId: 'seed', startTime: new Date(now - 2 * day).toISOString(), endTime: new Date(now - 2 * day + 2 * hour).toISOString(), locationName: 'Central Park, New York', lat: 40.7829, lon: -73.9654, notes: 'Beautiful morning walk along the lake.', createdAt: new Date(now - 2 * day).toISOString() },
-    { id: 'outing_seed_2', userId: 'seed', startTime: new Date(now - 8 * day).toISOString(), endTime: new Date(now - 8 * day + 3 * hour).toISOString(), locationName: 'Jamaica Bay Wildlife Refuge', lat: 40.6172, lon: -73.8253, notes: 'Saw a bald eagle soaring!', createdAt: new Date(now - 8 * day).toISOString() },
-    { id: 'outing_seed_3', userId: 'seed', startTime: new Date(now - 15 * day).toISOString(), endTime: new Date(now - 15 * day + 1.5 * hour).toISOString(), locationName: 'Prospect Park, Brooklyn', lat: 40.6602, lon: -73.9690, notes: 'Quick lunchtime birding.', createdAt: new Date(now - 15 * day).toISOString() },
-    { id: 'outing_seed_4', userId: 'seed', startTime: new Date(now - 30 * day).toISOString(), endTime: new Date(now - 30 * day + 4 * hour).toISOString(), locationName: 'Bear Mountain State Park', lat: 41.3126, lon: -73.9887, notes: 'Incredible raptor sightings.', createdAt: new Date(now - 30 * day).toISOString() },
-    { id: 'outing_seed_5', userId: 'seed', startTime: new Date(now - 45 * day).toISOString(), endTime: new Date(now - 45 * day + 2 * hour).toISOString(), locationName: 'Riverside Park, Manhattan', lat: 40.8008, lon: -73.9725, notes: '', createdAt: new Date(now - 45 * day).toISOString() },
-  ]
-
-  const speciesData = [
-    { name: 'Northern Cardinal', outings: [0, 2, 4], counts: [2, 1, 3], certainty: 'confirmed' as const },
-    { name: 'Blue Jay', outings: [0, 2], counts: [3, 2], certainty: 'confirmed' as const },
-    { name: 'American Robin', outings: [0, 2, 4], counts: [5, 3, 4], certainty: 'confirmed' as const },
-    { name: 'Red-tailed Hawk', outings: [1, 3], counts: [1, 2], certainty: 'confirmed' as const },
-    { name: 'Great Blue Heron', outings: [1], counts: [2], certainty: 'confirmed' as const },
-    { name: 'Ruby-throated Hummingbird', outings: [0], counts: [1], certainty: 'confirmed' as const },
-    { name: 'Bald Eagle', outings: [1], counts: [1], certainty: 'confirmed' as const },
-    { name: 'American Goldfinch', outings: [0, 4], counts: [4, 2], certainty: 'confirmed' as const },
-    { name: 'Downy Woodpecker', outings: [2, 3], counts: [1, 1], certainty: 'confirmed' as const },
-    { name: 'Eastern Bluebird', outings: [3], counts: [3], certainty: 'confirmed' as const },
-    { name: 'Black-capped Chickadee', outings: [2, 4], counts: [4, 2], certainty: 'confirmed' as const },
-    { name: 'Mourning Dove', outings: [0, 2, 4], counts: [2, 1, 3], certainty: 'confirmed' as const },
-    { name: 'House Finch', outings: [0, 4], counts: [3, 2], certainty: 'confirmed' as const },
-    { name: 'White-breasted Nuthatch', outings: [2, 3], counts: [1, 2], certainty: 'confirmed' as const },
-    { name: 'Red-winged Blackbird', outings: [1, 4], counts: [6, 3], certainty: 'confirmed' as const },
-    { name: "Cooper's Hawk", outings: [3], counts: [1], certainty: 'possible' as const },
-    { name: 'Cedar Waxwing', outings: [3], counts: [8], certainty: 'confirmed' as const },
-    { name: 'Tufted Titmouse', outings: [2], counts: [2], certainty: 'confirmed' as const },
-  ]
-
-  let obsCounter = 0
-  const observations = speciesData.flatMap(sp =>
-    sp.outings.map((outingIdx, i) => ({
-      id: `obs_seed_${++obsCounter}`,
-      outingId: outings[outingIdx].id,
-      speciesName: sp.name,
-      count: sp.counts[i],
-      certainty: sp.certainty,
-      notes: '',
-    }))
+  const fixturePath = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures', 'ebird-import.csv')
+  const csv = readFileSync(fixturePath, 'utf8')
+  const previews = parseEBirdCSV(csv)
+  const safePreviews = previews.filter((preview) =>
+    !isSensitiveRecord(preview.location, preview.lat, preview.lon)
   )
 
-  // Build dex
-  const dexMap = new Map<string, any>()
-  for (const obs of observations) {
-    if (obs.certainty !== 'confirmed') continue
-    const outing = outings.find(o => o.id === obs.outingId)!
-    const existing = dexMap.get(obs.speciesName)
-    const outingDate = new Date(outing.startTime)
-    if (existing) {
-      dexMap.set(obs.speciesName, {
-        ...existing,
-        firstSeenDate: outingDate < new Date(existing.firstSeenDate) ? outing.startTime : existing.firstSeenDate,
-        lastSeenDate: outingDate > new Date(existing.lastSeenDate) ? outing.startTime : existing.lastSeenDate,
-        totalOutings: existing.totalOutings + 1,
-        totalCount: existing.totalCount + obs.count,
-      })
-    } else {
-      dexMap.set(obs.speciesName, {
-        speciesName: obs.speciesName,
-        firstSeenDate: outing.startTime,
-        lastSeenDate: outing.startTime,
-        addedDate: outing.startTime,
-        totalOutings: 1,
-        totalCount: obs.count,
-        notes: '',
-      })
-    }
-  }
-  const dex = Array.from(dexMap.values()).sort((a: any, b: any) => a.speciesName.localeCompare(b.speciesName))
+  const grouped = groupPreviewsIntoOutings(safePreviews, 'seed')
+
+  const outings: Outing[] = grouped.outings.map((outing, index) => ({
+    ...outing,
+    id: `outing_seed_${index + 1}`,
+  }))
+
+  const outingIdMap = new Map(grouped.outings.map((outing, index) => [outing.id, outings[index].id]))
+  const observations: Observation[] = grouped.observations.map((observation, index) => ({
+    ...observation,
+    id: `obs_seed_${index + 1}`,
+    outingId: outingIdMap.get(observation.outingId) || observation.outingId,
+  }))
+
+  const dex = buildDex(outings, observations)
 
   return {
     [`${prefix}outings`]: JSON.stringify(outings),
