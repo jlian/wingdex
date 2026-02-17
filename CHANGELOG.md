@@ -34,7 +34,7 @@
 
 * pre-resolve Wikipedia titles at build time to fix iOS image loading ([#99](https://github.com/jlian/birddex/issues/99)) ([ce58c62](https://github.com/jlian/birddex/commit/ce58c627c4c21a16151cc35e33885c1e44c3a21a))
 
-## [1.3.0](https://github.com/jlian/birddex/compare/v1.2.3...v1.3.0) (2026-02-17)
+# [1.3.0](https://github.com/jlian/birddex/compare/v1.2.3...v1.3.0) (2026-02-17)
 
 
 ### Features
@@ -68,7 +68,7 @@
 
 * use plain v tags for release-please ([#85](https://github.com/jlian/birddex/issues/85)) ([ab4a2da](https://github.com/jlian/birddex/commit/ab4a2da3df3de4abb6e16589010b1a48f70bcd4f))
 
-## [1.2.0](https://github.com/jlian/birddex/compare/v1.1.0...v1.2.0) (2026-02-16)
+# [1.2.0](https://github.com/jlian/birddex/compare/v1.1.0...v1.2.0) (2026-02-16)
 
 ### Features
 - replace stat cards with compact inline stats on homepage ([3908041](https://github.com/jlian/birddex/commit/3908041))
@@ -157,7 +157,7 @@
 - Load PWA manifest from bundled asset to avoid Spark 404 ([0299465](https://github.com/jlian/birddex/commit/0299465))
 - Harden iOS home-screen icon metadata and cache-bust touch icon ([7bdb77e](https://github.com/jlian/birddex/commit/7bdb77e))
 
-## [1.1.0](https://github.com/jlian/birddex/compare/v1.0.2...v1.1.0) (2026-02-15)
+# [1.1.0](https://github.com/jlian/birddex/compare/v1.0.2...v1.1.0) (2026-02-15)
 
 ### Features
 - extract saved locations from eBird CSV import ([3cd4b05](https://github.com/jlian/birddex/commit/3cd4b05))
@@ -206,7 +206,7 @@
 - stabilize spark resolution and CI install mode ([f93cc93](https://github.com/jlian/birddex/commit/f93cc93))
 - sync settings version from package.json ([3cf43aa](https://github.com/jlian/birddex/commit/3cf43aa))
 
-## [1.0.0](https://github.com/jlian/birddex/compare/v0.9.0...v1.0.0) (2026-02-13)
+# [1.0.0](https://github.com/jlian/birddex/compare/v0.9.0...v1.0.0) (2026-02-13)
 
 ### Highlights
 - Reached first stable major release with core BirdDex flows: dark mode, outing title editing, and eBird record-format export.
