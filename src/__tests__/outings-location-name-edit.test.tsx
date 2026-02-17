@@ -27,6 +27,7 @@ const baseOuting: Outing = {
 
 function createDataStore(): BirdDexDataStore {
   return {
+    isLoading: false,
     photos: [],
     outings: [baseOuting],
     observations: [],

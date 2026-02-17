@@ -8,6 +8,7 @@ type KVControls<T> = {
   value: T
   setValue: (next: T | ((prev: T) => T)) => void
   deleteValue: () => void
+  isLoading: boolean
 }
 
 function Harness<T>({
@@ -19,11 +20,11 @@ function Harness<T>({
   initialValue: T
   onChange: (controls: KVControls<T>) => void
 }) {
-  const [value, setValue, deleteValue] = useKV<T>(storageKey, initialValue)
+  const [value, setValue, deleteValue, isLoading] = useKV<T>(storageKey, initialValue)
 
   useEffect(() => {
-    onChange({ value, setValue, deleteValue })
-  }, [value, setValue, deleteValue, onChange])
+    onChange({ value, setValue, deleteValue, isLoading })
+  }, [value, setValue, deleteValue, isLoading, onChange])
 
   return null
 }
@@ -57,6 +58,7 @@ describe('useKV (local runtime)', () => {
 
     await waitFor(() => {
       expect(latest?.value).toEqual(['saved'])
+      expect(latest?.isLoading).toBe(false)
     })
     expect(fetchSpy).not.toHaveBeenCalled()
   })
@@ -90,6 +92,7 @@ describe('useKV (local runtime)', () => {
     await waitFor(() => {
       expect(localStorage.getItem(`birddex_kv_${key}`)).toBeNull()
       expect(latest?.value).toEqual([])
+      expect(latest?.isLoading).toBe(false)
     })
   })
 
