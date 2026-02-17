@@ -196,7 +196,7 @@ function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date
           <img
             src={wikiImage}
             alt={displayName}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-[center_10%]"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
