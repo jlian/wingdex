@@ -770,7 +770,7 @@ describe('eBird CSV utilities', () => {
     it('preserves eBird species names as-is from CSV', () => {
       // The eBird CSV has "Chukar" as the common name — our taxonomy
       // matches eBird so it should stay as "Chukar" (not "Chukar Partridge").
-      // Wikipedia lookup uses WIKI_OVERRIDES to find the right article.
+      // Wikipedia lookup uses pre-resolved wiki titles from taxonomy.json.
       const csv = ebirdCSV([
         'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
       ])

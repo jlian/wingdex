@@ -33,7 +33,8 @@ export function useBirdImage(speciesName: string | undefined): string | undefine
       try {
         const response = await fetch(url)
         if (!response.ok) {
-          setImageUrl(undefined)
+          // Blob fetch failed; fall back to direct URL
+          if (!cancelled) setImageUrl(url)
           return
         }
         const blob = await response.blob()
@@ -41,7 +42,8 @@ export function useBirdImage(speciesName: string | undefined): string | undefine
         objectUrl = URL.createObjectURL(blob)
         setImageUrl(objectUrl)
       } catch {
-        if (!cancelled) setImageUrl(undefined)
+        // Blob fetch failed; fall back to direct URL
+        if (!cancelled) setImageUrl(url)
       }
     })
 

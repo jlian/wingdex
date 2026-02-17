@@ -1,30 +1,17 @@
 /**
  * Fetch bird images and summaries from Wikipedia Action API.
- * Tries multiple search strategies using overrides and normalized variants
- * (common/scientific names, common + " bird", Gray↔Grey, and dehyphenation).
- * No API key required; rate-limited by User-Agent convention.
+ * Uses pre-resolved Wikipedia article titles from taxonomy.json (hydrated at build time
+ * by scripts/hydrate-wiki-titles.mjs) for a single-fetch lookup per species.
+ * Falls back to common name for species not in the taxonomy.
+ * No API key required.
  */
 import { getDisplayName, getScientificName } from './utils'
+import { getWikiTitle } from './taxonomy'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
 const imageInFlight = new Map<string, Promise<string | undefined>>()
 const summaryInFlight = new Map<string, Promise<WikiSummary | undefined>>()
-
-/**
- * Manual overrides for species whose eBird common name doesn't match any Wikipedia article.
- * Covers taxonomic splits (Wikipedia still uses the pre-split name) and disambiguation
- * (e.g. "Merlin" → the bird, not the mythical figure). Sorted alphabetically by key.
- */
-const WIKI_OVERRIDES: Record<string, string> = {
-  'Black-billed Cnemoscopus': 'Grey-hooded bush tanager',
-  'Black-hooded Antthrush': 'Black-faced antthrush',
-  'Chukar': 'Chukar partridge',
-  'Gray-crowned Ground-Sparrow': 'White-eared ground sparrow',
-  'Merlin': 'Merlin (bird)',
-  'Mexican Squirrel-Cuckoo': 'Squirrel cuckoo',
-  'Rose-bellied Chat': 'Rose-breasted chat',
-}
 
 export interface WikiSummary {
   title: string
@@ -52,8 +39,7 @@ async function fetchSummary(title: string): Promise<FetchSummaryResult> {
     const normalizedTitle = title.replace(/ /g, '_')
     const encodedTitle = encodeURIComponent(normalizedTitle)
     const res = await fetch(
-      `https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=extracts|pageimages|info&inprop=url&exintro=1&explaintext=1&piprop=thumbnail|original&pithumbsize=600&titles=${encodedTitle}`,
-      { headers: { 'Api-User-Agent': 'BirdDex/1.0 (bird identification app)' } }
+      `https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=extracts%7Cpageimages%7Cinfo&inprop=url&exintro=1&explaintext=1&piprop=thumbnail%7Coriginal&pithumbsize=600&titles=${encodedTitle}`
     )
     if (!res.ok && res.status !== 404) {
       console.warn(`[wikimedia] Unexpected summary response ${res.status} for "${title}"`)
@@ -110,15 +96,30 @@ function parseSpeciesName(speciesName: string): { common: string; scientific?: s
 }
 
 /**
+ * Build ordered list of Wikipedia title candidates for a species.
+ * If a pre-resolved wikiTitle exists in taxonomy, it is the sole candidate.
+ * Otherwise falls back to common name → scientific name → common + " bird".
+ */
+function getCandidates(common: string, scientific?: string): string[] {
+  const wikiTitle = getWikiTitle(common)
+  if (wikiTitle) return [wikiTitle]
+
+  // Fallback for species not in taxonomy or without a hydrated wiki title
+  const candidates = [common]
+  if (scientific) candidates.push(scientific)
+  candidates.push(`${common} bird`)
+  return candidates
+}
+
+/**
  * Get a Wikimedia Commons thumbnail URL for a bird species.
- * Tries: common name → scientific name → common name + " bird"
+ * Uses pre-resolved Wikipedia title from taxonomy when available (single fetch).
  */
 export async function getWikimediaImage(
   speciesName: string,
   size = 300
 ): Promise<string | undefined> {
   const { common, scientific } = parseSpeciesName(speciesName)
-  const dehyphenated = common.includes('-') ? common.replace(/-/g, ' ') : undefined
   const cacheKey = common.toLowerCase()
 
   if (imageCache.has(cacheKey)) {
@@ -131,67 +132,13 @@ export async function getWikimediaImage(
 
   const lookupPromise = (async (): Promise<string | undefined> => {
     let hadTransientError = false
-
-    // Strategy 0: Check manual overrides for known mismatches
-    const override = WIKI_OVERRIDES[common]
     let imageUrl: string | undefined
-    if (override) {
-      const result = await fetchSummary(override)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
 
-    // Strategy 1: Try common name directly
-    if (!imageUrl) {
-      const result = await fetchSummary(common)
+    for (const candidate of getCandidates(common, scientific)) {
+      const result = await fetchSummary(candidate)
       if (result.kind === 'hit') {
         imageUrl = extractImageUrl(result.data, size)
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
-
-    // Strategy 2: Try scientific name if common name had no image
-    if (!imageUrl && scientific) {
-      const result = await fetchSummary(scientific)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
-
-    // Strategy 3: Try common name + " bird" (disambiguates e.g. "Robin")
-    if (!imageUrl) {
-      const result = await fetchSummary(`${common} bird`)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
-
-    // Strategy 4: Try Gray↔Grey swap (eBird uses "Gray", Wikipedia often has "Grey")
-    if (!imageUrl && /gray|grey/i.test(common)) {
-      const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
-        === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
-        : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
-      const result = await fetchSummary(swapped)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
-      } else if (result.kind === 'error') {
-        hadTransientError = true
-      }
-    }
-
-    // Strategy 5: Try dehyphenated (eBird: "Storm-Petrel", Wikipedia: "storm petrel")
-    if (!imageUrl && dehyphenated) {
-      const result = await fetchSummary(dehyphenated)
-      if (result.kind === 'hit') {
-        imageUrl = extractImageUrl(result.data, size)
+        if (imageUrl) break
       } else if (result.kind === 'error') {
         hadTransientError = true
       }
@@ -215,13 +162,12 @@ export async function getWikimediaImage(
 
 /**
  * Get Wikipedia summary text + image for a bird species.
- * Used for species detail views.
+ * Uses pre-resolved Wikipedia title from taxonomy when available (single fetch).
  */
 export async function getWikimediaSummary(
   speciesName: string
 ): Promise<WikiSummary | undefined> {
   const { common, scientific } = parseSpeciesName(speciesName)
-  const dehyphenated = common.includes('-') ? common.replace(/-/g, ' ') : undefined
   const cacheKey = common.toLowerCase()
 
   if (summaryCache.has(cacheKey)) {
@@ -235,20 +181,7 @@ export async function getWikimediaSummary(
   const lookupPromise = (async (): Promise<WikiSummary | undefined> => {
     let hadTransientError = false
 
-    // Try override → common name → scientific name → common + " bird" → Gray↔Grey swap → dehyphenated
-    const override = WIKI_OVERRIDES[common]
-    const candidates = [override, common, scientific, `${common} bird`].filter(Boolean) as string[]
-    if (/gray|grey/i.test(common)) {
-      const swapped = common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
-        === common ? common.replace(/Grey/g, 'Gray').replace(/grey/g, 'gray')
-        : common.replace(/Gray/g, 'Grey').replace(/gray/g, 'grey')
-      candidates.push(swapped)
-    }
-    if (dehyphenated) {
-      candidates.push(dehyphenated)
-    }
-
-    for (const candidate of candidates) {
+    for (const candidate of getCandidates(common, scientific)) {
       const result = await fetchSummary(candidate)
       if (result.kind === 'error') {
         hadTransientError = true

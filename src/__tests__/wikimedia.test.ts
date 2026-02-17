@@ -3,7 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
-// Import after mocking fetch
+// Mock getWikiTitle so tests control whether species have pre-resolved titles
+const mockGetWikiTitle = vi.fn<(name: string) => string | undefined>().mockReturnValue(undefined)
+vi.mock('@/lib/taxonomy', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual, getWikiTitle: (...args: [string]) => mockGetWikiTitle(...args) }
+})
+
+// Import after mocking
 const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
 function mockWikiResponse(pageData: Record<string, unknown> | null | 'missing') {
@@ -38,11 +45,22 @@ function wikiPageData(overrides: Record<string, unknown> = {}) {
 describe('getWikimediaImage', () => {
   beforeEach(() => {
     mockFetch.mockReset()
-    // Clear module-level caches by re-importing (they're Maps)
-    // We just test fresh species names each test to avoid cache hits
+    mockGetWikiTitle.mockReturnValue(undefined)
   })
 
-  it('returns image URL from common name (strategy 1)', async () => {
+  it('uses pre-resolved wiki title from taxonomy (single fetch)', async () => {
+    mockGetWikiTitle.mockReturnValue('Ruby-throated hummingbird')
+    mockWikiResponse(wikiPageData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-hummingbird.jpg' },
+    }))
+
+    const result = await getWikimediaImage('Unique Hummingbird T1')
+    expect(result).toContain('hummingbird.jpg')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch.mock.calls[0][0]).toContain('Ruby-throated_hummingbird')
+  })
+
+  it('returns image URL from common name when no wiki title (fallback)', async () => {
     mockWikiResponse(wikiPageData())
     const result = await getWikimediaImage('Unique Sparrow A')
     expect(result).toContain('upload.wikimedia.org')
@@ -50,10 +68,10 @@ describe('getWikimediaImage', () => {
     expect(mockFetch.mock.calls[0][0]).toContain('Unique_Sparrow_A')
   })
 
-  it('falls back to scientific name (strategy 2) when common name has no image', async () => {
-    // Strategy 1: common name — no image
+  it('falls back to scientific name when common name has no image', async () => {
+    // common name — no image
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // Strategy 2: scientific name — has image
+    // scientific name — has image
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-sci.jpg' },
       original: undefined,
@@ -64,12 +82,12 @@ describe('getWikimediaImage', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to common name + " bird" (strategy 3) when both fail', async () => {
-    // Strategy 1: no image
+  it('falls back to common name + " bird" when common and scientific fail', async () => {
+    // common name: no image
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // Strategy 2: scientific name — no match (404)
+    // scientific name: 404
     mockWikiResponse(null)
-    // Strategy 3: common name + " bird" — has image
+    // common name + " bird": has image
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' },
       original: undefined,
@@ -82,24 +100,7 @@ describe('getWikimediaImage', () => {
     expect(mockFetch.mock.calls[2][0]).toContain('Unique_Robin_C_bird')
   })
 
-  it('falls back to common name + " bird" when common and scientific have no image', async () => {
-    // Strategy 1: common name — no image
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // Strategy 2: scientific — no image
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // Strategy 3: common name + " bird" — has image
-    mockWikiResponse(wikiPageData({
-      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-fallback.jpg' },
-      original: undefined,
-    }))
-
-    const result = await getWikimediaImage('Unique Robin C2 (Turdus uniqueus2)')
-    expect(result).toContain('fallback.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Robin_C2_bird')
-  })
-
-  it('returns undefined when all strategies fail', async () => {
+  it('returns undefined when all fallback strategies fail', async () => {
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
     mockWikiResponse('missing')
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
@@ -125,14 +126,13 @@ describe('getWikimediaImage', () => {
     const result2 = await getWikimediaImage('Unique Owl F')
 
     expect(result1).toBe(result2)
-    // Only 1 fetch call since second was cached
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('skips scientific name fallback when none is provided', async () => {
-    // Strategy 1: no image
+    // common name: no image
     mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    // Strategy 3 (no strategy 2 since no scientific name): common name + " bird"
+    // common name + " bird"
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-bird-suffix.jpg' },
       original: undefined,
@@ -140,24 +140,7 @@ describe('getWikimediaImage', () => {
 
     const result = await getWikimediaImage('Unique Heron G')
     expect(result).toContain('bird-suffix.jpg')
-    // Only 2 calls: common name → common name + " bird" (no scientific name)
     expect(mockFetch).toHaveBeenCalledTimes(2)
-  })
-
-  it('tries dehyphenated common name after common/scientific/common+bird for hyphenated species', async () => {
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    mockWikiResponse(wikiPageData({ thumbnail: undefined, original: undefined }))
-    mockWikiResponse(wikiPageData({
-      thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-dehyphenated.jpg' },
-      original: undefined,
-    }))
-
-    const result = await getWikimediaImage('Unique-Hyphenated Bird M')
-    expect(result).toContain('dehyphenated.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique-Hyphenated_Bird_M')
-    expect(mockFetch.mock.calls[1][0]).toContain('Unique-Hyphenated_Bird_M_bird')
-    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Hyphenated_Bird_M')
   })
 })
 
@@ -166,6 +149,22 @@ describe('getWikimediaImage', () => {
 describe('getWikimediaSummary', () => {
   beforeEach(() => {
     mockFetch.mockReset()
+    mockGetWikiTitle.mockReturnValue(undefined)
+  })
+
+  it('uses pre-resolved wiki title from taxonomy (single fetch)', async () => {
+    mockGetWikiTitle.mockReturnValue('Merlin (bird)')
+    mockWikiResponse(wikiPageData({
+      title: 'Merlin (bird)',
+      extract: 'The merlin is a small species of falcon.',
+    }))
+
+    const result = await getWikimediaSummary('Merlin T2 (Falco columbarius)')
+    expect(result).toBeDefined()
+    expect(result!.title).toBe('Merlin (bird)')
+    expect(result!.extract).toContain('falcon')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch.mock.calls[0][0]).toContain('Merlin_(bird)')
   })
 
   it('returns summary with title, extract, imageUrl, and pageUrl', async () => {
@@ -206,7 +205,7 @@ describe('getWikimediaSummary', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to scientific name when common summary is missing and no cache collision', async () => {
+  it('falls back to scientific name when common summary is missing', async () => {
     mockWikiResponse(wikiPageData({ extract: undefined }))
     mockWikiResponse(wikiPageData({
       title: 'Unique Jay J',
@@ -231,21 +230,6 @@ describe('getWikimediaSummary', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
-  it('uses WIKI_OVERRIDES to disambiguate species like Merlin', async () => {
-    mockWikiResponse(wikiPageData({
-      title: 'Merlin (bird)',
-      extract: 'The merlin is a small species of falcon.',
-    }))
-
-    const result = await getWikimediaSummary('Merlin (Falco columbarius)')
-    expect(result).toBeDefined()
-    expect(result!.title).toBe('Merlin (bird)')
-    expect(result!.extract).toContain('falcon')
-    // Should fetch the override title "Merlin (bird)", not bare "Merlin"
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Merlin_(bird)')
-  })
-
   it('handles fetch errors gracefully', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
@@ -253,21 +237,5 @@ describe('getWikimediaSummary', () => {
     const result = await getWikimediaSummary('Unique Dove L')
     expect(result).toBeUndefined()
   })
-
-  it('tries dehyphenated common name last for summary lookups', async () => {
-    mockWikiResponse(wikiPageData({ extract: undefined }))
-    mockWikiResponse(wikiPageData({ extract: undefined }))
-    mockWikiResponse(wikiPageData({
-      title: 'Unique Hyphenated Bird M',
-      extract: 'Found via dehyphenated title.',
-    }))
-
-    const result = await getWikimediaSummary('Unique-Hyphenated Bird M')
-    expect(result).toBeDefined()
-    expect(result!.extract).toContain('dehyphenated')
-    expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(mockFetch.mock.calls[0][0]).toContain('Unique-Hyphenated_Bird_M')
-    expect(mockFetch.mock.calls[1][0]).toContain('Unique-Hyphenated_Bird_M_bird')
-    expect(mockFetch.mock.calls[2][0]).toContain('Unique_Hyphenated_Bird_M')
-  })
 })
+
