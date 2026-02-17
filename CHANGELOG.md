@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 Historical entries through v1.2.0 were backfilled from git tag ranges. New entries are managed by Release Please.
 
+## [1.3.1](https://github.com/jlian/birddex/compare/v1.3.0...v1.3.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* pre-resolve Wikipedia titles at build time to fix iOS image loading ([#99](https://github.com/jlian/birddex/issues/99)) ([ce58c62](https://github.com/jlian/birddex/commit/ce58c627c4c21a16151cc35e33885c1e44c3a21a))
+
 ## [1.3.0](https://github.com/jlian/birddex/compare/v1.2.3...v1.3.0) (2026-02-17)
 
 
