@@ -129,7 +129,7 @@ describe('getWikimediaSummary', () => {
     expect(result).toBeDefined()
     expect(result!.title).toBe('Northern Cardinal')
     expect(result!.extract).toContain('songbird')
-    expect(result!.imageUrl).toContain('100px-bird.jpg')
+    expect(result!.imageUrl).toContain('cardinal.jpg')
     expect(result!.pageUrl).toContain('Northern_Cardinal')
   })
 

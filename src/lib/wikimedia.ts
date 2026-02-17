@@ -49,9 +49,14 @@ async function fetchSummary(title: string): Promise<FetchResult> {
   }
 }
 
-/** Extract image URL, preferring thumbnail. */
-function extractImageUrl(data: RestSummary): string | undefined {
+/** Extract thumbnail image URL (for list views). */
+function extractThumbnailUrl(data: RestSummary): string | undefined {
   return data.thumbnail?.source ?? data.originalimage?.source
+}
+
+/** Extract full-resolution image URL (for detail views). */
+function extractFullImageUrl(data: RestSummary): string | undefined {
+  return data.originalimage?.source ?? data.thumbnail?.source
 }
 
 /** Extract the common name from a species string like "Northern Cardinal (Cardinalis cardinalis)" */
@@ -80,7 +85,7 @@ export async function getWikimediaImage(
 
   const lookupPromise = (async (): Promise<string | undefined> => {
     const result = await fetchSummary(wikiTitle)
-    const imageUrl = result.kind === 'hit' ? extractImageUrl(result.data) : undefined
+    const imageUrl = result.kind === 'hit' ? extractThumbnailUrl(result.data) : undefined
 
     if (imageUrl) {
       imageCache.set(cacheKey, imageUrl)
@@ -124,7 +129,7 @@ export async function getWikimediaSummary(
       const summary: WikiSummary = {
         title: result.data.title || common,
         extract: result.data.extract,
-        imageUrl: extractImageUrl(result.data),
+        imageUrl: extractFullImageUrl(result.data),
         pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
       }
       summaryCache.set(cacheKey, summary)

@@ -84,4 +84,24 @@ test.describe('App with seeded data', () => {
     // Should show a back button
     await expect(page.getByRole('button', { name: /back/i })).toBeVisible()
   })
+
+  test('species detail view loads Wikipedia image', async ({ page }) => {
+    await injectSeedData(page)
+
+    await page.getByRole('tab', { name: 'BirdDex' }).first().click()
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+
+    await page.locator('p:visible', { hasText: 'Northern Cardinal' }).first().click()
+    await page.waitForTimeout(1000)
+
+    await expect(page.getByRole('heading', { name: 'Northern Cardinal' })).toBeVisible()
+
+    // Wikipedia image should load in the detail hero area
+    const heroImg = page.getByRole('img', { name: 'Northern Cardinal' })
+    await expect(heroImg).toBeVisible({ timeout: 10_000 })
+    // Verify it loaded a real image (not a placeholder)
+    const src = await heroImg.getAttribute('src')
+    expect(src).toBeTruthy()
+    expect(src).toContain('wikimedia')
+  })
 })
