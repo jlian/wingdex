@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/jlian/wingdex/compare/v1.4.1...v1.4.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* remove thumbnail URL upsizing that causes 404 on iOS ([#133](https://github.com/jlian/wingdex/issues/133)) ([3972663](https://github.com/jlian/wingdex/commit/397266364d2566f4595b6e7dcd3a68362e753764))
+
 ## [1.4.1](https://github.com/jlian/wingdex/compare/v1.4.0...v1.4.1) (2026-02-17)
 
 
