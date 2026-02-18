@@ -41,7 +41,7 @@
         "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs"
     },
     "dependencies": {
-        "@github/spark": "0.44.19",
+        "@github/spark": "0.45.2",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/colors": "^3.0.0",
         "@radix-ui/react-accordion": "^1.2.3",
