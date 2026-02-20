@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { textLLM } from '@/lib/ai-inference'
 import { authClient } from '@/lib/auth-client'
-import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
+import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -50,17 +50,28 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     if (!file) return
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      if (profileTimezone !== 'observation-local') {
-        formData.append('profileTimezone', profileTimezone)
+      const makePreviewFormData = () => {
+        const formData = new FormData()
+        formData.append('file', file)
+        if (profileTimezone !== 'observation-local') {
+          formData.append('profileTimezone', profileTimezone)
+        }
+        return formData
       }
 
-      const previewResponse = await fetchWithLocalAuthRetry('/api/import/ebird-csv', {
+      const postPreview = () => fetch('/api/import/ebird-csv', {
         method: 'POST',
         credentials: 'include',
-        body: formData,
+        body: makePreviewFormData(),
       })
+
+      let previewResponse = await postPreview()
+      if (previewResponse.status === 401 && isLocalRuntime()) {
+        const signInResult = await authClient.signIn.anonymous()
+        if (!signInResult.error) {
+          previewResponse = await postPreview()
+        }
+      }
 
       if (!previewResponse.ok) {
         throw new Error(`Preview failed (${previewResponse.status})`)
