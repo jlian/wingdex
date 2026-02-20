@@ -66,6 +66,19 @@ function isSeedDexMeta(value: unknown): value is SeedDexMeta {
   return isObject(value) && typeof value.speciesName === 'string'
 }
 
+async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string[]): Promise<boolean> {
+  const uniqueOutingIds = Array.from(new Set(outingIds))
+  if (uniqueOutingIds.length === 0) return true
+
+  const placeholders = uniqueOutingIds.map(() => '?').join(', ')
+  const result = await db
+    .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
+    .bind(userId, ...uniqueOutingIds)
+    .all<{ id: string }>()
+
+  return result.results.length === uniqueOutingIds.length
+}
+
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
@@ -96,6 +109,16 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
   if (!Array.isArray(dex) || !dex.every(isSeedDexMeta)) {
     return new Response('Invalid dex payload', { status: 400 })
+  }
+
+  const seededOutingIds = new Set(outings.map(outing => outing.id))
+  const referencedExistingOutingIds = observations
+    .map(observation => observation.outingId)
+    .filter(outingId => !seededOutingIds.has(outingId))
+
+  const existingOutingsOwned = await hasOwnedOutings(context.env.DB, userId, referencedExistingOutingIds)
+  if (!existingOutingsOwned) {
+    return new Response('Invalid outing reference in observations payload', { status: 400 })
   }
 
   const statements: D1PreparedStatement[] = []

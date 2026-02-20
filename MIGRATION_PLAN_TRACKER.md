@@ -714,7 +714,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 ---
 
-#### Phase 2 — Data Layer (D1) + Species Search 🟡
+#### Phase 2 — Data Layer (D1) + Species Search ✅
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -736,9 +736,14 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ⚠️ (temporary `buildDexFromState` export kept for existing tests; remove in Phase 5) |
 | 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ⚠️ (legacy helpers retained in `src/lib/ebird.ts` for `seed-data` generation and tests; cleanup in Phase 5) |
 | 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ⚠️ (`src/lib/taxonomy.ts` retained for legacy test coverage in Phase 5) |
-| 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ✅ |
+| 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ⚠️ (legacy `use-kv` tests still assume Spark/local runtime split and are slated for Phase 5 test updates) |
 | 2.20 | Update storage-keys.ts | Simplified local storage key prefix to string user IDs directly (removed legacy numeric-id format assumptions). | ✅ |
 | 2.21 | Server-side auth on every endpoint | Verified endpoint auth checks and user scoping; added explicit auth guard to species search endpoint for consistency with protected API contract. | ✅ |
+
+**Audit update (2026-02-20)**
+- Hardened write endpoints to reject cross-user outing references by validating `outingId` ownership in `photos`, `observations`, and `seed` mutations.
+- Added explicit auth guard to `functions/api/species/search.ts` for uniform `/api/*` protection semantics.
+- Removed `BETTER_AUTH_SECRET` from committed `wrangler.toml` vars so auth secrets remain secret-managed only.
 
 **D1 transaction support** — for bulk operations like eBird import (insert many outings + observations atomically):
 
