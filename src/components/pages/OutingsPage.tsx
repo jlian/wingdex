@@ -25,7 +25,6 @@ import {
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
-import { exportOutingToEBirdCSV } from '@/lib/ebird'
 import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
@@ -364,16 +363,25 @@ function OutingDetail({
     speciesName: string
   } | null>(null)
 
-  const handleExport = () => {
-    const csv = exportOutingToEBirdCSV(outing, observations)
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `wingdex-outing-${new Date(outing.startTime).toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Outing exported in eBird Record CSV format')
+  const handleExport = async () => {
+    try {
+      const response = await fetch(`/api/export/outing/${outing.id}`, { credentials: 'include' })
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `wingdex-outing-${new Date(outing.startTime).toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Outing exported in eBird Record CSV format')
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to export outing: ${detail}`)
+    }
   }
 
   const handleDeleteOuting = () => {

@@ -16,7 +16,6 @@ import {
 import { textLLM } from '@/lib/ai-inference'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
-import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
@@ -50,37 +49,61 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     if (!file) return
 
     try {
-      const content = await file.text()
-      const previews = parseEBirdCSV(
-        content,
-        profileTimezone === 'observation-local' ? undefined : profileTimezone,
-      )
+      const formData = new FormData()
+      formData.append('file', file)
+      if (profileTimezone !== 'observation-local') {
+        formData.append('profileTimezone', profileTimezone)
+      }
 
-      if (previews.length === 0) {
+      const previewResponse = await fetch('/api/import/ebird-csv', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      if (!previewResponse.ok) {
+        throw new Error(`Preview failed (${previewResponse.status})`)
+      }
+
+      const previewPayload = await previewResponse.json() as {
+        previews: Array<{ previewId: string; speciesName: string; conflict?: 'new' | 'duplicate' | 'update_dates' }>
+      }
+
+      const selectedPreviewIds = previewPayload.previews
+        .filter(preview => preview.conflict !== 'duplicate')
+        .map(preview => preview.previewId)
+
+      if (selectedPreviewIds.length === 0) {
         toast.error('No valid data found in CSV')
         return
       }
 
-      // Group into outings + observations
-      const { outings, observations } = groupPreviewsIntoOutings(
-        previews,
-        user.id
-      )
+      const confirmResponse = await fetch('/api/import/ebird-csv/confirm', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ previewIds: selectedPreviewIds }),
+      })
 
-      // Import outings + observations, and update dex
-      const { newSpeciesCount } = data.importFromEBird(outings, observations)
+      if (!confirmResponse.ok) {
+        throw new Error(`Confirm failed (${confirmResponse.status})`)
+      }
 
-      const speciesCount = new Set(previews.map(p => p.speciesName)).size
+      const confirmPayload = await confirmResponse.json() as {
+        imported: { outings: number; newSpecies: number }
+      }
 
-      if (newSpeciesCount > 0) {
+      if (confirmPayload.imported.newSpecies > 0) {
         setShowConfetti(true)
         setTimeout(() => setShowConfetti(false), 3500)
       }
 
       toast.success(
-        `Imported ${speciesCount} species across ${outings.length} outings` +
-        (newSpeciesCount > 0 ? ` (${newSpeciesCount} new!)` : '')
+        `Imported eBird data across ${confirmPayload.imported.outings} outings` +
+        (confirmPayload.imported.newSpecies > 0 ? ` (${confirmPayload.imported.newSpecies} new!)` : '')
       )
+
+      window.location.reload()
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to import eBird data: ${detail}`)
@@ -92,16 +115,25 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     }
   }
 
-  const handleExportDex = () => {
-    const csv = exportDexToCSV(data.dex)
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `wingdex-export-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('WingDex exported')
+  const handleExportDex = async () => {
+    try {
+      const response = await fetch('/api/export/dex', { credentials: 'include' })
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `wingdex-export-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('WingDex exported')
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to export WingDex: ${detail}`)
+    }
   }
 
   return (
