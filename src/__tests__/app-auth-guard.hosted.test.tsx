@@ -7,6 +7,14 @@ import { render } from '@testing-library/react'
 import { screen } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockUseSession = vi.fn()
+
+vi.mock('@/lib/auth-client', () => ({
+  authClient: {
+    useSession: () => mockUseSession(),
+  },
+}))
+
 vi.mock('@/hooks/use-wingdex-data', () => ({
   useWingDexData: () => ({
     photos: [],
@@ -40,6 +48,8 @@ vi.mock('@phosphor-icons/react', () => ({
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
   GithubLogo: () => <span>GithubLogo</span>,
+  Key: () => <span>Key</span>,
+  PlusCircle: () => <span>PlusCircle</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({
@@ -66,51 +76,48 @@ vi.mock('@/components/flows/AddPhotosFlow', () => ({
 describe('App auth guard (hosted runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockUseSession.mockReturnValue({ data: null, isPending: false, refetch: vi.fn() })
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('shows auth error shell when Spark user payload is invalid in hosted runtime', async () => {
-    vi.stubGlobal('spark', {
-      user: vi.fn().mockResolvedValue({ login: 'abc', id: 'not-a-number' }),
-    })
+  it('shows login page when no hosted session exists', async () => {
+    const { default: App } = await import('@/App')
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Sign in with passkey' })).toBeInTheDocument()
+    expect(screen.getByText('Create account with passkey')).toBeInTheDocument()
+  })
+
+  it('shows boot shell while hosted session is pending', async () => {
+    mockUseSession.mockReturnValue({ data: null, isPending: true, refetch: vi.fn() })
 
     const { default: App } = await import('@/App')
     render(<App />)
 
-    expect(await screen.findByText('Sign-in required')).toBeInTheDocument()
-    expect(screen.getByText('Unable to verify your user session. Refresh the page and try again.')).toBeInTheDocument()
+    expect(await screen.findByText('HomeContentSkeleton')).toBeInTheDocument()
   })
 
-  it('shows auth error shell when Spark user lookup throws in hosted runtime', async () => {
-    vi.stubGlobal('spark', {
-      user: vi.fn().mockRejectedValue(new Error('network down')),
-    })
-
-    const { default: App } = await import('@/App')
-    render(<App />)
-
-    expect(await screen.findByText('Sign-in required')).toBeInTheDocument()
-    expect(screen.getByText('Unable to verify your user session. Refresh the page and try again.')).toBeInTheDocument()
-  })
-
-  it('renders app content when Spark user payload is valid', async () => {
-    vi.stubGlobal('spark', {
-      user: vi.fn().mockResolvedValue({
-        login: 'octocat',
-        avatarUrl: '',
-        email: 'octocat@example.com',
-        id: 123,
-        isOwner: true,
-      }),
+  it('renders app content when hosted session is present', async () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        user: {
+          id: 'user-123',
+          name: 'octocat',
+          image: '',
+          email: 'octocat@example.com',
+        },
+      },
+      isPending: false,
+      refetch: vi.fn(),
     })
 
     const { default: App } = await import('@/App')
     render(<App />)
 
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    expect(screen.queryByText('Sign-in required')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sign in with passkey')).not.toBeInTheDocument()
   })
 })

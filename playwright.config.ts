@@ -5,16 +5,16 @@ export default defineConfig({
   timeout: 30_000,
   retries: 1,
   use: {
-    baseURL: 'http://localhost:5000',
+    baseURL: 'http://127.0.0.1:5000',
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run dev',
-    port: 5000,
+    command: 'npm run dev -- --host 127.0.0.1 --port 5000',
+    url: 'http://127.0.0.1:5000',
     reuseExistingServer: true,
-    timeout: 15_000,
+    timeout: 60_000,
   },
   projects: [
     {

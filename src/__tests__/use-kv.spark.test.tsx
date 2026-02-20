@@ -5,7 +5,7 @@
 
 import { render } from '@testing-library/react'
 import { waitFor } from '@testing-library/dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 
 import { useKV } from '@/hooks/use-kv'
@@ -15,6 +15,22 @@ type KVControls<T> = {
   setValue: (next: T | ((prev: T) => T)) => void
   deleteValue: () => void
   isLoading: boolean
+}
+
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
 }
 
 function Harness<T>({
@@ -38,25 +54,20 @@ function Harness<T>({
 describe('useKV (Spark runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    localStorage.clear()
+    vi.stubGlobal('localStorage', createLocalStorageMock())
+    if (typeof localStorage.clear === 'function') {
+      localStorage.clear()
+    }
   })
 
-  it('does not repeatedly refetch Spark KV when rerendered with new [] literals', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does not issue network calls when rerendered with new [] literals', async () => {
     const key = 'u1_spark_existing'
-    const keyUrlPart = `/${encodeURIComponent(key)}`
-
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input)
-      const method = init?.method ?? 'GET'
-
-      if (url.endsWith('/__probe__') && method === 'GET') {
-        return new Response('', { status: 404 })
-      }
-      if (url.includes(keyUrlPart) && method === 'GET') {
-        return new Response(JSON.stringify(['from-kv']), { status: 200 })
-      }
-      return new Response('', { status: 404 })
-    })
+    localStorage.setItem(`wingdex_kv_${key}`, JSON.stringify(['from-kv']))
+    const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
     let latest: KVControls<string[]> | null = null
@@ -72,11 +83,7 @@ describe('useKV (Spark runtime)', () => {
       expect(latest?.value).toEqual(['from-kv'])
       expect(latest?.isLoading).toBe(false)
     })
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/__probe__'))).toBe(false)
-
-    const getCallsAfterMount = fetchMock.mock.calls.filter(
-      ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'GET',
-    ).length
+    const callsAfterMount = fetchMock.mock.calls.length
 
     // New [] reference on rerender should not trigger another load-effect network cycle.
     rerender(<Harness storageKey={key} initialValue={[]} onChange={onChange} />)
@@ -86,32 +93,14 @@ describe('useKV (Spark runtime)', () => {
       expect(latest?.isLoading).toBe(false)
     })
 
-    const getCallsAfterRerender = fetchMock.mock.calls.filter(
-      ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'GET',
-    ).length
+    const callsAfterRerender = fetchMock.mock.calls.length
 
-    expect(getCallsAfterRerender).toBe(getCallsAfterMount)
+    expect(callsAfterRerender).toBe(callsAfterMount)
   })
 
-  it('seeds a missing Spark key once instead of posting repeatedly', async () => {
+  it('keeps missing keys in-memory and remains stable on rerender', async () => {
     const key = 'u1_spark_missing'
-    const keyUrlPart = `/${encodeURIComponent(key)}`
-
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input)
-      const method = init?.method ?? 'GET'
-
-      if (url.endsWith('/__probe__') && method === 'GET') {
-        return new Response('', { status: 404 })
-      }
-      if (url.includes(keyUrlPart) && method === 'GET') {
-        return new Response('', { status: 404 })
-      }
-      if (url.includes(keyUrlPart) && method === 'POST') {
-        return new Response('', { status: 200 })
-      }
-      return new Response('', { status: 404 })
-    })
+    const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
     const onChange = vi.fn()
@@ -120,43 +109,21 @@ describe('useKV (Spark runtime)', () => {
     )
 
     await waitFor(() => {
-      const postCalls = fetchMock.mock.calls.filter(
-        ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'POST',
-      )
-      expect(postCalls.length).toBe(1)
+      expect(localStorage.getItem(`wingdex_kv_${key}`)).toBeNull()
     })
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/__probe__'))).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
 
     rerender(<Harness storageKey={key} initialValue={[]} onChange={onChange} />)
 
-    // Give effects a microtask; should still be one POST only.
     await waitFor(() => {
-      const postCalls = fetchMock.mock.calls.filter(
-        ([input, init]) => String(input).includes(keyUrlPart) && (init?.method ?? 'GET') === 'POST',
-      )
-      expect(postCalls.length).toBe(1)
+      expect(localStorage.getItem(`wingdex_kv_${key}`)).toBeNull()
     })
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('reports loading true until initial Spark read settles', async () => {
+  it('reports loading false immediately in localStorage-only mode', async () => {
     const key = 'u1_spark_loading'
-    const keyUrlPart = `/${encodeURIComponent(key)}`
-
-    let resolveGet!: (value: Response) => void
-    const pendingGet = new Promise<Response>((resolve) => {
-      resolveGet = resolve
-    })
-
-    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input)
-      const method = init?.method ?? 'GET'
-
-      if (url.includes(keyUrlPart) && method === 'GET') {
-        return pendingGet
-      }
-
-      return Promise.resolve(new Response('', { status: 404 }))
-    })
+    const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
     let latest: KVControls<string[]> | null = null
@@ -172,14 +139,8 @@ describe('useKV (Spark runtime)', () => {
 
     await waitFor(() => {
       expect(latest).not.toBeNull()
-      expect(latest?.isLoading).toBe(true)
-    })
-
-    resolveGet(new Response(JSON.stringify(['loaded']), { status: 200 }))
-
-    await waitFor(() => {
-      expect(latest?.value).toEqual(['loaded'])
       expect(latest?.isLoading).toBe(false)
     })
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

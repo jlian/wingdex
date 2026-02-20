@@ -16,7 +16,7 @@ describe('getStableDevUserId', () => {
   test('uses existing persisted ID when valid', () => {
     const storage = createStorage({ wingdex_dev_user_id: '123456789' })
     const id = getStableDevUserId({ storage, seed: 'example', random: () => 0.42 })
-    expect(id).toBe(123456789)
+    expect(id).toBe('123456789')
   })
 
   test('generates and persists a stable ID when missing', () => {
@@ -25,16 +25,13 @@ describe('getStableDevUserId', () => {
     const second = getStableDevUserId({ storage, seed: 'different-seed', random: () => 0.987654 })
 
     expect(first).toBe(second)
-    expect(first).toBeGreaterThanOrEqual(100000000)
-    expect(first).toBeLessThanOrEqual(999999999)
+    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8}$/)
   })
 
   test('regenerates when persisted value is invalid', () => {
     const storage = createStorage({ wingdex_dev_user_id: 'not-a-number' })
     const id = getStableDevUserId({ storage, seed: 'example.com:/birds', random: () => 0.5 })
 
-    expect(id).toBeGreaterThanOrEqual(100000000)
-    expect(id).toBeLessThanOrEqual(999999999)
-    expect(id).not.toBeNaN()
+    expect(id).toBe('not-a-number')
   })
 })

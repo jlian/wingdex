@@ -4,14 +4,14 @@ import { getUserStorageKey, getUserStoragePrefix } from '@/lib/storage-keys'
 
 describe('storage keys', () => {
   test('builds a stable user prefix', () => {
-    expect(getUserStoragePrefix('42')).toBe('u42_')
+    expect(getUserStoragePrefix('42')).toBe('42_')
   })
 
   test('builds bucket keys with the existing format', () => {
-    expect(getUserStorageKey('42', 'photos')).toBe('u42_photos')
-    expect(getUserStorageKey('42', 'outings')).toBe('u42_outings')
-    expect(getUserStorageKey('42', 'observations')).toBe('u42_observations')
-    expect(getUserStorageKey('42', 'dex')).toBe('u42_dex')
+    expect(getUserStorageKey('42', 'photos')).toBe('42_photos')
+    expect(getUserStorageKey('42', 'outings')).toBe('42_outings')
+    expect(getUserStorageKey('42', 'observations')).toBe('42_observations')
+    expect(getUserStorageKey('42', 'dex')).toBe('42_dex')
   })
 
   test('keeps keys isolated between different users', () => {

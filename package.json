@@ -37,6 +37,8 @@
         "test": "vitest run",
         "test:unit": "vitest run src/__tests__",
         "test:e2e": "npx playwright test",
+        "smoke:api": "bash scripts/api-auth-smoke.sh",
+        "smoke:api:seeded": "SEED_MODE=true bash scripts/api-auth-smoke.sh",
         "test:watch": "vitest",
         "taxonomy:ebird": "node scripts/fetch-ebird-codes.mjs",
         "taxonomy:hydrate-wiki": "node scripts/hydrate-wiki-titles.mjs",
