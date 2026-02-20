@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
@@ -142,38 +142,36 @@ export function useWingDexData(userId: string) {
     payloadRef.current = payload
   }, [payload])
 
+  const refresh = useCallback(async () => {
+    try {
+      const next = await apiJson<WingDexPayload>('/api/data/all')
+      setStorageMode('api')
+      setPayload({
+        outings: next.outings || [],
+        photos: next.photos || [],
+        observations: next.observations || [],
+        dex: next.dex || [],
+      })
+    } catch {
+      setStorageMode('local')
+      setPayload(readLocalData(userId))
+    }
+  }, [userId])
+
   useEffect(() => {
     let cancelled = false
 
-    const load = async () => {
-      setIsLoading(true)
-      try {
-        const next = await apiJson<WingDexPayload>('/api/data/all')
-        if (cancelled) return
-        setStorageMode('api')
-        setPayload({
-          outings: next.outings || [],
-          photos: next.photos || [],
-          observations: next.observations || [],
-          dex: next.dex || [],
-        })
-      } catch {
-        if (cancelled) return
-        setStorageMode('local')
-        setPayload(readLocalData(userId))
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
+    setIsLoading(true)
+    void refresh().finally(() => {
+      if (!cancelled) {
+        setIsLoading(false)
       }
-    }
-
-    void load()
+    })
 
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [refresh])
 
   const applyPayload = (next: WingDexPayload) => {
     setPayload(next)
@@ -617,7 +615,8 @@ export function useWingDexData(userId: string) {
     importFromEBird,
     clearAllData,
     loadSeedData,
-  }), [isLoading, payload])
+    refresh,
+  }), [isLoading, payload, refresh])
 
   return store
 }

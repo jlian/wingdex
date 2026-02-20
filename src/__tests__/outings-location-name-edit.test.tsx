@@ -48,6 +48,7 @@ function createDataStore(): WingDexDataStore {
     importFromEBird: vi.fn(() => ({ newSpeciesCount: 0 })),
     clearAllData: vi.fn(),
     loadSeedData: vi.fn(),
+    refresh: vi.fn(async () => undefined),
   }
 }
 
