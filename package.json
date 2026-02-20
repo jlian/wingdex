@@ -23,7 +23,8 @@
     },
     "scripts": {
         "dev": "vite",
-        "dev:full": "bash -lc \"printf 'y\\n' | wrangler d1 migrations apply wingdex-db --local && npm run build && wrangler pages dev dist --port 5000 --show-interactive-dev-session=false\"",
+        "dev:full": "bash scripts/dev-full.sh",
+        "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
         "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
         "kill": "fuser -k 5000/tcp",
         "setup:playwright": "npx playwright install --with-deps chromium",
