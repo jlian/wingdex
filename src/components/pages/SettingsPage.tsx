@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { textLLM } from '@/lib/ai-inference'
 import { authClient } from '@/lib/auth-client'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -27,25 +28,6 @@ interface SettingsPageProps {
     image: string
     email: string
   }
-}
-
-function isLocalRuntime(): boolean {
-  const host = window.location.hostname.toLowerCase()
-  return host === 'localhost' || host === '127.0.0.1'
-}
-
-async function fetchWithLocalAuthRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const firstResponse = await fetch(input, init)
-  if (firstResponse.status !== 401 || !isLocalRuntime()) {
-    return firstResponse
-  }
-
-  const signInResult = await authClient.signIn.anonymous()
-  if (signInResult.error) {
-    return firstResponse
-  }
-
-  return fetch(input, init)
 }
 
 export default function SettingsPage({ data, user }: SettingsPageProps) {

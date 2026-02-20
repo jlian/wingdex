@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 
 export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string; wikiTitle?: string }
 
@@ -44,7 +45,7 @@ export function SpeciesAutocomplete({
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      void fetch(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
+      void fetchWithLocalAuthRetry(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
         .then(async response => {
           if (!response.ok) {
             return { results: [] as TaxonEntry[] }

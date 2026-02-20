@@ -27,6 +27,7 @@ import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Outing, Observation } from '@/lib/types'
@@ -366,7 +367,7 @@ function OutingDetail({
 
   const handleExport = async () => {
     try {
-      const response = await fetch(`/api/export/outing/${outing.id}`, { credentials: 'include' })
+      const response = await fetchWithLocalAuthRetry(`/api/export/outing/${outing.id}`, { credentials: 'include' })
       if (!response.ok) {
         throw new Error(`Export failed (${response.status})`)
       }
