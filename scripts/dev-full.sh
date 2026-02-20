@@ -13,13 +13,8 @@ running_full_app() {
   curl -fsS "${BASE}/" >/dev/null 2>&1 && curl -fsS "${BASE}/api/auth/get-session" >/dev/null 2>&1
 }
 
-if running_full_app; then
-  echo "[dev:full] App already running at ${BASE}. Reusing existing server."
-  exit 0
-fi
-
-if is_port_listening; then
-  if [[ "${FORCE_RESTART}" == "true" ]]; then
+if [[ "${FORCE_RESTART}" == "true" ]]; then
+  if is_port_listening; then
     echo "[dev:full] Port ${PORT} is in use. Force-restarting listener(s)..."
     PIDS="$(lsof -t -nP -iTCP:"${PORT}" -sTCP:LISTEN | tr '\n' ' ')"
     if [[ -n "${PIDS// }" ]]; then
@@ -31,7 +26,14 @@ if is_port_listening; then
       echo "[dev:full] Failed to free port ${PORT}."
       exit 1
     fi
-  else
+  fi
+else
+  if running_full_app; then
+    echo "[dev:full] App already running at ${BASE}. Reusing existing server."
+    exit 0
+  fi
+
+  if is_port_listening; then
     echo "[dev:full] Port ${PORT} is already in use by another process."
     echo "[dev:full] If you want a fresh full-app server on this port, run: npm run dev:full:restart"
     exit 1
