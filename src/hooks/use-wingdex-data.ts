@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 
 export type WingDexDataStore = ReturnType<typeof useWingDexData>
 
@@ -110,7 +111,7 @@ function writeLocalData(userId: string, payload: WingDexPayload) {
 }
 
 async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetchWithLocalAuthRetry(input, {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
