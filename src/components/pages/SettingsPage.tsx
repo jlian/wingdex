@@ -104,7 +104,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         (confirmPayload.imported.newSpecies > 0 ? ` (${confirmPayload.imported.newSpecies} new!)` : '')
       )
 
-      window.location.reload()
+      window.setTimeout(() => {
+        window.location.reload()
+      }, 1200)
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to import eBird data: ${detail}`)
