@@ -35,6 +35,9 @@ pids
 
 .spark-workbench-id
 
+# Wrangler local dev state/cache
+.wrangler/
+
 # Playwright
 test-results/
 playwright-report/

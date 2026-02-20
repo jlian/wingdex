@@ -23,7 +23,7 @@
     },
     "scripts": {
         "dev": "vite",
-        "dev:cf": "wrangler pages dev dist",
+        "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
         "kill": "fuser -k 5000/tcp",
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
