@@ -88,15 +88,28 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Profile timezone defaults to America/Los_Angeles (Pacific) — no need to change it
 
-    // Import the test CSV
-    const fileInput = page.locator('input[type="file"][accept*=".csv"]')
-    await fileInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
+    const previewResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
+    )
+    const confirmResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv/confirm') && response.request().method() === 'POST'
+    )
 
-    // Wait for the success toast
-    await expect(page.getByText(/Imported.*species.*outings/)).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('button', { name: 'Import from eBird CSV' }).click()
+    await expect(page.getByRole('heading', { name: 'Import from eBird CSV' })).toBeVisible({ timeout: 5_000 })
 
-    // Wait for the toast to dismiss so it doesn't intercept clicks
-    await expect(page.getByText(/Imported.*species.*outings/)).not.toBeVisible({ timeout: 10_000 })
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Choose CSV File' }).click()
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
+
+    const previewResponse = await previewResponsePromise
+    expect(previewResponse.status()).toBe(200)
+
+    const confirmResponse = await confirmResponsePromise
+    expect(confirmResponse.status()).toBe(200)
+
+    await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
 
     // Navigate to Outings page
     await page.getByRole('tab', { name: 'Outings' }).first().click()
