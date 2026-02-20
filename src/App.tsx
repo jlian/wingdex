@@ -6,10 +6,12 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
+import { authClient } from '@/lib/auth-client'
 import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
 import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
+import LoginPage from '@/components/pages/LoginPage'
 
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
@@ -18,25 +20,23 @@ const loadAddPhotosFlow = () => import('@/components/flows/AddPhotosFlow')
 const AddPhotosFlow = lazy(loadAddPhotosFlow)
 
 interface UserInfo {
-  login: string
-  avatarUrl: string
+  name: string
+  image: string
   email: string
-  id: number
-  isOwner: boolean
+  id: string
 }
 
-function isSparkHostedRuntime(): boolean {
+function isDevRuntime(): boolean {
   const host = window.location.hostname.toLowerCase()
-  return host === 'github.app' || host.endsWith('.github.app')
+  return host === 'localhost' || host === '127.0.0.1'
 }
 
 function getFallbackUser(): UserInfo {
   return {
-    login: 'dev-user',
-    avatarUrl: '',
+    name: 'dev-user',
+    image: '',
     email: 'dev@localhost',
     id: getStableDevUserId(),
-    isOwner: true,
   }
 }
 
@@ -100,40 +100,30 @@ function useHashRouter() {
 // ─── App ──────────────────────────────────────────────────
 
 function App() {
+  const sessionState = authClient.useSession()
+  const session = sessionState.data
+  const isSessionPending = sessionState.isPending
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [authError, setAuthError] = useState<string | null>(null)
   const [showApp, setShowApp] = useState(false)
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const canUseDevFallback = !isSparkHostedRuntime()
-
-      try {
-        const userInfo = await window.spark.user()
-        if (userInfo && typeof userInfo.login === 'string' && typeof userInfo.id === 'number') {
-          setAuthError(null)
-          setUser(userInfo)
-        } else if (canUseDevFallback) {
-          console.warn('Spark user API returned invalid data, using fallback:', userInfo)
-          setAuthError(null)
-          setUser(getFallbackUser())
-        } else {
-          console.error('Spark user API returned invalid data in hosted runtime:', userInfo)
-          setAuthError('Unable to verify your user session. Refresh the page and try again.')
-        }
-      } catch (error) {
-        if (canUseDevFallback) {
-          console.warn('Spark user API unavailable, using fallback:', error)
-          setAuthError(null)
-          setUser(getFallbackUser())
-        } else {
-          console.error('Spark user API unavailable in hosted runtime:', error)
-          setAuthError('Unable to verify your user session. Refresh the page and try again.')
-        }
-      }
+    if (isDevRuntime()) {
+      setUser(getFallbackUser())
+      return
     }
-    fetchUser()
-  }, [])
+
+    if (!session || !session.user) {
+      setUser(null)
+      return
+    }
+
+    setUser({
+      id: session.user.id,
+      name: session.user.name || session.user.email || 'user',
+      image: session.user.image || '',
+      email: session.user.email,
+    })
+  }, [session])
 
   useEffect(() => {
     if (!user) {
@@ -148,11 +138,15 @@ function App() {
     return () => window.clearTimeout(timer)
   }, [user])
 
-  if (authError) {
-    return <AuthErrorShell message={authError} />
-  }
-
   if (!user) {
+    if (isSessionPending && !isDevRuntime()) {
+      return <BootShell />
+    }
+
+    if (!isDevRuntime()) {
+      return <LoginPage onAuthenticated={() => void sessionState.refetch()} />
+    }
+
     return <BootShell />
   }
 
@@ -181,19 +175,6 @@ function BootShell() {
 
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
         <HomeContentSkeleton />
-      </div>
-    </div>
-  )
-}
-
-function AuthErrorShell({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen bg-background px-4">
-      <div className="mx-auto max-w-md py-16">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h1 className="text-lg font-semibold text-foreground">Sign-in required</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-        </div>
       </div>
     </div>
   )
@@ -321,8 +302,8 @@ function AppContent({ user }: { user: UserInfo }) {
                   aria-label="Settings"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatarUrl} alt={user.login} />
-                    <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={user.image} alt={user.name} />
+                    <AvatarFallback>{user.name[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </button>
               </div>

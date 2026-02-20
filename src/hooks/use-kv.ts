@@ -11,12 +11,12 @@ type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 const LS_PREFIX = 'wingdex_kv_'
 const KV_BASE = '/_spark/kv'
 const SPARK_KV_WRITE_RETRIES = 2
-const USER_SCOPED_KEY_PATTERN = /^u\d+_[a-zA-Z][a-zA-Z0-9_]*$/
+const USER_SCOPED_KEY_PATTERN = /^u[a-zA-Z0-9-]+_[a-zA-Z][a-zA-Z0-9_]*$/
 
 function assertUserScopedKey(key: string): void {
   if (USER_SCOPED_KEY_PATTERN.test(key)) return
   throw new Error(
-    `[useKV] Invalid key "${key}". Keys must be user-scoped (e.g. u123_photos).`
+    `[useKV] Invalid key "${key}". Keys must be user-scoped (e.g. u123_photos or u550e8400-e29b-41d4-a716-446655440000_photos).`
   )
 }
 

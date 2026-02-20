@@ -9,11 +9,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut } from '@phosphor-icons/react'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { textLLM } from '@/lib/ai-inference'
+import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import { parseEBirdCSV, exportDexToCSV, groupPreviewsIntoOutings } from '@/lib/ebird'
 import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
@@ -22,9 +23,9 @@ import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 interface SettingsPageProps {
   data: WingDexDataStore
   user: {
-    id: number
-    login: string
-    avatarUrl: string
+    id: string
+    name: string
+    image: string
     email: string
   }
 }
@@ -63,7 +64,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
       // Group into outings + observations
       const { outings, observations } = groupPreviewsIntoOutings(
         previews,
-        `u${user.id}`
+        user.id
       )
 
       // Import outings + observations, and update dex
@@ -112,7 +113,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           Settings
         </h2>
         <p className="text-sm text-muted-foreground">
-          Signed in as {user.login}
+          Signed in as {user.name}
         </p>
       </div>
 
@@ -289,6 +290,42 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               </p>
             </div>
           )}
+        </div>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold text-foreground">Account</h3>
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={async () => {
+              const result = await authClient.passkey.addPasskey({
+                name: 'WingDex passkey',
+                authenticatorAttachment: 'platform',
+              })
+              if (result.error) {
+                toast.error(result.error.message || 'Failed to add passkey')
+                return
+              }
+              toast.success('Passkey added')
+            }}
+          >
+            <Key size={20} className="mr-2" />
+            Add another passkey
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={async () => {
+              await authClient.signOut()
+              window.location.reload()
+            }}
+          >
+            <SignOut size={20} className="mr-2" />
+            Sign out
+          </Button>
         </div>
       </Card>
 

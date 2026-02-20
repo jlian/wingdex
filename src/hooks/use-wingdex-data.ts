@@ -63,7 +63,7 @@ export function buildDexFromState(
   return rebuilt.sort((a, b) => a.speciesName.localeCompare(b.speciesName))
 }
 
-export function useWingDexData(userId: number) {
+export function useWingDexData(userId: string) {
   const [photos, setPhotos, , photosLoading] = useKV<Photo[]>(getUserStorageKey(userId, 'photos'), [])
   const [outings, setOutings, , outingsLoading] = useKV<Outing[]>(getUserStorageKey(userId, 'outings'), [])
   const [observations, setObservations, , observationsLoading] = useKV<Observation[]>(getUserStorageKey(userId, 'observations'), [])
