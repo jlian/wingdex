@@ -725,8 +725,8 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.5 | Create `functions/api/data/observations.ts` | `POST`: Bulk insert observations + return `{ observations, dexUpdates }`. `PATCH`: Update observation(s) + return `{ dexUpdates }` | ✅ |
 | 2.6 | Create `functions/api/data/dex.ts` | `GET`: Computed dex (SQL aggregate). `PATCH`: Update dex_meta (notes, bestPhotoId, addedDate) | ✅ |
 | 2.7 | Create `functions/api/import/ebird-csv.ts` | `POST`: Accept CSV upload → parse, group, detect conflicts → return `{ previews, summary }`. `POST /confirm`: Insert selected previews → return `{ imported, dexUpdates }` | |
-| 2.8 | Create `functions/api/export/outing/[id].ts` | `GET`: Export outing as eBird CSV | |
-| 2.9 | Create `functions/api/export/dex.ts` | `GET`: Export dex as CSV | |
+| 2.8 | Create `functions/api/export/outing/[id].ts` | `GET`: Export outing as eBird CSV | ✅ |
+| 2.9 | Create `functions/api/export/dex.ts` | `GET`: Export dex as CSV | ✅ |
 | 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ |
 | 2.11 | Create `functions/api/data/clear.ts` | `DELETE`: Delete all user data (`DELETE FROM outing WHERE userId = ?` — CASCADE handles the rest, then `DELETE FROM dex_meta WHERE userId = ?`) | ✅ |
 | 2.12 | Create `functions/api/species/search.ts` | `GET`: Load taxonomy.json into Worker module scope, implement `searchSpecies()` server-side. Accept `?q=&limit=` params. | ✅ |
