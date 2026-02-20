@@ -729,10 +729,10 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.9 | Create `functions/api/export/dex.ts` | `GET`: Export dex as CSV | |
 | 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ |
 | 2.11 | Create `functions/api/data/clear.ts` | `DELETE`: Delete all user data (`DELETE FROM outing WHERE userId = ?` — CASCADE handles the rest, then `DELETE FROM dex_meta WHERE userId = ?`) | ✅ |
-| 2.12 | Create `functions/api/species/search.ts` | `GET`: Load taxonomy.json into Worker module scope, implement `searchSpecies()` server-side. Accept `?q=&limit=` params. | |
+| 2.12 | Create `functions/api/species/search.ts` | `GET`: Load taxonomy.json into Worker module scope, implement `searchSpecies()` server-side. Accept `?q=&limit=` params. | ✅ |
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | |
-| 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | |
+| 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
 | 2.16 | Refactor use-wingdex-data.ts | Replace 4x `useKV` calls with a single `useEffect` that calls `GET /api/data/all` on mount. Each mutation updates React state optimistically + awaits API response + applies `dexUpdates` from response. Remove `buildDexFromState()`. | |
 | 2.17 | Refactor ebird.ts (client) | Remove `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, `detectImportConflicts()`, `exportOutingToEBirdCSV()`, `exportDexToCSV()`. Replace with API calls to `/api/import/ebird-csv` and `/api/export/*`. | |
 | 2.18 | Refactor species typeahead | Replace local `searchSpecies()` calls with `fetch('/api/species/search?q=...')` (debounced). Remove `taxonomy.json` import from client bundle (~300KB savings). | |
