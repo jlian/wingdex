@@ -23,6 +23,19 @@ function isCreatePhotoInput(value: unknown): value is CreatePhotoInput {
   )
 }
 
+async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string[]): Promise<boolean> {
+  const uniqueOutingIds = Array.from(new Set(outingIds))
+  if (uniqueOutingIds.length === 0) return true
+
+  const placeholders = uniqueOutingIds.map(() => '?').join(', ')
+  const result = await db
+    .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
+    .bind(userId, ...uniqueOutingIds)
+    .all<{ id: string }>()
+
+  return result.results.length === uniqueOutingIds.length
+}
+
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
@@ -42,6 +55,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   if (body.length === 0) {
     return Response.json([])
+  }
+
+  const allOwned = await hasOwnedOutings(
+    context.env.DB,
+    userId,
+    body.map(photo => photo.outingId)
+  )
+  if (!allOwned) {
+    return new Response('Invalid outing reference', { status: 400 })
   }
 
   const statements = body.map(photo =>
