@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
-import { searchSpecies, type TaxonEntry } from '@/lib/taxonomy'
 import { cn } from '@/lib/utils'
+
+export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string; wikiTitle?: string }
 
 interface SpeciesAutocompleteProps {
   value: string
@@ -41,12 +42,26 @@ export function SpeciesAutocomplete({
       setOpen(false)
       return
     }
+
     searchTimeoutRef.current = setTimeout(() => {
-      const hits = searchSpecies(q, 8)
-      setResults(hits)
-      setOpen(hits.length > 0)
-      setHighlightIndex(-1)
-    }, 80)
+      void fetch(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
+        .then(async response => {
+          if (!response.ok) {
+            return { results: [] as TaxonEntry[] }
+          }
+          return response.json() as Promise<{ results?: TaxonEntry[] }>
+        })
+        .then(payload => {
+          const hits = payload.results || []
+          setResults(hits)
+          setOpen(hits.length > 0)
+          setHighlightIndex(-1)
+        })
+        .catch(() => {
+          setResults([])
+          setOpen(false)
+        })
+    }, 150)
   }, [])
 
   // Close on click outside

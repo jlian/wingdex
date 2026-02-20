@@ -1,11 +1,9 @@
 /**
  * Fetch bird images and summaries from the Wikipedia REST API.
- * Uses pre-resolved Wikipedia article titles from taxonomy.json (hydrated at build time
- * by scripts/hydrate-wiki-titles.mjs) for a single-fetch lookup per species.
+ * Uses species display names for lookup keys against the Wikipedia REST API.
  * No API key required.
  */
 import { getDisplayName } from './utils'
-import { getWikiTitle } from './taxonomy'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
@@ -73,8 +71,7 @@ export async function getWikimediaImage(
 ): Promise<string | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = getWikiTitle(common)
-  if (!wikiTitle) return undefined
+  const wikiTitle = common
 
   if (imageCache.has(cacheKey)) {
     const cached = imageCache.get(cacheKey)
@@ -112,8 +109,7 @@ export async function getWikimediaSummary(
 ): Promise<WikiSummary | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = getWikiTitle(common)
-  if (!wikiTitle) return undefined
+  const wikiTitle = common
 
   if (summaryCache.has(cacheKey)) {
     const cached = summaryCache.get(cacheKey)

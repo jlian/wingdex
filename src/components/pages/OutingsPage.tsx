@@ -25,12 +25,12 @@ import {
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
-import { findBestMatch } from '@/lib/taxonomy'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
 import { toast } from 'sonner'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Outing, Observation } from '@/lib/types'
+import type { TaxonEntry } from '@/components/ui/species-autocomplete'
 
 interface OutingsPageProps {
   data: WingDexDataStore
@@ -357,6 +357,7 @@ function OutingDetail({
   const [locationName, setLocationName] = useState(outing.locationName || '')
   const [addingSpecies, setAddingSpecies] = useState(false)
   const [newSpeciesName, setNewSpeciesName] = useState('')
+  const [selectedSpeciesEntry, setSelectedSpeciesEntry] = useState<TaxonEntry | null>(null)
   const [deleteOutingOpen, setDeleteOutingOpen] = useState(false)
   const [pendingDeleteObservation, setPendingDeleteObservation] = useState<{
     ids: string[]
@@ -419,11 +420,11 @@ function OutingDetail({
 
   const handleAddSpecies = () => {
     if (!newSpeciesName.trim()) return
-    // Normalize to "Common Name (Scientific Name)" format to match AI/CSV import
-    const match = findBestMatch(newSpeciesName.trim())
-    const normalizedName = match
-      ? `${match.common} (${match.scientific})`
+
+    const normalizedName = selectedSpeciesEntry
+      ? `${selectedSpeciesEntry.common} (${selectedSpeciesEntry.scientific})`
       : newSpeciesName.trim()
+
     const obs: Observation = {
       id: `obs_${Date.now()}_manual`,
       outingId: outing.id,
@@ -435,6 +436,7 @@ function OutingDetail({
     data.addObservations([obs])
     data.updateDex(outing.id, [obs])
     setNewSpeciesName('')
+    setSelectedSpeciesEntry(null)
     setAddingSpecies(false)
     toast.success(`${getDisplayName(normalizedName)} added`)
   }
@@ -569,7 +571,14 @@ function OutingDetail({
               <SpeciesAutocomplete
                 id="species-name"
                 value={newSpeciesName}
-                onChange={setNewSpeciesName}
+                onChange={(value) => {
+                  setNewSpeciesName(value)
+                  setSelectedSpeciesEntry(null)
+                }}
+                onSelect={entry => {
+                  setSelectedSpeciesEntry(entry)
+                  setNewSpeciesName(entry.common)
+                }}
                 onSubmit={handleAddSpecies}
                 autoFocus
               />

@@ -733,12 +733,12 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | ✅ |
 | 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
-| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. **Deviation:** kept temporary exported `buildDexFromState` compatibility alias for existing tests; remove during Phase 5 test migration cleanup. | ✅ |
-| 2.17 | Refactor ebird.ts (client) | **In progress:** Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. Remaining cleanup: remove legacy helpers from `src/lib/ebird.ts` usages in seed-data/tests per Phase 5 migration. | ⏳ |
-| 2.18 | Refactor species typeahead | Replace local `searchSpecies()` calls with `fetch('/api/species/search?q=...')` (debounced). Remove `taxonomy.json` import from client bundle (~300KB savings). | |
-| 2.19 | Rewrite use-kv.ts | Strip all Spark code. Keep a simplified version for localStorage-only fallback in local dev mode. Or delete entirely and inline localStorage helpers into `useWingDexData`. | |
-| 2.20 | Update storage-keys.ts | Simplify — only needed for localStorage fallback in local dev. Remove the `u{numericId}_` pattern, use the string userId directly. | |
-| 2.21 | Server-side auth on every endpoint | All data endpoints use `context.data.user.id` from middleware. All SQL queries include `WHERE userId = ?`. Write endpoints validate the user owns the resource before modifying it. | |
+| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ⚠️ (temporary `buildDexFromState` export kept for existing tests; remove in Phase 5) |
+| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ⚠️ (legacy helpers retained in `src/lib/ebird.ts` for `seed-data` generation and tests; cleanup in Phase 5) |
+| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ⚠️ (`src/lib/taxonomy.ts` retained for legacy test coverage in Phase 5) |
+| 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ✅ |
+| 2.20 | Update storage-keys.ts | Simplified local storage key prefix to string user IDs directly (removed legacy numeric-id format assumptions). | ✅ |
+| 2.21 | Server-side auth on every endpoint | Verified endpoint auth checks and user scoping; added explicit auth guard to species search endpoint for consistency with protected API contract. | ✅ |
 
 **D1 transaction support** — for bulk operations like eBird import (insert many outings + observations atomically):
 

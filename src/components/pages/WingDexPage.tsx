@@ -10,7 +10,6 @@ import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
-import { getEbirdUrl } from '@/lib/taxonomy'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
@@ -20,6 +19,27 @@ export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
+
+function getEbirdUrl(commonName: string): string {
+  const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
+  if (words.length === 0) return 'https://ebird.org/species'
+
+  let code = ''
+  if (words.length === 1) {
+    code = words[0].slice(0, 6)
+  } else if (words.length === 2) {
+    code = words[0].slice(0, 3) + words[1].slice(0, 3)
+  } else if (words.length === 3) {
+    code = words[0].slice(0, 2) + words[1].slice(0, 1) + words[2].slice(0, 3)
+  } else {
+    const charsFromLast = Math.max(1, 7 - words.length)
+    const prefixChars = 6 - charsFromLast
+    code = words.slice(0, words.length - 1).map(word => word[0]).join('').slice(0, prefixChars)
+      + words[words.length - 1].slice(0, charsFromLast)
+  }
+
+  return `https://ebird.org/species/${code.toLowerCase()}`
+}
 
 interface WingDexPageProps {
   data: WingDexDataStore

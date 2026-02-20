@@ -1,86 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 
-/**
- * Runtime split:
- * - Spark-hosted (*.github.app): Spark KV only
- * - Non-Spark (local/codespaces): localStorage only
- */
-
 type SetValue<T> = (newValue: T | ((prev: T) => T)) => void
 
 const LS_PREFIX = 'wingdex_kv_'
-const KV_BASE = '/_spark/kv'
-const SPARK_KV_WRITE_RETRIES = 2
-const USER_SCOPED_KEY_PATTERN = /^u[a-zA-Z0-9-]+_[a-zA-Z][a-zA-Z0-9_]*$/
+const USER_SCOPED_KEY_PATTERN = /^[a-zA-Z0-9-]+_[a-zA-Z][a-zA-Z0-9_]*$/
 
 function assertUserScopedKey(key: string): void {
   if (USER_SCOPED_KEY_PATTERN.test(key)) return
   throw new Error(
-    `[useKV] Invalid key "${key}". Keys must be user-scoped (e.g. u123_photos or u550e8400-e29b-41d4-a716-446655440000_photos).`
+    `[useKV] Invalid key "${key}". Keys must be user-scoped (e.g. dev-user_photos or 550e8400-e29b-41d4-a716-446655440000_photos).`
   )
-}
-
-function isSparkHostedRuntime(): boolean {
-  if (typeof window === 'undefined') return false
-  const host = window.location.hostname.toLowerCase()
-  return host === 'github.app' || host.endsWith('.github.app')
-}
-
-async function sparkKvGet<T>(key: string): Promise<T | undefined> {
-  try {
-    const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'text/plain' },
-    })
-    if (res.status === 404) return undefined
-    if (!res.ok) {
-      console.warn(`[useKV] Unexpected Spark KV GET status ${res.status} for key "${key}".`)
-      return undefined
-    }
-    return JSON.parse(await res.text())
-  } catch { return undefined }
-}
-
-async function sparkKvSet<T>(key: string, value: T): Promise<boolean> {
-  let ok = false
-  for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
-    try {
-      const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(value),
-      })
-      if (res.ok) {
-        ok = true
-        break
-      }
-    } catch { /* ignore and retry */ }
-  }
-
-  if (!ok) {
-    console.warn(`[useKV] Failed to persist key "${key}" to Spark KV after retries; localStorage remains source of truth for this session.`)
-  }
-
-  return ok
-}
-
-async function sparkKvDelete(key: string): Promise<boolean> {
-  let ok = false
-  for (let attempt = 0; attempt <= SPARK_KV_WRITE_RETRIES; attempt++) {
-    try {
-      const res = await fetch(`${KV_BASE}/${encodeURIComponent(key)}`, { method: 'DELETE' })
-      if (res.ok) {
-        ok = true
-        break
-      }
-    } catch { /* ignore and retry */ }
-  }
-
-  if (!ok) {
-    console.warn(`[useKV] Failed to delete key "${key}" from Spark KV after retries.`)
-  }
-
-  return ok
 }
 
 function getLocalStorage<T>(key: string, fallback: T): T {
@@ -100,14 +29,9 @@ function setLocalStorage<T>(key: string, value: T): void {
 export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => void, boolean] {
   assertUserScopedKey(key)
 
-  const sparkRuntime = isSparkHostedRuntime()
-
   const initialValueRef = useRef(initialValue)
-  const [value, setValue] = useState<T>(() => (
-    sparkRuntime ? initialValue : getLocalStorage(key, initialValue)
-  ))
-  const [isLoading, setIsLoading] = useState(sparkRuntime)
-  const useSparkKv = useRef(false)
+  const [value, setValue] = useState<T>(() => getLocalStorage(key, initialValue))
+  const isLoading = false
 
   // Keep the latest fallback value without making network effects depend on
   // reference-unstable literals like [] passed from callers.
@@ -115,37 +39,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     initialValueRef.current = initialValue
   }, [key, initialValue])
 
-  // Spark runtime: load from Spark KV only.
   useEffect(() => {
-    if (!sparkRuntime) {
-      useSparkKv.current = false
-      setIsLoading(false)
-      return
-    }
-
-    let cancelled = false
-    setIsLoading(true)
-    ;(async () => {
-      useSparkKv.current = true
-      const stored = await sparkKvGet<T>(key)
-      if (cancelled) return
-      if (stored !== undefined) {
-        setValue(stored)
-      } else {
-        await sparkKvSet(key, initialValueRef.current)
-        if (cancelled) return
-        setValue(initialValueRef.current)
-      }
-      if (cancelled) return
-      setIsLoading(false)
-    })()
-    return () => { cancelled = true }
-  }, [key, sparkRuntime])
-
-  // Non-Spark runtime: sync localStorage across tabs.
-  useEffect(() => {
-    if (sparkRuntime) return
-
     const handler = (e: StorageEvent) => {
       if (e.key !== LS_PREFIX + key) return
       if (e.newValue === null) {
@@ -156,7 +50,7 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
-  }, [key, sparkRuntime])
+  }, [key])
 
   const userSetValue: SetValue<T> = useCallback((newValue) => {
     setValue((currentValue) => {
@@ -164,28 +58,16 @@ export function useKV<T>(key: string, initialValue: T): [T, SetValue<T>, () => v
         ? (newValue as (prev: T) => T)(currentValue)
         : newValue
 
-      if (sparkRuntime) {
-        if (useSparkKv.current) {
-          void sparkKvSet(key, nextValue)
-        }
-      } else {
-        setLocalStorage(key, nextValue)
-      }
+      setLocalStorage(key, nextValue)
 
       return nextValue
     })
-  }, [key, sparkRuntime])
+  }, [key])
 
   const deleteValue = useCallback(() => {
     setValue(initialValueRef.current)
-    if (sparkRuntime) {
-      if (useSparkKv.current) {
-        void sparkKvDelete(key)
-      }
-    } else {
-      try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
-    }
-  }, [key, sparkRuntime])
+    try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
+  }, [key])
 
   return [value, userSetValue, deleteValue, isLoading]
 }
