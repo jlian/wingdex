@@ -111,7 +111,7 @@ describe('identifyBirdInPhoto', () => {
 
     expect(result.candidates).toHaveLength(3)
     expect(result.candidates.map(c => c.confidence)).toEqual([0.89, 0.74, 0.42])
-    expect(result.candidates[0].species).toBe('Great Blue Heron (Ardea herodias)')
+    expect(result.candidates[0].species).toBe('Great Blue Heron')
   })
 
   it('grounds AI species names to canonical taxonomy', async () => {
@@ -140,7 +140,7 @@ describe('identifyBirdInPhoto', () => {
     const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
 
     expect(result.candidates).toHaveLength(1)
-    expect(result.candidates[0].species).toBe('Blue Jay (Cyanocitta cristata)')
+    expect(result.candidates[0].species).toBe('Blue Jay')
   })
 
   it('returns empty candidates when LLM finds no bird', async () => {

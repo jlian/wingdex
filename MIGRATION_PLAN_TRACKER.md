@@ -12,6 +12,8 @@
 
 ### TL;DR
 
+> **Phase 2 status**: ⚠️ Mostly aligned through data/API migration; auth provider parity (GitHub/Apple/Google UI+config) and server-owned AI endpoints remain outside completed Phase 2 scope.
+
 WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns — this is a platform-integration migration, not a rewrite.
 
 **Target stack**: Cloudflare Pages (SPA hosting) + Pages Functions (API routes) + D1/SQLite (all data — auth + app) + Better Auth (GitHub/Apple/Google + passkeys) + AI Gateway (LLM). Fresh start, no data migration.
@@ -21,6 +23,8 @@ WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV per
 ---
 
 ### Architecture
+
+> **Phase 2 status**: ⚠️ Core data/import/export/species API architecture is implemented; `/api/identify-bird` and `/api/suggest-location` are still pending (Phase 3), and auth providers currently differ from planned social-provider setup.
 
 ```
 Cloudflare Pages
@@ -57,6 +61,8 @@ Bindings:
 
 ### Current Spark Dependency Map
 
+> **Phase 2 status**: ⚠️ Spark KV/runtime/plugin dependencies are removed from active paths; Spark LLM proxy usage remains in `ai-inference.ts` until Phase 3 AI migration.
+
 | Concern | Current Code | Spark API | Files Affected |
 |---|---|---|---|
 | **Auth** | `window.spark.user()` → `UserInfo{login, avatarUrl, email, id, isOwner}` | Spark runtime global | App.tsx, dev-user.ts |
@@ -72,6 +78,8 @@ Bindings:
 ---
 
 ### Multi-Platform API Design
+
+> **Phase 2 status**: ⚠️ Data, import/export, and taxonomy behaviors are now API-first; bird-ID/location AI server centralization is pending with Phase 3 endpoint rollout.
 
 The migration is an opportunity to move business logic server-side so that any future client (iOS, Android, CLI) gets the same behavior for free. The current web app has ~1,730 lines of client-side business logic across 8 files. After migration:
 
@@ -90,6 +98,8 @@ After this migration, **adding an iOS app means**: build SwiftUI views that call
 ---
 
 ### D1 Schema Design
+
+> **Phase 2 status**: ✅ Implemented and active. Core app tables, indexes, and SQL-based dex aggregation are in place and used by `/api/data/*` routes.
 
 The current model stores 4 JSON arrays per user in flat KV keys. Moving to D1 means proper relational tables with foreign keys, indexes, and cascading deletes.
 
@@ -269,6 +279,8 @@ ORDER BY obs.speciesName;
 
 ### Auth: Better Auth + D1
 
+> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented, but current runtime/provider behavior deviates from this section's social-provider target (currently passkey + anonymous flow).
+
 **Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth — no web-specific coupling.
 
 **Setup**:
@@ -370,6 +382,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
 ### Bird ID & AI: Smart Server Endpoint
 
+> **Phase 2 status**: ⏳ Pending. Client still uses Spark-backed LLM path; planned `/api/identify-bird` and `/api/suggest-location` server endpoints are not yet implemented (tracked for Phase 3).
+
 Instead of a thin LLM proxy (which would force every client to reimplement prompt construction, taxonomy grounding, and crop-box computation), the server owns the entire bird identification pipeline. Clients upload an image with context and receive structured results.
 
 **Client contract** — identical for web and any future native client:
@@ -454,6 +468,8 @@ AI Gateway with Workers AI fallback. AI Gateway supports declarative fallback co
 
 ### Species Search: Server-Side Taxonomy
 
+> **Phase 2 status**: ✅ Implemented. Species autocomplete now queries server endpoint (`/api/species/search`) with auth guard; client-side taxonomy search dependency is removed from active typeahead flow.
+
 The ~11K-species eBird taxonomy currently ships as a 300KB+ JSON bundle in the SPA and is searched client-side. Moving search server-side means any client gets instant typeahead without bundling the taxonomy:
 
 ```
@@ -480,6 +496,8 @@ Response 200:
 ---
 
 ### Data Layer: Refactoring `useWingDexData`
+
+> **Phase 2 status**: ⚠️ Implemented as API-first with optimistic updates and localStorage fallback; minor planned/actual deltas are documented in Phase 2 tracker rows.
 
 The biggest refactor is replacing the KV-backed `useKV` hook with D1-backed API calls. The current flow is:
 
@@ -607,6 +625,8 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
 ### eBird Import: Server-Side Two-Step Flow
 
+> **Phase 2 status**: ✅ Implemented. Preview/confirm import and CSV export flows now run through server endpoints used by Settings/Outings UI.
+
 Instead of parsing CSV and detecting conflicts client-side (which would require reimplementing ~400 lines of CSV/timezone/grouping logic for iOS), the server handles the full pipeline:
 
 **Step 1 — Preview** (`POST /api/import/ebird-csv`):
@@ -646,9 +666,30 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 ---
 
+### Top-Half Design Conformance (Phase 2 Status)
+
+| Design Section | Phase 2 Status | Note |
+|---|---|---|
+| TL;DR / Overall Migration Direction | ⚠️ | Core Spark→Cloudflare migration for data paths is complete; auth provider parity and AI endpoint migration are still pending. |
+| Architecture | ⚠️ | `/api/data/*`, import/export, and species routes are implemented; `/api/identify-bird` + `/api/suggest-location` remain pending for Phase 3. |
+| Current Spark Dependency Map | ⚠️ | Spark KV/runtime/plugin dependency removed from active app paths; Spark LLM proxy remains in current AI flow. |
+| Multi-Platform API Design | ⚠️ | Data and taxonomy server-centralization implemented; bird-ID/location AI server centralization pending. |
+| D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
+| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 is wired; implementation currently uses passkey + anonymous flow instead of full planned social-provider parity. |
+| Bird ID & AI: Smart Server Endpoint | ⏳ | Not implemented yet in Phase 2 scope. |
+| Species Search: Server-Side Taxonomy | ✅ | Implemented via authenticated `/api/species/search`; active typeahead now server-backed. |
+| Data Layer: Refactoring `useWingDexData` | ⚠️ | API-first refactor complete with local fallback; minor deltas are documented in Phase 2 tracker row statuses. |
+| eBird Import: Server-Side Two-Step Flow | ✅ | Implemented and integrated into Settings/Outings flows. |
+
+---
+
 ### Phased Implementation
 
 #### Phase 0 — Scaffolding (no behavior change) ✅
+
+> **Status snapshot (2026-02-20)**: ✅ Implemented.
+> **Confidence**: High.
+> **Validation**: `npm run build` ✅, `npx wrangler pages functions build functions --outfile /tmp/functions-worker.mjs` ✅, local D1 migrations apply cleanly ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -688,6 +729,10 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 #### Phase 1 — Auth (Better Auth) 🟡
 
+> **Status snapshot (2026-02-20)**: ⚠️ Core auth migration implemented (session middleware + Better Auth client/server + passkey/anonymous flow); social OAuth provider registration still pending (`1.12`).
+> **Confidence**: Medium-High.
+> **Validation**: Auth guard unit tests ✅, authenticated API smoke flow (`npm run smoke:api`) establishes session via `/api/auth/sign-in/anonymous` and returns non-null `/api/auth/get-session` ✅, Playwright API smoke (`npx playwright test e2e/api-smoke.spec.ts --project=chromium`) ✅.
+
 | Step | What | Details | Status |
 |---|---|---|---|
 | 1.1 | `npm install better-auth` | Add as dependency | ✅ |
@@ -715,6 +760,10 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 ---
 
 #### Phase 2 — Data Layer (D1) + Species Search ✅
+
+> **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`.
+> **Confidence**: High.
+> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (430 tests), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, functions compile ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -783,6 +832,10 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 3 — Bird ID & AI
 
+> **Status snapshot (2026-02-20)**: ⏳ Not started in migration execution; planned server endpoints (`/api/identify-bird`, `/api/suggest-location`) are still pending.
+> **Confidence**: Low (not implemented yet).
+> **Validation**: N/A for server AI endpoints in current state.
+
 | Step | What | Details | Status |
 |---|---|---|---|
 | 3.1 | Create `functions/api/identify-bird.ts` | Accept multipart image + context. Resize image, construct prompt, call LLM, ground against taxonomy, compute crop box. Return structured `{ candidates, cropBox, multipleBirds }`. | |
@@ -796,6 +849,10 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 ---
 
 #### Phase 4 — Build & Hosting
+
+> **Status snapshot (2026-02-20)**: ⚠️ Major Spark build/runtime removals are landed, with broader hosting/deploy hardening continuing in later phases.
+> **Confidence**: Medium.
+> **Validation**: Repeated `npm run build` passes ✅ and local functions compile passes ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -813,6 +870,10 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 ---
 
 #### Phase 5 — Testing
+
+> **Status snapshot (2026-02-20)**: ⚠️ Phase-relevant migrated tests are updated/passing; remaining test migration items tied to future server-side AI/logic moves are pending.
+> **Confidence**: Medium-High.
+> **Validation**: `npm run test:unit` ✅ after aligning auth/data/storage/AI-client expectations with current implemented phases.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -835,6 +896,10 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 ---
 
 #### Phase 6 — CI/CD & Deploy
+
+> **Status snapshot (2026-02-20)**: ⏳ Not started.
+> **Confidence**: Low.
+> **Validation**: N/A yet.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -875,6 +940,10 @@ jobs:
 ---
 
 #### Phase 7 — Cleanup
+
+> **Status snapshot (2026-02-20)**: ⚠️ Partially complete (targeted cleanup and tracker/design notes done); full repo-wide cleanup sweep remains pending.
+> **Confidence**: Low-Medium.
+> **Validation**: Documentation/tracker updates verified and build still green ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
