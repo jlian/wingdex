@@ -29,6 +29,25 @@ interface SettingsPageProps {
   }
 }
 
+function isLocalRuntime(): boolean {
+  const host = window.location.hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1'
+}
+
+async function fetchWithLocalAuthRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const firstResponse = await fetch(input, init)
+  if (firstResponse.status !== 401 || !isLocalRuntime()) {
+    return firstResponse
+  }
+
+  const signInResult = await authClient.signIn.anonymous()
+  if (signInResult.error) {
+    return firstResponse
+  }
+
+  return fetch(input, init)
+}
+
 export default function SettingsPage({ data, user }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
@@ -55,7 +74,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         formData.append('profileTimezone', profileTimezone)
       }
 
-      const previewResponse = await fetch('/api/import/ebird-csv', {
+      const previewResponse = await fetchWithLocalAuthRetry('/api/import/ebird-csv', {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -78,7 +97,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         return
       }
 
-      const confirmResponse = await fetch('/api/import/ebird-csv/confirm', {
+      const confirmResponse = await fetchWithLocalAuthRetry('/api/import/ebird-csv/confirm', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +136,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
   const handleExportDex = async () => {
     try {
-      const response = await fetch('/api/export/dex', { credentials: 'include' })
+      const response = await fetchWithLocalAuthRetry('/api/export/dex', { credentials: 'include' })
       if (!response.ok) {
         throw new Error(`Export failed (${response.status})`)
       }

@@ -103,27 +103,38 @@ function App() {
   const sessionState = authClient.useSession()
   const session = sessionState.data
   const isSessionPending = sessionState.isPending
+  const localSessionBootstrapStarted = useRef(false)
   const [user, setUser] = useState<UserInfo | null>(null)
   const [showApp, setShowApp] = useState(false)
 
   useEffect(() => {
+    if (session && session.user) {
+      setUser({
+        id: session.user.id,
+        name: session.user.name || session.user.email || 'user',
+        image: session.user.image || '',
+        email: session.user.email,
+      })
+      return
+    }
+
     if (isDevRuntime()) {
       setUser(getFallbackUser())
+
+      if (!isSessionPending && !localSessionBootstrapStarted.current) {
+        localSessionBootstrapStarted.current = true
+        void authClient.signIn.anonymous().then(() => {
+          void sessionState.refetch()
+        }).catch(() => {
+          localSessionBootstrapStarted.current = false
+        })
+      }
+
       return
     }
 
-    if (!session || !session.user) {
-      setUser(null)
-      return
-    }
-
-    setUser({
-      id: session.user.id,
-      name: session.user.name || session.user.email || 'user',
-      image: session.user.image || '',
-      email: session.user.email,
-    })
-  }, [session])
+    setUser(null)
+  }, [session, isSessionPending, sessionState])
 
   useEffect(() => {
     if (!user) {
