@@ -4,7 +4,7 @@
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
-> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings).
+> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out).
 
 ---
 
@@ -731,7 +731,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 > **Status snapshot (2026-02-20)**: ⚠️ Core auth migration implemented (session middleware + Better Auth client/server + passkey/anonymous flow); social OAuth provider registration still pending (`1.12`).
 > **Confidence**: Medium-High.
-> **Validation**: Auth guard unit tests ✅, authenticated API smoke flow (`npm run smoke:api`) establishes session via `/api/auth/sign-in/anonymous` and returns non-null `/api/auth/get-session` ✅, Playwright API smoke (`npx playwright test e2e/api-smoke.spec.ts --project=chromium`) ✅.
+> **Validation**: Auth guard unit tests ✅, authenticated API smoke flow (`npm run smoke:api`) establishes session via `/api/auth/sign-in/anonymous` and returns non-null `/api/auth/get-session` ✅, Playwright API smoke (`npx playwright test e2e/api-smoke.spec.ts --project=chromium`) ✅, manual sign-out verification confirms in-app transition without hard reload ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -745,7 +745,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 1.8 | Update [App.tsx](src/App.tsx) auth flow | Replace `window.spark.user()` with `authClient.useSession()` or `fetch('/api/auth/get-session')`. Keep `getStableDevUserId()` fallback for local dev (change return type to `string`). | ✅ |
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
 | 1.10 | Create login page component | Replace `AuthErrorShell` with sign-in buttons (GitHub, Apple, Google, passkey). Style to match the naturalistic theme. | ✅ |
-| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. Add "Sign out" button using `authClient.signOut()`. | ✅ |
+| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. Add "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
 | 1.12 | Register OAuth apps | GitHub, Apple (if desired — requires paid dev account), Google | ⏳ |
 
 **userId type cascade** — changing `id` from `number` to `string` touches:
@@ -763,7 +763,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 > **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`.
 > **Confidence**: High.
-> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (430 tests), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, functions compile ✅.
+> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (430 tests), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -793,6 +793,11 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 - Hardened write endpoints to reject cross-user outing references by validating `outingId` ownership in `photos`, `observations`, and `seed` mutations.
 - Added explicit auth guard to `functions/api/species/search.ts` for uniform `/api/*` protection semantics.
 - Removed `BETTER_AUTH_SECRET` from committed `wrangler.toml` vars so auth secrets remain secret-managed only.
+
+**Audit update (2026-02-20, late)**
+- Added local auth retry helper + local-origin cookie/session handling to eliminate 401 churn in local full-stack mode.
+- Hardened CSV preview retry semantics to rebuild multipart payloads and avoid stale-body "Load failed" behavior.
+- Removed hard reload shortcuts from import/sign-out paths; data now refreshes in-app after successful operations.
 
 **D1 transaction support** — for bulk operations like eBird import (insert many outings + observations atomically):
 
@@ -873,7 +878,7 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 > **Status snapshot (2026-02-20)**: ⚠️ Phase-relevant migrated tests are updated/passing; remaining test migration items tied to future server-side AI/logic moves are pending.
 > **Confidence**: Medium-High.
-> **Validation**: `npm run test:unit` ✅ after aligning auth/data/storage/AI-client expectations with current implemented phases.
+> **Validation**: `npm run test:unit` ✅ after aligning auth/data/storage/AI-client expectations with current implemented phases; targeted Playwright specs for CSV import and full upload flow ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
