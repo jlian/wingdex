@@ -733,7 +733,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | ✅ |
 | 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
-| 2.16 | Refactor use-wingdex-data.ts | Replace 4x `useKV` calls with a single `useEffect` that calls `GET /api/data/all` on mount. Each mutation updates React state optimistically + awaits API response + applies `dexUpdates` from response. Remove `buildDexFromState()`. | |
+| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. **Deviation:** kept temporary exported `buildDexFromState` compatibility alias for existing tests; remove during Phase 5 test migration cleanup. | ✅ |
 | 2.17 | Refactor ebird.ts (client) | Remove `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, `detectImportConflicts()`, `exportOutingToEBirdCSV()`, `exportDexToCSV()`. Replace with API calls to `/api/import/ebird-csv` and `/api/export/*`. | |
 | 2.18 | Refactor species typeahead | Replace local `searchSpecies()` calls with `fetch('/api/species/search?q=...')` (debounced). Remove `taxonomy.json` import from client bundle (~300KB savings). | |
 | 2.19 | Rewrite use-kv.ts | Strip all Spark code. Keep a simplified version for localStorage-only fallback in local dev mode. Or delete entirely and inline localStorage helpers into `useWingDexData`. | |
@@ -967,6 +967,65 @@ jobs:
 | **Session invalidation on deploy** | D1 sessions persist across deploys (good). No invalidation concern. | N/A |
 | **Species search latency** | Server-side typeahead adds ~30-50ms per keystroke vs. instant client-side | Debounce at 150ms. Taxonomy is in Worker memory (no D1 hop). Cloudflare edge ≈ <50ms. Acceptable UX. If needed, optionally cache taxonomy client-side for offline/instant fallback. |
 | **Multipart upload in Workers** | Workers runtime has request body size limits (100MB free, adjustable on paid) | Bird photos compressed to ≤800px JPEG are typically <200KB. Well within limits. |
+
+---
+
+### Local Dev & Testing Playbook
+
+This section defines how to run the app locally during migration, how auth/data should behave in each mode, and the exact validation path before marking checklist items complete.
+
+#### Runtime Modes
+
+| Mode | Command(s) | Auth Source | Data Source | When to use |
+|---|---|---|---|---|
+| **Client-only fallback** | `npm run dev` | local dev user fallback (`getStableDevUserId()`) | localStorage (temporary migration fallback) | Fast UI iteration when API is not required |
+| **Hybrid local (recommended default)** | `npm run dev:cf` (or run Vite + Wrangler with proxy) | Better Auth session cookie | D1 via `/api/*` | Day-to-day migration work, endpoint + UI integration |
+| **Functions smoke** | `npx wrangler pages dev dist --port 8791` | Better Auth session cookie | D1 via Pages Functions only | Endpoint behavior checks independent of Vite |
+
+#### Local Auth Plan
+
+| Scenario | Expected behavior | Verification |
+|---|---|---|
+| Not signed in | protected `/api/data/*`, `/api/import/*`, `/api/export/*`, `/api/species/*` return `401` | `curl`/browser fetch to endpoint returns status `401` |
+| Signed in | `/api/auth/get-session` returns user + session; app renders main routes | Browser network panel shows `200` for session endpoint |
+| Sign-out flow | session cleared; protected API calls return `401` again | sign out then re-check `/api/auth/get-session` |
+| Local fallback mode | app still usable without Better Auth login while migration is incomplete | run `npm run dev` and confirm local user + state hydration |
+
+#### Local Data Plan
+
+| Capability | Server contract | Validation |
+|---|---|---|
+| Initial hydration | `GET /api/data/all` returns `outings`, `photos`, `observations`, `dex` | reload app and confirm state persists from D1 |
+| Outing mutations | `POST /api/data/outings`, `PATCH/DELETE /api/data/outings/:id` | create/edit/delete outing and confirm UI + D1 consistency |
+| Observation mutations | `POST/PATCH /api/data/observations` returns `dexUpdates` | confirm/reject species and verify dex rows update immediately |
+| Photo ingestion | `POST /api/data/photos` bulk insert | add photos in flow and confirm subsequent observation linkage |
+| Seed/clear workflows | `POST /api/data/seed`, `DELETE /api/data/clear` | settings actions update state and survive reloads |
+
+#### Test Execution Plan
+
+| Level | Commands | Scope | Gate |
+|---|---|---|---|
+| **Build/type gate** | `npm run build` | TypeScript + client production build | Must pass before commit |
+| **Functions compile gate** | `npx wrangler pages functions build functions --outfile /tmp/functions-worker.mjs` | Worker/function bundling | Must pass for API changes |
+| **Auth smoke gate** | local `wrangler pages dev` + `curl` checks | session + protected route behavior | `401` unauthenticated; `200` session when signed in |
+| **Targeted unit tests** | `npm test -- src/__tests__/...` | changed modules only first | must pass for touched areas |
+| **Regression/unit suite** | `npm test` | full unit baseline | run at milestone boundaries |
+| **E2E gate** | `npx playwright test` | user flows on local stack | run before Phase completion |
+
+#### Recommended Daily Loop
+
+1. Start in **Hybrid local** mode (`npm run dev:cf`).
+2. Implement one checklist slice (single endpoint/hook/component unit).
+3. Run build + functions compile gates.
+4. Run targeted tests for touched areas.
+5. Run a smoke check of changed API/UI behavior.
+6. Update this tracker row status + deviation note (if any), then commit.
+
+#### Deviation Logging Rules
+
+- If local fallback behavior is temporarily retained (e.g., localStorage path while API hook is mid-refactor), record it in the checklist row notes.
+- If a gate is skipped (for speed or known unrelated failures), explicitly note which gate and why.
+- If endpoint contracts change, update this playbook table in the same commit as code changes.
 
 ---
 
