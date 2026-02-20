@@ -1,5 +1,3 @@
-import { findBestMatch } from './taxonomy'
-
 // GitHub Models via Spark proxy — use full owner/model format
 const VISION_MODEL = 'openai/gpt-4.1-mini'
 const TEXT_MODEL = 'openai/gpt-4.1-mini'
@@ -226,16 +224,7 @@ export async function identifyBirdInPhoto(
           .slice(0, 5)
       : []
 
-    // Ground candidate names against the eBird taxonomy
-    const candidates = rawCandidates.map((c: any) => {
-      const match = findBestMatch(c.species)
-      if (match && match.common.toLowerCase() !== c.species.toLowerCase()) {
-        console.log(`🔄 Grounded "${c.species}" → "${match.common}"`)
-      }
-      // Include scientific name in format "Common Name (Scientific Name)"
-      const speciesName = match ? `${match.common} (${match.scientific})` : c.species
-      return { ...c, species: speciesName }
-    })
+    const candidates = rawCandidates
     console.log(`✅ ${candidates.length} candidates:`, candidates)
 
     let cropBox: BirdIdResult['cropBox'] = undefined

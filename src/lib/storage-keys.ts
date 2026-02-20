@@ -8,7 +8,7 @@ export type UserScopedDataBucket =
 type LegacyUserScopedDataBucket = 'savedSpots'
 
 export function getUserStoragePrefix(userId: string): string {
-  return `u${userId}_`
+  return `${userId}_`
 }
 
 export function getUserStorageKey(userId: string, bucket: UserScopedDataBucket | LegacyUserScopedDataBucket): string {

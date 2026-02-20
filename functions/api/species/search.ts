@@ -8,6 +8,11 @@ function parseLimit(value: string | null): number {
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
+  const userId = (context.data as { user?: { id?: string } }).user?.id
+  if (!userId) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
   const query = new URL(context.request.url).searchParams.get('q') ?? ''
   const limit = parseLimit(new URL(context.request.url).searchParams.get('limit'))
 
