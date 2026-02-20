@@ -7,7 +7,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return context.next()
   }
 
-  const auth = createAuth(context.env)
+  const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({
     headers: context.request.headers,
   })
