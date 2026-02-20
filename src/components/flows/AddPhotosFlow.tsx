@@ -169,7 +169,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
-      setTimeout(() => runSpeciesId(nextIdx), 300)
+      void runSpeciesId(nextIdx)
     } else {
       saveOuting(finalResults)
     }
@@ -232,7 +232,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         toast.success(
           `🎉 ${newSpeciesCount} new species added to your WingDex!`
         )
-        setTimeout(() => setShowConfetti(false), 3500)
       }
     } else {
       toast.warning('No species were confirmed for this outing')
@@ -244,12 +243,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setPhotoResults([])
       setCurrentCandidates([])
       setStep('review')
+      if (showConfetti) {
+        setShowConfetti(false)
+      }
     } else {
       if (confirmed.length > 0) {
         toast.success(`All done! ${confirmed.length} species saved.`)
       }
-      setStep('complete')
-      setTimeout(onClose, 3500)
+      setShowConfetti(false)
+      onClose()
     }
   }
 

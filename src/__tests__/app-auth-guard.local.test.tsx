@@ -8,10 +8,14 @@ import { screen } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockUseSession = vi.fn()
+const mockSignInAnonymous = vi.fn()
 
 vi.mock('@/lib/auth-client', () => ({
   authClient: {
     useSession: () => mockUseSession(),
+    signIn: {
+      anonymous: () => mockSignInAnonymous(),
+    },
   },
 }))
 
@@ -77,6 +81,7 @@ describe('App auth guard (local runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     mockUseSession.mockReturnValue({ data: null, isPending: false, refetch: vi.fn() })
+    mockSignInAnonymous.mockResolvedValue({ error: { message: 'Local auth unavailable in test' } })
   })
 
   afterEach(() => {

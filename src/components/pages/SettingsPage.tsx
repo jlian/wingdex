@@ -363,8 +363,22 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             variant="outline"
             className="w-full justify-start"
             onClick={async () => {
-              await authClient.signOut()
-              window.location.reload()
+              const signOutResult = await authClient.signOut()
+              if (signOutResult.error) {
+                toast.error(signOutResult.error.message || 'Failed to sign out')
+                return
+              }
+
+              if (isLocalRuntime()) {
+                const localSignInResult = await authClient.signIn.anonymous()
+                if (localSignInResult.error) {
+                  toast.error(localSignInResult.error.message || 'Signed out, but failed to restore local session')
+                } else {
+                  await data.refresh()
+                }
+              }
+
+              toast.success('Signed out')
             }}
           >
             <SignOut size={20} className="mr-2" />
