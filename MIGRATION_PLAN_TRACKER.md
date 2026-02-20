@@ -720,7 +720,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 |---|---|---|---|
 | 2.1 | Create `functions/api/data/all.ts` | `GET`: Load all user data (4 queries + dex computation), return `{photos, outings, observations, dex}` | ✅ |
 | 2.2 | Create `functions/api/data/outings.ts` | `POST`: Insert one outing | ✅ |
-| 2.3 | Create `functions/api/data/outings/[id].ts` | `PATCH`: Update outing fields. `DELETE`: Delete outing (CASCADE) + return `{ dexUpdates }` | |
+| 2.3 | Create `functions/api/data/outings/[id].ts` | `PATCH`: Update outing fields. `DELETE`: Delete outing (CASCADE) + return `{ dexUpdates }` | ✅ |
 | 2.4 | Create `functions/api/data/photos.ts` | `POST`: Bulk insert photos | |
 | 2.5 | Create `functions/api/data/observations.ts` | `POST`: Bulk insert observations + return `{ observations, dexUpdates }`. `PATCH`: Update observation(s) + return `{ dexUpdates }` | |
 | 2.6 | Create `functions/api/data/dex.ts` | `GET`: Computed dex (SQL aggregate). `PATCH`: Update dex_meta (notes, bestPhotoId, addedDate) | |
