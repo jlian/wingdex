@@ -2,7 +2,7 @@
     "name": "wingdex",
     "private": true,
     "version": "1.4.2",
-    "description": "Photo-first bird identification and WingDex tracker, built on GitHub Spark",
+    "description": "Photo-first bird identification and WingDex tracker",
     "repository": {
         "type": "git",
         "url": "https://github.com/jlian/wingdex.git"
@@ -13,20 +13,22 @@
         "birding",
         "bird-identification",
         "life-list",
-        "ebird",
-        "github-spark"
+        "ebird"
     ],
     "type": "module",
-    "packageManager": "npm@10.9.2",
+    "packageManager": "npm@11.6.2",
     "engines": {
         "node": ">=22.16.0",
-        "npm": "10.9.x"
+        "npm": ">=10.9.2 <12"
     },
     "scripts": {
         "dev": "vite",
+        "dev:cf": "wrangler pages dev dist",
         "kill": "fuser -k 5000/tcp",
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
+        "deploy": "npm run build && wrangler pages deploy dist --project-name wingdex",
+        "db:migrate": "wrangler d1 migrations apply wingdex-db",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",
         "lint": "eslint .",
@@ -41,7 +43,8 @@
         "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs"
     },
     "dependencies": {
-        "@github/spark": "0.44.19",
+        "@better-auth/core": "^1.4.18",
+        "@better-auth/passkey": "^1.4.18",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/colors": "^3.0.0",
         "@radix-ui/react-accordion": "^1.2.3",
@@ -72,12 +75,15 @@
         "@radix-ui/react-tooltip": "^1.1.8",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/vite": "^4.1.11",
+        "better-auth": "^1.4.18",
+        "better-call": "^1.1.8",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "date-fns": "^3.6.0",
         "embla-carousel-react": "^8.5.2",
         "input-otp": "^1.4.2",
+        "kysely-d1": "^0.4.0",
         "lucide-react": "^0.568.0",
         "next-themes": "^0.4.6",
         "react": "^19.2.4",
@@ -100,6 +106,7 @@
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@tailwindcss/postcss": "^4.1.8",
+        "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
         "@testing-library/user-event": "^14.6.1",
@@ -118,6 +125,7 @@
         "typescript": "~5.7.2",
         "typescript-eslint": "^8.38.0",
         "vite": "^7.2.6",
-        "vitest": "^4.0.18"
+        "vitest": "^4.0.18",
+        "wrangler": "^4.42.0"
     }
 }

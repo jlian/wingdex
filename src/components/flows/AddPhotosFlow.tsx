@@ -40,7 +40,7 @@ import { useBirdImage } from '@/hooks/use-bird-image'
 interface AddPhotosFlowProps {
   data: WingDexDataStore
   onClose: () => void
-  userId: number
+  userId: string
 }
 
 interface PhotoWithCrop extends Photo {

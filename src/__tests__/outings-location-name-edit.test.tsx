@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/dom'
 import OutingsPage from '@/components/pages/OutingsPage'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Outing } from '@/lib/types'

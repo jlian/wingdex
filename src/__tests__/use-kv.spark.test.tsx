@@ -3,7 +3,8 @@
  * @vitest-environment-options {"url":"https://wingdex--jlian.github.app/"}
  */
 
-import { render, waitFor } from '@testing-library/react'
+import { render } from '@testing-library/react'
+import { waitFor } from '@testing-library/dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 

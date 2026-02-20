@@ -22,7 +22,7 @@ interface PhotoCluster {
 interface OutingReviewProps {
   cluster: PhotoCluster
   data: WingDexDataStore
-  userId: number
+  userId: string
   /** Pre-fill location from a previous outing (user can override) */
   defaultLocationName?: string
   /** Automatically look up location name from GPS when available */

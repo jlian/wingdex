@@ -1,4 +1,5 @@
-import { act, render, waitFor } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
+import { waitFor } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 

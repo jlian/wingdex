@@ -1,0 +1,17 @@
+name = "wingdex"
+compatibility_date = "2026-02-19"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wingdex-db"
+database_id = "568355c1-6133-4811-94f0-b3394f5253d7"
+migrations_dir = "migrations"
+
+[ai]
+binding = "AI"
+
+[vars]
+BETTER_AUTH_URL = "https://wingdex.example.com"
+BETTER_AUTH_SECRET = "dev-only-change-me"
