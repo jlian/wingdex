@@ -1,15 +1,13 @@
 import { HttpError } from './http-error'
 
-type AiEndpoint = 'identify-bird' | 'suggest-location'
+type AiEndpoint = 'identify-bird'
 
 const DEFAULT_LIMITS: Record<AiEndpoint, number> = {
   'identify-bird': 150,
-  'suggest-location': 300,
 }
 
 const ENV_LIMIT_KEYS: Record<AiEndpoint, string> = {
   'identify-bird': 'AI_DAILY_LIMIT_IDENTIFY',
-  'suggest-location': 'AI_DAILY_LIMIT_SUGGEST',
 }
 
 export class RateLimitError extends HttpError {
