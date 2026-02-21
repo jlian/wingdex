@@ -6,37 +6,21 @@
     "month": 7,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.92}],\"birdCenter\":[30,58],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.95}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Blue Heron (Ardea herodias)",
-        "confidence": 0.92
+        "confidence": 0.95
       }
     ],
     "birdCenter": [
-      30,
-      58
+      40,
+      55
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 5174,
-      "height": 3449
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 427
-    }
-  },
-  "capturedAt": "2026-02-21T04:53:47.252Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:07.441Z"
 }

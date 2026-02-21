@@ -6,37 +6,21 @@
     "month": 8,
     "locationName": "Lake Michigan, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Spotted Sandpiper (Actitis macularius)\",\"confidence\":0.72}],\"birdCenter\":[25,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.90}],\"birdCenter\":[30,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Spotted Sandpiper (Actitis macularius)",
-        "confidence": 0.72
+        "species": "Sanderling (Calidris alba)",
+        "confidence": 0.9
       }
     ],
     "birdCenter": [
-      25,
+      30,
       60
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 2764,
-      "height": 1843
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 427
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:53.434Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:32.529Z"
 }

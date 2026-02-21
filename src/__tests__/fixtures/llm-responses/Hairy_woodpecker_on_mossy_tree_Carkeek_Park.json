@@ -6,37 +6,21 @@
     "month": 6,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Picoides villosus)\",\"confidence\":0.85}],\"birdCenter\":[35,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Leuconotopicus villosus)\",\"confidence\":0.90}],\"birdCenter\":[38,52],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Hairy Woodpecker (Picoides villosus)",
-        "confidence": 0.85
+        "species": "Hairy Woodpecker (Leuconotopicus villosus)",
+        "confidence": 0.9
       }
     ],
     "birdCenter": [
-      35,
-      60
+      38,
+      52
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 5083,
-      "height": 3389
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 427
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:02.376Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:30.580Z"
 }

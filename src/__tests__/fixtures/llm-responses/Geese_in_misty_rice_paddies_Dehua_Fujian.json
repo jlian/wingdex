@@ -3,40 +3,24 @@
   "context": {
     "lat": 25.7,
     "lon": 118.24,
-    "month": 0,
+    "month": 1,
     "locationName": "Dehua, Fujian, China"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Egret (Ardea alba)\",\"confidence\":0.88}],\"birdCenter\":[60,70],\"birdSize\":\"large\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Swan Goose (Anser cygnoides)\",\"confidence\":0.85}],\"birdCenter\":[50,80],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Great Egret (Ardea alba)",
-        "confidence": 0.88
+        "species": "Swan Goose (Anser cygnoides)",
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      60,
-      70
+      50,
+      80
     ],
-    "birdSize": "large",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 3629,
-      "height": 5444
-    },
-    "uploadedDimensions": {
-      "width": 427,
-      "height": 640
-    }
-  },
-  "capturedAt": "2026-02-21T04:55:13.652Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:14:57.970Z"
 }

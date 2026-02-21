@@ -6,37 +6,21 @@
     "month": 8,
     "locationName": "Montrose Point, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Black-capped Chickadee (Poecile atricapillus)\",\"confidence\":0.92}],\"birdCenter\":[60,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Black-throated Blue Warbler (Setophaga caerulescens)\",\"confidence\":0.85}],\"birdCenter\":[50,75],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Black-capped Chickadee (Poecile atricapillus)",
-        "confidence": 0.92
+        "species": "Black-throated Blue Warbler (Setophaga caerulescens)",
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      60,
-      65
+      50,
+      75
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 2062,
-      "height": 3093
-    },
-    "uploadedDimensions": {
-      "width": 427,
-      "height": 640
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:34.331Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:08.337Z"
 }

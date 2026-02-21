@@ -6,37 +6,21 @@
     "month": 7,
     "locationName": "Smith Island, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.92}],\"birdCenter\":[28,56],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95}],\"birdCenter\":[25,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Tufted Puffin (Fratercula cirrhata)",
-        "confidence": 0.92
+        "confidence": 0.95
       }
     ],
     "birdCenter": [
-      28,
-      56
+      25,
+      55
     ],
-    "birdSize": "medium",
+    "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 3215,
-      "height": 2143
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 426
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:22.852Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:55.462Z"
 }

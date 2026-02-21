@@ -6,37 +6,21 @@
     "month": 8,
     "locationName": "Park Ridge, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.82}],\"birdCenter\":[36,58],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "House Sparrow (Passer domesticus)",
-        "confidence": 0.82
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      36,
-      58
+      50,
+      55
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 4098,
-      "height": 2732
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 427
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:41.969Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:19.799Z"
 }
