@@ -4,6 +4,7 @@
  * No API key required.
  */
 import { getDisplayName } from './utils'
+import { fetchWithLocalAuthRetry } from './local-auth-fetch'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
@@ -94,7 +95,7 @@ async function ensureWikiTitleCached(speciesName: string): Promise<void> {
   if (wikiTitleCache.has(cacheKey)) return
 
   try {
-    const res = await fetch(`/api/species/wiki-title?name=${encodeURIComponent(speciesName)}`)
+    const res = await fetchWithLocalAuthRetry(`/api/species/wiki-title?name=${encodeURIComponent(speciesName)}`, { credentials: 'include' })
     if (res.ok) {
       const data = await res.json() as { wikiTitle: string | null; common: string | null; scientific: string | null }
       wikiTitleCache.set(cacheKey, data)

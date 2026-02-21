@@ -41,6 +41,23 @@ function getEbirdUrl(commonName: string): string {
   return `https://ebird.org/species/${code.toLowerCase()}`
 }
 
+async function fetchEbirdUrl(speciesName: string): Promise<string> {
+  const response = await fetch(`/api/species/ebird-code?name=${encodeURIComponent(speciesName)}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    return getEbirdUrl(getDisplayName(speciesName))
+  }
+
+  const payload = await response.json() as { ebirdCode?: string | null }
+  const code = payload.ebirdCode?.trim()
+  if (!code) {
+    return getEbirdUrl(getDisplayName(speciesName))
+  }
+
+  return `https://ebird.org/species/${code.toLowerCase()}`
+}
+
 interface WingDexPageProps {
   data: WingDexDataStore
   selectedSpecies: string | null
@@ -286,6 +303,26 @@ function SpeciesDetail({
   const scientificName = getScientificName(entry.speciesName)
   const wikiImage = useBirdImage(entry.speciesName)
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
+  const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
+
+  useEffect(() => {
+    let active = true
+    void fetchEbirdUrl(entry.speciesName)
+      .then(url => {
+        if (active) {
+          setEbirdUrl(url)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setEbirdUrl(getEbirdUrl(displayName))
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [entry.speciesName, displayName])
 
   // Find all sightings of this species across outings
   const sightings: Array<{ observation: Observation; outing: { id: string; locationName: string; startTime: string } }> = []
@@ -298,7 +335,6 @@ function SpeciesDetail({
     }
   }
 
-  const ebirdUrl = getEbirdUrl(displayName)
   const heroImage = summary?.imageUrl || wikiImage
 
   return (
