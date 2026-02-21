@@ -7,7 +7,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "wingdex-db"
-database_id = "568355c1-6133-4811-94f0-b3394f5253d7"
+database_id = "bb0a4504-8009-4ea3-b462-ce2b9de3d615"
 migrations_dir = "migrations"
 
 [ai]
