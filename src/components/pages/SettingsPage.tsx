@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -13,7 +12,6 @@ import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, De
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { textLLM } from '@/lib/ai-inference'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
@@ -517,46 +515,6 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           </AlertDialog>
         </div>
       </Card>
-
-      {/* Vision API Test — developer/debug tool */}
-      <Card className="p-4 space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Info size={20} />
-            <h3 className="font-semibold text-foreground">Vision API Test</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Verify that AI-powered bird identification is available
-          </p>
-        </div>
-        
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={async () => {
-              try {
-                toast.info('Testing Vision API access...')
-                const response = await textLLM('Test message: respond with "API is working" if you receive this.')
-                toast.success('Vision API is accessible!')
-                console.log('API Test Response:', response)
-              } catch (error) {
-                toast.error(`Vision API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                console.error('API Test Error:', error)
-              }
-            }}
-          >
-            Test Vision API Connection
-          </Button>
-          
-          <Alert>
-            <AlertDescription className="text-xs">
-              If the test fails, photo identification won&apos;t work. Check the browser console for details.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </Card>
-
 
     </div>
     </>
