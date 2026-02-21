@@ -1,6 +1,6 @@
 # WingDex Migration Plan & Tracker
 
-> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-21
+> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-20
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
@@ -12,7 +12,7 @@
 
 ### TL;DR
 
-> **Phase 2 status**: ⚠️ Mostly aligned through data/API migration; auth provider parity (GitHub/Apple/Google UI+config) and server-owned AI endpoints remain outside completed Phase 2 scope.
+> **Phase 2 status**: ✅ Data/API migration complete. All client-side business logic (ebird, taxonomy, seed-data) fully removed — server is sole owner. Auth provider parity (GitHub/Apple/Google UI+config) remains pending (Phase 1.12).
 
 WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns — this is a platform-integration migration, not a rewrite.
 
@@ -24,7 +24,7 @@ WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV per
 
 ### Architecture
 
-> **Phase 2 status**: ⚠️ Core data/import/export/species API architecture is implemented; `/api/identify-bird` and `/api/suggest-location` are now implemented (Phase 3 completed for code scope), and auth providers currently differ from planned social-provider setup.
+> **Phase 2 status**: ✅ All data/import/export/species/AI API routes implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). Auth providers differ from planned social-provider setup.
 
 ```
 Cloudflare Pages
@@ -40,17 +40,16 @@ Cloudflare Pages
         │   ├── photos.ts         ← POST: bulk insert photos
         │   ├── observations.ts   ← POST/PATCH: create/update observations
         │   ├── dex.ts            ← GET: computed dex; PATCH: update notes/bestPhoto
-        │   ├── seed.ts           ← POST: load demo data
         │   └── clear.ts         ← DELETE: wipe all user data
         ├── identify-bird.ts      ← POST: image + context → species candidates (smart endpoint)
-        ├── suggest-location.ts   ← POST: GPS coords → location name suggestion
         ├── import/
         │   └── ebird-csv.ts      ← POST: upload CSV → previews; POST /confirm → insert
         ├── export/
         │   ├── outing/[id].ts    ← GET: export outing as eBird CSV
         │   └── dex.ts            ← GET: export dex as CSV
         └── species/
-            └── search.ts         ← GET: taxonomy typeahead search
+            ├── search.ts         ← GET: taxonomy typeahead search
+            └── wiki-title.ts     ← GET: wiki title lookup (public, no auth)
 
 Bindings:
   DB  → D1 database (users, sessions, outings, photos, observations, dex_meta)
@@ -61,13 +60,13 @@ Bindings:
 
 ### Current Spark Dependency Map
 
-> **Phase 2 status**: ⚠️ Spark KV/runtime/plugin dependencies are removed from active paths; Spark LLM proxy usage has been removed from active AI flows.
+> **Phase 2 status**: ✅ All Spark dependencies (KV, runtime, plugins, LLM proxy) fully removed from active code paths.
 
 | Concern | Current Code | Spark API | Files Affected |
 |---|---|---|---|
 | **Auth** | `window.spark.user()` → `UserInfo{login, avatarUrl, email, id, isOwner}` | Spark runtime global | App.tsx, dev-user.ts |
 | **KV** | `fetch('/_spark/kv/{key}')` GET/POST/DELETE, keys like `u12345_photos` | Spark KV proxy | use-kv.ts, storage-keys.ts, use-wingdex-data.ts |
-| **LLM** | `POST /api/identify-bird` + `POST /api/suggest-location` | Cloudflare Functions API | ai-inference.ts, functions/api/* |
+| **LLM** | `POST /api/identify-bird` | Cloudflare Functions API | ai-inference.ts, functions/api/* |
 | **Runtime** | `await import('@github/spark/spark')` (conditional on `*.github.app` hostname) | Spark bootstrap | main.tsx |
 | **Vite plugins** | `sparkPlugin()`, `createIconImportProxy()` | Build tooling | vite.config.ts |
 | **Config** | runtime.config.json, spark.meta.json | Deployment metadata | Root files |
@@ -382,7 +381,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
 ### Bird ID & AI: Smart Server Endpoint
 
-> **Phase 2 status**: ✅ Implemented. Client now uses server-owned `/api/identify-bird` and `/api/suggest-location` endpoints.
+> **Phase 2 status**: ✅ Implemented. Client uses server-owned `/api/identify-bird`. `/api/suggest-location` removed — location search uses Nominatim directly; `textLLM` function deleted as dead code.
 
 Instead of a thin LLM proxy (which would force every client to reimplement prompt construction, taxonomy grounding, and crop-box computation), the server owns the entire bird identification pipeline. Clients upload an image with context and receive structured results.
 
@@ -468,7 +467,7 @@ AI Gateway with Workers AI fallback. AI Gateway supports declarative fallback co
 
 ### Species Search: Server-Side Taxonomy
 
-> **Phase 2 status**: ✅ Implemented. Species autocomplete now queries server endpoint (`/api/species/search`) with auth guard; client-side taxonomy search dependency is removed from active typeahead flow.
+> **Phase 2 status**: ✅ Implemented. Species autocomplete queries server endpoint (`/api/species/search`) with auth guard; wiki-title lookup uses `/api/species/wiki-title` (public). Client-side `taxonomy.ts` fully removed — 876KB saved from client bundle.
 
 The ~11K-species eBird taxonomy currently ships as a 300KB+ JSON bundle in the SPA and is searched client-side. Moving search server-side means any client gets instant typeahead without bundling the taxonomy:
 
@@ -497,7 +496,7 @@ Response 200:
 
 ### Data Layer: Refactoring `useWingDexData`
 
-> **Phase 2 status**: ⚠️ Implemented as API-first with optimistic updates and localStorage fallback; minor planned/actual deltas are documented in Phase 2 tracker rows.
+> **Phase 2 status**: ✅ Implemented as API-first with optimistic updates and localStorage fallback. Client-side `seed-data.ts` removed (demo data via CSV import API). `loadSeedData` and `importFromEBird` functions deleted from hook.
 
 The biggest refactor is replacing the KV-backed `useKV` hook with D1-backed API calls. The current flow is:
 
@@ -670,16 +669,16 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 | Design Section | Phase 2 Status | Note |
 |---|---|---|
-| TL;DR / Overall Migration Direction | ⚠️ | Core Spark→Cloudflare migration for data + AI paths is complete; auth provider parity remains pending. |
-| Architecture | ✅ | `/api/data/*`, import/export, species, and AI routes (`/api/identify-bird`, `/api/suggest-location`) are implemented. |
+| TL;DR / Overall Migration Direction | ✅ | Data/API migration complete; all client-side business logic removed. Auth provider parity (social OAuth) remains pending (Phase 1.12). |
+| Architecture | ✅ | `/api/data/*`, import/export, species, and AI routes (`/api/identify-bird`) are implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). |
 | Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
 | Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
 | Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 is wired; implementation currently uses passkey + anonymous flow instead of full planned social-provider parity. |
-| Bird ID & AI: Smart Server Endpoint | ✅ | Implemented in Phase 3 with provider-aware server runtime and client API calls. |
-| Species Search: Server-Side Taxonomy | ✅ | Implemented via authenticated `/api/species/search`; active typeahead now server-backed. |
-| Data Layer: Refactoring `useWingDexData` | ⚠️ | API-first refactor complete with local fallback; minor deltas are documented in Phase 2 tracker row statuses. |
-| eBird Import: Server-Side Two-Step Flow | ✅ | Implemented and integrated into Settings/Outings flows. |
+| Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` implemented. `/api/suggest-location` removed (dead). `textLLM` deleted. |
+| Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` (auth) + `/api/species/wiki-title` (public). Client `taxonomy.ts` fully removed — 876KB saved. |
+| Data Layer: Refactoring `useWingDexData` | ✅ | API-first refactor complete with local fallback. Dead functions (`loadSeedData`, `importFromEBird`) removed. |
+| eBird Import: Server-Side Two-Step Flow | ✅ | Implemented. Client `ebird.ts` + `seed-data.ts` fully removed; demo data loads via CSV import API. |
 
 ---
 
@@ -761,9 +760,9 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 #### Phase 2 — Data Layer (D1) + Species Search ✅
 
-> **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`.
+> **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`. Post-Phase-5 cleanup fully removed client-side `ebird.ts`, `taxonomy.ts`, and `seed-data.ts` — all business logic now server-only.
 > **Confidence**: High.
-> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (430 tests), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
+> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (478 tests, 27 files), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -776,15 +775,15 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.7 | Create `functions/api/import/ebird-csv.ts` | `POST`: Accept CSV upload → parse, group, detect conflicts → return `{ previews, summary }`. `POST /confirm`: Insert selected previews → return `{ imported, dexUpdates }` | ✅ |
 | 2.8 | Create `functions/api/export/outing/[id].ts` | `GET`: Export outing as eBird CSV | ✅ |
 | 2.9 | Create `functions/api/export/dex.ts` | `GET`: Export dex as CSV | ✅ |
-| 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ |
+| 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ (subsequently deleted — SettingsPage now uses CSV import API with demo CSV; seed endpoint had zero consumers) |
 | 2.11 | Create `functions/api/data/clear.ts` | `DELETE`: Delete all user data (`DELETE FROM outing WHERE userId = ?` — CASCADE handles the rest, then `DELETE FROM dex_meta WHERE userId = ?`) | ✅ |
 | 2.12 | Create `functions/api/species/search.ts` | `GET`: Load taxonomy.json into Worker module scope, implement `searchSpecies()` server-side. Accept `?q=&limit=` params. | ✅ |
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | ✅ |
 | 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
 | 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ✅ (`buildDexFromState` export intentionally kept — validates local fallback dex logic in `build-dex.test.ts`) |
-| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ✅ (client `src/lib/ebird.ts` retained — still used by `seed-data.ts` → `SettingsPage.tsx`; cannot remove) |
-| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ✅ (`src/lib/taxonomy.ts` retained — still used by `wikimedia.ts` → `use-bird-image.ts`; cannot remove) |
+| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ✅ (client `src/lib/ebird.ts` fully removed — `seed-data.ts` deleted, all consumers repointed to `functions/lib/ebird.ts`) |
+| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ✅ (`src/lib/taxonomy.ts` fully removed — `wikimedia.ts` now uses `/api/species/wiki-title` endpoint with client-side cache; 876KB saved from client bundle) |
 | 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ✅ (use-kv tests updated in Phase 5: renamed spark→hosted, updated URLs/keys, removed Spark runtime assumptions) |
 | 2.20 | Update storage-keys.ts | Simplified local storage key prefix to string user IDs directly (removed legacy numeric-id format assumptions). | ✅ |
 | 2.21 | Server-side auth on every endpoint | Verified endpoint auth checks and user scoping; added explicit auth guard to species search endpoint for consistency with protected API contract. | ✅ |
@@ -798,6 +797,18 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 - Added local auth retry helper + local-origin cookie/session handling to eliminate 401 churn in local full-stack mode.
 - Hardened CSV preview retry semantics to rebuild multipart payloads and avoid stale-body "Load failed" behavior.
 - Removed hard reload shortcuts from import/sign-out paths; data now refreshes in-app after successful operations.
+
+**Cleanup update (2026-02-20, post-Phase-5)**
+- Deleted `src/lib/seed-data.ts` — SettingsPage now loads demo data via CSV import API with a bundled `ebird-import.csv` fixture.
+- Deleted `src/lib/ebird.ts` — all eBird parsing consumers repointed to `functions/lib/ebird.ts`.
+- Deleted `src/lib/taxonomy.ts` — `wikimedia.ts` wiki-title lookup replaced with `/api/species/wiki-title` endpoint + client-side cache. Saved 876KB from client bundle.
+- Created `functions/api/species/wiki-title.ts` — public (no auth) endpoint for server-side taxonomy lookup by common name.
+- Deleted `functions/api/data/seed.ts` — dead endpoint after SettingsPage refactor to CSV import.
+- Removed dead `textLLM` function from `ai-inference.ts` and deleted its test file.
+- Removed dead `/api/suggest-location` endpoint, `suggestLocationName` from `bird-id.ts`, and cleaned rate-limit config.
+- Dead code audit: removed `downscaleForInference` (photo-utils), orphaned `ImportPreview` (client types), dead re-exports from `bird-id.ts`, un-exported self-consumed types.
+- Rewrote `e2e/helpers.ts` to use `seedViaCSVImport()` API helper instead of localStorage injection.
+- Replaced Radix UI Select with native `<select>` for timezone picker — SettingsPage chunk 113KB→63KB.
 
 **D1 transaction support** — for bulk operations like eBird import (insert many outings + observations atomically):
 
@@ -876,9 +887,9 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 5 — Testing
 
-> **Status snapshot (2026-02-21)**: ✅ Complete. All 482 unit tests pass across 28 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper key format fixed. Phase 2 deferred items (2.16–2.19) resolved. Lint fully clean (0 warnings).
+> **Status snapshot (2026-02-21)**: ✅ Complete. All 478 unit tests pass across 27 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings).
 > **Confidence**: High.
-> **Validation**: `npm run test:unit` — 482 tests, 28 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
+> **Validation**: `npm run test:unit` — 478 tests, 27 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -887,16 +898,16 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 5.3 | app-auth-guard.hosted.test.tsx | Updated URL from `wingdex--jlian.github.app` to `wingdex.app`. Tests already mock `fetch('/api/auth/get-session')` — no Spark dependencies. | ✅ |
 | 5.4 | app-auth-guard.local.test.tsx | Already uses string user IDs and better-auth mocks. No changes needed. | ✅ |
 | 5.5 | ai-inference.test.ts | Already tests `fetch('/api/identify-bird')` with FormData. No Spark dependencies remain. | ✅ |
-| 5.6 | ai-parse-and-textllm.test.ts | Already tests `fetch('/api/suggest-location')`. Server-side prompt/parse logic covered by new `bird-id-prompt.test.ts`. | ✅ |
+| 5.6 | ai-parse-and-textllm.test.ts | Deleted — `textLLM` function removed as dead code (location search uses Nominatim directly, not LLM suggestion). Server-side prompt/parse logic covered by `bird-id-prompt.test.ts`. | ✅ |
 | 5.7 | ai-fixture-replay.test.ts | Already replays against `/api/identify-bird`. No migration needed. | ✅ |
 | 5.8 | dev-user-id.test.ts | Already tests string user IDs. No changes needed. | ✅ |
 | 5.9 | storage-keys.test.ts | Already uses string userId format. No changes needed. | ✅ |
 | 5.10 | build-dex.test.ts | Kept — `buildDexFromState` validates local fallback dex computation logic. Still valuable for client-side correctness. | ✅ |
-| 5.11 | ebird-csv.test.ts | Client-side ebird tests retained (client module still used by `seed-data.ts`). Server-side ebird tested in new `server-ebird.test.ts`. | ✅ |
-| 5.12 | helpers.ts | Fixed localStorage key prefix from `wingdex_kv_u1_` to `1_` to match `getUserStorageKey('1', bucket)` format used by `readLocalData()`. | ✅ |
+| 5.11 | ebird-csv.test.ts | Tests repointed to import from `functions/lib/ebird.ts` after client `src/lib/ebird.ts` removal. Server-side ebird also tested in `server-ebird.test.ts`. | ✅ |
+| 5.12 | helpers.ts | Rewritten to use `seedViaCSVImport()` helper that seeds via `/api/import/ebird-csv` + `/api/import/ebird-csv/confirm` API endpoints instead of localStorage injection. | ✅ |
 | 5.13 | csv-and-upload-integration.spec.ts | Already intercepts `**/api/identify-bird`. No Spark routes remain. | ✅ |
 | 5.14 | Other e2e tests | All e2e tests use local dev mode + localStorage. No Spark dependencies. | ✅ |
-| 5.15 | **New**: Server-side function tests | Added 6 test files covering all testable `functions/lib/` modules: `server-taxonomy.test.ts` (5 tests), `server-ebird.test.ts` (9 tests), `bird-id-prompt.test.ts` (8 tests), `bird-id-helpers.test.ts` (27 tests: safeParseJSON, extractAssistantContent, buildCropBox), `ai-rate-limit.test.ts` (8 tests with FakeD1Database mock), `dex-query.test.ts` (3 tests with DexQueryDB mock). Remaining modules (`auth.ts` — betterAuth/Kysely integration, `_middleware.ts` — PagesFunction) require full Wrangler integration tests. | ✅ |
+| 5.15 | **New**: Server-side function tests | Added 6 test files covering all testable `functions/lib/` modules: `server-taxonomy.test.ts` (14 tests), `server-ebird.test.ts` (9 tests), `bird-id-prompt.test.ts` (8 tests), `bird-id-helpers.test.ts` (27 tests: safeParseJSON, extractAssistantContent, buildCropBox), `ai-rate-limit.test.ts` (7 tests with FakeD1Database mock), `dex-query.test.ts` (3 tests with DexQueryDB mock). Remaining modules (`auth.ts` — betterAuth/Kysely integration, `_middleware.ts` — PagesFunction) require full Wrangler integration tests. | ✅ |
 | 5.16 | Lint cleanup | Suppressed false-positive `react-hooks/exhaustive-deps` warning in `use-wingdex-data.ts` — mutation functions close over refs, not state. | ✅ |
 | 5.17 | Extract bird-id-helpers.ts | Extracted `safeParseJSON`, `extractAssistantContent`, `buildCropBox` from `bird-id.ts` into `functions/lib/bird-id-helpers.ts` so they can be tested without dragging in Cloudflare `Env` types. | ✅ |
 | 5.18 | Narrow dex-query.ts type | Replaced `D1Database` with minimal `DexQueryDB` interface (same pattern as `RateLimitDB`) to avoid Cloudflare type dependency in tsc. | ✅ |
