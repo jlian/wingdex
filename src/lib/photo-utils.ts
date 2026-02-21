@@ -173,17 +173,25 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
  */
 export async function computeFileHash(file: File): Promise<string> {
   const chunkSize = 64 * 1024
-  const firstChunk = await file.slice(0, chunkSize).arrayBuffer()
-  const lastChunkStart = Math.max(0, file.size - chunkSize)
-  const lastChunk = await file.slice(lastChunkStart, file.size).arrayBuffer()
+
+  let content: ArrayBuffer
+  if (file.size <= chunkSize * 2) {
+    content = await file.arrayBuffer()
+  } else {
+    const firstChunk = await file.slice(0, chunkSize).arrayBuffer()
+    const lastChunk = await file.slice(file.size - chunkSize, file.size).arrayBuffer()
+    const merged = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength)
+    merged.set(new Uint8Array(firstChunk), 0)
+    merged.set(new Uint8Array(lastChunk), firstChunk.byteLength)
+    content = merged.buffer
+  }
+
   const sizeBytes = new TextEncoder().encode(String(file.size))
+  const final = new Uint8Array(content.byteLength + sizeBytes.byteLength)
+  final.set(new Uint8Array(content), 0)
+  final.set(sizeBytes, content.byteLength)
 
-  const merged = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength + sizeBytes.byteLength)
-  merged.set(new Uint8Array(firstChunk), 0)
-  merged.set(new Uint8Array(lastChunk), firstChunk.byteLength)
-  merged.set(sizeBytes, firstChunk.byteLength + lastChunk.byteLength)
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', merged)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', final)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
