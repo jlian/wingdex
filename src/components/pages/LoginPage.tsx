@@ -201,6 +201,17 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
               </div>
 
               {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+
+              <p className="text-center text-sm text-muted-foreground">
+                Already have a passkey?{' '}
+                <button
+                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
+                  onClick={handlePasskeySignIn}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </p>
             </>
           )}
         </Card>
