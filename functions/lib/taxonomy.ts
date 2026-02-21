@@ -1,6 +1,6 @@
 import rawTaxonomy from '../../src/lib/taxonomy.json'
 
-export type TaxonEntry = {
+type TaxonEntry = {
   common: string
   scientific: string
   ebirdCode?: string

@@ -162,31 +162,6 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
   })
 }
 
-export async function downscaleForInference(dataUrl: string, maxDim = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Canvas not supported'))
-        return
-      }
-      
-      const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
-      canvas.width = img.width * scale
-      canvas.height = img.height * scale
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      resolve(canvas.toDataURL('image/jpeg', 0.75))
-    }
-    
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = dataUrl
-  })
-}
-
 export async function computeFileHash(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)

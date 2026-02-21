@@ -3,7 +3,6 @@ import { buildBirdIdPrompt } from './bird-id-prompt.js'
 import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 
-export { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
 const DEFAULT_AZURE_API_VERSION = '2024-10-21'
@@ -37,13 +36,13 @@ type Candidate = {
   wikiTitle?: string
 }
 
-export type IdentifyBirdResult = {
+type IdentifyBirdResult = {
   candidates: Candidate[]
   cropBox?: { x: number; y: number; width: number; height: number }
   multipleBirds?: boolean
 }
 
-export type IdentifyBirdInput = {
+type IdentifyBirdInput = {
   imageDataUrl: string
   imageWidth?: number
   imageHeight?: number
