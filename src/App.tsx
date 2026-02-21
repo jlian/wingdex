@@ -297,7 +297,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Toaster position="top-center" />
+      <Toaster position="bottom-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
         {/* ── Top header — sticky at top, content scrolls beneath ── */}
