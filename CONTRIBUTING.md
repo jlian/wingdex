@@ -11,7 +11,7 @@ Thanks for your interest in contributing! Here's how to get started.
    npm ci
    ```
 
-   Use Node 22+ (`node --version`).
+   Use Node 25+ (`node --version`).
 
 2. **Start the dev server**
    ```bash
@@ -30,7 +30,7 @@ Thanks for your interest in contributing! Here's how to get started.
    npx tsc -b --noCheck
    ```
 
-> **Note:** AI features use server endpoints (`/api/identify-bird`, `/api/suggest-location`) and require local provider credentials in `.dev.vars`.
+> **Note:** AI features use the server endpoint (`/api/identify-bird`) and require local provider credentials in `.dev.vars`.
 
 ## Making Changes
 

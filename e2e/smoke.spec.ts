@@ -72,7 +72,6 @@ test.describe('App smoke tests', () => {
     // Filter out known non-critical errors
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
-        && !e.includes('undefined')
     );
 
     expect(criticalErrors).toEqual([]);
@@ -119,7 +118,6 @@ test.describe('App smoke tests', () => {
     // Filter out known non-critical errors (network/favicon/transient)
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
-        && !e.includes('undefined')
     );
 
     expect(criticalErrors).toEqual([]);

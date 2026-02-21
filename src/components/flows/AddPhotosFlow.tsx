@@ -79,6 +79,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
   const [pendingDuplicatePhotos, setPendingDuplicatePhotos] = useState<PhotoWithCrop[]>([])
 
+  useEffect(() => {
+    if (!showConfetti) return
+    const timeoutId = window.setTimeout(() => setShowConfetti(false), 3500)
+    return () => window.clearTimeout(timeoutId)
+  }, [showConfetti])
+
   const handleOpenChange = (open: boolean) => {
     if (!open && needsCloseConfirmation(step)) {
       setShowCloseConfirm(true)
@@ -243,9 +249,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setPhotoResults([])
       setCurrentCandidates([])
       setStep('review')
-      if (showConfetti) {
-        setShowConfetti(false)
-      }
     } else {
       if (confirmed.length > 0) {
         toast.success(`All done! ${confirmed.length} species saved.`)

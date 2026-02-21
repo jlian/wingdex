@@ -33,6 +33,7 @@ export function SpeciesAutocomplete({
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const latestSearchIdRef = useRef(0)
 
   // Debounced search
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -45,6 +46,7 @@ export function SpeciesAutocomplete({
     }
 
     searchTimeoutRef.current = setTimeout(() => {
+      const searchId = ++latestSearchIdRef.current
       void fetchWithLocalAuthRetry(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
         .then(async response => {
           if (!response.ok) {
@@ -53,12 +55,14 @@ export function SpeciesAutocomplete({
           return response.json() as Promise<{ results?: TaxonEntry[] }>
         })
         .then(payload => {
+          if (searchId !== latestSearchIdRef.current) return
           const hits = payload.results || []
           setResults(hits)
           setOpen(hits.length > 0)
           setHighlightIndex(-1)
         })
         .catch(() => {
+          if (searchId !== latestSearchIdRef.current) return
           setResults([])
           setOpen(false)
         })

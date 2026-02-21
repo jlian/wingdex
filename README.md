@@ -62,13 +62,13 @@ npm ci
 npm run dev
 ```
 
-Requires Node 22+.
+Requires Node 25+.
 
 `npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
 
 ### AI provider setup (local)
 
-AI calls run through server endpoints (`/api/identify-bird`, `/api/suggest-location`) and require local env vars.
+AI calls run through the server endpoint (`/api/identify-bird`) and require local env vars.
 
 1. Copy `.dev.vars.example` to `.dev.vars`
 2. Choose provider with `LLM_PROVIDER=openai|azure|github`
@@ -107,7 +107,6 @@ Optional per-user daily limits for AI endpoints (UTC day):
 
 ```dotenv
 AI_DAILY_LIMIT_IDENTIFY=150
-AI_DAILY_LIMIT_SUGGEST=300
 ```
 
 ### Scripts
