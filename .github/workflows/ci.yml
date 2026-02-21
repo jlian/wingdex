@@ -36,19 +36,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Ensure BETTER_AUTH_SECRET in Pages
-        run: |
-          if [ -z "${BETTER_AUTH_SECRET:-}" ]; then
-            echo "Missing BETTER_AUTH_SECRET GitHub secret"
-            exit 1
-          fi
-          printf '%s' "$BETTER_AUTH_SECRET" | npx wrangler pages secret put BETTER_AUTH_SECRET --project-name=wingdex
-          printf '%s' "$BETTER_AUTH_SECRET" | npx wrangler pages secret put BETTER_AUTH_SECRET --project-name=wingdex --env preview
-        env:
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Deploy preview to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
