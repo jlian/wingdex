@@ -8,21 +8,13 @@ type CreateAuthOptions = {
   request?: Request
 }
 
-function isLocalHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase()
-  return normalized === 'localhost' || normalized === '127.0.0.1'
-}
-
 export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   const database = new Kysely({
     dialect: new D1Dialect({ database: env.DB }),
   })
 
   const requestOrigin = options.request ? new URL(options.request.url).origin : null
-  const requestHostname = options.request ? new URL(options.request.url).hostname : null
-  const baseURL = requestHostname && isLocalHostname(requestHostname)
-    ? requestOrigin || env.BETTER_AUTH_URL
-    : env.BETTER_AUTH_URL
+  const baseURL = requestOrigin || env.BETTER_AUTH_URL
   const useSecureCookies = baseURL.startsWith('https://')
 
   return betterAuth({
