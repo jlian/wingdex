@@ -117,7 +117,7 @@ function App() {
   useEffect(() => {
     if (initialSessionChecked.current || isSessionPending) return
     initialSessionChecked.current = true
-    if (session?.user && !Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)) {
+    if (session?.user && !(session.user as { isAnonymous?: boolean }).isAnonymous) {
       initialSessionResolved.current = true
     }
   }, [session, isSessionPending])

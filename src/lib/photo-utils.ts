@@ -162,6 +162,15 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
   })
 }
 
+/**
+ * Compute a fast content-addressable hash for duplicate detection.
+ *
+ * Hashes the first 64KB + last 64KB + file size instead of the full file.
+ * This is intentional: photo files differ in EXIF headers (first bytes) and
+ * compressed image data (tail bytes), and the size acts as an additional
+ * discriminator. Combined with the EXIF timestamp check in AddPhotosFlow,
+ * the collision risk for distinct photos is negligible in practice.
+ */
 export async function computeFileHash(file: File): Promise<string> {
   const chunkSize = 64 * 1024
   const firstChunk = await file.slice(0, chunkSize).arrayBuffer()

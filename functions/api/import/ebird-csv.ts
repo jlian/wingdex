@@ -8,7 +8,12 @@ const MAX_CSV_SIZE_BYTES = 10 * 1024 * 1024
 function encodePreviewId(preview: ImportPreview): string {
   const json = JSON.stringify(preview)
   const bytes = new TextEncoder().encode(json)
-  const binary = String.fromCharCode(...bytes)
+  // Avoid String.fromCharCode(...bytes) which can exceed call-stack limits
+  // for large payloads. Build the binary string in chunks instead.
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
   return btoa(binary)
 }
 

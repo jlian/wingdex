@@ -10,6 +10,7 @@ import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
@@ -42,7 +43,7 @@ function getEbirdUrl(commonName: string): string {
 }
 
 async function fetchEbirdUrl(speciesName: string): Promise<string> {
-  const response = await fetch(`/api/species/ebird-code?name=${encodeURIComponent(speciesName)}`, {
+  const response = await fetchWithLocalAuthRetry(`/api/species/ebird-code?name=${encodeURIComponent(speciesName)}`, {
     credentials: 'include',
   })
   if (!response.ok) {
