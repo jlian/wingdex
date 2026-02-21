@@ -9,6 +9,7 @@ Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
+- Use the internet to research best practices, common pitfalls, and existing solutions.
 - State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
