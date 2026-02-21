@@ -1,10 +1,10 @@
 # WingDex Migration Plan & Tracker
 
-> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-21
+> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-21 (late)
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
-> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall).
+> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall); CI/CD overhaul — split monolithic `verify:ci` into discrete lint/typecheck/unit/build/migrate/e2e steps, merged `deploy.yml` into `ci.yml`; `dev` branch strategy with separate D1 databases for prod vs preview; GitHub OAuth app registration (prod + dev environments); `computeFileHash` fix for small files (<128KB).
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### TL;DR
 
-> **Phase 2 status**: ✅ Data/API migration complete. All client-side business logic (ebird, taxonomy, seed-data) fully removed — server is sole owner. Auth provider parity (GitHub/Apple/Google UI+config) remains pending (Phase 1.12).
+> **Phase 2 status**: ✅ Data/API migration complete. All client-side business logic (ebird, taxonomy, seed-data) fully removed — server is sole owner. GitHub OAuth implemented and deployed (prod + dev environments). Apple/Google OAuth remain pending (Phase 1.12).
 
 WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns — this is a platform-integration migration, not a rewrite.
 
@@ -24,7 +24,7 @@ WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV per
 
 ### Architecture
 
-> **Phase 2 status**: ✅ All data/import/export/species/AI API routes implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). Auth providers differ from planned social-provider setup.
+> **Phase 2 status**: ✅ All data/import/export/species/AI API routes implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). GitHub OAuth active; Apple/Google pending.
 
 ```
 Cloudflare Pages
@@ -278,7 +278,7 @@ ORDER BY obs.speciesName;
 
 ### Auth: Better Auth + D1
 
-> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented; auth uses passkey-first signup via anonymous bootstrap (gated by middleware header `x-wingdex-passkey-signup`) with Better Auth's public plugin APIs. Social OAuth providers (GitHub/Apple/Google) remain pending (Phase 1.12). Decision: keep anonymous bootstrap over custom `@simplewebauthn/server` endpoint — uses stable public BA APIs vs fragile internals. Native BA passkey-only signup isn't supported (v1.4.x `freshSessionMiddleware` requires a session for credential registration).
+> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented; auth uses passkey-first signup via anonymous bootstrap (gated by middleware header `x-wingdex-passkey-signup`) with Better Auth's public plugin APIs. GitHub OAuth is now fully configured with two OAuth apps (prod: `wingdex.app` callback, dev: `dev.wingdex.pages.dev` callback) and conditional `socialProviders.github` (only active when `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` env vars are present). Account linking enabled (`trustedProviders: ['github']`, `allowDifferentEmails: true`). Apple/Google OAuth remain pending (Phase 1.12). Decision: keep anonymous bootstrap over custom `@simplewebauthn/server` endpoint — uses stable public BA APIs vs fragile internals. Native BA passkey-only signup isn't supported (v1.4.x `freshSessionMiddleware` requires a session for credential registration).
 
 **Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth — no web-specific coupling.
 
@@ -370,12 +370,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 - Opens `PasskeyAuthDialog.tsx` — defaults to signup view with pre-filled random bird-name (`fun-names.ts`, ~249K kebab-case combos like `sneaky-meadow-warbler`), re-roll button, and "Create account" CTA
 - "Already have an account? Sign in" link switches to sign-in view (triggers browser WebAuthn prompt directly)
 - Signup uses anonymous bootstrap → `addPasskey` → `finalize-passkey` (3-step, gated by middleware header)
-- Social OAuth buttons (GitHub, Apple, Google) to be added when providers are registered (Phase 1.12)
+- GitHub OAuth "Sign in with GitHub" button on login page + "Link GitHub account" in Settings (conditionally shown when `GITHUB_CLIENT_ID` env var is set)
+- Apple/Google OAuth buttons to be added when providers are registered (Phase 1.12)
 
-**OAuth app registration** required:
-- **GitHub**: Create OAuth App at github.com/settings/developers. Callback URL: `https://wingdex.example.com/api/auth/callback/github`
-- **Apple**: Create Service ID at developer.apple.com. Callback URL: `https://wingdex.example.com/api/auth/callback/apple`. Requires paid Apple Developer account ($99/yr).
-- **Google**: Create OAuth 2.0 Client at console.cloud.google.com. Callback URL: `https://wingdex.example.com/api/auth/callback/google`
+**OAuth app registration**:
+- **GitHub**: ✅ Two OAuth Apps created — prod (`https://wingdex.app/api/auth/callback/github`) and dev (`https://dev.wingdex.pages.dev/api/auth/callback/github`). Secrets (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments.
+- **Apple**: Create Service ID at developer.apple.com. Callback URL: `https://wingdex.app/api/auth/callback/apple`. Requires paid Apple Developer account ($99/yr).
+- **Google**: Create OAuth 2.0 Client at console.cloud.google.com. Callback URL: `https://wingdex.app/api/auth/callback/google`
 
 ---
 
@@ -669,12 +670,12 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 | Design Section | Phase 2 Status | Note |
 |---|---|---|
-| TL;DR / Overall Migration Direction | ✅ | Data/API migration complete; all client-side business logic removed. Auth provider parity (social OAuth) remains pending (Phase 1.12). |
+| TL;DR / Overall Migration Direction | ✅ | Data/API migration complete; all client-side business logic removed. GitHub OAuth done; Apple/Google pending (Phase 1.12). |
 | Architecture | ✅ | `/api/data/*`, import/export, species, and AI routes (`/api/identify-bird`) are implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). |
 | Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
 | Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
-| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with passkey-first UX. Anonymous bootstrap used for signup (gated by middleware header) — kept over custom SimpleWebAuthn endpoint (public BA APIs > fragile internals). Login reworked: single "Continue with passkey" → dialog with random bird-name signup. Social OAuth pending (1.12). |
+| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with passkey-first UX + GitHub OAuth. Anonymous bootstrap used for signup (gated by middleware header). GitHub OAuth fully configured (prod + dev apps, account linking with `allowDifferentEmails`). Apple/Google pending (1.12). |
 | Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` implemented. `/api/suggest-location` removed (dead). `textLLM` deleted. |
 | Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` (auth) + `/api/species/wiki-title` (public). Client `taxonomy.ts` fully removed — 876KB saved. |
 | Data Layer: Refactoring `useWingDexData` | ✅ | API-first refactor complete with local fallback. Dead functions (`loadSeedData`, `importFromEBird`) removed. |
@@ -704,33 +705,43 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 **`wrangler.toml`**:
 ```toml
 name = "wingdex"
-compatibility_date = "2026-02-01"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
+# Production (default) — uses the main database
 [[d1_databases]]
 binding = "DB"
 database_name = "wingdex-db"
-database_id = "<from wrangler d1 create>"
+database_id = "bb0a4504-8009-4ea3-b462-ce2b9de3d615"
 migrations_dir = "migrations"
 
 [ai]
 binding = "AI"
 
-[vars]
-BETTER_AUTH_URL = "https://wingdex.example.com"
-# Secrets (set via `wrangler secret put`):
-# BETTER_AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
-# APPLE_CLIENT_ID, APPLE_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-# OPENAI_API_KEY, CF_ACCOUNT_ID, AI_GATEWAY_ID
+# Preview/dev — uses a separate database
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "wingdex-db-dev"
+database_id = "7299207b-ddc7-4ecd-bc36-b6838f278c78"
+migrations_dir = "migrations"
+
+[env.preview.ai]
+binding = "AI"
+
+# Secrets (set via Cloudflare dashboard / `wrangler pages secret put`):
+# Production: BETTER_AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, OPENAI_API_KEY
+# Preview: BETTER_AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 ```
 
 ---
 
 #### Phase 1 — Auth (Better Auth) 🟡
 
-> **Status snapshot (2026-02-21)**: ⚠️ Core auth migration implemented with passkey-first UX rework. Login page uses unified "Continue with passkey" button + dialog (`PasskeyAuthDialog.tsx`). Signup: anonymous bootstrap → addPasskey → finalize (gated by `x-wingdex-passkey-signup` header in middleware). App.tsx auth transition jank fixed (eliminated 3-step state waterfall + 50ms opacity timer). Social OAuth provider registration still pending (`1.12`).
-> **Confidence**: Medium-High.
-> **Validation**: Auth guard unit tests ✅ (4/4), full test suite ✅ (478/478), `tsc --noEmit` ✅, authenticated API smoke flow ✅, Playwright e2e smoke ✅.
+> **Status snapshot (2026-02-21)**: ⚠️ Core auth migration implemented with passkey-first UX rework + GitHub OAuth. Login page uses unified "Continue with passkey" button + dialog (`PasskeyAuthDialog.tsx`) + "Sign in with GitHub" button (conditionally shown via `GITHUB_CLIENT_ID`). Signup: anonymous bootstrap → addPasskey → finalize (gated by `x-wingdex-passkey-signup` header in middleware). Settings page includes "Link GitHub account" with `listAccounts` check. App.tsx auth transition jank fixed (eliminated 3-step state waterfall + 50ms opacity timer). GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks), account linking with `allowDifferentEmails`. Apple/Google provider registration still pending (`1.12`).
+> **Confidence**: High.
+> **Validation**: Auth guard unit tests ✅ (4/4), full test suite ✅ (485/485), `tsc --noEmit` ✅, authenticated API smoke flow ✅, Playwright e2e smoke ✅, preview deploy auth OK check (`/api/auth/ok` → `{"ok":true}`) ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -743,9 +754,9 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 1.7 | Update `UserInfo` interface in [App.tsx](src/App.tsx) | `id: number` → `id: string`, drop `isOwner`, `login` → `name` | ✅ |
 | 1.8 | Update [App.tsx](src/App.tsx) auth flow | Replace `window.spark.user()` with `authClient.useSession()` or `fetch('/api/auth/get-session')`. Keep `getStableDevUserId()` fallback for local dev (change return type to `string`). | ✅ |
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
-| 1.10 | Create login page component | ⚠️ Implemented as unified passkey-first flow: single "Continue with passkey" button → `PasskeyAuthDialog` (signup with random bird-name + sign-in toggle). Social provider buttons deferred to 1.12. Added `fun-names.ts` (random kebab-case bird names). Fixed App.tsx auth jank (removed `showApp` timer + cascading state waterfall, added `authCompleted`/`initialSessionResolved` refs to gate transition). | ⚠️ |
-| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. Add "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
-| 1.12 | Register OAuth apps | GitHub, Apple (if desired — requires paid dev account), Google | ⏳ |
+| 1.10 | Create login page component | ⚠️ Implemented as unified passkey-first flow: single "Continue with passkey" button → `PasskeyAuthDialog` (signup with random bird-name + sign-in toggle). "Sign in with GitHub" button conditionally shown when `GITHUB_CLIENT_ID` env var is present. Settings page shows "Link GitHub account" for existing passkey users (checks `listAccounts`). Added `fun-names.ts` (random kebab-case bird names). Fixed App.tsx auth jank (removed `showApp` timer + cascading state waterfall, added `authCompleted`/`initialSessionResolved` refs to gate transition). | ⚠️ |
+| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. Add "Link GitHub account" button (conditional on env var + not already linked). Add "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
+| 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ⏳ (requires paid Apple Developer account). Google ⏳. | ⚠️ |
 
 **userId type cascade** — changing `id` from `number` to `string` touches:
 - [src/App.tsx](src/App.tsx): `UserInfo.id`, `getFallbackUser()`, `useWingDexData(user.id)`, `AddPhotosFlow userId=`
@@ -762,7 +773,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 > **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`. Post-Phase-5 cleanup fully removed client-side `ebird.ts`, `taxonomy.ts`, and `seed-data.ts` — all business logic now server-only.
 > **Confidence**: High.
-> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (478 tests, 27 files), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
+> **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (485 tests, 27 files), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -887,9 +898,11 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 5 — Testing
 
-> **Status snapshot (2026-02-21)**: ✅ Complete. All 478 unit tests pass across 27 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings).
+> **Status snapshot (2026-02-21)**: ✅ Complete. All 485 unit tests pass across 27 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings).
 > **Confidence**: High.
 > **Validation**: `npm run test:unit` — 478 tests, 27 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
+
+**Note**: Test count updated to 485 as of 2026-02-21 (late) after auth-config and additional server-side tests.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -916,72 +929,71 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 6 — CI/CD & Deploy
 
-> **Status snapshot (2026-02-20)**: ✅ Complete. Production deploy merged into `release.yml` (push to main: semantic-release → D1 migrations → Pages deploy). Preview deploy in `deploy.yml` (PR-only: build → deploy preview with PR URL comment via `gitHubToken`). GitHub repo secrets (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`) and Cloudflare Pages secrets (`BETTER_AUTH_SECRET`, `OPENAI_API_KEY`) all configured. Custom domain `wingdex.app` added (pending first deploy). Social OAuth secrets not yet set (depends on Phase 1.12). Stale `npm@10.9.2` version pin removed across 5 files.
+> **Status snapshot (2026-02-21)**: ✅ Complete — significantly reworked from original plan. CI pipeline split from monolithic `verify:ci` script into discrete lint/typecheck/unit/build/migrate/e2e steps for better observability. `deploy.yml` merged into `ci.yml` (preview deploy is the last CI step). `release.yml` triggers on pushes to `[main, dev]` — semantic-release only on main, branch-aware deploy + migration. Dev branch strategy: `main` (production, deploys to `wingdex.app`), `dev` (staging, deploys to `dev.wingdex.pages.dev`). Separate D1 databases: `wingdex-db` (prod, ID `bb0a4504-...`) and `wingdex-db-dev` (preview, ID `7299207b-...`). Both remote DBs have all 4 migrations applied. GitHub OAuth secrets + `BETTER_AUTH_SECRET` + `OPENAI_API_KEY` set in Cloudflare Pages for both production and preview environments. Custom domain `wingdex.app` added (pending first production deploy). `db:migrate` renamed to `db:migrate:local` for safety. `computeFileHash` fix for small files committed. `tsconfig.json` excludes `auth-config.test.ts` from `tsc -b` (imports Cloudflare Workers types).
 > **Confidence**: High.
-> **Validation**: Workflow YAML validated by inspection; `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set via `gh secret set` ✅; `BETTER_AUTH_SECRET` and `OPENAI_API_KEY` set via `wrangler pages secret put` ✅; CF zone `wingdex.app` active ✅; domain added to Pages project (status: pending first deploy) ✅.
+> **Validation**: CI passes on PR #145 ✅; preview deploys live (e.g. `cbc1648d.wingdex.pages.dev` returns 200, `/api/auth/ok` returns `{"ok":true}`) ✅; `wrangler pages secret list` confirms all secrets for both environments ✅; both remote D1 databases healthy with all migrations ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 6.1 | Create deploy workflows | Production: merged into `release.yml` (push to `main`: build → semantic-release → D1 migrations → `wrangler pages deploy`). PR preview: `deploy.yml` (build → deploy preview, auto-comments URL on PR via `gitHubToken`). Concurrency groups prevent parallel deploys. | ✅ |
-| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — set via `gh secret set` | ✅ |
-| 6.3 | Add Cloudflare secrets | `BETTER_AUTH_SECRET` (generated), `OPENAI_API_KEY` — set via `wrangler pages secret put`. Social OAuth secrets pending (Phase 1.12). | ✅ |
-| 6.4 | Custom domain | `wingdex.app` added to Cloudflare Pages project. Zone active (Cloudflare is registrar). `BETTER_AUTH_URL` set to `https://wingdex.app` in `wrangler.toml`. Status: pending first deploy. | ✅ |
-| 6.5 | Preview deployments | `deploy.yml` auto-creates `<hash>.wingdex.pages.dev` preview URLs per PR via `wrangler-action` with `gitHubToken` for automatic PR comments. | ✅ |
-| 6.6 | Remove stale npm pin | Removed `npm@10.9.2`/`npm@11.6.2` version pins from `ci.yml`, `copilot-setup-steps.yml`, `package.json`, `CONTRIBUTING.md`, `README.md` — was a Spark-era lockfile compatibility workaround. | ✅ |
+| 6.1 | Create deploy workflows | Original `deploy.yml` (PR preview) merged into `ci.yml` as final step. `release.yml` handles production + dev deploys on push to `[main, dev]`. Semantic-release only on `main` (`if: github.ref == 'refs/heads/main'`). Branch-aware deploy: `--branch=dev` for non-main pushes. Concurrency group: `release-${{ github.ref_name }}`. | ✅ |
+| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `BETTER_AUTH_SECRET` — set via `gh secret set` and used by both CI and release workflows. | ✅ |
+| 6.3 | Add Cloudflare secrets | Production: `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `OPENAI_API_KEY`. Preview: `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`. All set via Cloudflare dashboard / `wrangler pages secret put`. | ✅ |
+| 6.4 | Custom domain | `wingdex.app` added to Cloudflare Pages project. Zone active (Cloudflare is registrar). Status: pending first production deploy. | ✅ |
+| 6.5 | Preview deployments | CI workflow deploys preview per PR as `pr-<number>.wingdex.pages.dev` via `wrangler-action` with `gitHubToken` for automatic PR comments + deployment status. | ✅ |
+| 6.6 | Remove stale npm pin | Removed `npm@10.9.2`/`npm@11.6.2` version pins from `ci.yml`, `copilot-setup-steps.yml`, `package.json`, `CONTRIBUTING.md`, `README.md`. | ✅ |
+| 6.7 | **New**: CI pipeline overhaul | Split monolithic `verify:ci` npm script into discrete CI steps (lint → typecheck → unit tests → build → migrate local D1 → e2e tests) for better error isolation. Removed `>/dev/null` from `dev-full.sh` so build/migration errors are visible. E2e in CI uses pre-built `dist` directly (`npx wrangler pages dev dist`) instead of rebuilding via `dev:full`. | ✅ |
+| 6.8 | **New**: Dev branch strategy | Created `dev` branch from `main`. CI triggers on PRs to `[main, dev]`. Release triggers on pushes to `[main, dev]`. PR #145 retargeted from `main` to `dev` for preview testing. | ✅ |
+| 6.9 | **New**: Separate D1 databases | Created `wingdex-db-dev` (ID `7299207b-...`) for preview/dev deploys. Added `[env.preview]` section in `wrangler.toml` with separate D1 binding. Release workflow migrates correct DB per branch (`wingdex-db` on main, `wingdex-db-dev` on dev). | ✅ |
+| 6.10 | **New**: Migration script safety | Renamed `db:migrate` → `db:migrate:local` with explicit `--local` flag to prevent accidental remote prod mutations from local machine. | ✅ |
+| 6.11 | **New**: Build/tsc fix | Excluded `src/__tests__/auth-config.test.ts` from `tsconfig.json` — it imports `functions/lib/auth.ts` which uses Cloudflare Workers types not in frontend tsconfig. Tests still run via vitest (separate config). | ✅ |
+| 6.12 | **New**: Prod D1 database recreation | Original `wingdex-db` was deleted. Recreated with new ID (`bb0a4504-...`), updated `wrangler.toml`, applied all 4 migrations. | ✅ |
 
-**Deploy workflows** — split into two files:
+**Deploy workflows** — two files:
 
-`release.yml` (push to main — production):
+`ci.yml` (PRs to main/dev — CI + preview):
+```yaml
+name: CI & Preview
+on:
+  pull_request:
+    branches: [main, dev]
+jobs:
+  build-and-test:
+    steps:
+      - Checkout, setup Node 25, npm ci
+      - Lint
+      - Typecheck
+      - Unit tests
+      - Build
+      - Migrate local D1
+      - E2E tests
+      - Deploy preview (wrangler pages deploy --branch=pr-<number>)
+      - Create branch preview deployment status
+```
+
+`release.yml` (push to main/dev — release + deploy):
 ```yaml
 name: Release
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-
+    branches: [main, dev]
+concurrency:
+  group: release-${{ github.ref_name }}
 jobs:
   release:
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm ci
-      - run: npm run build
-      - run: npx semantic-release
-      - run: npx wrangler d1 migrations apply wingdex-db --remote
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          command: pages deploy dist --project-name=wingdex
-```
-
-`deploy.yml` (PR — preview):
-```yaml
-name: Preview Deploy
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  preview:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm ci
-      - run: npm run build
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          command: pages deploy dist --project-name=wingdex
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - Checkout, setup Node 25, npm ci
+      - Build
+      - Semantic-release (main only)
+      - Ensure BETTER_AUTH_SECRET in Pages
+      - Apply D1 migrations (wingdex-db on main, wingdex-db-dev on dev)
+      - Deploy (no --branch for main, --branch=dev for dev)
 ```
 
 ---
 
 #### Phase 7 — Cleanup
 
-> **Status snapshot (2026-02-20)**: ⚠️ Partially complete (targeted cleanup and tracker/design notes done); full repo-wide cleanup sweep remains pending.
+> **Status snapshot (2026-02-21)**: ⚠️ Partially complete (targeted cleanup and tracker/design notes done); full repo-wide cleanup sweep remains pending. GitHub OAuth references updated from `example.com` to actual domains.
 > **Confidence**: Low-Medium.
 > **Validation**: Documentation/tracker updates verified and build still green ✅.
 
@@ -1153,6 +1165,7 @@ This section defines how to run the app locally during migration, how auth/data 
 - [ ] Local dev: Vite serves SPA, localStorage fallback works, bird photos can be uploaded and identified via `/api/identify-bird` (proxied to Wrangler)
 - [ ] `wrangler pages dev dist` — Pages Functions respond correctly
 - [ ] Auth flow: GitHub sign-in → session cookie set → `/api/auth/get-session` returns user → app renders with user info
+- [ ] Auth flow: Passkey sign-in + account linking with GitHub OAuth
 - [ ] Data persistence: Create outing → reload page → outing still exists (D1)
 - [ ] Bird ID: Upload bird photo → `POST /api/identify-bird` → structured species candidates returned → client displays results
 - [ ] Species search: Type in species field → `/api/species/search?q=robin` → autocomplete results shown
@@ -1162,6 +1175,7 @@ This section defines how to run the app locally during migration, how auth/data 
 - [ ] eBird export: `GET /api/export/outing/:id` → valid eBird CSV downloaded
 - [ ] E2E: `npx playwright test` passes against local dev server
 - [ ] Deploy: Push to `main` → GitHub Actions deploys to Cloudflare Pages → app live at custom domain
+- [ ] Deploy: Push to `dev` → GitHub Actions deploys to `dev.wingdex.pages.dev` with separate D1 database
 - [ ] Passkey: Register passkey in settings → sign out → sign in with passkey
 - [ ] No `spark` string remains in codebase (except git history)
 - [ ] Client bundle size: `taxonomy.json` no longer in client bundle (~300KB reduction)
