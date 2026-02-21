@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { enforceAiDailyLimit, RateLimitError } from '../../functions/lib/ai-rate-limit'
 
 type UsageRow = {
@@ -64,6 +64,15 @@ function createFakeDB(overrides: Record<string, any> = {}) {
 }
 
 describe('enforceAiDailyLimit', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-20T15:30:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('allows requests up to limit and then throws 429', async () => {
     const db = new FakeD1Database()
 
@@ -78,6 +87,55 @@ describe('enforceAiDailyLimit', () => {
       const rateLimitError = error as RateLimitError
       expect(rateLimitError.status).toBe(429)
       expect(rateLimitError.retryAfterSeconds).toBeGreaterThan(0)
+    }
+  })
+
+  it('uses default limit of 150 for identify-bird', async () => {
+    const db = new FakeD1Database()
+    // Should succeed without explicit limit (uses default 150)
+    await expect(enforceAiDailyLimit(db, 'u1', 'identify-bird')).resolves.toBeUndefined()
+  })
+
+  it('uses default limit of 300 for suggest-location', async () => {
+    const db = new FakeD1Database()
+    await expect(enforceAiDailyLimit(db, 'u1', 'suggest-location')).resolves.toBeUndefined()
+  })
+
+  it('isolates limits between different users', async () => {
+    const db = new FakeD1Database()
+    await enforceAiDailyLimit(db, 'user-A', 'identify-bird', '1')
+    // user-A is now at limit
+    await expect(enforceAiDailyLimit(db, 'user-A', 'identify-bird', '1')).rejects.toThrow(RateLimitError)
+    // user-B should still be allowed
+    await expect(enforceAiDailyLimit(db, 'user-B', 'identify-bird', '1')).resolves.toBeUndefined()
+  })
+
+  it('isolates limits between different endpoints', async () => {
+    const db = new FakeD1Database()
+    await enforceAiDailyLimit(db, 'u1', 'identify-bird', '1')
+    await expect(enforceAiDailyLimit(db, 'u1', 'identify-bird', '1')).rejects.toThrow(RateLimitError)
+    // Different endpoint should still be allowed
+    await expect(enforceAiDailyLimit(db, 'u1', 'suggest-location', '1')).resolves.toBeUndefined()
+  })
+
+  it('falls back to default limit for non-numeric override', async () => {
+    const db = new FakeD1Database()
+    // 'not-a-number' → falls back to 150 for identify-bird
+    await expect(enforceAiDailyLimit(db, 'u1', 'identify-bird', 'not-a-number')).resolves.toBeUndefined()
+  })
+
+  it('throws with retryAfterSeconds > 0 and <= 86400', async () => {
+    const db = new FakeD1Database()
+    db.alwaysDenyUpdates = true
+
+    try {
+      await enforceAiDailyLimit(db, 'u1', 'identify-bird')
+      expect.fail('should have thrown')
+    } catch (err) {
+      const rle = err as RateLimitError
+      expect(rle.retryAfterSeconds).toBeGreaterThan(0)
+      expect(rle.retryAfterSeconds).toBeLessThanOrEqual(86400)
+      expect(rle.message).toContain('Daily AI request limit reached')
     }
   })
 })

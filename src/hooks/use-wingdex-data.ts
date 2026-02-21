@@ -616,6 +616,7 @@ export function useWingDexData(userId: string) {
     clearAllData,
     loadSeedData,
     refresh,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation fns close over refs, not state; intentionally omitted
   }), [isLoading, payload, refresh])
 
   return store

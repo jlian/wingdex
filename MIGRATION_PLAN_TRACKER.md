@@ -876,9 +876,9 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 5 — Testing
 
-> **Status snapshot (2026-02-21)**: ✅ Complete. All 446 unit tests pass. Server-side function tests added. Spark test naming/URLs updated. E2E helper key format fixed. Phase 2 deferred items (2.16–2.19) resolved.
+> **Status snapshot (2026-02-21)**: ✅ Complete. All 482 unit tests pass across 28 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper key format fixed. Phase 2 deferred items (2.16–2.19) resolved. Lint fully clean (0 warnings).
 > **Confidence**: High.
-> **Validation**: `npm run test:unit` — 446 tests, 26 files ✅. `npm run lint` ✅ (0 errors). `npm run build` ✅.
+> **Validation**: `npm run test:unit` — 482 tests, 28 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -896,7 +896,10 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 5.12 | helpers.ts | Fixed localStorage key prefix from `wingdex_kv_u1_` to `1_` to match `getUserStorageKey('1', bucket)` format used by `readLocalData()`. | ✅ |
 | 5.13 | csv-and-upload-integration.spec.ts | Already intercepts `**/api/identify-bird`. No Spark routes remain. | ✅ |
 | 5.14 | Other e2e tests | All e2e tests use local dev mode + localStorage. No Spark dependencies. | ✅ |
-| 5.15 | **New**: Server-side function tests | Added 3 test files: `server-taxonomy.test.ts` (5 tests: getEbirdCode, getSpeciesByCode, searchSpecies, findBestMatch, getWikiTitle), `server-ebird.test.ts` (9 tests: parseEBirdCSV, groupPreviewsIntoOutings, detectImportConflicts, exportOutingToEBirdCSV, exportDexToCSV), `bird-id-prompt.test.ts` (8 tests: prompt generation with/without context, month formatting, JSON output instructions). | ✅ |
+| 5.15 | **New**: Server-side function tests | Added 6 test files covering all testable `functions/lib/` modules: `server-taxonomy.test.ts` (5 tests), `server-ebird.test.ts` (9 tests), `bird-id-prompt.test.ts` (8 tests), `bird-id-helpers.test.ts` (27 tests: safeParseJSON, extractAssistantContent, buildCropBox), `ai-rate-limit.test.ts` (8 tests with FakeD1Database mock), `dex-query.test.ts` (3 tests with DexQueryDB mock). Remaining modules (`auth.ts` — betterAuth/Kysely integration, `_middleware.ts` — PagesFunction) require full Wrangler integration tests. | ✅ |
+| 5.16 | Lint cleanup | Suppressed false-positive `react-hooks/exhaustive-deps` warning in `use-wingdex-data.ts` — mutation functions close over refs, not state. | ✅ |
+| 5.17 | Extract bird-id-helpers.ts | Extracted `safeParseJSON`, `extractAssistantContent`, `buildCropBox` from `bird-id.ts` into `functions/lib/bird-id-helpers.ts` so they can be tested without dragging in Cloudflare `Env` types. | ✅ |
+| 5.18 | Narrow dex-query.ts type | Replaced `D1Database` with minimal `DexQueryDB` interface (same pattern as `RateLimitDB`) to avoid Cloudflare type dependency in tsc. | ✅ |
 
 ---
 

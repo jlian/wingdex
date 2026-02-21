@@ -27,7 +27,16 @@ const DEX_QUERY = `
   ORDER BY obs.speciesName
 `
 
-export async function computeDex(db: D1Database, userId: string): Promise<DexRow[]> {
+/** D1-compatible database handle (only the subset we use). */
+export interface DexQueryDB {
+  prepare(sql: string): {
+    bind(...args: unknown[]): {
+      all<T>(): Promise<{ results: T[] }>
+    }
+  }
+}
+
+export async function computeDex(db: DexQueryDB, userId: string): Promise<DexRow[]> {
   const result = await db.prepare(DEX_QUERY).bind(userId).all<DexRow>()
   return result.results
 }
