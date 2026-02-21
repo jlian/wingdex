@@ -33,7 +33,7 @@ test.describe('API smoke (request context)', () => {
   test.beforeAll(async () => {
     execSync("printf 'y\\n' | npx wrangler d1 migrations apply wingdex-db --local", {
       stdio: 'pipe',
-      shell: '/bin/zsh',
+      shell: true,
     })
 
     wranglerProc = spawn('npx', ['wrangler', 'pages', 'dev', 'dist', '--port', String(API_PORT)], {
