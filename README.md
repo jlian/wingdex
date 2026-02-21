@@ -103,6 +103,13 @@ GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
 GITHUB_MODELS_ENDPOINT=https://models.github.ai/inference/chat/completions
 ```
 
+Optional per-user daily limits for AI endpoints (UTC day):
+
+```dotenv
+AI_DAILY_LIMIT_IDENTIFY=150
+AI_DAILY_LIMIT_SUGGEST=300
+```
+
 ### Scripts
 
 | Command | Description |

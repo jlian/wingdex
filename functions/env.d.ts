@@ -21,4 +21,6 @@ interface Env {
   GITHUB_MODELS_MODEL: string
   CF_ACCOUNT_ID: string
   AI_GATEWAY_ID: string
+  AI_DAILY_LIMIT_IDENTIFY?: string
+  AI_DAILY_LIMIT_SUGGEST?: string
 }
