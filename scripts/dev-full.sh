@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PORT="${PORT:-5000}"
-BASE="http://127.0.0.1:${PORT}"
+BASE="http://localhost:${PORT}"
 FORCE_RESTART="${FORCE_RESTART:-false}"
 
 is_port_listening() {

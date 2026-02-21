@@ -6,14 +6,14 @@ export default defineConfig({
   retries: 1,
   reporter: process.env.CI ? 'line' : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:5000',
+    baseURL: 'http://localhost:5000',
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
   webServer: {
     command: 'npm run dev:full',
-    url: 'http://127.0.0.1:5000',
+    url: 'http://localhost:5000',
     reuseExistingServer: true,
     timeout: 60_000,
   },
