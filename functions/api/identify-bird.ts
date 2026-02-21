@@ -1,4 +1,5 @@
 import { HttpError, identifyBird } from '../lib/bird-id'
+import { RateLimitError, enforceAiDailyLimit } from '../lib/ai-rate-limit'
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | undefined {
   if (value == null) return undefined
@@ -24,6 +25,13 @@ async function toImageDataUrl(image: FormDataEntryValue | null): Promise<string>
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   try {
+    const userId = (context.data as { user?: { id?: string } }).user?.id
+    if (!userId) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+
+    await enforceAiDailyLimit(context.env, userId, 'identify-bird')
+
     const formData = await context.request.formData()
     const imageDataUrl = await toImageDataUrl(formData.get('image'))
     const lat = parseOptionalNumber(formData.get('lat'))
@@ -44,6 +52,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     return Response.json(result)
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return new Response(error.message, {
+        status: error.status,
+        headers: {
+          'Retry-After': String(error.retryAfterSeconds),
+        },
+      })
+    }
+
     if (error instanceof HttpError) {
       return new Response(error.message, { status: error.status })
     }
