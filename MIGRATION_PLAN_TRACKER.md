@@ -916,28 +916,31 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 6 — CI/CD & Deploy
 
-> **Status snapshot (2026-02-20)**: ⚠️ Deploy workflow created (6.1); preview deploys automatic (6.5). Manual steps (secrets, domain) pending.
-> **Confidence**: Medium.
-> **Validation**: Workflow YAML validated by inspection; actual deployment requires secrets to be configured.
+> **Status snapshot (2026-02-20)**: ✅ Complete. Production deploy merged into `release.yml` (push to main: semantic-release → D1 migrations → Pages deploy). Preview deploy in `deploy.yml` (PR-only: build → deploy preview with PR URL comment via `gitHubToken`). GitHub repo secrets (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`) and Cloudflare Pages secrets (`BETTER_AUTH_SECRET`, `OPENAI_API_KEY`) all configured. Custom domain `wingdex.app` added (pending first deploy). Social OAuth secrets not yet set (depends on Phase 1.12). Stale `npm@10.9.2` version pin removed across 5 files.
+> **Confidence**: High.
+> **Validation**: Workflow YAML validated by inspection; `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set via `gh secret set` ✅; `BETTER_AUTH_SECRET` and `OPENAI_API_KEY` set via `wrangler pages secret put` ✅; CF zone `wingdex.app` active ✅; domain added to Pages project (status: pending first deploy) ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 6.1 | Create `.github/workflows/deploy.yml` | On push to `main`: `npm ci` → `npm run build` → D1 migrations → `wrangler pages deploy dist`. On PR: build → deploy preview. Uses concurrency groups. | ✅ |
-| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — required for deploy workflow | ⏳ |
-| 6.3 | Add Cloudflare secrets | `wrangler secret put BETTER_AUTH_SECRET`, `OPENAI_API_KEY`, and optionally social OAuth secrets (`GITHUB_CLIENT_SECRET`, etc.) | ⏳ |
-| 6.4 | Custom domain | In Cloudflare Pages dashboard: add custom domain → configure DNS. Update `BETTER_AUTH_URL` in `wrangler.toml`. | ⏳ |
-| 6.5 | Preview deployments | Pages auto-creates `<hash>.wingdex.pages.dev` preview URLs per PR via `wrangler-action`. | ✅ |
+| 6.1 | Create deploy workflows | Production: merged into `release.yml` (push to `main`: build → semantic-release → D1 migrations → `wrangler pages deploy`). PR preview: `deploy.yml` (build → deploy preview, auto-comments URL on PR via `gitHubToken`). Concurrency groups prevent parallel deploys. | ✅ |
+| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — set via `gh secret set` | ✅ |
+| 6.3 | Add Cloudflare secrets | `BETTER_AUTH_SECRET` (generated), `OPENAI_API_KEY` — set via `wrangler pages secret put`. Social OAuth secrets pending (Phase 1.12). | ✅ |
+| 6.4 | Custom domain | `wingdex.app` added to Cloudflare Pages project. Zone active (Cloudflare is registrar). `BETTER_AUTH_URL` set to `https://wingdex.app` in `wrangler.toml`. Status: pending first deploy. | ✅ |
+| 6.5 | Preview deployments | `deploy.yml` auto-creates `<hash>.wingdex.pages.dev` preview URLs per PR via `wrangler-action` with `gitHubToken` for automatic PR comments. | ✅ |
+| 6.6 | Remove stale npm pin | Removed `npm@10.9.2`/`npm@11.6.2` version pins from `ci.yml`, `copilot-setup-steps.yml`, `package.json`, `CONTRIBUTING.md`, `README.md` — was a Spark-era lockfile compatibility workaround. | ✅ |
 
-**Deploy workflow**:
+**Deploy workflows** — split into two files:
+
+`release.yml` (push to main — production):
 ```yaml
-name: Deploy
+name: Release
 on:
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -945,15 +948,33 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci
       - run: npm run build
+      - run: npx semantic-release
       - run: npx wrangler d1 migrations apply wingdex-db --remote
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex
+```
+
+`deploy.yml` (PR — preview):
+```yaml
+name: Preview Deploy
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          command: pages deploy dist --project-name=wingdex
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
