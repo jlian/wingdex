@@ -30,7 +30,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    await enforceAiDailyLimit(context.env, userId, 'identify-bird')
+    await enforceAiDailyLimit(context.env.DB, userId, 'identify-bird', context.env.AI_DAILY_LIMIT_IDENTIFY)
 
     const formData = await context.request.formData()
     const imageDataUrl = await toImageDataUrl(formData.get('image'))

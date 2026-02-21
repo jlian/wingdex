@@ -837,19 +837,19 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 3 — Bird ID & AI
 
-> **Status snapshot (2026-02-21)**: ⚠️ Phase 3 required code items are complete (`/api/identify-bird`, `/api/suggest-location`, provider-aware server inference, simplified client API calls). Latest tuning keeps a single-model server path while reducing latency via smaller upload image sizing, lower completion token budgets, and low reasoning effort for GPT-5-family OpenAI calls. Remaining items are external dashboard configuration (`3.6`) and optional per-user rate limiting (`3.7`).
-> **Confidence**: Medium.
-> **Validation**: `npm run test:unit -- src/__tests__/ai-inference.test.ts src/__tests__/ai-parse-and-textllm.test.ts src/__tests__/ai-fixture-replay.test.ts` ✅, `npm run build` ✅, `npx playwright test e2e/live-species-id.spec.ts --workers=1` ✅, `npm run smoke:api` ✅.
+> **Status snapshot (2026-02-21)**: ✅ Phase 3 complete. Server-owned AI endpoints, provider-aware inference, simplified client, AI Gateway code path, and D1-backed per-user daily rate limiting are all implemented and tested. AI Gateway dashboard entity created but not actively routing traffic (direct OpenAI preferred for now). Default model is `gpt-4.1-mini` after benchmarking against `gpt-5-mini` and `gpt-5-nano`.
+> **Confidence**: High.
+> **Validation**: `npm run test:unit` ✅ (415 tests including ai-inference, ai-fixture-replay, ai-rate-limit), `npm run build` ✅, `npm run smoke:api` ✅, `npm run lint` ✅ (0 errors).
 
 | Step | What | Details | Status |
 |---|---|---|---|
 | 3.1 | Create `functions/api/identify-bird.ts` | Accept multipart image + context. Resize image, construct prompt, call LLM, ground against taxonomy, compute crop box. Return structured `{ candidates, cropBox, multipleBirds }`. | ✅ |
 | 3.2 | Create `functions/api/suggest-location.ts` | Accept coords + optional existing names. Call text LLM with location suggestion prompt. Return `{ name }`. | ✅ |
-| 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. | ✅ |
+| 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. Prompt deduplicated into shared `functions/lib/bird-id-prompt.js` used by runtime, fixture capture, and benchmark scripts. | ✅ |
 | 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server — clients never see the LLM API directly. | ✅ (OpenAI, Azure OpenAI, and GitHub Models provider selection + unsupported-parameter fallback handling implemented) |
 | 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Keep only lightweight client image compression + multipart upload (`POST /api/identify-bird`) and server text call (`POST /api/suggest-location`) with local auth retry wrapper. | ✅ |
-| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ⏳ (manual Cloudflare dashboard task; not codified in repo) |
-| 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | ⏳ (optional hardening; deferred) |
+| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ✅ Gateway created (`wingdex-prod`); code path in `bird-id.ts` routes through gateway when `CF_ACCOUNT_ID` + `AI_GATEWAY_ID` are set. Not actively used — direct OpenAI preferred for simplicity. |
+| 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | ✅ D1 `ai_daily_usage` table (migration 0003) + `enforceAiDailyLimit` helper. Defaults: 150/day identify, 300/day suggest. Returns 429 + `Retry-After`. Configurable via `AI_DAILY_LIMIT_IDENTIFY`/`AI_DAILY_LIMIT_SUGGEST` env vars. Unit + endpoint tests in `ai-rate-limit.test.ts`. |
 
 ---
 

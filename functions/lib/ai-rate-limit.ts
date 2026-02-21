@@ -1,4 +1,4 @@
-import { HttpError } from './bird-id'
+import { HttpError } from './http-error'
 
 type AiEndpoint = 'identify-bird' | 'suggest-location'
 
@@ -7,7 +7,7 @@ const DEFAULT_LIMITS: Record<AiEndpoint, number> = {
   'suggest-location': 300,
 }
 
-const ENV_KEYS: Record<AiEndpoint, keyof Env> = {
+const ENV_LIMIT_KEYS: Record<AiEndpoint, string> = {
   'identify-bird': 'AI_DAILY_LIMIT_IDENTIFY',
   'suggest-location': 'AI_DAILY_LIMIT_SUGGEST',
 }
@@ -36,12 +36,21 @@ function secondsUntilNextUtcDay(now: Date): number {
   return Math.max(1, Math.ceil((next - now.getTime()) / 1000))
 }
 
-export async function enforceAiDailyLimit(env: Env, userId: string, endpoint: AiEndpoint): Promise<void> {
-  const today = utcDateKey(new Date())
-  const configured = env[ENV_KEYS[endpoint]] as string | undefined
-  const limit = parseLimit(configured, DEFAULT_LIMITS[endpoint])
+/** D1-compatible database handle (only the subset we use). */
+export interface RateLimitDB {
+  prepare(sql: string): { bind(...args: unknown[]): { run(): Promise<{ meta: { changes?: number } }> } }
+}
 
-  await env.DB.prepare(
+export async function enforceAiDailyLimit(
+  db: RateLimitDB,
+  userId: string,
+  endpoint: AiEndpoint,
+  limitOverride?: string,
+): Promise<void> {
+  const today = utcDateKey(new Date())
+  const limit = parseLimit(limitOverride, DEFAULT_LIMITS[endpoint])
+
+  await db.prepare(
     `INSERT INTO ai_daily_usage (userId, endpoint, usageDate, requestCount)
      VALUES (?, ?, ?, 0)
      ON CONFLICT(userId, endpoint, usageDate) DO NOTHING`,
@@ -49,7 +58,7 @@ export async function enforceAiDailyLimit(env: Env, userId: string, endpoint: Ai
     .bind(userId, endpoint, today)
     .run()
 
-  const increment = await env.DB.prepare(
+  const increment = await db.prepare(
     `UPDATE ai_daily_usage
        SET requestCount = requestCount + 1,
            updatedAt = datetime('now')
