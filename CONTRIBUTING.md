@@ -11,7 +11,7 @@ Thanks for your interest in contributing! Here's how to get started.
    npm ci
    ```
 
-   Use `Node 22.16.x` and `npm 10.9.x` to avoid lockfile drift.
+   Use Node 22+ (`node --version`).
 
 2. **Start the dev server**
    ```bash

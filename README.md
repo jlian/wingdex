@@ -62,7 +62,7 @@ npm ci
 npm run dev
 ```
 
-For reproducible installs and stable lockfile output, use `Node 22.16.x` and `npm 10.9.x`.
+Requires Node 22+.
 
 `npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
 
