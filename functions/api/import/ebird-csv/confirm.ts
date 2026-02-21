@@ -48,6 +48,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json({ imported: { outings: 0, observations: 0, newSpecies: 0 }, dexUpdates })
   }
 
+  // Snapshot species already in the user's dex before inserting
+  const priorDex = await computeDex(context.env.DB, userId)
+  const priorSpecies = new Set(priorDex.map(row => row.speciesName))
+
   const { outings, observations } = groupPreviewsIntoOutings(selectedPreviews, userId)
 
   const insertStatements: D1PreparedStatement[] = []
@@ -98,13 +102,13 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   const dexUpdates = await computeDex(context.env.DB, userId)
-  const importedSpecies = new Set(observations.map(observation => observation.speciesName))
+  const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length
 
   return Response.json({
     imported: {
       outings: outings.length,
       observations: observations.length,
-      newSpecies: importedSpecies.size,
+      newSpecies,
     },
     dexUpdates: dexUpdates.map(row => ({
       ...row,
