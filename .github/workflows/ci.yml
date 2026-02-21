@@ -43,28 +43,26 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex --branch=pr-${{ github.event.pull_request.number }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create GitHub Deployments
+      - name: Stable preview deployment
         uses: actions/github-script@v7
         with:
           script: |
-            const previews = [
-              { env: 'Preview', url: 'https://pr-${{ github.event.pull_request.number }}.wingdex.pages.dev' },
-              { env: 'Preview (commit)', url: '${{ steps.deploy.outputs.deployment-url }}' },
-            ];
-            for (const { env, url } of previews) {
-              const { data: deployment } = await github.rest.repos.createDeployment({
-                ...context.repo,
-                ref: context.sha,
-                environment: env,
-                auto_merge: false,
-                required_contexts: [],
-                transient_environment: true,
-              });
-              await github.rest.repos.createDeploymentStatus({
-                ...context.repo,
-                deployment_id: deployment.id,
-                state: 'success',
-                environment_url: url,
-              });
-            }
+            const { data: deployment } = await github.rest.repos.createDeployment({
+              ...context.repo,
+              ref: context.sha,
+              environment: 'Preview (stable)',
+              auto_merge: false,
+              required_contexts: [],
+              transient_environment: true,
+              production_environment: false,
+            });
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo,
+              deployment_id: deployment.id,
+              state: 'success',
+              environment_url: 'https://pr-${{ github.event.pull_request.number }}.wingdex.pages.dev',
+              log_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              auto_inactive: true,
+            });
