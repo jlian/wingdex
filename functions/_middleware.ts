@@ -1,7 +1,15 @@
 import { createAuth } from './lib/auth'
 
 export const onRequest: PagesFunction<Env> = async (context) => {
-  const { pathname } = new URL(context.request.url)
+  const { pathname, hostname } = new URL(context.request.url)
+  const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
+
+  if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
+    const signupHeader = context.request.headers.get('x-wingdex-passkey-signup')
+    if (signupHeader !== '1') {
+      return new Response('Forbidden', { status: 403 })
+    }
+  }
 
   if (!pathname.startsWith('/api/') || pathname.startsWith('/api/auth')) {
     return context.next()
