@@ -46,7 +46,12 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     if (isLocalRuntime()) return
     void authClient.listAccounts().then((result) => {
       if (result.data) {
-        setGithubLinked(result.data.some((a: { providerId: string }) => a.providerId === 'github'))
+        const linked = result.data.some((a: { providerId: string }) => a.providerId === 'github')
+        setGithubLinked(linked)
+        if (linked && sessionStorage.getItem('pendingGitHubLink')) {
+          sessionStorage.removeItem('pendingGitHubLink')
+          toast.success('GitHub account linked')
+        }
       }
     })
   }, [])
@@ -372,6 +377,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               disabled={githubLinked === true || linkingGitHub}
               onClick={async () => {
                 setLinkingGitHub(true)
+                sessionStorage.setItem('pendingGitHubLink', '1')
                 await authClient.linkSocial({
                   provider: 'github',
                   callbackURL: `${window.location.origin}/#settings`,
