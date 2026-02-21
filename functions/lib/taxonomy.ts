@@ -111,6 +111,11 @@ export function findBestMatch(name: string): TaxonEntry | null {
   return bestEntry
 }
 
+export function normalizeSpeciesName(name: string): string {
+  const match = findBestMatch(name)
+  return match ? match.common : name
+}
+
 export function getEbirdCode(commonName: string): string {
   const match = byCommonLower.get(commonName.toLowerCase())
   if (match?.ebirdCode) return match.ebirdCode

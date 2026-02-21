@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findBestMatch } from '@/lib/taxonomy'
+import { findBestMatch } from '../../functions/lib/taxonomy'
 
 // ── Fixture loading ─────────────────────────────────────────
 

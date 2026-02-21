@@ -493,53 +493,6 @@ export function useWingDexData(userId: string) {
     }
   }
 
-  /** Import outings, observations, and update dex in one shot (for eBird CSV import) */
-  const importFromEBird = (
-    newOutings: Outing[],
-    newObservations: Observation[]
-  ): { newSpeciesCount: number } => {
-    const existingSpecies = new Set(payloadRef.current.dex.map(entry => entry.speciesName))
-    const incomingSpecies = new Set(
-      newObservations
-        .filter(observation => observation.certainty === 'confirmed')
-        .map(observation => observation.speciesName)
-    )
-    const newSpeciesCount = Array.from(incomingSpecies).filter(speciesName => !existingSpecies.has(speciesName)).length
-
-    const optimistic: WingDexPayload = {
-      ...payloadRef.current,
-      outings: [...newOutings, ...payloadRef.current.outings],
-      observations: [...payloadRef.current.observations, ...newObservations],
-      dex: rebuildDexFromState(
-        [...newOutings, ...payloadRef.current.outings],
-        [...payloadRef.current.observations, ...newObservations],
-        payloadRef.current.dex,
-      ),
-    }
-    applyPayload(optimistic)
-
-    if (storageMode === 'api') {
-      void Promise.all(
-        newOutings.map(outing =>
-          apiJson('/api/data/outings', {
-            method: 'POST',
-            body: JSON.stringify(outing),
-          })
-        )
-      )
-        .then(() =>
-          apiJson<{ observations: Observation[]; dexUpdates: DexEntry[] }>('/api/data/observations', {
-            method: 'POST',
-            body: JSON.stringify(newObservations),
-          })
-        )
-        .then(response => applyDexUpdates(response.dexUpdates))
-        .catch(() => undefined)
-    }
-
-    return { newSpeciesCount }
-  }
-
   const clearAllData = () => {
     const next: WingDexPayload = {
       outings: [],
@@ -563,37 +516,6 @@ export function useWingDexData(userId: string) {
     }
   }
 
-  const loadSeedData = (
-    seedOutings: Outing[],
-    seedObservations: Observation[],
-    seedDex: DexEntry[],
-  ) => {
-    const next = {
-      outings: seedOutings,
-      photos: payloadRef.current.photos,
-      observations: seedObservations,
-      dex: seedDex,
-    }
-    applyPayload(next)
-
-    if (storageMode === 'api') {
-      void apiJson<{ dexUpdates?: DexEntry[] }>('/api/data/seed', {
-        method: 'POST',
-        body: JSON.stringify({
-          outings: seedOutings,
-          observations: seedObservations,
-          dex: seedDex,
-        }),
-      })
-        .then(response => {
-          if (response.dexUpdates) {
-            applyDexUpdates(response.dexUpdates)
-          }
-        })
-        .catch(() => undefined)
-    }
-  }
-
   const store = useMemo(() => ({
     isLoading,
     photos: payload.photos,
@@ -612,9 +534,7 @@ export function useWingDexData(userId: string) {
     getOutingPhotos,
     getDexEntry,
     importDexEntries,
-    importFromEBird,
     clearAllData,
-    loadSeedData,
     refresh,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation fns close over refs, not state; intentionally omitted
   }), [isLoading, payload, refresh])

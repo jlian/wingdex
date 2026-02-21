@@ -3,7 +3,7 @@ import { createAuth } from './lib/auth'
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname } = new URL(context.request.url)
 
-  if (!pathname.startsWith('/api/') || pathname.startsWith('/api/auth')) {
+  if (!pathname.startsWith('/api/') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/species/wiki-title')) {
     return context.next()
   }
 
