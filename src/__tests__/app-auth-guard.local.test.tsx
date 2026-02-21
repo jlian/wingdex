@@ -35,6 +35,10 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
+vi.mock('@/components/flows/PasskeyAuthDialog', () => ({
+  default: () => null,
+}))
+
 vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
@@ -96,6 +100,6 @@ describe('App auth guard (local runtime)', () => {
     render(<App />)
 
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    expect(screen.queryByText('Sign in with passkey')).not.toBeInTheDocument()
+    expect(screen.queryByText('Welcome to WingDex')).not.toBeInTheDocument()
   })
 })

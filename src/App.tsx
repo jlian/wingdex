@@ -107,12 +107,34 @@ function App() {
   const localSessionBootstrapStarted = useRef(false)
   const [localSessionBootstrapFailed, setLocalSessionBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [showApp, setShowApp] = useState(false)
+  const authCompleted = useRef(false)
+  // Tracks whether the initial session fetch resolved with a valid session
+  // (returning user with a cookie). Set once, never cleared.
+  const initialSessionResolved = useRef(false)
+  const initialSessionChecked = useRef(false)
+
+  // On the first non-pending session result, mark whether a valid session existed
+  useEffect(() => {
+    if (initialSessionChecked.current || isSessionPending) return
+    initialSessionChecked.current = true
+    if (session?.user && !Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)) {
+      initialSessionResolved.current = true
+    }
+  }, [session, isSessionPending])
 
   useEffect(() => {
     if (session && session.user) {
       const isAnonymousUser = !isDevRuntime() && Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
       if (isAnonymousUser) {
+        setUser(null)
+        return
+      }
+
+      // On hosted: only promote session → user when the page loaded with a
+      // valid session (returning user) OR after LoginPage signals completion.
+      // This prevents intermediate session changes during signup from causing
+      // flashes of the authenticated UI.
+      if (!isDevRuntime() && !authCompleted.current && !initialSessionResolved.current) {
         setUser(null)
         return
       }
@@ -154,18 +176,10 @@ function App() {
     setUser(null)
   }, [session, isSessionPending, refetchSession, localSessionBootstrapFailed])
 
-  useEffect(() => {
-    if (!user) {
-      setShowApp(false)
-      return
-    }
-
-    const timer = window.setTimeout(() => {
-      setShowApp(true)
-    }, 50)
-
-    return () => window.clearTimeout(timer)
-  }, [user])
+  const handleAuthenticated = useCallback(() => {
+    authCompleted.current = true
+    void refetchSession()
+  }, [refetchSession])
 
   if (!user) {
     if (isSessionPending && !isDevRuntime()) {
@@ -173,17 +187,13 @@ function App() {
     }
 
     if (!isDevRuntime()) {
-      return <LoginPage onAuthenticated={() => void sessionState.refetch()} />
+      return <LoginPage onAuthenticated={handleAuthenticated} />
     }
 
     return <BootShell />
   }
 
-  return (
-    <div className={`transition-opacity duration-150 ease-out ${showApp ? 'opacity-100' : 'opacity-0'}`}>
-      <AppContent user={user} />
-    </div>
-  )
+  return <AppContent user={user} />
 }
 
 function BootShell() {
