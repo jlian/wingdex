@@ -916,17 +916,17 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 6 — CI/CD & Deploy
 
-> **Status snapshot (2026-02-20)**: ⏳ Not started.
-> **Confidence**: Low.
-> **Validation**: N/A yet.
+> **Status snapshot (2026-02-20)**: ⚠️ Deploy workflow created (6.1); preview deploys automatic (6.5). Manual steps (secrets, domain) pending.
+> **Confidence**: Medium.
+> **Validation**: Workflow YAML validated by inspection; actual deployment requires secrets to be configured.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 6.1 | Create `.github/workflows/deploy.yml` | On push to `main`: `npm ci` → `npm run build` → `wrangler pages deploy dist`. On PR: deploy preview. | |
-| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | |
-| 6.3 | Add Cloudflare secrets | `wrangler secret put BETTER_AUTH_SECRET`, `wrangler secret put GITHUB_CLIENT_SECRET`, etc. | |
-| 6.4 | Custom domain | In Cloudflare Pages dashboard: add custom domain → configure DNS. | |
-| 6.5 | Preview deployments | Pages auto-creates `<branch>.wingdex.pages.dev` preview URLs per PR. | |
+| 6.1 | Create `.github/workflows/deploy.yml` | On push to `main`: `npm ci` → `npm run build` → D1 migrations → `wrangler pages deploy dist`. On PR: build → deploy preview. Uses concurrency groups. | ✅ |
+| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — required for deploy workflow | ⏳ |
+| 6.3 | Add Cloudflare secrets | `wrangler secret put BETTER_AUTH_SECRET`, `OPENAI_API_KEY`, and optionally social OAuth secrets (`GITHUB_CLIENT_SECRET`, etc.) | ⏳ |
+| 6.4 | Custom domain | In Cloudflare Pages dashboard: add custom domain → configure DNS. Update `BETTER_AUTH_URL` in `wrangler.toml`. | ⏳ |
+| 6.5 | Preview deployments | Pages auto-creates `<hash>.wingdex.pages.dev` preview URLs per PR via `wrangler-action`. | ✅ |
 
 **Deploy workflow**:
 ```yaml
