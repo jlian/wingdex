@@ -66,7 +66,6 @@ vi.mock('@phosphor-icons/react', () => ({
 
 vi.mock('@/components/pages/HomePage', () => ({
   default: () => <div>HomePage</div>,
-  HomeContentSkeleton: () => <div>HomeContentSkeleton</div>,
 }))
 
 vi.mock('@/components/pages/OutingsPage', () => ({
@@ -110,9 +109,12 @@ describe('App auth guard (hosted runtime)', () => {
     mockUseSession.mockReturnValue({ data: null, isPending: true, refetch: vi.fn() })
 
     const { default: App } = await import('@/App')
-    render(<App />)
+    const { container } = render(<App />)
 
-    expect(await screen.findByText('HomeContentSkeleton')).toBeInTheDocument()
+    // Boot shell renders as a blank background div (no skeleton, no login)
+    expect(container.querySelector('.bg-background')).toBeInTheDocument()
+    expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Welcome to WingDex' })).not.toBeInTheDocument()
   })
 
   it('renders app content when hosted session is present', async () => {
@@ -179,7 +181,7 @@ describe('App auth guard (hosted runtime)', () => {
 
     // Signup view should still be visible (not replaced by BootShell)
     expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
-    expect(screen.queryByText('HomeContentSkeleton')).not.toBeInTheDocument()
+    expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
   })
 
   it('does not show app content for anonymous session during signup', async () => {

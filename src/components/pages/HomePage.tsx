@@ -16,48 +16,6 @@ interface HomePageProps {
   onNavigate: (tab: string) => void
 }
 
-export function HomeContentSkeleton() {
-  return (
-    <>
-      {/* Hero skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-12 w-20 rounded-md bg-muted animate-pulse" />
-          <div className="h-5 w-36 rounded-md bg-muted animate-pulse" />
-        </div>
-        <div className="h-12 w-24 rounded-xl bg-muted animate-pulse" />
-      </div>
-
-      {/* Recent Species skeleton */}
-      <div className="space-y-3 pt-2">
-        <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-        <div className="flex gap-3 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-28 flex-shrink-0 space-y-2">
-              <div className="aspect-square rounded-lg bg-muted animate-pulse" />
-              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Outings skeleton */}
-      <div className="space-y-3 pt-2">
-        <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex gap-3 items-start py-3 border-b border-border last:border-0">
-            <div className="h-4 w-4 rounded-full bg-muted animate-pulse mt-0.5" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-              <div className="h-3 w-40 rounded bg-muted animate-pulse" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-}
-
 export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
 
@@ -79,13 +37,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
 
   const totalPhotos = data.photos.length
 
-  if (data.isLoading) {
-    return (
-      <div className="px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
-        <HomeContentSkeleton />
-      </div>
-    )
-  }
+  if (data.isLoading) return null
 
   if (dex.length === 0) {
     return (

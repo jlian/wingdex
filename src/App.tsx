@@ -10,7 +10,7 @@ import { authClient } from '@/lib/auth-client'
 import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
-import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
+import HomePage from '@/components/pages/HomePage'
 import LoginPage from '@/components/pages/LoginPage'
 
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
@@ -197,26 +197,7 @@ function App() {
 }
 
 function BootShell() {
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
-            <div className="flex gap-2">
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-            </div>
-            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-          </div>
-        </div>
-      </header>
-
-      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
-        <HomeContentSkeleton />
-      </div>
-    </div>
-  )
+  return <div className="min-h-screen bg-background" />
 }
 
 function AppContent({ user }: { user: UserInfo }) {
@@ -367,7 +348,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'outings' && (
             <TabsContent value="outings" className="mt-0">
-              <Suspense fallback={<ListPageLoadingFallback title="Your Outings" />}>
+              <Suspense fallback={null}>
                 <OutingsPage
                   data={data}
                   selectedOutingId={subId ?? null}
@@ -385,7 +366,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'wingdex' && (
             <TabsContent value="wingdex" className="mt-0">
-              <Suspense fallback={<ListPageLoadingFallback title="WingDex" />}>
+              <Suspense fallback={null}>
                 <WingDexPage
                   data={data}
                   selectedSpecies={subId ?? null}
@@ -403,7 +384,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'settings' && (
             <TabsContent value="settings" className="mt-0">
-              <Suspense fallback={<SettingsLoadingFallback />}>
+              <Suspense fallback={null}>
                 <SettingsPage data={data} user={user} />
               </Suspense>
             </TabsContent>
@@ -438,41 +419,6 @@ function AppContent({ user }: { user: UserInfo }) {
         </a>
       </div>
 
-    </div>
-  )
-}
-
-function ListPageLoadingFallback({ title }: { title: string }) {
-  return (
-    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
-      <div className="space-y-2">
-        <p className="font-serif text-2xl font-semibold text-foreground">{title}</p>
-        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="h-9 flex-1 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-      </div>
-
-      <div className="space-y-1">
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-      </div>
-    </div>
-  )
-}
-
-function SettingsLoadingFallback() {
-  return (
-    <div className="px-4 sm:px-6 py-6 space-y-3 max-w-3xl mx-auto">
-      <div className="h-7 w-32 rounded-md bg-muted animate-pulse" />
-      <div className="h-24 w-full rounded-lg bg-muted animate-pulse" />
-      <div className="h-16 w-full rounded-lg bg-muted animate-pulse" />
     </div>
   )
 }

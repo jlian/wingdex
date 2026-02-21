@@ -66,7 +66,6 @@ vi.mock('@phosphor-icons/react', () => ({
 
 vi.mock('@/components/pages/HomePage', () => ({
   default: () => <div>HomePage</div>,
-  HomeContentSkeleton: () => <div>HomeContentSkeleton</div>,
 }))
 
 vi.mock('@/components/pages/OutingsPage', () => ({
