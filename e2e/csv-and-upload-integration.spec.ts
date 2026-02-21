@@ -69,7 +69,15 @@ function mockWikimedia(page: Page) {
 
 /** Navigate to app, wait for it to load. */
 async function loadApp(page: Page) {
-  await page.goto('/')
+  try {
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+  } catch (error) {
+    const message = String(error)
+    if (!message.includes('frame was detached') && !message.includes('ERR_ABORTED')) {
+      throw error
+    }
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+  }
   await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
 }
 
