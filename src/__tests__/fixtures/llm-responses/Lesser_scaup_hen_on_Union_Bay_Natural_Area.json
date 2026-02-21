@@ -6,37 +6,21 @@
     "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.88}],\"birdCenter\":[60,50],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Lesser Scaup (Aythya affinis)\",\"confidence\":0.85}],\"birdCenter\":[45,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Mallard (Anas platyrhynchos)",
-        "confidence": 0.88
+        "species": "Lesser Scaup (Aythya affinis)",
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      60,
-      50
+      45,
+      55
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 5039,
-      "height": 3359
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 426
-    }
-  },
-  "capturedAt": "2026-02-21T04:54:06.846Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:22:40.443Z"
 }

@@ -6,37 +6,21 @@
     "month": 5,
     "locationName": "Unknown (AI-generated test image)"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Say's Phoebe (Sayornis saya)\",\"confidence\":0.65}],\"birdCenter\":[35,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Least Flycatcher (Empidonax minimus)\",\"confidence\":0.88}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Say's Phoebe (Sayornis saya)",
-        "confidence": 0.65
+        "species": "Least Flycatcher (Empidonax minimus)",
+        "confidence": 0.88
       }
     ],
     "birdCenter": [
-      35,
-      60
+      50,
+      55
     ],
-    "birdSize": "medium",
+    "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 1024,
-      "height": 1536
-    },
-    "uploadedDimensions": {
-      "width": 427,
-      "height": 640
-    }
-  },
-  "capturedAt": "2026-02-21T04:55:24.242Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:55.379Z"
 }

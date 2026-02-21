@@ -6,37 +6,21 @@
     "month": 11,
     "locationName": "Taipei Zoo, Taiwan"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.92}],\"birdCenter\":[67,50],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.95}],\"birdCenter\":[70,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Common Kingfisher (Alcedo atthis)",
-        "confidence": 0.92
+        "confidence": 0.95
       }
     ],
     "birdCenter": [
-      67,
-      50
+      70,
+      55
     ],
-    "birdSize": "medium",
+    "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "gpt-5-nano",
-  "requestConfig": {
-    "tokenParam": "max_completion_tokens",
-    "maxCompletionTokens": 1400,
-    "reasoningEffort": "low",
-    "resizedBeforeSend": true,
-    "resizeMaxDim": 640,
-    "jpegQuality": 70,
-    "sourceDimensions": {
-      "width": 5012,
-      "height": 3341
-    },
-    "uploadedDimensions": {
-      "width": 640,
-      "height": 426
-    }
-  },
-  "capturedAt": "2026-02-21T04:55:18.107Z"
+  "model": "openai/gpt-4.1-mini",
+  "capturedAt": "2026-02-16T04:23:48.881Z"
 }
