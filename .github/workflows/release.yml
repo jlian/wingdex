@@ -74,3 +74,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex ${{ github.ref != 'refs/heads/main' && format('--branch={0}', github.ref_name) || '' }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
