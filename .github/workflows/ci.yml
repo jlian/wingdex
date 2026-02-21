@@ -1,4 +1,4 @@
-name: CI
+name: CI & Preview
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build and Test
+    name: Verify & Deploy Preview
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,3 +43,8 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex --branch=pr-${{ github.event.pull_request.number }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Preview URL
+        run: |
+          echo "### Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://pr-${{ github.event.pull_request.number }}.wingdex.pages.dev" >> "$GITHUB_STEP_SUMMARY"
