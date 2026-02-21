@@ -79,7 +79,7 @@ OpenAI:
 ```dotenv
 LLM_PROVIDER=openai
 OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-5-mini
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
 Azure OpenAI:
@@ -88,7 +88,7 @@ Azure OpenAI:
 LLM_PROVIDER=azure
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
 AZURE_OPENAI_API_KEY=...
-AZURE_OPENAI_DEPLOYMENT=gpt-5-mini
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
 # optional
 AZURE_OPENAI_API_VERSION=2024-10-21
 ```
@@ -99,7 +99,7 @@ GitHub Models:
 LLM_PROVIDER=github
 GITHUB_MODELS_TOKEN=...
 # optional (defaults shown)
-GITHUB_MODELS_MODEL=openai/gpt-5-mini
+GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
 GITHUB_MODELS_ENDPOINT=https://models.github.ai/inference/chat/completions
 ```
 

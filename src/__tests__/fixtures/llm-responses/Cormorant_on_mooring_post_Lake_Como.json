@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Lake Como, Italy"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.90}],\"birdCenter\":[45,40],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.92}],\"birdCenter\":[30,50],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Cormorant (Phalacrocorax carbo)",
-        "confidence": 0.9
+        "confidence": 0.92
       }
     ],
     "birdCenter": [
-      45,
-      40
+      30,
+      50
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:40.478Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3291,
+      "height": 2194
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "capturedAt": "2026-02-21T04:55:08.981Z"
 }

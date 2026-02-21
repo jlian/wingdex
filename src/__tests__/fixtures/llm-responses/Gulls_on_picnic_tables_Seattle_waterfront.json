@@ -6,21 +6,37 @@
     "month": 7,
     "locationName": "Seattle Waterfront, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.85}],\"birdCenter\":[30,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Herring Gull (Larus argentatus)\",\"confidence\":0.85}],\"birdCenter\":[60,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Western Gull (Larus occidentalis)",
+        "species": "Herring Gull (Larus argentatus)",
         "confidence": 0.85
       }
     ],
     "birdCenter": [
-      30,
-      75
+      60,
+      60
     ],
     "birdSize": "medium",
-    "multipleBirds": true
+    "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:23.243Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5989,
+      "height": 3993
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:57.795Z"
 }

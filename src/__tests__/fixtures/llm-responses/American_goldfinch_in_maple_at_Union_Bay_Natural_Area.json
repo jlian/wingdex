@@ -1,26 +1,42 @@
 {
   "imageFile": "American_goldfinch_in_maple_at_Union_Bay_Natural_Area.jpg",
   "context": {
-    "lat": 47.6564,
-    "lon": -122.2924,
-    "month": 8,
+    "lat": 47.6543,
+    "lon": -122.2952,
+    "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"American Goldfinch (Spinus tristis)\",\"confidence\":0.85}],\"birdCenter\":[45,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"American Goldfinch (Spinus tristis)\",\"confidence\":0.88}],\"birdCenter\":[60,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "American Goldfinch (Spinus tristis)",
-        "confidence": 0.85
+        "confidence": 0.88
       }
     ],
     "birdCenter": [
-      45,
-      55
+      60,
+      60
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:07.338Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 1910,
+      "height": 2865
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:18.323Z"
 }

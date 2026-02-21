@@ -6,21 +6,37 @@
     "month": 7,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Belted Kingfisher (Megaceryle alcyon)\",\"confidence\":0.95}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Belted Kingfisher (Megaceryle alcyon)\",\"confidence\":0.85}],\"birdCenter\":[35,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Belted Kingfisher (Megaceryle alcyon)",
-        "confidence": 0.95
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      40,
-      55
+      35,
+      60
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:21:52.921Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3832,
+      "height": 2555
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:27.761Z"
 }

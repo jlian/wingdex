@@ -1,26 +1,42 @@
 {
   "imageFile": "Stellers_Jay_eating_cherries_Seattle_backyard.jpg",
   "context": {
-    "lat": 47.68,
-    "lon": -122.34,
-    "month": 7,
+    "lat": 47.6399,
+    "lon": -122.4039,
+    "month": 5,
     "locationName": "Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Steller's Jay (Cyanocitta stelleri)\",\"confidence\":0.95}],\"birdCenter\":[55,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Lazuli Bunting (Passerina amoena)\",\"confidence\":0.62}],\"birdCenter\":[40,52],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Steller's Jay (Cyanocitta stelleri)",
-        "confidence": 0.95
+        "species": "Lazuli Bunting (Passerina amoena)",
+        "confidence": 0.62
       }
     ],
     "birdCenter": [
-      55,
-      55
+      40,
+      52
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:43.768Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4957,
+      "height": 3305
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "capturedAt": "2026-02-21T04:54:17.731Z"
 }

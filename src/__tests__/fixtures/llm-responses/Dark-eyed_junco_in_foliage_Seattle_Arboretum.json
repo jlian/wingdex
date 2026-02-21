@@ -6,21 +6,37 @@
     "month": 10,
     "locationName": "Washington Park Arboretum, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Dark-eyed Junco (Junco hyemalis)\",\"confidence\":0.90}],\"birdCenter\":[65,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Dark-eyed Junco (Junco hyemalis)\",\"confidence\":0.82}],\"birdCenter\":[65,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Dark-eyed Junco (Junco hyemalis)",
-        "confidence": 0.9
+        "confidence": 0.82
       }
     ],
     "birdCenter": [
       65,
-      50
+      60
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:35.087Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5500,
+      "height": 3667
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:43.545Z"
 }

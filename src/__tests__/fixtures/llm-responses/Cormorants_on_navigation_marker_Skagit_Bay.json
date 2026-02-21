@@ -6,25 +6,37 @@
     "month": 6,
     "locationName": "Skagit Bay, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Pelagic Cormorant (Urile pelagicus)\",\"confidence\":0.85},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.70}],\"birdCenter\":[50,40],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Double-crested Cormorant (Phalacrocorax auritus)\",\"confidence\":0.85}],\"birdCenter\":[42,38],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Pelagic Cormorant (Urile pelagicus)",
+        "species": "Double-crested Cormorant (Phalacrocorax auritus)",
         "confidence": 0.85
-      },
-      {
-        "species": "Glaucous-winged Gull (Larus glaucescens)",
-        "confidence": 0.7
       }
     ],
     "birdCenter": [
-      50,
-      40
+      42,
+      38
     ],
     "birdSize": "medium",
-    "multipleBirds": true
+    "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:27.868Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5603,
+      "height": 3735
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:32.266Z"
 }

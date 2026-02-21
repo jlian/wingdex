@@ -6,8 +6,8 @@ vi.stubGlobal('fetch', mockFetch)
 
 // Mock HTMLImageElement loading
 vi.stubGlobal('Image', class {
-  width = 100
-  height = 100
+  width = 2000
+  height = 1000
   onload: (() => void) | null = null
   onerror: ((e: any) => void) | null = null
   set src(_: string) {
@@ -173,5 +173,21 @@ describe('identifyBirdInPhoto', () => {
     expect(body.get('lat')).toBe('25.0306')
     expect(body.get('lon')).toBe('121.5354')
     expect(body.get('month')).toBe('11')
+  })
+
+  it('compresses oversized images to max 640px with quality 0.7 before upload', async () => {
+    mockApiResponse({
+      candidates: [{ species: 'Common Kingfisher (Alcedo atthis)', confidence: 0.9 }],
+    })
+
+    await identifyBirdInPhoto('data:image/jpeg;base64,test')
+
+    expect(mockCanvasCtx.drawImage).toHaveBeenCalled()
+    expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.7)
+
+    const [, opts] = mockFetch.mock.calls[0]
+    const body = opts.body as FormData
+    expect(body.get('imageWidth')).toBe('640')
+    expect(body.get('imageHeight')).toBe('320')
   })
 })

@@ -4,6 +4,7 @@
  * No API key required.
  */
 import { getDisplayName } from './utils'
+import { findBestMatch, getWikiTitle } from './taxonomy'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
@@ -63,6 +64,30 @@ function getCommonName(speciesName: string): string {
   return getDisplayName(speciesName)
 }
 
+function getLookupTitles(speciesName: string): string[] {
+  const common = getCommonName(speciesName)
+  const match = findBestMatch(speciesName)
+  const wikiTitle = getWikiTitle(match?.common || common)
+
+  const candidates = [
+    wikiTitle,
+    match?.common,
+    match?.scientific,
+    common,
+  ].filter((value): value is string => Boolean(value && value.trim()))
+
+  const unique: string[] = []
+  const seen = new Set<string>()
+  for (const title of candidates) {
+    const key = title.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(title)
+  }
+
+  return unique
+}
+
 /**
  * Get a Wikimedia Commons thumbnail URL for a bird species.
  */
@@ -71,7 +96,7 @@ export async function getWikimediaImage(
 ): Promise<string | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = common
+  const titles = getLookupTitles(speciesName)
 
   if (imageCache.has(cacheKey)) {
     const cached = imageCache.get(cacheKey)
@@ -82,12 +107,24 @@ export async function getWikimediaImage(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<string | undefined> => {
-    const result = await fetchSummary(wikiTitle)
-    const imageUrl = result.kind === 'hit' ? extractThumbnailUrl(result.data) : undefined
+    let imageUrl: string | undefined
+    let sawError = false
+
+    for (const title of titles) {
+      const result = await fetchSummary(title)
+      if (result.kind === 'hit') {
+        imageUrl = extractThumbnailUrl(result.data)
+        if (imageUrl) break
+        continue
+      }
+      if (result.kind === 'error') {
+        sawError = true
+      }
+    }
 
     if (imageUrl) {
       imageCache.set(cacheKey, imageUrl)
-    } else if (result.kind !== 'error') {
+    } else if (!sawError) {
       imageCache.set(cacheKey, null)
     }
     return imageUrl
@@ -109,7 +146,7 @@ export async function getWikimediaSummary(
 ): Promise<WikiSummary | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = common
+  const titles = getLookupTitles(speciesName)
 
   if (summaryCache.has(cacheKey)) {
     const cached = summaryCache.get(cacheKey)
@@ -120,20 +157,28 @@ export async function getWikimediaSummary(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<WikiSummary | undefined> => {
-    const result = await fetchSummary(wikiTitle)
+    let sawError = false
 
-    if (result.kind === 'hit' && result.data.extract) {
-      const summary: WikiSummary = {
-        title: result.data.title || common,
-        extract: result.data.extract,
-        imageUrl: extractFullImageUrl(result.data),
-        pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
+    for (const title of titles) {
+      const result = await fetchSummary(title)
+
+      if (result.kind === 'hit' && result.data.extract) {
+        const summary: WikiSummary = {
+          title: result.data.title || common,
+          extract: result.data.extract,
+          imageUrl: extractFullImageUrl(result.data),
+          pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent((result.data.title || title).replace(/ /g, '_'))}`,
+        }
+        summaryCache.set(cacheKey, summary)
+        return summary
       }
-      summaryCache.set(cacheKey, summary)
-      return summary
+
+      if (result.kind === 'error') {
+        sawError = true
+      }
     }
 
-    if (result.kind !== 'error') {
+    if (!sawError) {
       summaryCache.set(cacheKey, null)
     }
     return undefined

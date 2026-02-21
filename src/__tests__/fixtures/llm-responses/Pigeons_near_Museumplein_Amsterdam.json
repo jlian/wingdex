@@ -1,26 +1,42 @@
 {
   "imageFile": "Pigeons_near_Museumplein_Amsterdam.jpg",
   "context": {
-    "lat": 52.3579,
-    "lon": 4.8815,
-    "month": 4,
+    "lat": 52.3581,
+    "lon": 4.8826,
+    "month": 11,
     "locationName": "Museumplein, Amsterdam, Netherlands"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Rock Pigeon (Columba livia)\",\"confidence\":0.90}],\"birdCenter\":[75,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Rock Dove (Columba livia)\",\"confidence\":0.92}],\"birdCenter\":[60,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Rock Pigeon (Columba livia)",
-        "confidence": 0.9
+        "species": "Rock Dove (Columba livia)",
+        "confidence": 0.92
       }
     ],
     "birdCenter": [
-      75,
-      65
+      60,
+      60
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:49.817Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4059,
+      "height": 2706
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "capturedAt": "2026-02-21T04:55:04.216Z"
 }
