@@ -116,7 +116,7 @@ function App() {
         id: session.user.id,
         name: session.user.name || session.user.email || 'user',
         image: session.user.image || '',
-        email: session.user.email,
+        email: session.user.email || '',
       })
       return
     }

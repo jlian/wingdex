@@ -11,7 +11,9 @@ function isConfirmBody(value: unknown): value is ConfirmBody {
 
 function decodePreviewId(previewId: string): ImportPreview | null {
   try {
-    const json = decodeURIComponent(escape(atob(previewId)))
+    const binary = atob(previewId)
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0))
+    const json = new TextDecoder().decode(bytes)
     const parsed = JSON.parse(json)
     if (!parsed || typeof parsed !== 'object') return null
     return parsed as ImportPreview

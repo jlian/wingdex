@@ -16,8 +16,6 @@ type OutingRow = {
 type PhotoRow = {
   id: string
   outingId: string
-  dataUrl: string
-  thumbnail: string
   exifTime?: string | null
   gpsLat?: number | null
   gpsLon?: number | null
@@ -46,7 +44,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const [outingsResult, photosResult, observationsResult, dex] = await Promise.all([
     db.prepare('SELECT * FROM outing WHERE userId = ? ORDER BY startTime DESC').bind(userId).all<OutingRow>(),
-    db.prepare('SELECT id, outingId, dataUrl, thumbnail, exifTime, gpsLat, gpsLon, fileHash, fileName FROM photo WHERE userId = ?')
+    db.prepare('SELECT id, outingId, exifTime, gpsLat, gpsLon, fileHash, fileName FROM photo WHERE userId = ?')
       .bind(userId)
       .all<PhotoRow>(),
     db.prepare('SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes FROM observation WHERE userId = ?')
@@ -65,8 +63,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   const photos = photosResult.results.map(photo => ({
     id: photo.id,
     outingId: photo.outingId,
-    dataUrl: photo.dataUrl,
-    thumbnail: photo.thumbnail,
+    dataUrl: '',
+    thumbnail: '',
     exifTime: photo.exifTime || undefined,
     gps: photo.gpsLat != null && photo.gpsLon != null ? { lat: photo.gpsLat, lon: photo.gpsLon } : undefined,
     fileHash: photo.fileHash,

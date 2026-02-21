@@ -201,9 +201,18 @@ export function useWingDexData(userId: string) {
     applyPayload(optimistic)
 
     if (storageMode === 'api') {
+      const requestBody = newPhotos.map(photo => ({
+        id: photo.id,
+        outingId: photo.outingId,
+        exifTime: photo.exifTime,
+        gps: photo.gps,
+        fileHash: photo.fileHash,
+        fileName: photo.fileName,
+      }))
+
       void apiJson<Photo[]>('/api/data/photos', {
         method: 'POST',
-        body: JSON.stringify(newPhotos),
+        body: JSON.stringify(requestBody),
       }).catch(() => undefined)
     }
   }

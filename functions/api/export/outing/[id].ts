@@ -36,11 +36,12 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     }>()
 
   const csv = exportOutingToEBirdCSV(outing, observationsResult.results, true)
+  const safeOutingId = outingId.replace(/[^a-zA-Z0-9._-]/g, '_')
 
   return new Response(csv, {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': `attachment; filename="wingdex-outing-${outingId}.csv"`,
+      'content-disposition': `attachment; filename="wingdex-outing-${safeOutingId}.csv"`,
       'cache-control': 'no-store',
     },
   })

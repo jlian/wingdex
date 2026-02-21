@@ -65,7 +65,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       return new Response(error.message, { status: error.status })
     }
 
-    const message = error instanceof Error ? error.message : 'Bird identification failed'
-    return new Response(message, { status: 500 })
+    if (error instanceof Error) {
+      console.error('Unexpected error during bird identification:', error)
+    } else {
+      console.error('Unexpected non-Error thrown during bird identification:', error)
+    }
+
+    return new Response('An unexpected error occurred during bird identification', { status: 500 })
   }
 }

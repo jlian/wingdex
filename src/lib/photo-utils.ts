@@ -163,8 +163,18 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
 }
 
 export async function computeFileHash(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const chunkSize = 64 * 1024
+  const firstChunk = await file.slice(0, chunkSize).arrayBuffer()
+  const lastChunkStart = Math.max(0, file.size - chunkSize)
+  const lastChunk = await file.slice(lastChunkStart, file.size).arrayBuffer()
+  const sizeBytes = new TextEncoder().encode(String(file.size))
+
+  const merged = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength + sizeBytes.byteLength)
+  merged.set(new Uint8Array(firstChunk), 0)
+  merged.set(new Uint8Array(lastChunk), firstChunk.byteLength)
+  merged.set(sizeBytes, firstChunk.byteLength + lastChunk.byteLength)
+
+  const hashBuffer = await crypto.subtle.digest('SHA-256', merged)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }

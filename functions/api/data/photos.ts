@@ -1,8 +1,8 @@
 type CreatePhotoInput = {
   id: string
   outingId: string
-  dataUrl: string
-  thumbnail: string
+  dataUrl?: string
+  thumbnail?: string
   exifTime?: string
   gps?: { lat: number; lon: number }
   fileHash: string
@@ -16,8 +16,8 @@ function isCreatePhotoInput(value: unknown): value is CreatePhotoInput {
   return (
     typeof data.id === 'string' &&
     typeof data.outingId === 'string' &&
-    typeof data.dataUrl === 'string' &&
-    typeof data.thumbnail === 'string' &&
+    (data.dataUrl === undefined || typeof data.dataUrl === 'string') &&
+    (data.thumbnail === undefined || typeof data.thumbnail === 'string') &&
     typeof data.fileHash === 'string' &&
     typeof data.fileName === 'string'
   )
@@ -74,8 +74,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       photo.id,
       photo.outingId,
       userId,
-      photo.dataUrl,
-      photo.thumbnail,
+      '',
+      '',
       photo.exifTime ?? null,
       photo.gps?.lat ?? null,
       photo.gps?.lon ?? null,

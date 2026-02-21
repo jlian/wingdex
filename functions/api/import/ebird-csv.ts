@@ -3,9 +3,13 @@ import { detectImportConflicts, parseEBirdCSV, type ImportPreview } from '../../
 
 type EncodedPreview = ImportPreview & { previewId: string }
 
+const MAX_CSV_SIZE_BYTES = 10 * 1024 * 1024
+
 function encodePreviewId(preview: ImportPreview): string {
   const json = JSON.stringify(preview)
-  return btoa(unescape(encodeURIComponent(json)))
+  const bytes = new TextEncoder().encode(json)
+  const binary = String.fromCharCode(...bytes)
+  return btoa(binary)
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -24,6 +28,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const file = formData.get('file')
   if (!(file instanceof File)) {
     return new Response('Missing CSV file', { status: 400 })
+  }
+
+  if (file.size > MAX_CSV_SIZE_BYTES) {
+    return new Response('CSV file too large (max 10MB)', { status: 413 })
   }
 
   const profileTimezone = formData.get('profileTimezone')
