@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
 
+const runLiveE2E = process.env.RUN_LIVE_E2E === '1'
+
 test.describe('Live Species ID', () => {
-  // Requires OPENAI_API_KEY — skip in CI where the key isn't available
+  test.skip(!runLiveE2E, 'Set RUN_LIVE_E2E=1 to run live OpenAI e2e')
   test.skip(!process.env.OPENAI_API_KEY, 'OPENAI_API_KEY not set')
 
   test('hits live /api/identify-bird and reaches species step', async ({ page }) => {
