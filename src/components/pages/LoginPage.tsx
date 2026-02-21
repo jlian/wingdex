@@ -4,6 +4,7 @@ import { Bird, Key, PlusCircle } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface LoginPageProps {
   onAuthenticated: () => void
@@ -13,6 +14,7 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState('')
 
   const handleSignInPasskey = async () => {
     setErrorMessage(null)
@@ -38,6 +40,12 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   }
 
   const handleCreateWithPasskey = async () => {
+    const trimmedName = displayName.trim()
+    if (!trimmedName) {
+      setErrorMessage('Please enter a display name before creating a passkey account.')
+      return
+    }
+
     setErrorMessage(null)
     setIsCreating(true)
 
@@ -57,6 +65,19 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
     if (passkeyResult.error) {
       await authClient.signOut()
       setErrorMessage(passkeyResult.error.message || 'Passkey registration failed. Please try again.')
+      return
+    }
+
+    const finalizeResponse = await fetch('/api/auth/finalize-passkey', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: trimmedName }),
+    })
+
+    if (!finalizeResponse.ok) {
+      await authClient.signOut()
+      setErrorMessage('Account setup could not be completed. Please try again.')
       return
     }
 
@@ -83,6 +104,14 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
               <Key size={18} className="mr-2" />
               {isSigningIn ? 'Signing in...' : 'Sign in with passkey'}
             </Button>
+
+            <Input
+              value={displayName}
+              onChange={event => setDisplayName(event.target.value)}
+              placeholder="Display name"
+              aria-label="Display name"
+              disabled={isSigningIn || isCreating}
+            />
 
             <Button variant="outline" className="w-full" onClick={handleCreateWithPasskey} disabled={isSigningIn || isCreating}>
               <PlusCircle size={18} className="mr-2" />
