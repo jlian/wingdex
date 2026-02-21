@@ -12,7 +12,9 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run dev:full',
+    command: process.env.CI
+      ? 'npx wrangler pages dev dist --port 5000 --show-interactive-dev-session=false'
+      : 'npm run dev:full',
     url: 'http://localhost:5000',
     reuseExistingServer: true,
     timeout: 60_000,
