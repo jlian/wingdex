@@ -50,10 +50,11 @@ function buildDex(outings: Outing[], observations: Observation[]): DexEntry[] {
 /**
  * Builds localStorage seed entries from the eBird CSV fixture.
  *
- * Keyed for userId=1 (the dev-user fallback).
+ * Keyed for userId='1' (the dev-user fallback). Keys use the format
+ * expected by readLocalData() in use-wingdex-data.ts: `{userId}_{bucket}`.
  */
 export function buildSeedLocalStorage(): Record<string, string> {
-  const prefix = 'wingdex_kv_u1_'
+  const prefix = '1_'
 
   const fixturePath = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures', 'ebird-import.csv')
   const csv = readFileSync(fixturePath, 'utf8')
@@ -92,7 +93,7 @@ export async function injectSeedData(page: Page) {
   const seedData = buildSeedLocalStorage()
   await page.goto('/')
   await page.evaluate((data) => {
-    // Force the dev user ID to 1 so it matches our seed key prefix (u1_)
+    // Force the dev user ID to '1' so it matches our seed key prefix (1_)
     localStorage.setItem('wingdex_dev_user_id', '1')
     for (const [key, value] of Object.entries(data)) {
       localStorage.setItem(key, value)

@@ -1,6 +1,6 @@
 /**
  * @vitest-environment jsdom
- * @vitest-environment-options {"url":"https://wingdex--jlian.github.app/"}
+ * @vitest-environment-options {"url":"https://wingdex.app/"}
  */
 
 import { render } from '@testing-library/react'
@@ -51,7 +51,7 @@ function Harness<T>({
   return null
 }
 
-describe('useKV (Spark runtime)', () => {
+describe('useKV (hosted runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.stubGlobal('localStorage', createLocalStorageMock())
@@ -65,7 +65,7 @@ describe('useKV (Spark runtime)', () => {
   })
 
   it('does not issue network calls when rerendered with new [] literals', async () => {
-    const key = 'u1_spark_existing'
+    const key = 'u1_hosted_existing'
     localStorage.setItem(`wingdex_kv_${key}`, JSON.stringify(['from-kv']))
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
@@ -99,7 +99,7 @@ describe('useKV (Spark runtime)', () => {
   })
 
   it('keeps missing keys in-memory and remains stable on rerender', async () => {
-    const key = 'u1_spark_missing'
+    const key = 'u1_hosted_missing'
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
@@ -122,7 +122,7 @@ describe('useKV (Spark runtime)', () => {
   })
 
   it('reports loading false immediately in localStorage-only mode', async () => {
-    const key = 'u1_spark_loading'
+    const key = 'u1_hosted_loading'
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 

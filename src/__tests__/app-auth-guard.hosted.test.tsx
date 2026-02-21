@@ -1,6 +1,6 @@
 /**
  * @vitest-environment jsdom
- * @vitest-environment-options {"url":"https://wingdex--jlian.github.app/"}
+ * @vitest-environment-options {"url":"https://wingdex.app/"}
  */
 
 import { render } from '@testing-library/react'
