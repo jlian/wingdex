@@ -29,7 +29,7 @@
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
         "deploy": "npm run build && wrangler pages deploy dist --project-name wingdex",
-        "db:migrate": "wrangler d1 migrations apply wingdex-db",
+        "db:migrate:local": "printf 'y\n' | wrangler d1 migrations apply wingdex-db --local",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",
         "lint": "eslint .",
