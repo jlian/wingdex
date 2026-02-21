@@ -120,13 +120,6 @@ test.describe('CSV import + photo upload integration', () => {
 
     await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
 
-    // Dismiss the success toast so it doesn't overlay the tab bar
-    const toast = page.locator('[data-sonner-toast]').first()
-    if (await toast.isVisible()) {
-      await toast.click()
-      await toast.waitFor({ state: 'hidden', timeout: 5_000 })
-    }
-
     // Navigate to Outings page
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
