@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test'
 import path from 'path'
 
 test.describe('Live Species ID', () => {
+  // Requires OPENAI_API_KEY — skip in CI where the key isn't available
+  test.skip(!process.env.OPENAI_API_KEY, 'OPENAI_API_KEY not set')
+
   test('hits live /api/identify-bird and reaches species step', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('header')).toBeVisible({ timeout: 15_000 })
