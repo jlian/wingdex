@@ -26,6 +26,14 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
       return
     }
 
+    const sessionResult = await authClient.getSession()
+    const isAnonymousSession = Boolean((sessionResult.data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous)
+    if (isAnonymousSession || !sessionResult.data?.user) {
+      await authClient.signOut()
+      setErrorMessage('No passkey was completed. Please create an account with passkey or retry sign-in.')
+      return
+    }
+
     onAuthenticated()
   }
 
@@ -47,6 +55,7 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
 
     setIsCreating(false)
     if (passkeyResult.error) {
+      await authClient.signOut()
       setErrorMessage(passkeyResult.error.message || 'Passkey registration failed. Please try again.')
       return
     }

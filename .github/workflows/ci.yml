@@ -43,6 +43,7 @@ jobs:
             exit 1
           fi
           printf '%s' "$BETTER_AUTH_SECRET" | npx wrangler pages secret put BETTER_AUTH_SECRET --project-name=wingdex
+          printf '%s' "$BETTER_AUTH_SECRET" | npx wrangler pages secret put BETTER_AUTH_SECRET --project-name=wingdex --env preview
         env:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
