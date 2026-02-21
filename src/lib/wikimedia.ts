@@ -99,6 +99,9 @@ async function ensureWikiTitleCached(speciesName: string): Promise<void> {
     if (res.ok) {
       const data = await res.json() as { wikiTitle: string | null; common: string | null; scientific: string | null }
       wikiTitleCache.set(cacheKey, data)
+    } else {
+      // Cache negative result to avoid refetching on every render
+      wikiTitleCache.set(cacheKey, { wikiTitle: null, common: null, scientific: null })
     }
   } catch {
     // Proceed with common name only

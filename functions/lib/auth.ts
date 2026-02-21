@@ -27,12 +27,16 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     advanced: {
       useSecureCookies,
     },
-    socialProviders: {
-      github: {
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
-      },
-    },
+    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+      ? {
+          socialProviders: {
+            github: {
+              clientId: env.GITHUB_CLIENT_ID,
+              clientSecret: env.GITHUB_CLIENT_SECRET,
+            },
+          },
+        }
+      : {}),
     account: {
       accountLinking: {
         enabled: true,
