@@ -6,21 +6,37 @@
     "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.95}],\"birdCenter\":[40,45],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.92}],\"birdCenter\":[40,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Mallard (Anas platyrhynchos)",
-        "confidence": 0.95
+        "confidence": 0.92
       }
     ],
     "birdCenter": [
       40,
-      45
+      60
     ],
     "birdSize": "medium",
-    "multipleBirds": true
+    "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:47.413Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4629,
+      "height": 3086
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
+  },
+  "capturedAt": "2026-02-21T04:54:10.740Z"
 }

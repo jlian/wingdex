@@ -5,6 +5,7 @@ import { resolve } from 'path'
 import packageJson from './package.json'
 
 const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+const apiPort = process.env.API_PORT || '8788'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,7 +18,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': 'http://localhost:8788',
+      '/api': `http://localhost:${apiPort}`,
     },
   },
   resolve: {

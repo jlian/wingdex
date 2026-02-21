@@ -63,7 +63,7 @@ export async function identifyBirdInPhoto(
   locationName?: string,
 ): Promise<BirdIdResult> {
   const image = await loadImage(imageDataUrl)
-  const compressed = compressImage(image, 800, 0.75)
+  const compressed = compressImage(image, 640, 0.7)
 
   const formData = new FormData()
   formData.append('image', dataUrlToBlob(compressed.dataUrl), 'bird.jpg')

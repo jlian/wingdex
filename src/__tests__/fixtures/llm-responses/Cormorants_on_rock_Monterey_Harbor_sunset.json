@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Monterey Harbor, CA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Brandt's Cormorant (Phalacrocorax penicillatus)\",\"confidence\":0.80}],\"birdCenter\":[35,65],\"birdSize\":\"small\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.85}],\"birdCenter\":[30,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Brandt's Cormorant (Phalacrocorax penicillatus)",
-        "confidence": 0.8
+        "species": "Western Gull (Larus occidentalis)",
+        "confidence": 0.85
       }
     ],
     "birdCenter": [
-      35,
-      65
+      30,
+      60
     ],
-    "birdSize": "small",
-    "multipleBirds": true
+    "birdSize": "medium",
+    "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:21:59.580Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 2560,
+      "height": 3414
+    },
+    "uploadedDimensions": {
+      "width": 480,
+      "height": 640
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:36.466Z"
 }

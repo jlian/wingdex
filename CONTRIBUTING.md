@@ -30,7 +30,7 @@ Thanks for your interest in contributing! Here's how to get started.
    npx tsc -b --noCheck
    ```
 
-> **Note:** AI features (bird detection, species ID) only work inside the [GitHub Spark](https://githubnext.com/projects/github-spark) runtime, which provides the `/_spark/llm` proxy. Everything else works locally.
+> **Note:** AI features use server endpoints (`/api/identify-bird`, `/api/suggest-location`) and require local provider credentials in `.dev.vars`.
 
 ## Making Changes
 

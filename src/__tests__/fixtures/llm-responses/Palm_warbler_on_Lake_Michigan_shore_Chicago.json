@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Lake Michigan shore, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Waterthrush (Parkesia noveboracensis)\",\"confidence\":0.80}],\"birdCenter\":[50,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Chipping Sparrow (Spizella passerina)\",\"confidence\":0.68}],\"birdCenter\":[28,60],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Northern Waterthrush (Parkesia noveboracensis)",
-        "confidence": 0.8
+        "species": "Chipping Sparrow (Spizella passerina)",
+        "confidence": 0.68
       }
     ],
     "birdCenter": [
-      50,
-      70
+      28,
+      60
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:26.006Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 1258,
+      "height": 1887
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "capturedAt": "2026-02-21T04:54:46.917Z"
 }

@@ -183,7 +183,6 @@ test.describe('Dark mode', () => {
     // Filter out known non-critical errors
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
-        && !e.includes('_spark') && !e.includes('spark')
     );
 
     expect(criticalErrors).toEqual([]);

@@ -6,21 +6,37 @@
     "month": 9,
     "locationName": "Drayton Harbor, Blaine, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.90}],\"birdCenter\":[50,85],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.92}],\"birdCenter\":[52,62],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Blue Heron (Ardea herodias)",
-        "confidence": 0.9
+        "confidence": 0.92
       }
     ],
     "birdCenter": [
-      50,
-      85
+      52,
+      62
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:15.633Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4128,
+      "height": 6192
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:53.053Z"
 }

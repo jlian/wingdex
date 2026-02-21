@@ -1,26 +1,42 @@
 {
   "imageFile": "Anna's_hummingbird_in_Seattle_garden.jpg",
   "context": {
-    "lat": 47.6,
-    "lon": -122.33,
-    "month": 3,
+    "lat": 47.6399,
+    "lon": -122.4039,
+    "month": 6,
     "locationName": "Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Anna's Hummingbird (Calypte anna)\",\"confidence\":0.90}],\"birdCenter\":[70,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Anna's Hummingbird (Calypte anna)\",\"confidence\":0.92}],\"birdCenter\":[70,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Anna's Hummingbird (Calypte anna)",
-        "confidence": 0.9
+        "confidence": 0.92
       }
     ],
     "birdCenter": [
       70,
-      50
+      55
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:12.812Z"
+  "model": "gpt-5-nano",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3668,
+      "height": 2445
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
+  },
+  "capturedAt": "2026-02-21T04:53:22.504Z"
 }

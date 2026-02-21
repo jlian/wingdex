@@ -1,6 +1,6 @@
 # WingDex Migration Plan & Tracker
 
-> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-20
+> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-21
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
@@ -837,9 +837,9 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 3 — Bird ID & AI
 
-> **Status snapshot (2026-02-20)**: ⚠️ Phase 3 required code items are complete (`/api/identify-bird`, `/api/suggest-location`, provider-aware server inference with fallback hardening, simplified client API calls). Remaining items are external dashboard configuration (`3.6`) and optional per-user rate limiting (`3.7`).
+> **Status snapshot (2026-02-21)**: ⚠️ Phase 3 required code items are complete (`/api/identify-bird`, `/api/suggest-location`, provider-aware server inference, simplified client API calls). Latest tuning keeps a single-model server path while reducing latency via smaller upload image sizing, lower completion token budgets, and low reasoning effort for GPT-5-family OpenAI calls. Remaining items are external dashboard configuration (`3.6`) and optional per-user rate limiting (`3.7`).
 > **Confidence**: Medium.
-> **Validation**: Targeted AI unit tests (`ai-inference`, `ai-parse-and-textllm`, `ai-fixture-replay`) pass; Playwright smoke spec passes.
+> **Validation**: `npm run test:unit -- src/__tests__/ai-inference.test.ts src/__tests__/ai-parse-and-textllm.test.ts src/__tests__/ai-fixture-replay.test.ts` ✅, `npm run build` ✅, `npx playwright test e2e/live-species-id.spec.ts --workers=1` ✅, `npm run smoke:api` ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -847,7 +847,7 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 3.2 | Create `functions/api/suggest-location.ts` | Accept coords + optional existing names. Call text LLM with location suggestion prompt. Return `{ name }`. | ✅ |
 | 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. | ✅ |
 | 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server — clients never see the LLM API directly. | ✅ (OpenAI, Azure OpenAI, and GitHub Models provider selection + unsupported-parameter fallback handling implemented) |
-| 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `compressImage()`, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Replace with: compress image to ≤800px → `POST /api/identify-bird` with FormData → return response. ~30 lines total. | ✅ |
+| 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Keep only lightweight client image compression + multipart upload (`POST /api/identify-bird`) and server text call (`POST /api/suggest-location`) with local auth retry wrapper. | ✅ |
 | 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ⏳ (manual Cloudflare dashboard task; not codified in repo) |
 | 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | ⏳ (optional hardening; deferred) |
 
