@@ -13,4 +13,4 @@ migrations_dir = "migrations"
 binding = "AI"
 
 [vars]
-BETTER_AUTH_URL = "https://wingdex.example.com"
+BETTER_AUTH_URL = "https://wingdex.app"
