@@ -9,9 +9,6 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut } from '@phosphor-icons/react'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
@@ -219,29 +216,28 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                     <GlobeHemisphereWest size={14} />
                     eBird profile timezone
                   </label>
-                  <Select value={profileTimezone} onValueChange={setProfileTimezone}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Los_Angeles">Pacific (PST/PDT)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain (MST/MDT)</SelectItem>
-                      <SelectItem value="America/Chicago">Central (CST/CDT)</SelectItem>
-                      <SelectItem value="America/New_York">Eastern (EST/EDT)</SelectItem>
-                      <SelectItem value="Pacific/Honolulu">Hawaii (HST)</SelectItem>
-                      <SelectItem value="America/Anchorage">Alaska (AKST/AKDT)</SelectItem>
-                      <SelectItem value="America/Puerto_Rico">Atlantic (AST)</SelectItem>
-                      <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
-                      <SelectItem value="Europe/Paris">Central Europe (CET/CEST)</SelectItem>
-                      <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
-                      <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
-                      <SelectItem value="Asia/Taipei">Taipei (CST)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
-                      <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
-                      <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
-                      <SelectItem value="observation-local">None (times already local)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={profileTimezone}
+                    onChange={e => setProfileTimezone(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="America/Los_Angeles">Pacific (PST/PDT)</option>
+                    <option value="America/Denver">Mountain (MST/MDT)</option>
+                    <option value="America/Chicago">Central (CST/CDT)</option>
+                    <option value="America/New_York">Eastern (EST/EDT)</option>
+                    <option value="Pacific/Honolulu">Hawaii (HST)</option>
+                    <option value="America/Anchorage">Alaska (AKST/AKDT)</option>
+                    <option value="America/Puerto_Rico">Atlantic (AST)</option>
+                    <option value="Europe/London">London (GMT/BST)</option>
+                    <option value="Europe/Paris">Central Europe (CET/CEST)</option>
+                    <option value="Asia/Kolkata">India (IST)</option>
+                    <option value="Asia/Shanghai">China (CST)</option>
+                    <option value="Asia/Taipei">Taipei (CST)</option>
+                    <option value="Asia/Tokyo">Japan (JST)</option>
+                    <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+                    <option value="Pacific/Auckland">New Zealand (NZST/NZDT)</option>
+                    <option value="observation-local">None (times already local)</option>
+                  </select>
                 </div>
 
                 <p className="text-xs text-muted-foreground">
