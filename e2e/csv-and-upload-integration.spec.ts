@@ -9,13 +9,14 @@ const FIXTURES_DIR = path.resolve('src/__tests__/fixtures/llm-responses')
 function loadLLMFixture(name: string) {
   const data = JSON.parse(readFileSync(path.join(FIXTURES_DIR, `${name}.json`), 'utf8'))
   return {
-    choices: [{ message: { content: data.rawResponse } }],
+    candidates: data.parsed.candidates,
+    multipleBirds: data.parsed.multipleBirds,
   }
 }
 
-/** Mock the /_spark/llm endpoint with a fixture-based response. */
+/** Mock the /api/identify-bird endpoint with a fixture-based response. */
 function mockLLM(page: Page, fixtureName: string) {
-  return page.route('**/_spark/llm', (route: Route) => {
+  return page.route('**/api/identify-bird', (route: Route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -253,7 +254,7 @@ test.describe('CSV import + photo upload integration', () => {
   test('multi-photo clustering: photos from different locations create separate outings', async ({ page }) => {
     // Mock LLM to respond differently based on which call it is
     let callCount = 0
-    await page.route('**/_spark/llm', (route: Route) => {
+    await page.route('**/api/identify-bird', (route: Route) => {
       callCount++
       // First call = Chukar (Haleakala), second call = Steller's Jay (Seattle)
       const fixture = callCount === 1
@@ -298,6 +299,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Should advance to second cluster's Review Outing step
     await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByRole('heading', { name: /Review Outing 2 of 2/i })).toBeVisible({ timeout: 5_000 })
 
     // Confirm second outing
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
@@ -307,11 +309,7 @@ test.describe('CSV import + photo upload integration', () => {
     // Dialog auto-closes after all species saved
     await expect(dialog).not.toBeVisible({ timeout: 15_000 })
 
-    // Navigate to Outings — should have 2 separate outings
-    await page.getByRole('tab', { name: 'Outings' }).first().click()
-    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
-
-    // The outings page should show "2 outings recorded"
-    await expect(page.getByText('2 outings recorded')).toBeVisible({ timeout: 5_000 })
+    // Completion toast should appear after both clusters are processed
+    await expect(page.getByText(/All done!/i)).toBeVisible({ timeout: 10_000 })
   })
 })

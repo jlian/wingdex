@@ -396,14 +396,12 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
             <strong>Your photos are never stored.</strong> During identification,
-            compressed images are sent to GitHub Models for AI processing, then
+            compressed images are sent to WingDex&apos;s server-side AI endpoint for processing, then
             immediately discarded.
           </p>
           <p>
             Your birding records (outings, species, and sightings) are saved
-            to GitHub&apos;s key-value store, scoped to your GitHub account.
-            There is no separate backend; all data stays within GitHub&apos;s
-            infrastructure.
+            to WingDex&apos;s Cloudflare-backed database, scoped to your account.
           </p>
           <p>
             Location lookups use OpenStreetMap Nominatim to resolve GPS

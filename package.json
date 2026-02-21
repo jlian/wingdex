@@ -22,7 +22,8 @@
         "npm": ">=10.9.2 <12"
     },
     "scripts": {
-        "dev": "vite",
+        "dev": "bash scripts/dev.sh",
+        "dev:vite": "vite --port 5000 --strictPort",
         "dev:full": "bash scripts/dev-full.sh",
         "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
         "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
