@@ -25,9 +25,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 25
-          cache: npm
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --workspaces=false
 
       - name: Cache Playwright browsers
