@@ -855,22 +855,22 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 4 — Build & Hosting
 
-> **Status snapshot (2026-02-20)**: ⚠️ Major Spark build/runtime removals are landed, with broader hosting/deploy hardening continuing in later phases.
-> **Confidence**: Medium.
-> **Validation**: Repeated `npm run build` passes ✅ and local functions compile passes ✅.
+> **Status snapshot (2026-02-20)**: ✅ All Spark build/runtime/config integrations removed. SPA hosting assets in place.
+> **Confidence**: High.
+> **Validation**: `npm run build` passes ✅, no Spark imports/plugins/config remain in build pipeline.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 4.1 | Update vite.config.ts | Remove `import sparkPlugin` and `import createIconImportProxy` from `@github/spark`. Remove both from `plugins[]`. Add dev proxy: `server: { proxy: { '/api': 'http://localhost:8788' } }` (Wrangler dev server port). | |
-| 4.2 | Update main.tsx | Remove the `isSparkHosted` check and `import('@github/spark/spark')` block. Mount directly: `createRoot(document.getElementById('app')!).render(...)`. | |
-| 4.3 | Update index.html | Rename `<div id="spark-app">` → `<div id="app">`. | |
-| 4.4 | Update portal-container.ts | Change `getElementById('spark-app')` → `getElementById('app')`. | |
-| 4.5 | Update vite-env.d.ts | Remove `GITHUB_RUNTIME_PERMANENT_NAME` and `BASE_KV_SERVICE_URL` declarations. Keep `APP_VERSION`. | |
-| 4.6 | Remove `@github/spark` | `npm uninstall @github/spark` | |
-| 4.7 | Delete Spark config files | Remove spark.meta.json, runtime.config.json. | |
-| 4.8 | Add `public/_redirects` | `/* index.html 200` for SPA fallback routing (or rely on Pages' auto-SPA behavior). | |
-| 4.9 | Update package.json | Remove `@github/spark` from dependencies. Add `wrangler` to devDependencies, `better-auth` to dependencies. Update `description` and `keywords`. Add deploy/CF scripts. | |
-| 4.10 | Phosphor icon plugin | Drop `createIconImportProxy()` — if a Phosphor icon import is invalid, the build fails with a clear error (better than silent fallback to `Question` icon). All current imports are valid. | |
+| 4.1 | Update vite.config.ts | Remove `import sparkPlugin` and `import createIconImportProxy` from `@github/spark`. Remove both from `plugins[]`. Add dev proxy: `server: { proxy: { '/api': 'http://localhost:8788' } }` (Wrangler dev server port). | ✅ |
+| 4.2 | Update main.tsx | Remove the `isSparkHosted` check and `import('@github/spark/spark')` block. Mount directly: `createRoot(document.getElementById('app')!).render(...)`. | ✅ |
+| 4.3 | Update index.html | Rename `<div id="spark-app">` → `<div id="app">`. | ✅ |
+| 4.4 | Update portal-container.ts | Change `getElementById('spark-app')` → `getElementById('app')`. | ✅ |
+| 4.5 | Update vite-env.d.ts | Remove `GITHUB_RUNTIME_PERMANENT_NAME` and `BASE_KV_SERVICE_URL` declarations. Keep `APP_VERSION`. | ✅ |
+| 4.6 | Remove `@github/spark` | `npm uninstall @github/spark` | ✅ |
+| 4.7 | Delete Spark config files | Remove spark.meta.json, runtime.config.json. | ✅ |
+| 4.8 | Add `public/_redirects` | `/* index.html 200` for SPA fallback routing (or rely on Pages' auto-SPA behavior). | ✅ |
+| 4.9 | Update package.json | Remove `@github/spark` from dependencies. Add `wrangler` to devDependencies, `better-auth` to dependencies. Update `description` and `keywords`. Add deploy/CF scripts. | ✅ |
+| 4.10 | Phosphor icon plugin | Drop `createIconImportProxy()` — if a Phosphor icon import is invalid, the build fails with a clear error (better than silent fallback to `Question` icon). All current imports are valid. | ✅ |
 
 ---
 
