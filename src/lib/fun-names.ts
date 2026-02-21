@@ -10,6 +10,7 @@ const adjectives = [
   'silent', 'sleek', 'sneaky', 'snug', 'spry', 'steady', 'stout',
   'swift', 'tender', 'tiny', 'vivid', 'warm', 'wary', 'watchful',
   'whimsy', 'wild', 'wily', 'wise', 'witty', 'zappy', 'zesty',
+  'dank', 
 ]
 
 const modifiers = [
