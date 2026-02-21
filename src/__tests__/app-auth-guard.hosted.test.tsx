@@ -100,6 +100,7 @@ describe('App auth guard (hosted runtime)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
     expect(screen.getByText('Continue with passkey')).toBeInTheDocument()
+    expect(screen.getByText('Sign in')).toBeInTheDocument()
   })
 
   it('shows boot shell while hosted session is pending', async () => {
@@ -129,6 +130,6 @@ describe('App auth guard (hosted runtime)', () => {
     render(<App />)
 
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    expect(screen.queryByText('Sign in with passkey')).not.toBeInTheDocument()
+    expect(screen.queryByText('Continue with passkey')).not.toBeInTheDocument()
   })
 })

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowsClockwise, Key, UserPlus } from '@phosphor-icons/react'
+import { ArrowsClockwise, UserPlus } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
 import { generateBirdName } from '@/lib/fun-names'
@@ -19,42 +19,15 @@ interface PasskeyAuthDialogProps {
   onAuthenticated: () => void
 }
 
+/** Dialog close animation is 200ms — wait for it before unmounting. */
+const CLOSE_ANIMATION_MS = 220
+
 export default function PasskeyAuthDialog({ open, onOpenChange, onAuthenticated }: PasskeyAuthDialogProps) {
-  const [view, setView] = useState<'signup' | 'signin'>('signup')
   const [displayName, setDisplayName] = useState(() => generateBirdName())
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const rerollName = () => setDisplayName(generateBirdName())
-
-  const handleSignIn = async () => {
-    setErrorMessage(null)
-    setIsLoading(true)
-
-    const result = await authClient.signIn.passkey({ autoFill: false })
-
-    if (result.error) {
-      setIsLoading(false)
-      setErrorMessage(result.error.message || 'Passkey sign-in failed. Please try again.')
-      return
-    }
-
-    // Verify it's a real (non-anonymous) session
-    const sessionResult = await authClient.getSession()
-    const isAnonymous = Boolean(
-      (sessionResult.data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous,
-    )
-    if (isAnonymous || !sessionResult.data?.user) {
-      await authClient.signOut()
-      setIsLoading(false)
-      setErrorMessage('No passkey found. Create a new account instead.')
-      setView('signup')
-      return
-    }
-
-    setIsLoading(false)
-    onAuthenticated()
-  }
 
   const handleCreateAccount = async () => {
     const trimmedName = displayName.trim()
@@ -104,91 +77,51 @@ export default function PasskeyAuthDialog({ open, onOpenChange, onAuthenticated 
       return
     }
 
+    // Close the dialog and let the animation finish before transitioning
     setIsLoading(false)
-    onAuthenticated()
+    onOpenChange(false)
+    setTimeout(onAuthenticated, CLOSE_ANIMATION_MS)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        {view === 'signup' ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>Create your account</DialogTitle>
-              <DialogDescription>
-                Pick a display name and register a passkey to get started.
-              </DialogDescription>
-            </DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Create your account</DialogTitle>
+          <DialogDescription>
+            Pick a display name and register a passkey to get started.
+          </DialogDescription>
+        </DialogHeader>
 
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Display name"
-                  aria-label="Display name"
-                  disabled={isLoading}
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={rerollName}
-                  disabled={isLoading}
-                  aria-label="Randomize name"
-                  title="Randomize name"
-                >
-                  <ArrowsClockwise size={16} />
-                </Button>
-              </div>
-
-              <Button className="w-full" onClick={handleCreateAccount} disabled={isLoading}>
-                <UserPlus size={18} className="mr-2" />
-                {isLoading ? 'Creating account…' : 'Create account'}
-              </Button>
-            </div>
-
-            {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <button
-                className="text-primary underline-offset-4 hover:underline cursor-pointer"
-                onClick={() => { setErrorMessage(null); setView('signin') }}
-                disabled={isLoading}
-              >
-                Sign in
-              </button>
-            </p>
-          </>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Sign in</DialogTitle>
-              <DialogDescription>
-                Use your existing passkey to sign in.
-              </DialogDescription>
-            </DialogHeader>
-
-            <Button className="w-full" onClick={handleSignIn} disabled={isLoading}>
-              <Key size={18} className="mr-2" />
-              {isLoading ? 'Signing in…' : 'Sign in with passkey'}
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Display name"
+              aria-label="Display name"
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={rerollName}
+              disabled={isLoading}
+              aria-label="Randomize name"
+              title="Randomize name"
+            >
+              <ArrowsClockwise size={16} />
             </Button>
+          </div>
 
-            {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+          <Button className="w-full" onClick={handleCreateAccount} disabled={isLoading}>
+            <UserPlus size={18} className="mr-2" />
+            {isLoading ? 'Creating account…' : 'Create account'}
+          </Button>
+        </div>
 
-            <p className="text-center text-sm text-muted-foreground">
-              New here?{' '}
-              <button
-                className="text-primary underline-offset-4 hover:underline cursor-pointer"
-                onClick={() => { setErrorMessage(null); setView('signup') }}
-                disabled={isLoading}
-              >
-                Create account
-              </button>
-            </p>
-          </>
-        )}
+        {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
       </DialogContent>
     </Dialog>
   )
