@@ -25,7 +25,7 @@ describe('getStableDevUserId', () => {
     const second = getStableDevUserId({ storage, seed: 'different-seed', random: () => 0.987654 })
 
     expect(first).toBe(second)
-    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8}$/)
+    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
   })
 
   test('returns any non-empty persisted value as-is', () => {

@@ -243,46 +243,11 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       ],
     })
 
-    const callVision = async (strictJsonOnly: boolean) => callOpenAI(
-      env,
-      buildVisionBody(strictJsonOnly),
-    )
-
-    const content = await callVision(false)
-
-    let parsed = safeParseJSON(content)
-    let sourceForRepair = content
+    const content = await callOpenAI(env, buildVisionBody(true))
+    const parsed = safeParseJSON(content)
 
     if (!parsed) {
-      const strictContent = await callVision(true)
-      parsed = safeParseJSON(strictContent)
-      sourceForRepair = strictContent || content
-    }
-
-    if (!parsed && sourceForRepair.trim()) {
-      const repaired = await callOpenAI(env, {
-        model,
-        ...withReasoningOptions(model),
-        ...withSamplingOptions(model),
-        ...withTokenLimit(model, 700),
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: 'Normalize the input into strict JSON with shape: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.0}],"birdCenter":[0,0]|null,"birdSize":"small|medium|large|null","multipleBirds":boolean}. Return only JSON.',
-          },
-          {
-            role: 'user',
-            content: `Convert this bird-identification output to the required JSON schema:\n\n${sourceForRepair}`,
-          },
-        ],
-      })
-
-      parsed = safeParseJSON(repaired)
-    }
-
-    if (!parsed) {
-      throw new HttpError(502, `AI returned an unparseable response: ${sourceForRepair.substring(0, 200)}`)
+      throw new HttpError(502, `AI returned an unparseable response: ${content.substring(0, 200)}`)
     }
 
     return parsed

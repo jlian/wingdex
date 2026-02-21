@@ -21,8 +21,9 @@ function toPseudoUuid(seed: string, random: () => number): string {
   const b = fromInt((hash * 17) ^ rand())
   const c = fromInt((hash * 37) ^ rand())
   const d = fromInt((hash * 53) ^ rand())
+  const e = fromInt(rand())
 
-  return `${a.slice(0, 8)}-${b.slice(0, 4)}-${b.slice(4, 8)}-${c.slice(0, 4)}-${d.slice(0, 12)}`
+  return `${a.slice(0, 8)}-${b.slice(0, 4)}-${b.slice(4, 8)}-${c.slice(0, 4)}-${d}${e.slice(0, 4)}`
 }
 
 export function getStableDevUserId(options: StableDevUserIdOptions = {}): string {
