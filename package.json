@@ -32,6 +32,7 @@
         "db:migrate": "wrangler d1 migrations apply wingdex-db",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",
+        "verify:ci": "npm run lint && npm run test:unit && npm run test:e2e && npm run build",
         "lint": "eslint .",
         "optimize": "vite optimize",
         "preview": "vite preview",
