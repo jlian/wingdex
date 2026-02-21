@@ -62,7 +62,7 @@ jobs:
           if [ "${{ github.ref_name }}" = "main" ]; then
             npx wrangler d1 migrations apply wingdex-db --remote
           else
-            npx wrangler d1 migrations apply wingdex-db-dev --remote
+            npx wrangler d1 migrations apply wingdex-db-dev --remote --env preview
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
