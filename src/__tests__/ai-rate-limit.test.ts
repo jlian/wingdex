@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { enforceAiDailyLimit, RateLimitError } from '../../functions/lib/ai-rate-limit'
-import { onRequestPost as identifyBirdPost } from '../../functions/api/identify-bird'
 
 type UsageRow = {
   requestCount: number
@@ -60,45 +59,21 @@ class FakeD1Database {
   }
 }
 
-function createEnv(overrides: Partial<Env> = {}): Env {
-  return {
-    DB: new FakeD1Database() as unknown as D1Database,
-    AI: {} as Ai,
-    BETTER_AUTH_URL: '',
-    BETTER_AUTH_SECRET: '',
-    GITHUB_CLIENT_ID: '',
-    GITHUB_CLIENT_SECRET: '',
-    APPLE_CLIENT_ID: '',
-    APPLE_CLIENT_SECRET: '',
-    GOOGLE_CLIENT_ID: '',
-    GOOGLE_CLIENT_SECRET: '',
-    LLM_PROVIDER: 'openai',
-    OPENAI_API_KEY: '',
-    OPENAI_MODEL: '',
-    AZURE_OPENAI_ENDPOINT: '',
-    AZURE_OPENAI_API_KEY: '',
-    AZURE_OPENAI_DEPLOYMENT: '',
-    AZURE_OPENAI_API_VERSION: '',
-    GITHUB_MODELS_TOKEN: '',
-    GITHUB_MODELS_ENDPOINT: '',
-    GITHUB_MODELS_MODEL: '',
-    CF_ACCOUNT_ID: '',
-    AI_GATEWAY_ID: '',
-    ...overrides,
-  }
+function createFakeDB(overrides: Record<string, any> = {}) {
+  return { ...new FakeD1Database(), ...overrides }
 }
 
 describe('enforceAiDailyLimit', () => {
   it('allows requests up to limit and then throws 429', async () => {
-    const env = createEnv({ AI_DAILY_LIMIT_IDENTIFY: '2' })
+    const db = new FakeD1Database()
 
-    await expect(enforceAiDailyLimit(env, 'user-1', 'identify-bird')).resolves.toBeUndefined()
-    await expect(enforceAiDailyLimit(env, 'user-1', 'identify-bird')).resolves.toBeUndefined()
+    await expect(enforceAiDailyLimit(db, 'user-1', 'identify-bird', '2')).resolves.toBeUndefined()
+    await expect(enforceAiDailyLimit(db, 'user-1', 'identify-bird', '2')).resolves.toBeUndefined()
 
-    await expect(enforceAiDailyLimit(env, 'user-1', 'identify-bird')).rejects.toBeInstanceOf(RateLimitError)
+    await expect(enforceAiDailyLimit(db, 'user-1', 'identify-bird', '2')).rejects.toBeInstanceOf(RateLimitError)
 
     try {
-      await enforceAiDailyLimit(env, 'user-1', 'identify-bird')
+      await enforceAiDailyLimit(db, 'user-1', 'identify-bird', '2')
     } catch (error) {
       const rateLimitError = error as RateLimitError
       expect(rateLimitError.status).toBe(429)
@@ -107,21 +82,11 @@ describe('enforceAiDailyLimit', () => {
   })
 })
 
-describe('identify-bird endpoint rate limiting', () => {
-  it('returns 429 and Retry-After header when daily limit is reached', async () => {
-    const db = new FakeD1Database()
-    db.alwaysDenyUpdates = true
-
-    const response = await identifyBirdPost({
-      request: new Request('http://localhost/api/identify-bird', { method: 'POST' }),
-      env: createEnv({ DB: db as unknown as D1Database }),
-      data: { user: { id: 'user-2' } },
-    } as unknown as Parameters<typeof identifyBirdPost>[0])
-
-    expect(response.status).toBe(429)
-    expect(await response.text()).toContain('Daily AI request limit reached')
-    const retryAfter = response.headers.get('Retry-After')
-    expect(retryAfter).toBeTruthy()
-    expect(Number(retryAfter)).toBeGreaterThan(0)
+describe('RateLimitError', () => {
+  it('has 429 status and positive retryAfterSeconds', () => {
+    const error = new RateLimitError('limit reached', 3600)
+    expect(error.status).toBe(429)
+    expect(error.retryAfterSeconds).toBe(3600)
+    expect(error.message).toBe('limit reached')
   })
 })

@@ -15,7 +15,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    await enforceAiDailyLimit(context.env, userId, 'suggest-location')
+    await enforceAiDailyLimit(context.env.DB, userId, 'suggest-location', context.env.AI_DAILY_LIMIT_SUGGEST)
 
     const body = await context.request.json() as SuggestLocationBody
 

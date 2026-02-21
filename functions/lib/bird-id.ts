@@ -1,5 +1,6 @@
 import { findBestMatch, getWikiTitle } from './taxonomy'
 import { buildBirdIdPrompt } from './bird-id-prompt.js'
+import { HttpError } from './http-error'
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
 const DEFAULT_AZURE_API_VERSION = '2024-10-21'
@@ -48,14 +49,7 @@ export type IdentifyBirdInput = {
   locationName?: string
 }
 
-export class HttpError extends Error {
-  status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.status = status
-  }
-}
+export { HttpError } from './http-error'
 
 function safeParseJSON(text: string): any {
   try {
