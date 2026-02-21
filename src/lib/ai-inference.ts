@@ -104,22 +104,3 @@ export async function identifyBirdInPhoto(
     multipleBirds: payload?.multipleBirds === true,
   }
 }
-
-export async function textLLM(prompt: string): Promise<string> {
-  const response = await fetchWithLocalAuthRetry('/api/suggest-location', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  })
-
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(`LLM ${response.status}: ${message.substring(0, 300)}`)
-  }
-
-  const payload = await response.json() as { text?: string; name?: string }
-  return payload.text || payload.name || ''
-}
