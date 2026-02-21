@@ -111,6 +111,12 @@ function App() {
 
   useEffect(() => {
     if (session && session.user) {
+      const isAnonymousUser = !isDevRuntime() && Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
+      if (isAnonymousUser) {
+        setUser(null)
+        return
+      }
+
       setLocalSessionBootstrapFailed(false)
       setUser({
         id: session.user.id,
