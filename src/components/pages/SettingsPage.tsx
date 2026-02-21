@@ -374,7 +374,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 setLinkingGitHub(true)
                 await authClient.linkSocial({
                   provider: 'github',
-                  callbackURL: '/#settings',
+                  callbackURL: `${window.location.origin}/#settings`,
                 })
               }}
             >
