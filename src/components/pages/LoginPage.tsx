@@ -49,7 +49,13 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
     setErrorMessage(null)
     setIsCreating(true)
 
-    const anonymousResult = await authClient.signIn.anonymous()
+    const anonymousResult = await authClient.signIn.anonymous({
+      fetchOptions: {
+        headers: {
+          'x-wingdex-passkey-signup': '1',
+        },
+      },
+    })
     if (anonymousResult.error) {
       setIsCreating(false)
       setErrorMessage(anonymousResult.error.message || 'Unable to create account session.')

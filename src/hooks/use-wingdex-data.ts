@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
-import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
+import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 
 export type WingDexDataStore = ReturnType<typeof useWingDexData>
 
@@ -76,7 +76,7 @@ function rebuildDexFromState(
 export const buildDexFromState = rebuildDexFromState
 
 function readLocalData(userId: string): WingDexPayload {
-  if (typeof window === 'undefined' || !window.localStorage) {
+  if (!isLocalRuntime() || typeof window === 'undefined' || !window.localStorage) {
     return { outings: [], photos: [], observations: [], dex: [] }
   }
 
@@ -102,7 +102,7 @@ function readLocalData(userId: string): WingDexPayload {
 }
 
 function writeLocalData(userId: string, payload: WingDexPayload) {
-  if (typeof window === 'undefined' || !window.localStorage) return
+  if (!isLocalRuntime() || typeof window === 'undefined' || !window.localStorage) return
 
   window.localStorage.setItem(getUserStorageKey(userId, 'outings'), JSON.stringify(payload.outings))
   window.localStorage.setItem(getUserStorageKey(userId, 'photos'), JSON.stringify(payload.photos))
@@ -142,6 +142,20 @@ export function useWingDexData(userId: string) {
     payloadRef.current = payload
   }, [payload])
 
+  useEffect(() => {
+    if (isLocalRuntime() || typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+
+    try {
+      const photosKey = getUserStorageKey(userId, 'photos')
+      window.localStorage.removeItem(photosKey)
+      window.localStorage.removeItem(`wingdex_kv_${photosKey}`)
+    } catch {
+      // Ignore storage errors in hosted mode cleanup
+    }
+  }, [userId])
+
   const refresh = useCallback(async () => {
     try {
       const next = await apiJson<WingDexPayload>('/api/data/all')
@@ -153,8 +167,10 @@ export function useWingDexData(userId: string) {
         dex: next.dex || [],
       })
     } catch {
-      setStorageMode('local')
-      setPayload(readLocalData(userId))
+      if (isLocalRuntime()) {
+        setStorageMode('local')
+        setPayload(readLocalData(userId))
+      }
     }
   }, [userId])
 
