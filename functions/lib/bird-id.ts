@@ -319,33 +319,3 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     multipleBirds: parsed.multipleBirds === true,
   }
 }
-
-export async function suggestLocationName(
-  env: Env,
-  input: { lat?: number; lon?: number; existingNames?: string[]; prompt?: string },
-): Promise<{ name: string; text: string }> {
-  const model = resolveModel(env)
-  const hasCoordinates = Number.isFinite(input.lat) && Number.isFinite(input.lon)
-
-  const userPrompt = input.prompt || (hasCoordinates
-    ? `Suggest a concise birding location name for coordinates ${input.lat}, ${input.lon}. Return plain text only.`
-    : 'Return "API is working".')
-
-  const existingNamesHint = input.existingNames?.length
-    ? ` Existing place names: ${input.existingNames.join(', ')}.`
-    : ''
-
-  const content = await callOpenAI(env, {
-    model,
-    ...withSamplingOptions(model),
-    ...withTokenLimit(model, 120),
-    response_format: { type: 'text' },
-    messages: [
-      { role: 'system', content: 'You provide concise location names. Return plain text only.' },
-      { role: 'user', content: `${userPrompt}${existingNamesHint}` },
-    ],
-  })
-
-  const text = content.trim().replace(/^"|"$/g, '')
-  return { name: text, text }
-}

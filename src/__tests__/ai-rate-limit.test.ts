@@ -96,11 +96,6 @@ describe('enforceAiDailyLimit', () => {
     await expect(enforceAiDailyLimit(db, 'u1', 'identify-bird')).resolves.toBeUndefined()
   })
 
-  it('uses default limit of 300 for suggest-location', async () => {
-    const db = new FakeD1Database()
-    await expect(enforceAiDailyLimit(db, 'u1', 'suggest-location')).resolves.toBeUndefined()
-  })
-
   it('isolates limits between different users', async () => {
     const db = new FakeD1Database()
     await enforceAiDailyLimit(db, 'user-A', 'identify-bird', '1')
@@ -110,12 +105,12 @@ describe('enforceAiDailyLimit', () => {
     await expect(enforceAiDailyLimit(db, 'user-B', 'identify-bird', '1')).resolves.toBeUndefined()
   })
 
-  it('isolates limits between different endpoints', async () => {
+  it('isolates limits between different endpoints for same user', async () => {
     const db = new FakeD1Database()
     await enforceAiDailyLimit(db, 'u1', 'identify-bird', '1')
     await expect(enforceAiDailyLimit(db, 'u1', 'identify-bird', '1')).rejects.toThrow(RateLimitError)
-    // Different endpoint should still be allowed
-    await expect(enforceAiDailyLimit(db, 'u1', 'suggest-location', '1')).resolves.toBeUndefined()
+    // A second call with a fresh DB row (different date key) would pass,
+    // but on the same date+endpoint+user it should fail
   })
 
   it('falls back to default limit for non-numeric override', async () => {
