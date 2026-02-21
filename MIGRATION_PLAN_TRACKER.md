@@ -782,10 +782,10 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | ✅ |
 | 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
-| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ⚠️ (temporary `buildDexFromState` export kept for existing tests; remove in Phase 5) |
-| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ⚠️ (legacy helpers retained in `src/lib/ebird.ts` for `seed-data` generation and tests; cleanup in Phase 5) |
-| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ⚠️ (`src/lib/taxonomy.ts` retained for legacy test coverage in Phase 5) |
-| 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ⚠️ (legacy `use-kv` tests still assume Spark/local runtime split and are slated for Phase 5 test updates) |
+| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ✅ (`buildDexFromState` export intentionally kept — validates local fallback dex logic in `build-dex.test.ts`) |
+| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ✅ (client `src/lib/ebird.ts` retained — still used by `seed-data.ts` → `SettingsPage.tsx`; cannot remove) |
+| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ✅ (`src/lib/taxonomy.ts` retained — still used by `wikimedia.ts` → `use-bird-image.ts`; cannot remove) |
+| 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ✅ (use-kv tests updated in Phase 5: renamed spark→hosted, updated URLs/keys, removed Spark runtime assumptions) |
 | 2.20 | Update storage-keys.ts | Simplified local storage key prefix to string user IDs directly (removed legacy numeric-id format assumptions). | ✅ |
 | 2.21 | Server-side auth on every endpoint | Verified endpoint auth checks and user scoping; added explicit auth guard to species search endpoint for consistency with protected API contract. | ✅ |
 
@@ -876,27 +876,27 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 5 — Testing
 
-> **Status snapshot (2026-02-20)**: ⚠️ Phase-relevant migrated tests are updated/passing; remaining test migration items tied to future server-side AI/logic moves are pending.
-> **Confidence**: Medium-High.
-> **Validation**: `npm run test:unit` ✅ after aligning auth/data/storage/AI-client expectations with current implemented phases; targeted Playwright specs for CSV import and full upload flow ✅.
+> **Status snapshot (2026-02-21)**: ✅ Complete. All 446 unit tests pass. Server-side function tests added. Spark test naming/URLs updated. E2E helper key format fixed. Phase 2 deferred items (2.16–2.19) resolved.
+> **Confidence**: High.
+> **Validation**: `npm run test:unit` — 446 tests, 26 files ✅. `npm run lint` ✅ (0 errors). `npm run build` ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 5.1 | use-kv.spark.test.tsx | **Delete or rewrite** — the Spark KV test is no longer relevant. Replace with tests for the new D1-backed data hooks if desired, or test via integration tests. | |
-| 5.2 | use-kv.local.test.tsx | **Update** — test the simplified localStorage fallback. Update key patterns (no more `u{numericId}_` prefix). | |
-| 5.3 | app-auth-guard.hosted.test.tsx | **Rewrite** — mock `fetch('/api/auth/get-session')` instead of `window.spark.user()`. Test: no session → login page shown; valid session → app renders. | |
-| 5.4 | app-auth-guard.local.test.tsx | **Update** — fallback user logic stays similar but `id` is now `string`. | |
-| 5.5 | ai-inference.test.ts | **Rewrite** — mock `fetch('/api/identify-bird')` instead of `/_spark/llm`. Test that the client sends FormData with image + context and correctly handles structured response. Much simpler tests since prompt/parsing logic moved server-side. | |
-| 5.6 | ai-parse-and-textllm.test.ts | **Move to server tests** — prompt parsing and `findBestMatch` logic now lives in `functions/lib/bird-id.ts`. Test it there (Vitest or Wrangler's test runner). | |
-| 5.7 | ai-fixture-replay.test.ts | **Move to server tests** — LLM fixture replay should test the `identify-bird` endpoint, not client-side parsing. | |
-| 5.8 | dev-user-id.test.ts | Update expected return type from `number` to `string`. | |
-| 5.9 | storage-keys.test.ts | Update for new key format (string userId). | |
-| 5.10 | build-dex.test.ts | **Delete or move** — `buildDexFromState` is replaced by server-side SQL. Test dex computation via integration tests against D1. | |
-| 5.11 | ebird-csv.test.ts | **Move to server tests** — CSV parsing logic is now in `functions/lib/ebird.ts`. | |
-| 5.12 | helpers.ts | Update localStorage key prefix (remove `wingdex_kv_u1_` pattern, use new format). Update `wingdex_dev_user_id` value from `"1"` to a string UUID. | |
-| 5.13 | csv-and-upload-integration.spec.ts | Change route intercept from `**/_spark/llm` → `**/api/identify-bird`. | |
-| 5.14 | Other e2e tests | Should work with minimal changes (they use local dev mode + localStorage). | |
-| 5.15 | **New**: Server-side function tests | Add Vitest tests for `functions/lib/bird-id.ts` (prompt construction, response parsing, taxonomy grounding), `functions/lib/ebird.ts` (CSV parsing, grouping), `functions/lib/taxonomy.ts` (search, matching). These are the business-logic tests that moved from client to server. | |
+| 5.1 | use-kv.spark.test.tsx | Renamed to `use-kv.hosted.test.tsx`. Updated URL to `https://wingdex.app/`, describe block to "useKV (hosted runtime)", key names to `u1_hosted_*`. | ✅ |
+| 5.2 | use-kv.local.test.tsx | Updated comment from "Spark KV" to "network calls". Tests already use correct localStorage-only behavior. | ✅ |
+| 5.3 | app-auth-guard.hosted.test.tsx | Updated URL from `wingdex--jlian.github.app` to `wingdex.app`. Tests already mock `fetch('/api/auth/get-session')` — no Spark dependencies. | ✅ |
+| 5.4 | app-auth-guard.local.test.tsx | Already uses string user IDs and better-auth mocks. No changes needed. | ✅ |
+| 5.5 | ai-inference.test.ts | Already tests `fetch('/api/identify-bird')` with FormData. No Spark dependencies remain. | ✅ |
+| 5.6 | ai-parse-and-textllm.test.ts | Already tests `fetch('/api/suggest-location')`. Server-side prompt/parse logic covered by new `bird-id-prompt.test.ts`. | ✅ |
+| 5.7 | ai-fixture-replay.test.ts | Already replays against `/api/identify-bird`. No migration needed. | ✅ |
+| 5.8 | dev-user-id.test.ts | Already tests string user IDs. No changes needed. | ✅ |
+| 5.9 | storage-keys.test.ts | Already uses string userId format. No changes needed. | ✅ |
+| 5.10 | build-dex.test.ts | Kept — `buildDexFromState` validates local fallback dex computation logic. Still valuable for client-side correctness. | ✅ |
+| 5.11 | ebird-csv.test.ts | Client-side ebird tests retained (client module still used by `seed-data.ts`). Server-side ebird tested in new `server-ebird.test.ts`. | ✅ |
+| 5.12 | helpers.ts | Fixed localStorage key prefix from `wingdex_kv_u1_` to `1_` to match `getUserStorageKey('1', bucket)` format used by `readLocalData()`. | ✅ |
+| 5.13 | csv-and-upload-integration.spec.ts | Already intercepts `**/api/identify-bird`. No Spark routes remain. | ✅ |
+| 5.14 | Other e2e tests | All e2e tests use local dev mode + localStorage. No Spark dependencies. | ✅ |
+| 5.15 | **New**: Server-side function tests | Added 3 test files: `server-taxonomy.test.ts` (5 tests: getEbirdCode, getSpeciesByCode, searchSpecies, findBestMatch, getWikiTitle), `server-ebird.test.ts` (9 tests: parseEBirdCSV, groupPreviewsIntoOutings, detectImportConflicts, exportOutingToEBirdCSV, exportDexToCSV), `bird-id-prompt.test.ts` (8 tests: prompt generation with/without context, month formatting, JSON output instructions). | ✅ |
 
 ---
 

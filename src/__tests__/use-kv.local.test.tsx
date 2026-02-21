@@ -66,7 +66,7 @@ describe('useKV (local runtime)', () => {
     vi.unstubAllGlobals()
   })
 
-  it('initializes from localStorage and does not hit Spark KV', async () => {
+  it('initializes from localStorage and does not issue network calls', async () => {
     localStorage.setItem(`wingdex_kv_${key}`, JSON.stringify(['saved']))
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
