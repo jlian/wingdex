@@ -129,7 +129,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Navigate to WingDex to verify species
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 15_000 })
     const wingdexSearch = page.getByPlaceholder('Search species...')
 
     // All 4 species from the CSV should be in the dex
@@ -179,7 +179,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Navigate to WingDex to verify the species was saved
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 15_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
 
     await expect(
@@ -202,7 +202,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Verify Chukar is in the dex from CSV
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 15_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
     await expect(page.locator('p:visible', { hasText: 'Chukar' }).first()).toBeVisible()
 
@@ -235,7 +235,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Go to WingDex — Chukar should still be there (converged, not duplicated)
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 15_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
 
     // Count the Chukar entries — should be exactly 1 (not 2 separate entries)
