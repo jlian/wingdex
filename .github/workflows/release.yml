@@ -2,14 +2,14 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
   workflow_dispatch:
 
 concurrency:
-  group: release-main
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -40,6 +40,7 @@ jobs:
         run: npm run build
 
       - name: Run semantic-release
+        if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
@@ -67,4 +68,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=wingdex
+          command: pages deploy dist --project-name=wingdex ${{ github.ref != 'refs/heads/main' && format('--branch={0}', github.ref_name) || '' }}
