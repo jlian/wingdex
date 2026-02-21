@@ -77,12 +77,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Skip deploy when the release workflow already handles this branch
       - name: Deploy preview to Cloudflare Pages
+        if: github.head_ref != 'dev' && github.head_ref != 'main'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=wingdex --branch=pr-${{ github.event.pull_request.number }}
+          command: pages deploy dist --project-name=wingdex --branch=${{ github.head_ref }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Branch preview deployment
@@ -92,7 +94,7 @@ jobs:
             const { data: deployment } = await github.rest.repos.createDeployment({
               ...context.repo,
               ref: '${{ github.event.pull_request.head.sha }}',
-              environment: 'branch preview',
+              environment: 'preview (${{ github.head_ref }})',
               auto_merge: false,
               required_contexts: [],
               production_environment: false,
@@ -101,5 +103,5 @@ jobs:
               ...context.repo,
               deployment_id: deployment.id,
               state: 'success',
-              environment_url: 'https://pr-${{ github.event.pull_request.number }}.wingdex.pages.dev',
+              environment_url: 'https://${{ github.head_ref }}.wingdex.pages.dev',
             });
