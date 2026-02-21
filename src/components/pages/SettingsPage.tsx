@@ -8,7 +8,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, GithubLogo, LinkSimple } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
@@ -31,6 +31,8 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [githubLinked, setGithubLinked] = useState<boolean | null>(null)
+  const [linkingGitHub, setLinkingGitHub] = useState(false)
   const [profileTimezone, setProfileTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
   )
@@ -38,6 +40,15 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (isLocalRuntime()) return
+    void authClient.listAccounts().then((result) => {
+      if (result.data) {
+        setGithubLinked(result.data.some((a: { providerId: string }) => a.providerId === 'github'))
+      }
+    })
   }, [])
 
   const handleImportEBird = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -353,6 +364,29 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             <Key size={20} className="mr-2" />
             Add another passkey
           </Button>
+
+          {!isLocalRuntime() && (
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              disabled={githubLinked === true || linkingGitHub}
+              onClick={async () => {
+                setLinkingGitHub(true)
+                await authClient.linkSocial({
+                  provider: 'github',
+                  callbackURL: '/#settings',
+                })
+              }}
+            >
+              <GithubLogo size={20} className="mr-2" />
+              {githubLinked ? (
+                <>
+                  GitHub linked
+                  <LinkSimple size={14} className="ml-1 text-muted-foreground" />
+                </>
+              ) : linkingGitHub ? 'Linking…' : 'Link GitHub account'}
+            </Button>
+          )}
 
           <Button
             variant="outline"

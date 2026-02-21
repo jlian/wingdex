@@ -41,6 +41,7 @@ describe('auth config', () => {
     expect(auth.options.account?.accountLinking?.trustedProviders).toContain(
       'github',
     )
+    expect(auth.options.account?.accountLinking?.allowDifferentEmails).toBe(true)
   })
 
   it('includes passkey and anonymous plugins', () => {
