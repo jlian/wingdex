@@ -15,6 +15,7 @@ vi.mock('@/lib/auth-client', () => ({
     useSession: () => mockUseSession(),
     signIn: {
       anonymous: () => mockSignInAnonymous(),
+      social: vi.fn(),
     },
   },
 }))
@@ -35,8 +36,8 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-vi.mock('@/components/flows/PasskeyAuthDialog', () => ({
-  default: () => null,
+vi.mock('@/lib/fun-names', () => ({
+  generateBirdName: () => 'test-bird-name',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({
@@ -58,6 +59,9 @@ vi.mock('@phosphor-icons/react', () => ({
   GithubLogo: () => <span>GithubLogo</span>,
   Key: () => <span>Key</span>,
   PlusCircle: () => <span>PlusCircle</span>,
+  UserPlus: () => <span>UserPlus</span>,
+  ArrowsClockwise: () => <span>ArrowsClockwise</span>,
+  ArrowLeft: () => <span>ArrowLeft</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({

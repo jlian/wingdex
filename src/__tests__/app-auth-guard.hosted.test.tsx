@@ -15,6 +15,7 @@ vi.mock('@/lib/auth-client', () => ({
     useSession: () => mockUseSession(),
     signIn: {
       anonymous: () => mockSignInAnonymous(),
+      social: vi.fn(),
     },
   },
 }))
@@ -35,8 +36,8 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-vi.mock('@/components/flows/PasskeyAuthDialog', () => ({
-  default: () => null,
+vi.mock('@/lib/fun-names', () => ({
+  generateBirdName: () => 'test-bird-name',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({
@@ -60,6 +61,7 @@ vi.mock('@phosphor-icons/react', () => ({
   PlusCircle: () => <span>PlusCircle</span>,
   UserPlus: () => <span>UserPlus</span>,
   ArrowsClockwise: () => <span>ArrowsClockwise</span>,
+  ArrowLeft: () => <span>ArrowLeft</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({
@@ -100,6 +102,7 @@ describe('App auth guard (hosted runtime)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
     expect(screen.getByText('Continue with passkey')).toBeInTheDocument()
+    expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument()
     expect(screen.getByText('Sign in')).toBeInTheDocument()
   })
 
