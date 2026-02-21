@@ -3,10 +3,9 @@
  *
  * These tests mock the fetch call to return captured responses from GitHub Models
  * (stored in fixtures/llm-responses/) and verify the full pipeline:
- *   1. JSON parsing robustness (safeParseJSON on raw LLM output)
+ *   1. JSON parsing robustness (local helper on captured raw output)
  *   2. Taxonomy grounding (findBestMatch normalization)
- *   3. Crop box derivation from birdCenter + birdSize
- *   4. Candidate ranking and filtering contracts
+ *   3. Client request/response handling against server-style payload shape
  *
  * Fixtures are captured via: node scripts/capture-llm-fixtures.mjs
  * No network calls are made during these tests.
@@ -56,13 +55,37 @@ const mockCanvasCtx = { drawImage: vi.fn() }
 HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(mockCanvasCtx) as any
 HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue('data:image/jpeg;base64,mock')
 
-const { identifyBirdInPhoto, safeParseJSON } = await import('@/lib/ai-inference')
+const { identifyBirdInPhoto } = await import('@/lib/ai-inference')
+
+function safeParseJSON(text: string): any {
+  try {
+    return JSON.parse(text)
+  } catch {}
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenced?.[1]) {
+    try {
+      return JSON.parse(fenced[1].trim())
+    } catch {}
+  }
+
+  const objectLike = text.match(/\{[\s\S]*\}/)
+  if (objectLike?.[0]) {
+    try {
+      return JSON.parse(objectLike[0])
+    } catch {}
+  }
+
+  return null
+}
 
 function replayFixture(fixture: Fixture) {
+  const parsed = safeParseJSON(fixture.rawResponse)
   mockFetch.mockResolvedValueOnce({
     ok: true,
     json: async () => ({
-      choices: [{ message: { content: fixture.rawResponse } }],
+      candidates: parsed?.candidates || fixture.parsed.candidates,
+      multipleBirds: parsed?.multipleBirds ?? fixture.parsed.multipleBirds,
     }),
     text: async () => fixture.rawResponse,
   })
@@ -201,59 +224,6 @@ describe('LLM fixture replay', () => {
         }
       )
     }
-  })
-
-  // ── Crop box derivation ─────────────────────────────────
-
-  describe('crop box derivation from fixtures', () => {
-    it('all fixtures with birdCenter produce valid crop boxes', async () => {
-      const fixturesWithCenter = fixtures.filter(
-        f => f.parsed.birdCenter && f.parsed.birdSize
-      )
-      expect(fixturesWithCenter.length).toBeGreaterThan(0)
-      for (const f of fixturesWithCenter) {
-        replayFixture(f)
-        const result = await identifyBirdInPhoto(
-          'data:image/jpeg;base64,test',
-          fixtureLocation(f),
-          f.context.month,
-        )
-        expect(result.cropBox).toBeDefined()
-        const { x, y, width, height } = result.cropBox!
-        expect(x).toBeGreaterThanOrEqual(0)
-        expect(x).toBeLessThanOrEqual(100)
-        expect(y).toBeGreaterThanOrEqual(0)
-        expect(y).toBeLessThanOrEqual(100)
-        expect(width).toBeGreaterThan(0)
-        expect(width).toBeLessThanOrEqual(100)
-        expect(height).toBeGreaterThan(0)
-        expect(height).toBeLessThanOrEqual(100)
-        expect(x + width).toBeLessThanOrEqual(100)
-        expect(y + height).toBeLessThanOrEqual(100)
-      }
-    })
-
-    it('small bird gets ~40% crop size', async () => {
-      const smallFixture = fixtures.find(f => f.parsed.birdSize === 'small')
-      if (!smallFixture) return
-      replayFixture(smallFixture)
-
-      const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
-      expect(result.cropBox).toBeDefined()
-      expect(result.cropBox!.height).toBe(40)
-      expect(result.cropBox!.width).toBe(30)
-    })
-
-    it('medium bird gets ~55% crop size', async () => {
-      const medFixture = fixtures.find(f => f.parsed.birdSize === 'medium')
-      if (!medFixture) return
-      replayFixture(medFixture)
-
-      const result = await identifyBirdInPhoto('data:image/jpeg;base64,test')
-      expect(result.cropBox).toBeDefined()
-      expect(result.cropBox!.height).toBe(55)
-      expect(result.cropBox!.width).toBe(41)
-    })
   })
 
   // ── Candidate ranking contract ──────────────────────────

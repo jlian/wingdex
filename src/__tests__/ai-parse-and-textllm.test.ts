@@ -12,54 +12,7 @@ vi.stubGlobal('Image', class {
 HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() }) as any
 HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue('data:image/jpeg;base64,mock')
 
-const { safeParseJSON, textLLM } = await import('@/lib/ai-inference')
-
-// ── safeParseJSON ───────────────────────────────────────────
-
-describe('safeParseJSON', () => {
-  it('parses valid JSON directly', () => {
-    const result = safeParseJSON('{"species":"Blue Jay","confidence":0.9}')
-    expect(result).toEqual({ species: 'Blue Jay', confidence: 0.9 })
-  })
-
-  it('extracts JSON from markdown code block', () => {
-    const text = 'Here is the result:\n```json\n{"candidates":[{"species":"Robin"}]}\n```'
-    const result = safeParseJSON(text)
-    expect(result).toEqual({ candidates: [{ species: 'Robin' }] })
-  })
-
-  it('extracts JSON from untagged code block', () => {
-    const text = 'Result:\n```\n{"answer":"yes"}\n```'
-    const result = safeParseJSON(text)
-    expect(result).toEqual({ answer: 'yes' })
-  })
-
-  it('extracts JSON object embedded in prose', () => {
-    const text = 'The bird is a {"species":"Cardinal","confidence":0.95} which is common here.'
-    const result = safeParseJSON(text)
-    expect(result).toEqual({ species: 'Cardinal', confidence: 0.95 })
-  })
-
-  it('returns null for completely unparseable text', () => {
-    expect(safeParseJSON('I cannot identify the bird.')).toBeNull()
-  })
-
-  it('returns null for empty string', () => {
-    expect(safeParseJSON('')).toBeNull()
-  })
-
-  it('handles nested JSON objects', () => {
-    const text = '{"candidates":[{"species":"Hawk"}],"cropBox":{"x":10,"y":20,"width":50,"height":40}}'
-    const result = safeParseJSON(text)
-    expect(result.cropBox).toEqual({ x: 10, y: 20, width: 50, height: 40 })
-  })
-
-  it('handles JSON with whitespace in markdown block', () => {
-    const text = '```json\n  {\n    "species": "Eagle"\n  }\n```'
-    const result = safeParseJSON(text)
-    expect(result).toEqual({ species: 'Eagle' })
-  })
-})
+const { textLLM } = await import('@/lib/ai-inference')
 
 // ── textLLM ─────────────────────────────────────────────────
 
@@ -68,12 +21,10 @@ describe('textLLM', () => {
     mockFetch.mockReset()
   })
 
-  it('sends prompt to /_spark/llm and returns content', async () => {
+  it('sends prompt to /api/suggest-location and returns content', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({
-        choices: [{ message: { content: 'Central Park, New York' } }],
-      }),
+      json: async () => ({ text: 'Central Park, New York' }),
     })
 
     const result = await textLLM('What location is at 40.78, -73.96?')
@@ -81,12 +32,9 @@ describe('textLLM', () => {
 
     // Verify the request structure
     const [url, opts] = mockFetch.mock.calls[0]
-    expect(url).toBe('/_spark/llm')
+    expect(url).toBe('/api/suggest-location')
     const body = JSON.parse(opts.body)
-    expect(body.model).toBe('openai/gpt-4.1-mini')
-    expect(body.messages[1].content).toContain('What location')
-    expect(body.max_tokens).toBe(200)
-    expect(body.temperature).toBe(0.3)
+    expect(body.prompt).toContain('What location')
   })
 
   it('throws on non-ok response', async () => {

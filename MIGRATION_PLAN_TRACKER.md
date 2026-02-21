@@ -24,7 +24,7 @@ WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV per
 
 ### Architecture
 
-> **Phase 2 status**: ⚠️ Core data/import/export/species API architecture is implemented; `/api/identify-bird` and `/api/suggest-location` are still pending (Phase 3), and auth providers currently differ from planned social-provider setup.
+> **Phase 2 status**: ⚠️ Core data/import/export/species API architecture is implemented; `/api/identify-bird` and `/api/suggest-location` are now implemented (Phase 3 completed for code scope), and auth providers currently differ from planned social-provider setup.
 
 ```
 Cloudflare Pages
@@ -61,13 +61,13 @@ Bindings:
 
 ### Current Spark Dependency Map
 
-> **Phase 2 status**: ⚠️ Spark KV/runtime/plugin dependencies are removed from active paths; Spark LLM proxy usage remains in `ai-inference.ts` until Phase 3 AI migration.
+> **Phase 2 status**: ⚠️ Spark KV/runtime/plugin dependencies are removed from active paths; Spark LLM proxy usage has been removed from active AI flows.
 
 | Concern | Current Code | Spark API | Files Affected |
 |---|---|---|---|
 | **Auth** | `window.spark.user()` → `UserInfo{login, avatarUrl, email, id, isOwner}` | Spark runtime global | App.tsx, dev-user.ts |
 | **KV** | `fetch('/_spark/kv/{key}')` GET/POST/DELETE, keys like `u12345_photos` | Spark KV proxy | use-kv.ts, storage-keys.ts, use-wingdex-data.ts |
-| **LLM** | `fetch('/_spark/llm')` POST, OpenAI Chat Completions format, `openai/gpt-4.1-mini` | Spark LLM proxy | ai-inference.ts |
+| **LLM** | `POST /api/identify-bird` + `POST /api/suggest-location` | Cloudflare Functions API | ai-inference.ts, functions/api/* |
 | **Runtime** | `await import('@github/spark/spark')` (conditional on `*.github.app` hostname) | Spark bootstrap | main.tsx |
 | **Vite plugins** | `sparkPlugin()`, `createIconImportProxy()` | Build tooling | vite.config.ts |
 | **Config** | runtime.config.json, spark.meta.json | Deployment metadata | Root files |
@@ -79,7 +79,7 @@ Bindings:
 
 ### Multi-Platform API Design
 
-> **Phase 2 status**: ⚠️ Data, import/export, and taxonomy behaviors are now API-first; bird-ID/location AI server centralization is pending with Phase 3 endpoint rollout.
+> **Phase 2 status**: ✅ Data, import/export, taxonomy, and bird-ID/location AI flows are API-first after Phase 3 endpoint rollout.
 
 The migration is an opportunity to move business logic server-side so that any future client (iOS, Android, CLI) gets the same behavior for free. The current web app has ~1,730 lines of client-side business logic across 8 files. After migration:
 
@@ -382,7 +382,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
 ### Bird ID & AI: Smart Server Endpoint
 
-> **Phase 2 status**: ⏳ Pending. Client still uses Spark-backed LLM path; planned `/api/identify-bird` and `/api/suggest-location` server endpoints are not yet implemented (tracked for Phase 3).
+> **Phase 2 status**: ✅ Implemented. Client now uses server-owned `/api/identify-bird` and `/api/suggest-location` endpoints.
 
 Instead of a thin LLM proxy (which would force every client to reimplement prompt construction, taxonomy grounding, and crop-box computation), the server owns the entire bird identification pipeline. Clients upload an image with context and receive structured results.
 
@@ -670,13 +670,13 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 | Design Section | Phase 2 Status | Note |
 |---|---|---|
-| TL;DR / Overall Migration Direction | ⚠️ | Core Spark→Cloudflare migration for data paths is complete; auth provider parity and AI endpoint migration are still pending. |
-| Architecture | ⚠️ | `/api/data/*`, import/export, and species routes are implemented; `/api/identify-bird` + `/api/suggest-location` remain pending for Phase 3. |
-| Current Spark Dependency Map | ⚠️ | Spark KV/runtime/plugin dependency removed from active app paths; Spark LLM proxy remains in current AI flow. |
-| Multi-Platform API Design | ⚠️ | Data and taxonomy server-centralization implemented; bird-ID/location AI server centralization pending. |
+| TL;DR / Overall Migration Direction | ⚠️ | Core Spark→Cloudflare migration for data + AI paths is complete; auth provider parity remains pending. |
+| Architecture | ✅ | `/api/data/*`, import/export, species, and AI routes (`/api/identify-bird`, `/api/suggest-location`) are implemented. |
+| Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
+| Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
 | Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 is wired; implementation currently uses passkey + anonymous flow instead of full planned social-provider parity. |
-| Bird ID & AI: Smart Server Endpoint | ⏳ | Not implemented yet in Phase 2 scope. |
+| Bird ID & AI: Smart Server Endpoint | ✅ | Implemented in Phase 3 with provider-aware server runtime and client API calls. |
 | Species Search: Server-Side Taxonomy | ✅ | Implemented via authenticated `/api/species/search`; active typeahead now server-backed. |
 | Data Layer: Refactoring `useWingDexData` | ⚠️ | API-first refactor complete with local fallback; minor deltas are documented in Phase 2 tracker row statuses. |
 | eBird Import: Server-Side Two-Step Flow | ✅ | Implemented and integrated into Settings/Outings flows. |
@@ -837,19 +837,19 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 3 — Bird ID & AI
 
-> **Status snapshot (2026-02-20)**: ⏳ Not started in migration execution; planned server endpoints (`/api/identify-bird`, `/api/suggest-location`) are still pending.
-> **Confidence**: Low (not implemented yet).
-> **Validation**: N/A for server AI endpoints in current state.
+> **Status snapshot (2026-02-20)**: ⚠️ Phase 3 required code items are complete (`/api/identify-bird`, `/api/suggest-location`, provider-aware server inference with fallback hardening, simplified client API calls). Remaining items are external dashboard configuration (`3.6`) and optional per-user rate limiting (`3.7`).
+> **Confidence**: Medium.
+> **Validation**: Targeted AI unit tests (`ai-inference`, `ai-parse-and-textllm`, `ai-fixture-replay`) pass; Playwright smoke spec passes.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 3.1 | Create `functions/api/identify-bird.ts` | Accept multipart image + context. Resize image, construct prompt, call LLM, ground against taxonomy, compute crop box. Return structured `{ candidates, cropBox, multipleBirds }`. | |
-| 3.2 | Create `functions/api/suggest-location.ts` | Accept coords + optional existing names. Call text LLM with location suggestion prompt. Return `{ name }`. | |
-| 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. | |
-| 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server — clients never see the LLM API directly. | |
-| 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `compressImage()`, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Replace with: compress image to ≤800px → `POST /api/identify-bird` with FormData → return response. ~30 lines total. | |
-| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | |
-| 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | |
+| 3.1 | Create `functions/api/identify-bird.ts` | Accept multipart image + context. Resize image, construct prompt, call LLM, ground against taxonomy, compute crop box. Return structured `{ candidates, cropBox, multipleBirds }`. | ✅ |
+| 3.2 | Create `functions/api/suggest-location.ts` | Accept coords + optional existing names. Call text LLM with location suggestion prompt. Return `{ name }`. | ✅ |
+| 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. | ✅ |
+| 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server — clients never see the LLM API directly. | ✅ (OpenAI, Azure OpenAI, and GitHub Models provider selection + unsupported-parameter fallback handling implemented) |
+| 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `compressImage()`, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Replace with: compress image to ≤800px → `POST /api/identify-bird` with FormData → return response. ~30 lines total. | ✅ |
+| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ⏳ (manual Cloudflare dashboard task; not codified in repo) |
+| 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | ⏳ (optional hardening; deferred) |
 
 ---
 
