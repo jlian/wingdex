@@ -28,7 +28,7 @@ describe('getStableDevUserId', () => {
     expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8}$/)
   })
 
-  test('regenerates when persisted value is invalid', () => {
+  test('returns any non-empty persisted value as-is', () => {
     const storage = createStorage({ wingdex_dev_user_id: 'not-a-number' })
     const id = getStableDevUserId({ storage, seed: 'example.com:/birds', random: () => 0.5 })
 
