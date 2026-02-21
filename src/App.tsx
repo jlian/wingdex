@@ -182,7 +182,7 @@ function App() {
   }, [refetchSession])
 
   if (!user) {
-    if (isSessionPending && !isDevRuntime()) {
+    if (isSessionPending && !isDevRuntime() && !initialSessionChecked.current) {
       return <BootShell />
     }
 
