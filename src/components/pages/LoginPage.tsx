@@ -1,29 +1,33 @@
 import { useState } from 'react'
-import { Bird, Key } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowsClockwise, Bird, GithubLogo, Key, UserPlus } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
+import { generateBirdName } from '@/lib/fun-names'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import PasskeyAuthDialog from '@/components/flows/PasskeyAuthDialog'
+import { Input } from '@/components/ui/input'
 
 interface LoginPageProps {
   onAuthenticated: () => void
 }
 
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [signingIn, setSigningIn] = useState(false)
-  const [signInError, setSignInError] = useState<string | null>(null)
+  const [view, setView] = useState<'welcome' | 'signup'>('welcome')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState(() => generateBirdName())
 
-  const handleSignIn = async () => {
-    setSignInError(null)
-    setSigningIn(true)
+  const rerollName = () => setDisplayName(generateBirdName())
+
+  const handlePasskeySignIn = async () => {
+    setErrorMessage(null)
+    setIsLoading(true)
 
     const result = await authClient.signIn.passkey({ autoFill: false })
 
     if (result.error) {
-      setSigningIn(false)
-      setSignInError(result.error.message || 'Passkey sign-in failed.')
+      setIsLoading(false)
+      setErrorMessage(result.error.message || 'Passkey sign-in failed.')
       return
     }
 
@@ -34,12 +38,69 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
     )
     if (isAnonymous || !sessionResult.data?.user) {
       await authClient.signOut()
-      setSigningIn(false)
-      setSignInError('No passkey found. Create a new account instead.')
+      setIsLoading(false)
+      setErrorMessage('No passkey found. Create a new account instead.')
       return
     }
 
-    setSigningIn(false)
+    setIsLoading(false)
+    onAuthenticated()
+  }
+
+  const handleGitHubSignIn = () => {
+    setErrorMessage(null)
+    void authClient.signIn.social({ provider: 'github' })
+  }
+
+  const handleCreateAccount = async () => {
+    const trimmedName = displayName.trim()
+    if (!trimmedName) {
+      setErrorMessage('Please enter a display name.')
+      return
+    }
+
+    setErrorMessage(null)
+    setIsLoading(true)
+
+    // Step 1: anonymous bootstrap (gated by middleware header)
+    const anonResult = await authClient.signIn.anonymous({
+      fetchOptions: {
+        headers: { 'x-wingdex-passkey-signup': '1' },
+      },
+    })
+    if (anonResult.error) {
+      setIsLoading(false)
+      setErrorMessage(anonResult.error.message || 'Unable to start account creation.')
+      return
+    }
+
+    // Step 2: register passkey on the anonymous session
+    const passkeyResult = await authClient.passkey.addPasskey({
+      name: 'WingDex passkey',
+      authenticatorAttachment: 'platform',
+    })
+    if (passkeyResult.error) {
+      await authClient.signOut()
+      setIsLoading(false)
+      setErrorMessage(passkeyResult.error.message || 'Passkey registration failed. Please try again.')
+      return
+    }
+
+    // Step 3: finalize — flip anonymous → real user
+    const finalizeResponse = await fetch('/api/auth/finalize-passkey', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: trimmedName }),
+    })
+    if (!finalizeResponse.ok) {
+      await authClient.signOut()
+      setIsLoading(false)
+      setErrorMessage('Account setup could not be completed. Please try again.')
+      return
+    }
+
+    setIsLoading(false)
     onAuthenticated()
   }
 
@@ -47,42 +108,103 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
     <div className="min-h-screen bg-background px-4">
       <div className="mx-auto max-w-md py-16 space-y-4">
         <Card className="p-6 space-y-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 text-primary">
-              <Bird size={20} weight="duotone" />
-              <span className="font-semibold">WingDex</span>
-            </div>
-            <h1 className="text-lg font-semibold text-foreground">Welcome to WingDex</h1>
-            <p className="text-sm text-muted-foreground">
-              Your personal bird-watching companion. Sign in or create an account to get started.
-            </p>
-          </div>
+          {view === 'welcome' ? (
+            <>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 text-primary">
+                  <Bird size={20} weight="duotone" />
+                  <span className="font-semibold">WingDex</span>
+                </div>
+                <h1 className="text-lg font-semibold text-foreground">Welcome to WingDex</h1>
+                <p className="text-sm text-muted-foreground">
+                  Your personal bird-watching companion. Sign in or create an account to get started.
+                </p>
+              </div>
 
-          <Button className="w-full" onClick={() => setDialogOpen(true)} disabled={signingIn}>
-            <Key size={18} className="mr-2" />
-            Continue with passkey
-          </Button>
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  onClick={() => { setErrorMessage(null); setView('signup') }}
+                  disabled={isLoading}
+                >
+                  <Key size={18} className="mr-2" />
+                  Continue with passkey
+                </Button>
 
-          {signInError && <p className="text-sm text-destructive">{signInError}</p>}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGitHubSignIn}
+                  disabled={isLoading}
+                >
+                  <GithubLogo size={18} className="mr-2" />
+                  Sign in with GitHub
+                </Button>
+              </div>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <button
-              className="text-primary underline-offset-4 hover:underline cursor-pointer"
-              onClick={handleSignIn}
-              disabled={signingIn}
-            >
-              {signingIn ? 'Signing in…' : 'Sign in'}
-            </button>
-          </p>
+              {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+
+              <p className="text-center text-sm text-muted-foreground">
+                Already have a passkey?{' '}
+                <button
+                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
+                  onClick={handlePasskeySignIn}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <button
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                  onClick={() => { setErrorMessage(null); setView('welcome') }}
+                  disabled={isLoading}
+                >
+                  <ArrowLeft size={14} />
+                  Back
+                </button>
+                <h1 className="text-lg font-semibold text-foreground">Create your account</h1>
+                <p className="text-sm text-muted-foreground">
+                  Pick a display name and register a passkey to get started.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Display name"
+                    aria-label="Display name"
+                    disabled={isLoading}
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={rerollName}
+                    disabled={isLoading}
+                    aria-label="Randomize name"
+                    title="Randomize name"
+                  >
+                    <ArrowsClockwise size={16} />
+                  </Button>
+                </div>
+
+                <Button className="w-full" onClick={handleCreateAccount} disabled={isLoading}>
+                  <UserPlus size={18} className="mr-2" />
+                  {isLoading ? 'Creating account…' : 'Create account'}
+                </Button>
+              </div>
+
+              {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+            </>
+          )}
         </Card>
       </div>
-
-      <PasskeyAuthDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onAuthenticated={onAuthenticated}
-      />
     </div>
   )
 }
