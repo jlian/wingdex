@@ -35,6 +35,10 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
+vi.mock('@/components/flows/PasskeyAuthDialog', () => ({
+  default: () => null,
+}))
+
 vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
@@ -54,6 +58,8 @@ vi.mock('@phosphor-icons/react', () => ({
   GithubLogo: () => <span>GithubLogo</span>,
   Key: () => <span>Key</span>,
   PlusCircle: () => <span>PlusCircle</span>,
+  UserPlus: () => <span>UserPlus</span>,
+  ArrowsClockwise: () => <span>ArrowsClockwise</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({
@@ -92,8 +98,8 @@ describe('App auth guard (hosted runtime)', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Sign in with passkey' })).toBeInTheDocument()
-    expect(screen.getByText('Create account with passkey')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
+    expect(screen.getByText('Continue with passkey')).toBeInTheDocument()
   })
 
   it('shows boot shell while hosted session is pending', async () => {

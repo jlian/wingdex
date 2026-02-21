@@ -1,10 +1,10 @@
 # WingDex Migration Plan & Tracker
 
-> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-20
+> Source: [Issue #74 comment](https://github.com/jlian/wingdex/issues/74#issuecomment-3906820357) · Last updated: 2026-02-21
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
-> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out).
+> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall).
 
 ---
 
@@ -278,7 +278,7 @@ ORDER BY obs.speciesName;
 
 ### Auth: Better Auth + D1
 
-> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented, but current runtime/provider behavior deviates from this section's social-provider target (currently passkey + anonymous flow).
+> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented; auth uses passkey-first signup via anonymous bootstrap (gated by middleware header `x-wingdex-passkey-signup`) with Better Auth's public plugin APIs. Social OAuth providers (GitHub/Apple/Google) remain pending (Phase 1.12). Decision: keep anonymous bootstrap over custom `@simplewebauthn/server` endpoint — uses stable public BA APIs vs fragile internals. Native BA passkey-only signup isn't supported (v1.4.x `freshSessionMiddleware` requires a session for credential registration).
 
 **Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth — no web-specific coupling.
 
@@ -365,12 +365,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 | `email: string` | `email: string` | Always present |
 | `isOwner: boolean` | N/A | Drop — was Spark-specific |
 
-**Login UI** — replace `AuthErrorShell` ("Sign-in required") with a proper login page:
-- "Sign in with Apple" button
-- "Sign in with Google" button
-- "Sign in with passkey" button
-- "Sign in with GitHub" button
-- "Register passkey" option
+**Login UI** — implemented as a unified passkey-first flow:
+- Single "Continue with passkey" button on a clean card (`LoginPage.tsx`)
+- Opens `PasskeyAuthDialog.tsx` — defaults to signup view with pre-filled random bird-name (`fun-names.ts`, ~249K kebab-case combos like `sneaky-meadow-warbler`), re-roll button, and "Create account" CTA
+- "Already have an account? Sign in" link switches to sign-in view (triggers browser WebAuthn prompt directly)
+- Signup uses anonymous bootstrap → `addPasskey` → `finalize-passkey` (3-step, gated by middleware header)
+- Social OAuth buttons (GitHub, Apple, Google) to be added when providers are registered (Phase 1.12)
 
 **OAuth app registration** required:
 - **GitHub**: Create OAuth App at github.com/settings/developers. Callback URL: `https://wingdex.example.com/api/auth/callback/github`
@@ -674,7 +674,7 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 | Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
 | Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
-| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 is wired; implementation currently uses passkey + anonymous flow instead of full planned social-provider parity. |
+| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with passkey-first UX. Anonymous bootstrap used for signup (gated by middleware header) — kept over custom SimpleWebAuthn endpoint (public BA APIs > fragile internals). Login reworked: single "Continue with passkey" → dialog with random bird-name signup. Social OAuth pending (1.12). |
 | Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` implemented. `/api/suggest-location` removed (dead). `textLLM` deleted. |
 | Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` (auth) + `/api/species/wiki-title` (public). Client `taxonomy.ts` fully removed — 876KB saved. |
 | Data Layer: Refactoring `useWingDexData` | ✅ | API-first refactor complete with local fallback. Dead functions (`loadSeedData`, `importFromEBird`) removed. |
@@ -728,9 +728,9 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 
 #### Phase 1 — Auth (Better Auth) 🟡
 
-> **Status snapshot (2026-02-20)**: ⚠️ Core auth migration implemented (session middleware + Better Auth client/server + passkey/anonymous flow); social OAuth provider registration still pending (`1.12`).
+> **Status snapshot (2026-02-21)**: ⚠️ Core auth migration implemented with passkey-first UX rework. Login page uses unified "Continue with passkey" button + dialog (`PasskeyAuthDialog.tsx`). Signup: anonymous bootstrap → addPasskey → finalize (gated by `x-wingdex-passkey-signup` header in middleware). App.tsx auth transition jank fixed (eliminated 3-step state waterfall + 50ms opacity timer). Social OAuth provider registration still pending (`1.12`).
 > **Confidence**: Medium-High.
-> **Validation**: Auth guard unit tests ✅, authenticated API smoke flow (`npm run smoke:api`) establishes session via `/api/auth/sign-in/anonymous` and returns non-null `/api/auth/get-session` ✅, Playwright API smoke (`npx playwright test e2e/api-smoke.spec.ts --project=chromium`) ✅, manual sign-out verification confirms in-app transition without hard reload ✅.
+> **Validation**: Auth guard unit tests ✅ (4/4), full test suite ✅ (478/478), `tsc --noEmit` ✅, authenticated API smoke flow ✅, Playwright e2e smoke ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -743,7 +743,7 @@ BETTER_AUTH_URL = "https://wingdex.example.com"
 | 1.7 | Update `UserInfo` interface in [App.tsx](src/App.tsx) | `id: number` → `id: string`, drop `isOwner`, `login` → `name` | ✅ |
 | 1.8 | Update [App.tsx](src/App.tsx) auth flow | Replace `window.spark.user()` with `authClient.useSession()` or `fetch('/api/auth/get-session')`. Keep `getStableDevUserId()` fallback for local dev (change return type to `string`). | ✅ |
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
-| 1.10 | Create login page component | Replace `AuthErrorShell` with sign-in buttons (GitHub, Apple, Google, passkey). Style to match the naturalistic theme. | ✅ |
+| 1.10 | Create login page component | ⚠️ Implemented as unified passkey-first flow: single "Continue with passkey" button → `PasskeyAuthDialog` (signup with random bird-name + sign-in toggle). Social provider buttons deferred to 1.12. Added `fun-names.ts` (random kebab-case bird names). Fixed App.tsx auth jank (removed `showApp` timer + cascading state waterfall, added `authCompleted`/`initialSessionResolved` refs to gate transition). | ⚠️ |
 | 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. Add "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
 | 1.12 | Register OAuth apps | GitHub, Apple (if desired — requires paid dev account), Google | ⏳ |
 
@@ -1025,7 +1025,9 @@ jobs:
 | `functions/api/export/dex.ts` | **Create** | GET: export dex as CSV |
 | `functions/api/species/search.ts` | **Create** | GET: taxonomy typeahead search |
 | `src/lib/auth-client.ts` | **Create** | Better Auth client SDK config |
-| `src/components/LoginPage.tsx` | **Create** | Sign-in UI (GitHub, Apple, Google, passkey buttons) |
+| `src/components/pages/LoginPage.tsx` | **Create** | ⚠️ Unified passkey-first login: single "Continue with passkey" button → opens `PasskeyAuthDialog`. Social buttons deferred to 1.12. |
+| `src/components/flows/PasskeyAuthDialog.tsx` | **Create** | Dialog with signup (random bird-name, re-roll, anonymous→addPasskey→finalize) and sign-in views |
+| `src/lib/fun-names.ts` | **Create** | Random kebab-case bird-name generator (~249K combos: 77 adjectives × 81 modifiers × 40 birds) |
 | `.github/workflows/deploy.yml` | **Create** | Cloudflare Pages deploy CI |
 | `public/_redirects` | **Create** | SPA fallback routing |
 | vite.config.ts | **Modify** | Remove Spark plugins, add dev proxy to Wrangler |
