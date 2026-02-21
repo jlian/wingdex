@@ -4,13 +4,14 @@
  * No API key required.
  */
 import { getDisplayName } from './utils'
-import { findBestMatch, getWikiTitle } from './taxonomy'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
 const imageInFlight = new Map<string, Promise<string | undefined>>()
 const summaryInFlight = new Map<string, Promise<WikiSummary | undefined>>()
 
+/** Cache for wiki-title API lookups. */
+const wikiTitleCache = new Map<string, { wikiTitle: string | null; common: string | null; scientific: string | null }>()
 export interface WikiSummary {
   title: string
   extract: string
@@ -66,19 +67,17 @@ function getCommonName(speciesName: string): string {
 
 function getLookupTitles(speciesName: string): string[] {
   const common = getCommonName(speciesName)
-  const match = findBestMatch(speciesName)
-  const wikiTitle = getWikiTitle(match?.common || common)
+  const cacheKey = common.toLowerCase()
+  const cached = wikiTitleCache.get(cacheKey)
 
-  const candidates = [
-    wikiTitle,
-    match?.common,
-    match?.scientific,
-    common,
-  ].filter((value): value is string => Boolean(value && value.trim()))
+  const candidates = cached
+    ? [cached.wikiTitle, cached.common, cached.scientific, common]
+    : [common]
 
   const unique: string[] = []
   const seen = new Set<string>()
   for (const title of candidates) {
+    if (!title?.trim()) continue
     const key = title.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
@@ -86,6 +85,23 @@ function getLookupTitles(speciesName: string): string[] {
   }
 
   return unique
+}
+
+/** Fetch and cache taxonomy match from the server wiki-title API. */
+async function ensureWikiTitleCached(speciesName: string): Promise<void> {
+  const common = getCommonName(speciesName)
+  const cacheKey = common.toLowerCase()
+  if (wikiTitleCache.has(cacheKey)) return
+
+  try {
+    const res = await fetch(`/api/species/wiki-title?name=${encodeURIComponent(speciesName)}`)
+    if (res.ok) {
+      const data = await res.json() as { wikiTitle: string | null; common: string | null; scientific: string | null }
+      wikiTitleCache.set(cacheKey, data)
+    }
+  } catch {
+    // Proceed with common name only
+  }
 }
 
 /**
@@ -96,6 +112,8 @@ export async function getWikimediaImage(
 ): Promise<string | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
+
+  await ensureWikiTitleCached(speciesName)
   const titles = getLookupTitles(speciesName)
 
   if (imageCache.has(cacheKey)) {
@@ -146,6 +164,8 @@ export async function getWikimediaSummary(
 ): Promise<WikiSummary | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
+
+  await ensureWikiTitleCached(speciesName)
   const titles = getLookupTitles(speciesName)
 
   if (summaryCache.has(cacheKey)) {

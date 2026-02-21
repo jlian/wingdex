@@ -17,7 +17,7 @@ import { textLLM } from '@/lib/ai-inference'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { toast } from 'sonner'
-import { SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX } from '@/lib/seed-data'
+import demoCsv from '../../../e2e/fixtures/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
 interface SettingsPageProps {
@@ -439,9 +439,42 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => {
-                    data.loadSeedData(SEED_OUTINGS, SEED_OBSERVATIONS, SEED_DEX)
-                    toast.success(`Demo data loaded: ${SEED_OUTINGS.length} outings, ${SEED_DEX.length} species`)
+                  onClick={async () => {
+                    try {
+                      data.clearAllData()
+
+                      const formData = new FormData()
+                      formData.append('file', new Blob([demoCsv], { type: 'text/csv' }), 'demo.csv')
+
+                      const previewRes = await fetchWithLocalAuthRetry('/api/import/ebird-csv', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData,
+                      })
+                      if (!previewRes.ok) throw new Error(`Preview failed (${previewRes.status})`)
+
+                      const { previews } = await previewRes.json() as {
+                        previews: Array<{ previewId: string }>
+                      }
+
+                      const confirmRes = await fetchWithLocalAuthRetry('/api/import/ebird-csv/confirm', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ previewIds: previews.map(p => p.previewId) }),
+                      })
+                      if (!confirmRes.ok) throw new Error(`Confirm failed (${confirmRes.status})`)
+
+                      const { imported } = await confirmRes.json() as {
+                        imported: { outings: number; newSpecies: number }
+                      }
+
+                      await data.refresh()
+                      toast.success(`Demo data loaded: ${imported.outings} outings, ${imported.newSpecies} species`)
+                    } catch (error) {
+                      const detail = error instanceof Error ? error.message : 'Unknown error'
+                      toast.error(`Failed to load demo data: ${detail}`)
+                    }
                   }}
                 >
                   Load Demo Data
