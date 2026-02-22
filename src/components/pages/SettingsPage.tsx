@@ -337,12 +337,13 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           <p className="text-sm text-muted-foreground">Loading passkeys…</p>
         ) : passkeys.length > 0 ? (
           <div className="space-y-2">
-            {passkeys.map((pk) => (
-              <div key={pk.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            {passkeys.map((pk) => {
+              const passkeyLabel = toStandardPasskeyLabel(pk.name, user.name)
+              return <div key={pk.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Key size={16} className="shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{toStandardPasskeyLabel(pk.name, pk.createdAt, user.name)}</p>
+                    <p className="text-sm font-medium truncate">{passkeyLabel}</p>
                     <p className="text-xs text-muted-foreground">
                       Added {pk.createdAt.toLocaleDateString()}
                     </p>
@@ -354,8 +355,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     size="sm"
                     className="text-muted-foreground hover:text-foreground"
                     onClick={async () => {
-                      const newName = window.prompt('Rename passkey', pk.name || 'Passkey')
-                      if (!newName || newName.trim() === pk.name) return
+                      const newName = window.prompt('Rename passkey', passkeyLabel)
+                      if (!newName || newName.trim() === passkeyLabel) return
                       const result = await authClient.passkey.updatePasskey({ id: pk.id, name: newName.trim() })
                       if (result.error) {
                         toast.error(result.error.message || 'Failed to rename passkey')
@@ -386,7 +387,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                   </Button>
                 </div>
               </div>
-            ))}
+            })}
           </div>
         ) : null}
 
@@ -395,7 +396,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           className="w-full justify-start"
           onClick={async () => {
             const deviceLabel = getDeviceLabel()
-            const passkeyName = buildPasskeyName(deviceLabel, new Date(), user.name)
+            const passkeyName = buildPasskeyName(deviceLabel, user.name)
             const result = await authClient.passkey.addPasskey({
               name: passkeyName,
               authenticatorAttachment: 'platform',

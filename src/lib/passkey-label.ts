@@ -1,12 +1,5 @@
 const KNOWN_DEVICES = ['iPhone', 'iPad', 'Mac', 'Windows', 'Android', 'Linux', 'ChromeOS', 'Device'] as const
 
-function formatDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 function findDeviceFromUserAgent(ua: string): string {
   if (/iPad/.test(ua)) return 'iPad'
   if (/iPhone/.test(ua)) return 'iPhone'
@@ -37,25 +30,29 @@ export function getDeviceLabelFromNavigator(): string {
   return findDeviceFromUserAgent(navigator.userAgent)
 }
 
-export function buildPasskeyName(deviceLabel: string, createdAt: Date, displayName: string): string {
+export function buildPasskeyName(deviceLabel: string, displayName: string): string {
   const safeDisplayName = displayName.trim() || 'User'
-  return `${deviceLabel}, ${formatDate(createdAt)}, ${safeDisplayName}`
+  return `${deviceLabel} (${safeDisplayName})`
 }
 
-export function toStandardPasskeyLabel(name: string | undefined, createdAt: Date, fallbackDisplayName: string): string {
+export function toStandardPasskeyLabel(name: string | undefined, fallbackDisplayName: string): string {
   const trimmed = (name || '').trim()
   const standardized = trimmed.match(/^([^,]+),\s*([^,]+),\s*(.+)$/)
   if (standardized) {
-    const [, device, date, displayName] = standardized
-    return `${device.trim()}, ${date.trim()}, ${displayName.trim()}`
+    const [, device, _date, displayName] = standardized
+    return buildPasskeyName(device.trim(), displayName.trim())
   }
 
-  const inferredDevice = inferDeviceFromLegacyName(trimmed) || 'Device'
-  const displayName = inferredDevice === 'Device'
-    ? (trimmed || fallbackDisplayName || 'User')
-    : (fallbackDisplayName || 'User')
+  if (!trimmed) {
+    return buildPasskeyName('Device', fallbackDisplayName || 'User')
+  }
 
-  return buildPasskeyName(inferredDevice, createdAt, displayName)
+  const legacyDeviceOnly = inferDeviceFromLegacyName(trimmed)
+  if (legacyDeviceOnly) {
+    return buildPasskeyName(legacyDeviceOnly, fallbackDisplayName || 'User')
+  }
+
+  return trimmed
 }
 
 export function isPasskeyCancellationLike(err: { code?: string; message?: string }): boolean {

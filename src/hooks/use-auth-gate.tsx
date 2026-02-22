@@ -122,7 +122,7 @@ function AuthGateModal({
     // Create account: the current session is already anonymous, so just
     // register a passkey on it and finalize.
     const birdName = generateBirdName()
-    const passkeyName = buildPasskeyName(getDeviceLabelFromNavigator(), new Date(), birdName)
+    const passkeyName = buildPasskeyName(getDeviceLabelFromNavigator(), birdName)
 
     const passkeyResult = await authClient.passkey.addPasskey({
       name: passkeyName,
