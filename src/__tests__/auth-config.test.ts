@@ -65,4 +65,24 @@ describe('auth config', () => {
     })
     expect(auth.api.signInSocial).toBeDefined()
   })
+
+  it('maps local two-port runtime to app origin for baseURL', () => {
+    const req = new Request('http://localhost:8788/api/auth/get-session', {
+      headers: { origin: 'http://localhost:5000' },
+    })
+
+    const auth = createAuth({ ...mockEnv, BETTER_AUTH_URL: '' }, { request: req })
+    expect(auth.options.baseURL).toBe('http://localhost:5000')
+  })
+
+  it('includes request and app origins in trustedOrigins for local runtime', () => {
+    const req = new Request('http://localhost:8788/api/auth/get-session', {
+      headers: { origin: 'http://localhost:5000' },
+    })
+
+    const auth = createAuth({ ...mockEnv, BETTER_AUTH_URL: '' }, { request: req })
+    const trusted = auth.options.trustedOrigins as string[] | undefined
+    expect(trusted).toContain('http://localhost:5000')
+    expect(trusted).toContain('http://localhost:8788')
+  })
 })
