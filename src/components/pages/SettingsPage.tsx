@@ -243,8 +243,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Account</h3>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            Welcome, <span className="text-foreground font-medium">{displayName}</span>
-            <button
+            Welcome, <button
               type="button"
               className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
               disabled={profileSaving}
@@ -260,6 +259,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             >
               <ArrowsClockwise size={14} weight="bold" />
             </button>
+            <span className="text-foreground font-medium">{displayName}</span>
           </p>
         </div>
 
