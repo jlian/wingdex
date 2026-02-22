@@ -70,6 +70,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [displayName, setDisplayName] = useState(user.name)
   const [profileImage, setProfileImage] = useState(user.image)
   const [profileSaving, setProfileSaving] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState(user.name)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setDisplayName(user.name)
@@ -243,23 +246,75 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Account</h3>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            Welcome, <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-              disabled={profileSaving}
-              onClick={() => {
-                const name = generateBirdName()
-                const emoji = emojiForBirdName(name)
-                const image = emojiAvatarDataUrl(emoji)
-                setDisplayName(name)
-                setProfileImage(image)
-                void saveProfile(name, image)
-              }}
-              aria-label="Generate new nickname"
-            >
-              <ArrowsClockwise size={14} weight="bold" />
-            </button>
-            <span className="text-foreground font-medium">{displayName}</span>
+            Welcome,{' '}
+            {editingName ? (
+              <span className="flex items-center gap-1">
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  className="border-b border-foreground/30 bg-transparent text-foreground font-medium text-sm outline-none w-40 px-0.5"
+                  value={nameInput}
+                  maxLength={50}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const trimmed = nameInput.trim()
+                      if (trimmed) {
+                        setDisplayName(trimmed)
+                        void saveProfile(trimmed, profileImage)
+                      }
+                      setEditingName(false)
+                    } else if (e.key === 'Escape') {
+                      setNameInput(displayName)
+                      setEditingName(false)
+                    }
+                  }}
+                  onBlur={() => {
+                    const trimmed = nameInput.trim()
+                    if (trimmed && trimmed !== displayName) {
+                      setDisplayName(trimmed)
+                      void saveProfile(trimmed, profileImage)
+                    }
+                    setEditingName(false)
+                  }}
+                />
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                  disabled={profileSaving}
+                  onClick={() => {
+                    const name = generateBirdName()
+                    const emoji = emojiForBirdName(name)
+                    const image = emojiAvatarDataUrl(emoji)
+                    setNameInput(name)
+                    setDisplayName(name)
+                    setProfileImage(image)
+                    void saveProfile(name, image)
+                    setEditingName(false)
+                  }}
+                  aria-label="Generate random nickname"
+                >
+                  <ArrowsClockwise size={14} weight="bold" />
+                </button>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <span className="text-foreground font-medium">{displayName}</span>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                  disabled={profileSaving}
+                  onClick={() => {
+                    setNameInput(displayName)
+                    setEditingName(true)
+                    setTimeout(() => nameInputRef.current?.select(), 0)
+                  }}
+                  aria-label="Edit display name"
+                >
+                  <PencilSimple size={14} weight="bold" />
+                </button>
+              </span>
+            )}
           </p>
         </div>
 
