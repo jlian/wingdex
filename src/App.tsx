@@ -474,28 +474,18 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </Suspense>
       )}
 
-      {/* Footer – mobile two lines, wide screens one line */}
-      <footer className="flex flex-col items-center gap-2 px-8 sm:px-16 py-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
-        <nav className="order-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:order-2 sm:flex-nowrap">
-          <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">
-            Privacy
-          </button>
-          <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">
-            Terms
-          </button>
-          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            Issues?
+      <footer className="flex flex-col-reverse items-center gap-2 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
+        <div className="flex items-center gap-2">
+          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-muted-foreground transition-colors">
+            <GithubLogo size={16} />
           </a>
-          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
-            <GithubLogo size={14} />
-          </a>
+          <span>WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">John Lian</a></span>
+        </div>
+        <nav className="flex items-center gap-4">
+          <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">Privacy</button>
+          <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">Terms</button>
+          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Issues?</a>
         </nav>
-        <span className="order-2 whitespace-nowrap sm:order-1">
-          WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} ©{' '}
-          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-            John Lian
-          </a>
-        </span>
       </footer>
 
     </div>
