@@ -476,10 +476,11 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
 
       <footer className="flex flex-col-reverse items-center gap-2 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
         <div className="flex items-center gap-2">
+          <span>John Lian</span>
           <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-muted-foreground transition-colors">
             <GithubLogo size={16} />
           </a>
-          <span>WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">John Lian</a></span>
+          <span>{typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'}</span>
         </div>
         <nav className="flex items-center gap-4">
           <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">Privacy</button>
