@@ -57,6 +57,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
   GithubLogo: () => <span>GithubLogo</span>,
+  AppleLogo: () => <span>AppleLogo</span>,
   Key: () => <span>Key</span>,
   PlusCircle: () => <span>PlusCircle</span>,
   UserPlus: () => <span>UserPlus</span>,

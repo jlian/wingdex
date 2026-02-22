@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, ArrowsClockwise, Bird, GithubLogo, Key, UserPlus } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowsClockwise, Bird, GithubLogo, Key, UserPlus, AppleLogo } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
 import { generateBirdName } from '@/lib/fun-names'
@@ -50,6 +50,11 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const handleGitHubSignIn = () => {
     setErrorMessage(null)
     void authClient.signIn.social({ provider: 'github' })
+  }
+
+  const handleAppleSignIn = () => {
+    setErrorMessage(null)
+    void authClient.signIn.social({ provider: 'apple' })
   }
 
   const handleCreateAccount = async () => {
@@ -139,6 +144,16 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
                 >
                   <GithubLogo size={18} className="mr-2" />
                   Sign in with GitHub
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleAppleSignIn}
+                  disabled={isLoading}
+                >
+                  <AppleLogo size={18} className="mr-2" />
+                  Sign in with Apple
                 </Button>
               </div>
 

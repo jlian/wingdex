@@ -17,6 +17,14 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   const baseURL = requestOrigin || env.BETTER_AUTH_URL
   const useSecureCookies = baseURL.startsWith('https://')
 
+  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
+  if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
+    socialProviders.github = { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }
+  }
+  if (env.APPLE_CLIENT_ID && env.APPLE_CLIENT_SECRET) {
+    socialProviders.apple = { clientId: env.APPLE_CLIENT_ID, clientSecret: env.APPLE_CLIENT_SECRET }
+  }
+
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
     baseURL,
@@ -27,16 +35,14 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     advanced: {
       useSecureCookies,
     },
-    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
-      ? {
-          socialProviders: {
-            github: {
-              clientId: env.GITHUB_CLIENT_ID,
-              clientSecret: env.GITHUB_CLIENT_SECRET,
-            },
-          },
-        }
-      : {}),
+    ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ['github', 'apple'],
+        allowDifferentEmails: true,
+      },
+    },
     plugins: [
       anonymous(),
       passkey({

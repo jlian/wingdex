@@ -27,6 +27,14 @@ const mockEnv = {
 } satisfies Env
 
 describe('auth config', () => {
+  it('exposes account linking options', () => {
+    const auth = createAuth(mockEnv)
+    expect(auth.options.account?.accountLinking?.enabled).toBe(true)
+    expect(auth.options.account?.accountLinking?.trustedProviders).toContain('github')
+    expect(auth.options.account?.accountLinking?.trustedProviders).toContain('apple')
+    expect(auth.options.account?.accountLinking?.allowDifferentEmails).toBe(true)
+  })
+
   it('includes passkey and anonymous plugins', () => {
     const auth = createAuth(mockEnv)
     const apiKeys = Object.keys(auth.api)
@@ -47,5 +55,14 @@ describe('auth config', () => {
     const authNoGh = createAuth({ ...mockEnv, GITHUB_CLIENT_ID: '', GITHUB_CLIENT_SECRET: '' })
     // Auth should still create successfully without GitHub
     expect(authNoGh.api).toBeDefined()
+  })
+
+  it('registers Apple provider when credentials are set', () => {
+    const auth = createAuth({
+      ...mockEnv,
+      APPLE_CLIENT_ID: 'test-apple-id',
+      APPLE_CLIENT_SECRET: 'test-apple-secret',
+    })
+    expect(auth.api.signInSocial).toBeDefined()
   })
 })
