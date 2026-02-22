@@ -1,4 +1,5 @@
-import { act, render, waitFor } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
+import { waitFor } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 
@@ -9,6 +10,28 @@ type KVControls<T> = {
   setValue: (next: T | ((prev: T) => T)) => void
   deleteValue: () => void
   isLoading: boolean
+}
+
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
+function clearStorageSafe() {
+  if (typeof localStorage?.clear === 'function') {
+    localStorage.clear()
+  }
 }
 
 function Harness<T>({
@@ -34,14 +57,16 @@ describe('useKV (local runtime)', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    localStorage.clear()
+    vi.stubGlobal('localStorage', createLocalStorageMock())
+    clearStorageSafe()
   })
 
   afterEach(() => {
-    localStorage.clear()
+    clearStorageSafe()
+    vi.unstubAllGlobals()
   })
 
-  it('initializes from localStorage and does not hit Spark KV', async () => {
+  it('initializes from localStorage and does not issue network calls', async () => {
     localStorage.setItem(`wingdex_kv_${key}`, JSON.stringify(['saved']))
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
@@ -130,12 +155,12 @@ describe('useKV (local runtime)', () => {
     expect(() => {
       render(
         <Harness
-          storageKey="test_key"
+          storageKey="testkey"
           initialValue={[]}
           onChange={() => {}}
         />,
       )
-    }).toThrow('[useKV] Invalid key "test_key". Keys must be user-scoped (e.g. u123_photos).')
+    }).toThrow('[useKV] Invalid key "testkey". Keys must be user-scoped (e.g. dev-user_photos or 550e8400-e29b-41d4-a716-446655440000_photos).')
   })
 
   it('keeps user-scoped keys isolated from each other', async () => {

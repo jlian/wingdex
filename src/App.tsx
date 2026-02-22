@@ -6,10 +6,12 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
+import { authClient } from '@/lib/auth-client'
 import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
-import HomePage, { HomeContentSkeleton } from '@/components/pages/HomePage'
+import HomePage from '@/components/pages/HomePage'
+import LoginPage from '@/components/pages/LoginPage'
 
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
@@ -18,25 +20,23 @@ const loadAddPhotosFlow = () => import('@/components/flows/AddPhotosFlow')
 const AddPhotosFlow = lazy(loadAddPhotosFlow)
 
 interface UserInfo {
-  login: string
-  avatarUrl: string
+  name: string
+  image: string
   email: string
-  id: number
-  isOwner: boolean
+  id: string
 }
 
-function isSparkHostedRuntime(): boolean {
+function isDevRuntime(): boolean {
   const host = window.location.hostname.toLowerCase()
-  return host === 'github.app' || host.endsWith('.github.app')
+  return host === 'localhost' || host === '127.0.0.1'
 }
 
 function getFallbackUser(): UserInfo {
   return {
-    login: 'dev-user',
-    avatarUrl: '',
+    name: 'dev-user',
+    image: '',
     email: 'dev@localhost',
     id: getStableDevUserId(),
-    isOwner: true,
   }
 }
 
@@ -100,103 +100,104 @@ function useHashRouter() {
 // ─── App ──────────────────────────────────────────────────
 
 function App() {
+  const sessionState = authClient.useSession()
+  const session = sessionState.data
+  const isSessionPending = sessionState.isPending
+  const refetchSession = sessionState.refetch
+  const localSessionBootstrapStarted = useRef(false)
+  const [localSessionBootstrapFailed, setLocalSessionBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [showApp, setShowApp] = useState(false)
+  const authCompleted = useRef(false)
+  // Tracks whether the initial session fetch resolved with a valid session
+  // (returning user with a cookie). Set once, never cleared.
+  const initialSessionResolved = useRef(false)
+  const initialSessionChecked = useRef(false)
 
+  // On the first non-pending session result, mark whether a valid session existed
   useEffect(() => {
-    const fetchUser = async () => {
-      const canUseDevFallback = !isSparkHostedRuntime()
-
-      try {
-        const userInfo = await window.spark.user()
-        if (userInfo && typeof userInfo.login === 'string' && typeof userInfo.id === 'number') {
-          setAuthError(null)
-          setUser(userInfo)
-        } else if (canUseDevFallback) {
-          console.warn('Spark user API returned invalid data, using fallback:', userInfo)
-          setAuthError(null)
-          setUser(getFallbackUser())
-        } else {
-          console.error('Spark user API returned invalid data in hosted runtime:', userInfo)
-          setAuthError('Unable to verify your user session. Refresh the page and try again.')
-        }
-      } catch (error) {
-        if (canUseDevFallback) {
-          console.warn('Spark user API unavailable, using fallback:', error)
-          setAuthError(null)
-          setUser(getFallbackUser())
-        } else {
-          console.error('Spark user API unavailable in hosted runtime:', error)
-          setAuthError('Unable to verify your user session. Refresh the page and try again.')
-        }
-      }
+    if (initialSessionChecked.current || isSessionPending) return
+    initialSessionChecked.current = true
+    if (session?.user && !(session.user as { isAnonymous?: boolean }).isAnonymous) {
+      initialSessionResolved.current = true
     }
-    fetchUser()
-  }, [])
+  }, [session, isSessionPending])
 
   useEffect(() => {
-    if (!user) {
-      setShowApp(false)
+    if (session && session.user) {
+      const isAnonymousUser = !isDevRuntime() && Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
+      if (isAnonymousUser) {
+        setUser(null)
+        return
+      }
+
+      // On hosted: only promote session → user when the page loaded with a
+      // valid session (returning user) OR after LoginPage signals completion.
+      // This prevents intermediate session changes during signup from causing
+      // flashes of the authenticated UI.
+      if (!isDevRuntime() && !authCompleted.current && !initialSessionResolved.current) {
+        setUser(null)
+        return
+      }
+
+      setLocalSessionBootstrapFailed(false)
+      setUser({
+        id: session.user.id,
+        name: session.user.name || session.user.email || 'user',
+        image: session.user.image || '',
+        email: session.user.email || '',
+      })
       return
     }
 
-    const timer = window.setTimeout(() => {
-      setShowApp(true)
-    }, 50)
+    if (isDevRuntime()) {
+      if (localSessionBootstrapFailed) {
+        setUser(getFallbackUser())
+        return
+      }
 
-    return () => window.clearTimeout(timer)
-  }, [user])
+      if (!isSessionPending && !localSessionBootstrapStarted.current) {
+        localSessionBootstrapStarted.current = true
+        void authClient.signIn.anonymous().then((result) => {
+          if (result.error) {
+            setLocalSessionBootstrapFailed(true)
+            return
+          }
+          void refetchSession()
+        }).catch(() => {
+          setLocalSessionBootstrapFailed(true)
+          localSessionBootstrapStarted.current = false
+        })
+      }
 
-  if (authError) {
-    return <AuthErrorShell message={authError} />
-  }
+      setUser(null)
+      return
+    }
+
+    setUser(null)
+  }, [session, isSessionPending, refetchSession, localSessionBootstrapFailed])
+
+  const handleAuthenticated = useCallback(() => {
+    authCompleted.current = true
+    void refetchSession()
+  }, [refetchSession])
 
   if (!user) {
+    if (isSessionPending && !isDevRuntime() && !initialSessionChecked.current) {
+      return <BootShell />
+    }
+
+    if (!isDevRuntime()) {
+      return <LoginPage onAuthenticated={handleAuthenticated} />
+    }
+
     return <BootShell />
   }
 
-  return (
-    <div className={`transition-opacity duration-150 ease-out ${showApp ? 'opacity-100' : 'opacity-0'}`}>
-      <AppContent user={user} />
-    </div>
-  )
+  return <AppContent user={user} />
 }
 
 function BootShell() {
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
-            <div className="flex gap-2">
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-md bg-muted animate-pulse" />
-            </div>
-            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-          </div>
-        </div>
-      </header>
-
-      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
-        <HomeContentSkeleton />
-      </div>
-    </div>
-  )
-}
-
-function AuthErrorShell({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen bg-background px-4">
-      <div className="mx-auto max-w-md py-16">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h1 className="text-lg font-semibold text-foreground">Sign-in required</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-        </div>
-      </div>
-    </div>
-  )
+  return <div className="min-h-screen bg-background" />
 }
 
 function AppContent({ user }: { user: UserInfo }) {
@@ -277,7 +278,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Toaster position="top-center" />
+      <Toaster position="bottom-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
         {/* ── Top header — sticky at top, content scrolls beneath ── */}
@@ -321,8 +322,8 @@ function AppContent({ user }: { user: UserInfo }) {
                   aria-label="Settings"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatarUrl} alt={user.login} />
-                    <AvatarFallback>{user.login[0].toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={user.image} alt={user.name} />
+                    <AvatarFallback>{user.name[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </button>
               </div>
@@ -347,7 +348,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'outings' && (
             <TabsContent value="outings" className="mt-0">
-              <Suspense fallback={<ListPageLoadingFallback title="Your Outings" />}>
+              <Suspense fallback={null}>
                 <OutingsPage
                   data={data}
                   selectedOutingId={subId ?? null}
@@ -365,7 +366,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'wingdex' && (
             <TabsContent value="wingdex" className="mt-0">
-              <Suspense fallback={<ListPageLoadingFallback title="WingDex" />}>
+              <Suspense fallback={null}>
                 <WingDexPage
                   data={data}
                   selectedSpecies={subId ?? null}
@@ -383,7 +384,7 @@ function AppContent({ user }: { user: UserInfo }) {
 
           {tab === 'settings' && (
             <TabsContent value="settings" className="mt-0">
-              <Suspense fallback={<SettingsLoadingFallback />}>
+              <Suspense fallback={null}>
                 <SettingsPage data={data} user={user} />
               </Suspense>
             </TabsContent>
@@ -418,41 +419,6 @@ function AppContent({ user }: { user: UserInfo }) {
         </a>
       </div>
 
-    </div>
-  )
-}
-
-function ListPageLoadingFallback({ title }: { title: string }) {
-  return (
-    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
-      <div className="space-y-2">
-        <p className="font-serif text-2xl font-semibold text-foreground">{title}</p>
-        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="h-9 flex-1 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-        <div className="h-9 w-14 rounded-md bg-muted animate-pulse" />
-      </div>
-
-      <div className="space-y-1">
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-        <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-      </div>
-    </div>
-  )
-}
-
-function SettingsLoadingFallback() {
-  return (
-    <div className="px-4 sm:px-6 py-6 space-y-3 max-w-3xl mx-auto">
-      <div className="h-7 w-32 rounded-md bg-muted animate-pulse" />
-      <div className="h-24 w-full rounded-lg bg-muted animate-pulse" />
-      <div className="h-16 w-full rounded-lg bg-muted animate-pulse" />
     </div>
   )
 }

@@ -1,5 +1,24 @@
-import { render, screen } from '@testing-library/react'
+/**
+ * @vitest-environment jsdom
+ * @vitest-environment-options {"url":"http://localhost:5173/"}
+ */
+
+import { render } from '@testing-library/react'
+import { screen } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mockUseSession = vi.fn()
+const mockSignInAnonymous = vi.fn()
+
+vi.mock('@/lib/auth-client', () => ({
+  authClient: {
+    useSession: () => mockUseSession(),
+    signIn: {
+      anonymous: () => mockSignInAnonymous(),
+      social: vi.fn(),
+    },
+  },
+}))
 
 vi.mock('@/hooks/use-wingdex-data', () => ({
   useWingDexData: () => ({
@@ -15,6 +34,10 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+vi.mock('@/lib/fun-names', () => ({
+  generateBirdName: () => 'test-bird-name',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({
@@ -34,11 +57,15 @@ vi.mock('@phosphor-icons/react', () => ({
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
   GithubLogo: () => <span>GithubLogo</span>,
+  Key: () => <span>Key</span>,
+  PlusCircle: () => <span>PlusCircle</span>,
+  UserPlus: () => <span>UserPlus</span>,
+  ArrowsClockwise: () => <span>ArrowsClockwise</span>,
+  ArrowLeft: () => <span>ArrowLeft</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({
   default: () => <div>HomePage</div>,
-  HomeContentSkeleton: () => <div>HomeContentSkeleton</div>,
 }))
 
 vi.mock('@/components/pages/OutingsPage', () => ({
@@ -60,22 +87,22 @@ vi.mock('@/components/flows/AddPhotosFlow', () => ({
 describe('App auth guard (local runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockUseSession.mockReturnValue({ data: null, isPending: false, refetch: vi.fn() })
+    mockSignInAnonymous.mockResolvedValue({ error: { message: 'Local auth unavailable in test' } })
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-    localStorage.clear()
+    if (typeof localStorage.clear === 'function') {
+      localStorage.clear()
+    }
   })
 
-  it('allows fallback user outside hosted runtime when Spark user lookup fails', async () => {
-    vi.stubGlobal('spark', {
-      user: vi.fn().mockRejectedValue(new Error('spark unavailable locally')),
-    })
-
+  it('allows fallback user in local dev runtime when no hosted session exists', async () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    expect(screen.queryByText('Sign-in required')).not.toBeInTheDocument()
+    expect(screen.queryByText('Welcome to WingDex')).not.toBeInTheDocument()
   })
 })

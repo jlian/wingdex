@@ -1,17 +1,18 @@
 /**
  * Fetch bird images and summaries from the Wikipedia REST API.
- * Uses pre-resolved Wikipedia article titles from taxonomy.json (hydrated at build time
- * by scripts/hydrate-wiki-titles.mjs) for a single-fetch lookup per species.
+ * Uses species display names for lookup keys against the Wikipedia REST API.
  * No API key required.
  */
 import { getDisplayName } from './utils'
-import { getWikiTitle } from './taxonomy'
+import { fetchWithLocalAuthRetry } from './local-auth-fetch'
 
 const imageCache = new Map<string, string | null>()
 const summaryCache = new Map<string, WikiSummary | null>()
 const imageInFlight = new Map<string, Promise<string | undefined>>()
 const summaryInFlight = new Map<string, Promise<WikiSummary | undefined>>()
 
+/** Cache for wiki-title API lookups. */
+const wikiTitleCache = new Map<string, { wikiTitle: string | null; common: string | null; scientific: string | null }>()
 export interface WikiSummary {
   title: string
   extract: string
@@ -65,6 +66,48 @@ function getCommonName(speciesName: string): string {
   return getDisplayName(speciesName)
 }
 
+function getLookupTitles(speciesName: string): string[] {
+  const common = getCommonName(speciesName)
+  const cacheKey = common.toLowerCase()
+  const cached = wikiTitleCache.get(cacheKey)
+
+  const candidates = cached
+    ? [cached.wikiTitle, cached.common, cached.scientific, common]
+    : [common]
+
+  const unique: string[] = []
+  const seen = new Set<string>()
+  for (const title of candidates) {
+    if (!title?.trim()) continue
+    const key = title.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(title)
+  }
+
+  return unique
+}
+
+/** Fetch and cache taxonomy match from the server wiki-title API. */
+async function ensureWikiTitleCached(speciesName: string): Promise<void> {
+  const common = getCommonName(speciesName)
+  const cacheKey = common.toLowerCase()
+  if (wikiTitleCache.has(cacheKey)) return
+
+  try {
+    const res = await fetchWithLocalAuthRetry(`/api/species/wiki-title?name=${encodeURIComponent(speciesName)}`, { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json() as { wikiTitle: string | null; common: string | null; scientific: string | null }
+      wikiTitleCache.set(cacheKey, data)
+    } else {
+      // Cache negative result to avoid refetching on every render
+      wikiTitleCache.set(cacheKey, { wikiTitle: null, common: null, scientific: null })
+    }
+  } catch {
+    // Proceed with common name only
+  }
+}
+
 /**
  * Get a Wikimedia Commons thumbnail URL for a bird species.
  */
@@ -73,8 +116,9 @@ export async function getWikimediaImage(
 ): Promise<string | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = getWikiTitle(common)
-  if (!wikiTitle) return undefined
+
+  await ensureWikiTitleCached(speciesName)
+  const titles = getLookupTitles(speciesName)
 
   if (imageCache.has(cacheKey)) {
     const cached = imageCache.get(cacheKey)
@@ -85,12 +129,24 @@ export async function getWikimediaImage(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<string | undefined> => {
-    const result = await fetchSummary(wikiTitle)
-    const imageUrl = result.kind === 'hit' ? extractThumbnailUrl(result.data) : undefined
+    let imageUrl: string | undefined
+    let sawError = false
+
+    for (const title of titles) {
+      const result = await fetchSummary(title)
+      if (result.kind === 'hit') {
+        imageUrl = extractThumbnailUrl(result.data)
+        if (imageUrl) break
+        continue
+      }
+      if (result.kind === 'error') {
+        sawError = true
+      }
+    }
 
     if (imageUrl) {
       imageCache.set(cacheKey, imageUrl)
-    } else if (result.kind !== 'error') {
+    } else if (!sawError) {
       imageCache.set(cacheKey, null)
     }
     return imageUrl
@@ -112,8 +168,9 @@ export async function getWikimediaSummary(
 ): Promise<WikiSummary | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  const wikiTitle = getWikiTitle(common)
-  if (!wikiTitle) return undefined
+
+  await ensureWikiTitleCached(speciesName)
+  const titles = getLookupTitles(speciesName)
 
   if (summaryCache.has(cacheKey)) {
     const cached = summaryCache.get(cacheKey)
@@ -124,20 +181,28 @@ export async function getWikimediaSummary(
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<WikiSummary | undefined> => {
-    const result = await fetchSummary(wikiTitle)
+    let sawError = false
 
-    if (result.kind === 'hit' && result.data.extract) {
-      const summary: WikiSummary = {
-        title: result.data.title || common,
-        extract: result.data.extract,
-        imageUrl: extractFullImageUrl(result.data),
-        pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(common.replace(/ /g, '_'))}`,
+    for (const title of titles) {
+      const result = await fetchSummary(title)
+
+      if (result.kind === 'hit' && result.data.extract) {
+        const summary: WikiSummary = {
+          title: result.data.title || common,
+          extract: result.data.extract,
+          imageUrl: extractFullImageUrl(result.data),
+          pageUrl: result.data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent((result.data.title || title).replace(/ /g, '_'))}`,
+        }
+        summaryCache.set(cacheKey, summary)
+        return summary
       }
-      summaryCache.set(cacheKey, summary)
-      return summary
+
+      if (result.kind === 'error') {
+        sawError = true
+      }
     }
 
-    if (result.kind !== 'error') {
+    if (!sawError) {
       summaryCache.set(cacheKey, null)
     }
     return undefined

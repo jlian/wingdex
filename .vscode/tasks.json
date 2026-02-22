@@ -28,7 +28,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "if [ -z \"$CODESPACES\" ]; then echo \"Skipping ensure-app-on-5000 outside Codespaces\"; exit 0; fi; if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo \"App already available on :5000\"; else echo \"No app on :5000, starting npm run dev\"; npm run dev; fi"
+        "if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo \"App already available on :5000\"; else echo \"No app on :5000, starting npm run dev\"; npm run dev; fi"
       ],
       "isBackground": true,
       "problemMatcher": {
@@ -38,8 +38,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "No app on :5000, starting npm run dev|App already available on :5000|Skipping ensure-app-on-5000 outside Codespaces",
-          "endsPattern": "Local:|App already available on :5000|Skipping ensure-app-on-5000 outside Codespaces"
+          "beginsPattern": "No app on :5000, starting npm run dev|App already available on :5000",
+          "endsPattern": "Local:|App already available on :5000"
         }
       }
     },

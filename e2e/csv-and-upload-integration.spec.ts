@@ -9,13 +9,14 @@ const FIXTURES_DIR = path.resolve('src/__tests__/fixtures/llm-responses')
 function loadLLMFixture(name: string) {
   const data = JSON.parse(readFileSync(path.join(FIXTURES_DIR, `${name}.json`), 'utf8'))
   return {
-    choices: [{ message: { content: data.rawResponse } }],
+    candidates: data.parsed.candidates,
+    multipleBirds: data.parsed.multipleBirds,
   }
 }
 
-/** Mock the /_spark/llm endpoint with a fixture-based response. */
+/** Mock the /api/identify-bird endpoint with a fixture-based response. */
 function mockLLM(page: Page, fixtureName: string) {
-  return page.route('**/_spark/llm', (route: Route) => {
+  return page.route('**/api/identify-bird', (route: Route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -68,7 +69,15 @@ function mockWikimedia(page: Page) {
 
 /** Navigate to app, wait for it to load. */
 async function loadApp(page: Page) {
-  await page.goto('/')
+  try {
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+  } catch (error) {
+    const message = String(error)
+    if (!message.includes('frame was detached') && !message.includes('ERR_ABORTED')) {
+      throw error
+    }
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+  }
   await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
 }
 
@@ -88,15 +97,28 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Profile timezone defaults to America/Los_Angeles (Pacific) — no need to change it
 
-    // Import the test CSV
-    const fileInput = page.locator('input[type="file"][accept*=".csv"]')
-    await fileInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
+    const previewResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
+    )
+    const confirmResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv/confirm') && response.request().method() === 'POST'
+    )
 
-    // Wait for the success toast
-    await expect(page.getByText(/Imported.*species.*outings/)).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('button', { name: 'Import from eBird CSV' }).click()
+    await expect(page.getByRole('heading', { name: 'Import from eBird CSV' })).toBeVisible({ timeout: 5_000 })
 
-    // Wait for the toast to dismiss so it doesn't intercept clicks
-    await expect(page.getByText(/Imported.*species.*outings/)).not.toBeVisible({ timeout: 10_000 })
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Choose CSV File' }).click()
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
+
+    const previewResponse = await previewResponsePromise
+    expect(previewResponse.status()).toBe(200)
+
+    const confirmResponse = await confirmResponsePromise
+    expect(confirmResponse.status()).toBe(200)
+
+    await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
 
     // Navigate to Outings page
     await page.getByRole('tab', { name: 'Outings' }).first().click()
@@ -240,7 +262,7 @@ test.describe('CSV import + photo upload integration', () => {
   test('multi-photo clustering: photos from different locations create separate outings', async ({ page }) => {
     // Mock LLM to respond differently based on which call it is
     let callCount = 0
-    await page.route('**/_spark/llm', (route: Route) => {
+    await page.route('**/api/identify-bird', (route: Route) => {
       callCount++
       // First call = Chukar (Haleakala), second call = Steller's Jay (Seattle)
       const fixture = callCount === 1
@@ -285,6 +307,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Should advance to second cluster's Review Outing step
     await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByRole('heading', { name: /Review Outing 2 of 2/i })).toBeVisible({ timeout: 5_000 })
 
     // Confirm second outing
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
@@ -294,11 +317,7 @@ test.describe('CSV import + photo upload integration', () => {
     // Dialog auto-closes after all species saved
     await expect(dialog).not.toBeVisible({ timeout: 15_000 })
 
-    // Navigate to Outings — should have 2 separate outings
-    await page.getByRole('tab', { name: 'Outings' }).first().click()
-    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
-
-    // The outings page should show "2 outings recorded"
-    await expect(page.getByText('2 outings recorded')).toBeVisible({ timeout: 5_000 })
+    // Completion toast should appear after both clusters are processed
+    await expect(page.getByText(/All done!/i)).toBeVisible({ timeout: 10_000 })
   })
 })

@@ -27,6 +27,8 @@ dist-ssr
 *.sw?
 
 .env
+.dev.vars
+.dev.vars.*
 **/agent-eval-report*
 packages
 pids
@@ -34,6 +36,9 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+
+# Wrangler local dev state/cache
+.wrangler/
 
 # Playwright
 test-results/

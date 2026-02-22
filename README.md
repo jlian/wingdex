@@ -62,15 +62,60 @@ npm ci
 npm run dev
 ```
 
-For reproducible installs and stable lockfile output, use `Node 22.16.x` and `npm 10.9.x`.
+Requires Node 25+.
 
-> **Note:** AI features (bird detection, species ID) require the `/_spark/llm` proxy and will not work outside of the Spark runtime. Everything else (photo upload, EXIF parsing, outing management, WingDex browsing) works normally.
+`npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
+
+### AI provider setup (local)
+
+AI calls run through the server endpoint (`/api/identify-bird`) and require local env vars.
+
+1. Copy `.dev.vars.example` to `.dev.vars`
+2. Choose provider with `LLM_PROVIDER=openai|azure|github`
+3. Fill provider credentials and (optionally) model
+
+OpenAI:
+
+```dotenv
+LLM_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Azure OpenAI:
+
+```dotenv
+LLM_PROVIDER=azure
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
+# optional
+AZURE_OPENAI_API_VERSION=2024-10-21
+```
+
+GitHub Models:
+
+```dotenv
+LLM_PROVIDER=github
+GITHUB_MODELS_TOKEN=...
+# optional (defaults shown)
+GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
+GITHUB_MODELS_ENDPOINT=https://models.github.ai/inference/chat/completions
+```
+
+Optional per-user daily limits for AI endpoints (UTC day):
+
+```dotenv
+AI_DAILY_LIMIT_IDENTIFY=150
+```
 
 ### Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Vite dev server (port 5000) |
+| `npm run dev` | Start full local dev loop: Functions API (`:8788`) + Vite HMR (`:5000`) |
+| `npm run dev:vite` | Start Vite only |
+| `npm run dev:cf` | Start Cloudflare Pages Functions runtime only |
 | `npm run build` | Type-check and production build |
 | `npm run test` | Run all tests (Vitest) |
 | `npm run test:unit` | Run unit tests only |

@@ -72,7 +72,6 @@ test.describe('App smoke tests', () => {
     // Filter out known non-critical errors
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
-        && !e.includes('_spark') && !e.includes('spark') && !e.includes('undefined')
     );
 
     expect(criticalErrors).toEqual([]);
@@ -116,10 +115,9 @@ test.describe('App smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Filter out known non-critical errors (like Spark API 403s, Spark runtime errors)
+    // Filter out known non-critical errors (network/favicon/transient)
     const criticalErrors = errors.filter(
       e => !e.includes('403') && !e.includes('net::ERR') && !e.includes('favicon')
-        && !e.includes('_spark') && !e.includes('spark')
     );
 
     expect(criticalErrors).toEqual([]);

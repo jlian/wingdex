@@ -3,11 +3,14 @@
  * Capture real LLM responses for test fixtures.
  *
  * Usage:
- *   GITHUB_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
+ *   GITHUB_MODELS_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
+ *   FIXTURE_OVERWRITE=true node scripts/capture-llm-fixtures.mjs
  *
  * Reads images from src/assets/images/, sends each to the GitHub Models
  * vision API with the same prompt used in production, and writes the raw
  * response to src/__tests__/fixtures/llm-responses/<image-key>.json.
+ *
+ * Capture mirrors runtime behavior by resizing images before send.
  *
  * The fixture includes:
  *   - imageFile: original filename
@@ -20,11 +23,66 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import sharp from 'sharp'
+import { buildBirdIdPrompt } from '../functions/lib/bird-id-prompt.js'
 
-const API_URL = 'https://models.github.ai/inference/chat/completions'
-const MODEL = 'openai/gpt-4.1-mini'
-const TOKEN = process.env.GITHUB_TOKEN
-if (!TOKEN) { console.error('GITHUB_TOKEN required'); process.exit(1) }
+function parseDevVars() {
+  if (!existsSync('.dev.vars')) return {}
+
+  const vars = {}
+  const content = readFileSync('.dev.vars', 'utf8')
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#') || !line.includes('=')) continue
+    const [key, ...rest] = line.split('=')
+    vars[key.trim()] = rest.join('=').trim()
+  }
+
+  return vars
+}
+
+const DEV_VARS = parseDevVars()
+const API_URL = process.env.FIXTURE_API_URL || 'https://models.github.ai/inference/chat/completions'
+const MODEL = process.env.FIXTURE_MODEL || 'openai/gpt-4.1-mini'
+const TOKEN = process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN || DEV_VARS.GITHUB_MODELS_TOKEN || DEV_VARS.GITHUB_TOKEN
+if (!TOKEN) { console.error('GITHUB_MODELS_TOKEN (or GITHUB_TOKEN) required'); process.exit(1) }
+
+const FIXTURE_OVERWRITE = process.env.FIXTURE_OVERWRITE === 'true'
+const MAX_COMPLETION_TOKENS = Number(process.env.FIXTURE_MAX_COMPLETION_TOKENS || 1400)
+const RESIZE_MAX_DIM = Number(process.env.FIXTURE_RESIZE_MAX_DIM || 640)
+const JPEG_QUALITY = Number(process.env.FIXTURE_JPEG_QUALITY || 70)
+
+function shouldUseMaxCompletionTokens(model) {
+  const normalized = model.toLowerCase()
+  return normalized.includes('gpt-5') || normalized.startsWith('o1') || normalized.startsWith('o3') || normalized.startsWith('o4')
+}
+
+function withTokenLimit(model, maxTokens) {
+  if (shouldUseMaxCompletionTokens(model)) {
+    return { max_completion_tokens: maxTokens }
+  }
+
+  return { max_tokens: maxTokens }
+}
+
+function withSamplingOptions(model) {
+  if (shouldUseMaxCompletionTokens(model)) {
+    return {}
+  }
+
+  return {
+    temperature: 0.2,
+    top_p: 1.0,
+  }
+}
+
+function withReasoningOptions(model) {
+  if (model.toLowerCase().includes('gpt-5')) {
+    return { reasoning_effort: 'low' }
+  }
+
+  return {}
+}
 
 const FIXTURE_DIR = join(import.meta.dirname, '..', 'src', '__tests__', 'fixtures', 'llm-responses')
 mkdirSync(FIXTURE_DIR, { recursive: true })
@@ -150,56 +208,6 @@ const IMAGES = [
   },
 ]
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-
-function buildPrompt(ctx) {
-  const ctxParts = []
-  if (ctx.lat != null) ctxParts.push(`Primary geolocation (authoritative): GPS ${ctx.lat.toFixed(4)}, ${ctx.lon.toFixed(4)}.`)
-  if (ctx.location) ctxParts.push(`Place label (secondary, may be noisy): ${ctx.location}.`)
-  if (ctx.month != null) ctxParts.push(`Month: ${MONTHS[ctx.month]}.`)
-  const ctxStr = ctxParts.length ? `\nContext:\n- ${ctxParts.join('\n- ')}` : ''
-
-  return `Identify birds in this image and return ONE JSON object only.${ctxStr}
-
-  Process (in order):
-  1) Detect all birds.
-  2) Select ONE focal bird: prefer the most notable/uncommon species; if all are common (gulls, pigeons, crows, sparrows), pick the largest clear one; if tied, nearest image center.
-  3) Note the focal bird's center position in the image as a percentage.
-  4) Identify only that focal bird.
-
-  Rules:
-  - Never mix traits across birds.
-  - GPS and month are authoritative range constraints.
-  - Location name is secondary habitat context only. If it conflicts with GPS/month, trust GPS/month.
-  - Only suggest species expected at that location/time; account for regional splits and seasonal plumage.
-  - Lower confidence for small/blurry/occluded/backlit birds.
-
-  Candidates:
-  - Return 1-3 candidates total (1 primary + up to 2 alternatives), sorted by confidence descending.
-  - species format: "Common Name (Scientific name)".
-
-  Confidence:
-  - 0.90-1.00 diagnostic field marks clearly visible
-  - 0.75-0.89 strong match
-  - 0.50-0.74 likely
-  - 0.30-0.49 possible
-
-  Output JSON only:
-  - Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87}],"birdCenter":[35,60],"birdSize":"medium","multipleBirds":false}
-  - No bird: {"candidates":[],"birdCenter":null,"birdSize":null,"multipleBirds":false}
-
-  multipleBirds: true if more than one bird species is visible in the image.
-
-  birdCenter: [x, y] percentage position of the focal bird's center.
-  - Values 0-100 (percentage of image width and height)
-  - integers only
-
-  birdSize: how much of the image the bird fills.
-  - "small" = bird is <20% of image area
-  - "medium" = bird is 20-50%
-  - "large" = bird is >50%`
-}
-
 async function captureOne(entry) {
   const imgPath = join(import.meta.dirname, '..', 'src', 'assets', 'images', entry.file)
   if (!existsSync(imgPath)) {
@@ -209,21 +217,40 @@ async function captureOne(entry) {
 
   const key = entry.file.replace(/\.[^.]+$/, '')
   const outPath = join(FIXTURE_DIR, `${key}.json`)
-  if (existsSync(outPath)) {
+  if (!FIXTURE_OVERWRITE && existsSync(outPath)) {
     console.log(`⏭️  ${key}: fixture exists, skipping`)
     return
   }
 
   console.log(`📸 ${entry.file}...`)
   const imgBuf = readFileSync(imgPath)
-  const b64 = imgBuf.toString('base64')
-  const mime = entry.file.endsWith('.png') ? 'image/png' : 'image/jpeg'
-  const dataUrl = `data:${mime};base64,${b64}`
+  const sourceMeta = await sharp(imgBuf).metadata()
+  const resizedBuf = await sharp(imgBuf)
+    .rotate()
+    .resize({
+      width: RESIZE_MAX_DIM,
+      height: RESIZE_MAX_DIM,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: JPEG_QUALITY })
+    .toBuffer()
+  const resizedMeta = await sharp(resizedBuf).metadata()
 
-  const prompt = buildPrompt(entry)
+  const b64 = resizedBuf.toString('base64')
+  const dataUrl = `data:image/jpeg;base64,${b64}`
+
+  const prompt = buildBirdIdPrompt(
+    entry.lat != null && entry.lon != null ? { lat: entry.lat, lon: entry.lon } : undefined,
+    entry.month,
+    entry.location,
+  )
 
   const body = {
     model: MODEL,
+    ...withReasoningOptions(MODEL),
+    ...withSamplingOptions(MODEL),
+    ...withTokenLimit(MODEL, MAX_COMPLETION_TOKENS),
     messages: [
       { role: 'system', content: 'You are an expert ornithologist assistant. Return only what is asked.' },
       {
@@ -234,9 +261,6 @@ async function captureOne(entry) {
         ],
       },
     ],
-    temperature: 0.2,
-    top_p: 1.0,
-    max_tokens: 500,
     response_format: { type: 'json_object' },
   }
 
@@ -272,6 +296,22 @@ async function captureOne(entry) {
     rawResponse,
     parsed,
     model: MODEL,
+    requestConfig: {
+      tokenParam: shouldUseMaxCompletionTokens(MODEL) ? 'max_completion_tokens' : 'max_tokens',
+      maxCompletionTokens: MAX_COMPLETION_TOKENS,
+      reasoningEffort: withReasoningOptions(MODEL).reasoning_effort || null,
+      resizedBeforeSend: true,
+      resizeMaxDim: RESIZE_MAX_DIM,
+      jpegQuality: JPEG_QUALITY,
+      sourceDimensions: {
+        width: sourceMeta.width || null,
+        height: sourceMeta.height || null,
+      },
+      uploadedDimensions: {
+        width: resizedMeta.width || null,
+        height: resizedMeta.height || null,
+      },
+    },
     capturedAt: new Date().toISOString(),
   }
 
@@ -286,6 +326,9 @@ async function captureOne(entry) {
 
 async function main() {
   console.log(`\n🐦 Capturing LLM fixtures for ${IMAGES.length} images...\n`)
+  if (FIXTURE_OVERWRITE) {
+    console.log('ℹ️  FIXTURE_OVERWRITE=true → existing fixture files will be replaced')
+  }
   for (const entry of IMAGES) {
     await captureOne(entry)
     // Small delay to avoid rate limits

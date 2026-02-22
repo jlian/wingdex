@@ -1,0 +1,25 @@
+name = "wingdex"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+# Production (default) — uses the main database
+[[d1_databases]]
+binding = "DB"
+database_name = "wingdex-db"
+database_id = "bb0a4504-8009-4ea3-b462-ce2b9de3d615"
+migrations_dir = "migrations"
+
+[ai]
+binding = "AI"
+
+# Preview/dev — uses a separate database
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "wingdex-db-dev"
+database_id = "7299207b-ddc7-4ecd-bc36-b6838f278c78"
+migrations_dir = "migrations"
+
+[env.preview.ai]
+binding = "AI"

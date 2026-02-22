@@ -40,7 +40,7 @@ import { useBirdImage } from '@/hooks/use-bird-image'
 interface AddPhotosFlowProps {
   data: WingDexDataStore
   onClose: () => void
-  userId: number
+  userId: string
 }
 
 interface PhotoWithCrop extends Photo {
@@ -78,6 +78,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
   const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
   const [pendingDuplicatePhotos, setPendingDuplicatePhotos] = useState<PhotoWithCrop[]>([])
+
+  useEffect(() => {
+    if (!showConfetti) return
+    const timeoutId = window.setTimeout(() => setShowConfetti(false), 3500)
+    return () => window.clearTimeout(timeoutId)
+  }, [showConfetti])
 
   const handleOpenChange = (open: boolean) => {
     if (!open && needsCloseConfirmation(step)) {
@@ -169,7 +175,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
-      setTimeout(() => runSpeciesId(nextIdx), 300)
+      void runSpeciesId(nextIdx)
     } else {
       saveOuting(finalResults)
     }
@@ -232,7 +238,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         toast.success(
           `🎉 ${newSpeciesCount} new species added to your WingDex!`
         )
-        setTimeout(() => setShowConfetti(false), 3500)
       }
     } else {
       toast.warning('No species were confirmed for this outing')
@@ -248,8 +253,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       if (confirmed.length > 0) {
         toast.success(`All done! ${confirmed.length} species saved.`)
       }
-      setStep('complete')
-      setTimeout(onClose, 3500)
+      setShowConfetti(false)
+      onClose()
     }
   }
 

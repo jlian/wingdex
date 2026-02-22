@@ -2,7 +2,7 @@
     "name": "wingdex",
     "private": true,
     "version": "1.4.2",
-    "description": "Photo-first bird identification and WingDex tracker, built on GitHub Spark",
+    "description": "Photo-first bird identification and WingDex tracker",
     "repository": {
         "type": "git",
         "url": "https://github.com/jlian/wingdex.git"
@@ -13,20 +13,23 @@
         "birding",
         "bird-identification",
         "life-list",
-        "ebird",
-        "github-spark"
+        "ebird"
     ],
     "type": "module",
-    "packageManager": "npm@10.9.2",
     "engines": {
-        "node": ">=22.16.0",
-        "npm": "10.9.x"
+        "node": ">=25.0.0"
     },
     "scripts": {
-        "dev": "vite",
-        "kill": "fuser -k 5000/tcp",
+        "dev": "bash scripts/dev.sh",
+        "dev:vite": "vite --port 5000 --strictPort",
+        "dev:full": "bash scripts/dev-full.sh",
+        "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
+        "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
+        "kill": "bash -lc 'PIDS=$(lsof -t -nP -iTCP:5000 -sTCP:LISTEN | tr \"\\n\" \" \" ); if [ -n \"$PIDS\" ]; then kill $PIDS; fi'",
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
+        "deploy": "npm run build && wrangler pages deploy dist --project-name wingdex",
+        "db:migrate:local": "printf 'y\n' | wrangler d1 migrations apply wingdex-db --local",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",
         "lint": "eslint .",
@@ -34,14 +37,19 @@
         "preview": "vite preview",
         "test": "vitest run",
         "test:unit": "vitest run src/__tests__",
-        "test:e2e": "npx playwright test",
+        "test:e2e": "RUN_LIVE_E2E=0 npx playwright test",
+        "test:e2e:live": "RUN_LIVE_E2E=1 npx playwright test e2e/live-species-id.spec.ts",
+        "smoke:api": "bash scripts/api-auth-smoke.sh",
+        "smoke:api:seeded": "SEED_MODE=true bash scripts/api-auth-smoke.sh",
         "test:watch": "vitest",
         "taxonomy:ebird": "node scripts/fetch-ebird-codes.mjs",
         "taxonomy:hydrate-wiki": "node scripts/hydrate-wiki-titles.mjs",
-        "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs"
+        "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs",
+        "bench:vision": "node scripts/benchmark-vision-models.mjs"
     },
     "dependencies": {
-        "@github/spark": "0.44.19",
+        "@better-auth/core": "^1.4.18",
+        "@better-auth/passkey": "^1.4.18",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/colors": "^3.0.0",
         "@radix-ui/react-accordion": "^1.2.3",
@@ -72,12 +80,15 @@
         "@radix-ui/react-tooltip": "^1.1.8",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/vite": "^4.1.11",
+        "better-auth": "^1.4.18",
+        "better-call": "^1.1.8",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "date-fns": "^3.6.0",
         "embla-carousel-react": "^8.5.2",
         "input-otp": "^1.4.2",
+        "kysely-d1": "^0.4.0",
         "lucide-react": "^0.568.0",
         "next-themes": "^0.4.6",
         "react": "^19.2.4",
@@ -92,14 +103,16 @@
         "tw-animate-css": "^1.2.4",
         "tz-lookup": "^6.1.25",
         "vaul": "^1.1.2",
-        "zod": "^3.25.76"
+        "zod": "^4.3.6"
     },
     "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260228.0",
         "@eslint/js": "^9.21.0",
         "@playwright/test": "^1.58.2",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@tailwindcss/postcss": "^4.1.8",
+        "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
         "@testing-library/user-event": "^14.6.1",
@@ -114,10 +127,12 @@
         "globals": "^16.0.0",
         "jsdom": "^28.1.0",
         "semantic-release": "^25.0.3",
+        "sharp": "^0.34.5",
         "tailwindcss": "^4.1.18",
         "typescript": "~5.7.2",
         "typescript-eslint": "^8.38.0",
         "vite": "^7.2.6",
-        "vitest": "^4.0.18"
+        "vitest": "^4.0.18",
+        "wrangler": "^4.42.0"
     }
 }

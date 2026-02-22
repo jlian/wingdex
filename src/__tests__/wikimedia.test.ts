@@ -1,23 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockFetch = vi.fn()
-vi.stubGlobal('fetch', mockFetch)
+/** Queued Wikipedia responses (consumed FIFO). */
+const wikiQueue: Array<{ ok: boolean; status?: number; json?: () => Promise<unknown> }> = []
 
-// Mock getWikiTitle so tests control whether species have pre-resolved titles
-const mockGetWikiTitle = vi.fn<(name: string) => string | undefined>().mockReturnValue(undefined)
-vi.mock('@/lib/taxonomy', async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual, getWikiTitle: (...args: [string]) => mockGetWikiTitle(...args) }
+/** Override the wiki-title API response for a specific test. */
+let wikiTitleOverride: { wikiTitle: string | null; common: string | null; scientific: string | null } | null = null
+
+const mockFetch = vi.fn((url: string) => {
+  if (typeof url === 'string' && url.includes('/api/species/wiki-title')) {
+    const body = wikiTitleOverride ?? { wikiTitle: null, common: null, scientific: null }
+    return Promise.resolve({ ok: true, json: async () => body })
+  }
+  // Dequeue the next Wikipedia response
+  const next = wikiQueue.shift()
+  if (next) return Promise.resolve(next)
+  return Promise.resolve({ ok: false, status: 404 })
 })
+
+vi.stubGlobal('fetch', mockFetch)
 
 // Import after mocking
 const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
 function mockWikiResponse(data: Record<string, unknown> | null) {
   if (data === null) {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+    wikiQueue.push({ ok: false, status: 404 })
   } else {
-    mockFetch.mockResolvedValueOnce({
+    wikiQueue.push({
       ok: true,
       json: async () => data,
     })
@@ -25,7 +34,7 @@ function mockWikiResponse(data: Record<string, unknown> | null) {
 }
 
 function mockTransientError() {
-  mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+  wikiQueue.push({ ok: false, status: 500 })
 }
 
 function wikiPageData(overrides: Record<string, unknown> = {}) {
@@ -41,41 +50,60 @@ function wikiPageData(overrides: Record<string, unknown> = {}) {
 
 // ── getWikimediaImage ───────────────────────────────────────
 
+/** Return only the fetch calls to Wikipedia (not the wiki-title API). */
+function wikiCalls() {
+  return mockFetch.mock.calls.filter(
+    ([url]: [string]) => !url.includes('/api/species/wiki-title')
+  )
+}
+
 describe('getWikimediaImage', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
-    mockGetWikiTitle.mockReturnValue(undefined)
+    mockFetch.mockClear()
+    wikiQueue.length = 0
+    wikiTitleOverride = null
   })
 
-  it('uses pre-resolved wiki title from taxonomy (single fetch)', async () => {
-    mockGetWikiTitle.mockReturnValue('Ruby-throated hummingbird')
+  it('uses species display name for lookup (single fetch)', async () => {
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/300px-hummingbird.jpg' },
     }))
 
-    const result = await getWikimediaImage('Unique Hummingbird T1')
+    const result = await getWikimediaImage('Ruby-throated hummingbird (Archilochus colubris)')
     expect(result).toContain('hummingbird.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Ruby-throated_hummingbird')
+    expect(wikiCalls()).toHaveLength(1)
+    expect(wikiCalls()[0][0]).toContain('Ruby-throated_hummingbird')
   })
 
-  it('returns undefined when species has no wiki title', async () => {
+  it('uses taxonomy wikiTitle for Chukar image lookup', async () => {
+    wikiTitleOverride = { wikiTitle: 'Chukar partridge', common: 'Chukar', scientific: 'Alectoris chukar' }
+    mockWikiResponse(wikiPageData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/chukar.jpg' },
+    }))
+
+    const result = await getWikimediaImage('Chukar (Alectoris chukar)')
+    expect(result).toContain('chukar.jpg')
+    expect(wikiCalls()).toHaveLength(1)
+    expect(wikiCalls()[0][0]).toContain('Chukar_partridge')
+  })
+
+  it('returns undefined when species page is missing', async () => {
+    mockWikiResponse(null)
+
     const result = await getWikimediaImage('Unknown Bird X')
     expect(result).toBeUndefined()
-    expect(mockFetch).not.toHaveBeenCalled()
+    expect(wikiCalls().length).toBeGreaterThanOrEqual(1)
   })
 
   it('returns undefined when wiki page has no image', async () => {
-    mockGetWikiTitle.mockReturnValue('Imageless Bird')
     mockWikiResponse(wikiPageData({ thumbnail: undefined, originalimage: undefined }))
 
     const result = await getWikimediaImage('Unique Warbler B2')
     expect(result).toBeUndefined()
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(wikiCalls()).toHaveLength(1)
   })
 
   it('prefers thumbnail URL when available', async () => {
-    mockGetWikiTitle.mockReturnValue('Unique Finch')
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/thumb/100px-bird.jpg' },
       originalimage: { source: 'https://upload.wikimedia.org/original-bird.jpg' },
@@ -86,7 +114,6 @@ describe('getWikimediaImage', () => {
   })
 
   it('does not upsize thumbnail URL to avoid 404 on small originals (iOS regression)', async () => {
-    mockGetWikiTitle.mockReturnValue('Small Image Bird')
     mockWikiResponse(wikiPageData({
       thumbnail: { source: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/220px-Bird.jpg' },
     }))
@@ -99,22 +126,21 @@ describe('getWikimediaImage', () => {
   })
 
   it('caches results for subsequent calls', async () => {
-    mockGetWikiTitle.mockReturnValue('Unique Owl')
     mockWikiResponse(wikiPageData())
 
     const result1 = await getWikimediaImage('Unique Owl F')
     const result2 = await getWikimediaImage('Unique Owl F')
 
     expect(result1).toBe(result2)
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(wikiCalls()).toHaveLength(1)
   })
 
   it('does not cache transient errors so retries are possible', async () => {
-    mockGetWikiTitle.mockReturnValue('Retry Bird')
     mockTransientError()
 
     const result1 = await getWikimediaImage('Retry Bird G')
     expect(result1).toBeUndefined()
+    const firstWikiCallCount = wikiCalls().length
 
     // Second call should retry (not serve from cache)
     mockWikiResponse(wikiPageData({
@@ -122,7 +148,7 @@ describe('getWikimediaImage', () => {
     }))
     const result2 = await getWikimediaImage('Retry Bird G')
     expect(result2).toContain('retry-bird.jpg')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(wikiCalls().length).toBeGreaterThan(firstWikiCallCount)
   })
 })
 
@@ -130,12 +156,13 @@ describe('getWikimediaImage', () => {
 
 describe('getWikimediaSummary', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
-    mockGetWikiTitle.mockReturnValue(undefined)
+    mockFetch.mockClear()
+    wikiQueue.length = 0
+    wikiTitleOverride = null
   })
 
-  it('uses pre-resolved wiki title from taxonomy (single fetch)', async () => {
-    mockGetWikiTitle.mockReturnValue('Merlin (bird)')
+  it('uses species display name for summary lookup (single fetch)', async () => {
+    wikiTitleOverride = { wikiTitle: 'Merlin (bird)', common: 'Merlin', scientific: 'Falco columbarius' }
     mockWikiResponse(wikiPageData({
       title: 'Merlin (bird)',
       extract: 'The merlin is a small species of falcon.',
@@ -145,12 +172,11 @@ describe('getWikimediaSummary', () => {
     expect(result).toBeDefined()
     expect(result!.title).toBe('Merlin (bird)')
     expect(result!.extract).toContain('falcon')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('Merlin_(bird)')
+    expect(wikiCalls()).toHaveLength(1)
+    expect(wikiCalls()[0][0]).toContain('Merlin_(bird)')
   })
 
   it('returns summary with title, extract, imageUrl, and pageUrl', async () => {
-    mockGetWikiTitle.mockReturnValue('Northern Cardinal')
     mockWikiResponse(wikiPageData({
       title: 'Northern Cardinal',
       extract: 'The northern cardinal is a songbird.',
@@ -166,34 +192,33 @@ describe('getWikimediaSummary', () => {
     expect(result!.pageUrl).toContain('Northern_Cardinal')
   })
 
-  it('returns undefined when species has no wiki title', async () => {
+  it('returns undefined when species summary page is missing', async () => {
+    mockWikiResponse(null)
+
     const result = await getWikimediaSummary('Unknown Bird Y')
     expect(result).toBeUndefined()
-    expect(mockFetch).not.toHaveBeenCalled()
+    expect(wikiCalls().length).toBeGreaterThanOrEqual(1)
   })
 
   it('returns undefined when wiki page has no extract', async () => {
-    mockGetWikiTitle.mockReturnValue('Empty Bird')
     mockWikiResponse(wikiPageData({ extract: undefined }))
 
     const result = await getWikimediaSummary('Unique Empty Z')
     expect(result).toBeUndefined()
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(wikiCalls()).toHaveLength(1)
   })
 
   it('caches results for subsequent calls', async () => {
-    mockGetWikiTitle.mockReturnValue('Unique Wren')
     mockWikiResponse(wikiPageData({ extract: 'Cached bird.' }))
 
     const result1 = await getWikimediaSummary('Unique Wren K')
     const result2 = await getWikimediaSummary('Unique Wren K')
 
     expect(result1).toEqual(result2)
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(wikiCalls()).toHaveLength(1)
   })
 
   it('handles fetch errors gracefully', async () => {
-    mockGetWikiTitle.mockReturnValue('Unique Dove')
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
     const result = await getWikimediaSummary('Unique Dove L')

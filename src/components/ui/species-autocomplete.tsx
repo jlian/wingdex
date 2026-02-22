@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
-import { searchSpecies, type TaxonEntry } from '@/lib/taxonomy'
 import { cn } from '@/lib/utils'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
+
+export type TaxonEntry = { common: string; scientific: string; ebirdCode?: string; wikiTitle?: string }
 
 interface SpeciesAutocompleteProps {
   value: string
@@ -31,6 +33,7 @@ export function SpeciesAutocomplete({
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const latestSearchIdRef = useRef(0)
 
   // Debounced search
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -41,12 +44,29 @@ export function SpeciesAutocomplete({
       setOpen(false)
       return
     }
+
     searchTimeoutRef.current = setTimeout(() => {
-      const hits = searchSpecies(q, 8)
-      setResults(hits)
-      setOpen(hits.length > 0)
-      setHighlightIndex(-1)
-    }, 80)
+      const searchId = ++latestSearchIdRef.current
+      void fetchWithLocalAuthRetry(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
+        .then(async response => {
+          if (!response.ok) {
+            return { results: [] as TaxonEntry[] }
+          }
+          return response.json() as Promise<{ results?: TaxonEntry[] }>
+        })
+        .then(payload => {
+          if (searchId !== latestSearchIdRef.current) return
+          const hits = payload.results || []
+          setResults(hits)
+          setOpen(hits.length > 0)
+          setHighlightIndex(-1)
+        })
+        .catch(() => {
+          if (searchId !== latestSearchIdRef.current) return
+          setResults([])
+          setOpen(false)
+        })
+    }, 150)
   }, [])
 
   // Close on click outside

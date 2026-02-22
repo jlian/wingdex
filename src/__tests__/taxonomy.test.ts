@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { searchSpecies, findBestMatch, normalizeSpeciesName, speciesCount, getWikiTitle } from '@/lib/taxonomy'
+import { searchSpecies, findBestMatch, normalizeSpeciesName, speciesCount, getWikiTitle } from '../../functions/lib/taxonomy'
 
 describe('taxonomy', () => {
   describe('speciesCount', () => {

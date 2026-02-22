@@ -162,34 +162,36 @@ export async function generateThumbnail(file: File, maxWidth = 400): Promise<str
   })
 }
 
-export async function downscaleForInference(dataUrl: string, maxDim = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Canvas not supported'))
-        return
-      }
-      
-      const scale = Math.min(maxDim / Math.max(img.width, img.height), 1)
-      canvas.width = img.width * scale
-      canvas.height = img.height * scale
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      resolve(canvas.toDataURL('image/jpeg', 0.75))
-    }
-    
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = dataUrl
-  })
-}
-
+/**
+ * Compute a fast content-addressable hash for duplicate detection.
+ *
+ * Hashes the first 64KB + last 64KB + file size instead of the full file.
+ * This is intentional: photo files differ in EXIF headers (first bytes) and
+ * compressed image data (tail bytes), and the size acts as an additional
+ * discriminator. Combined with the EXIF timestamp check in AddPhotosFlow,
+ * the collision risk for distinct photos is negligible in practice.
+ */
 export async function computeFileHash(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const chunkSize = 64 * 1024
+
+  let content: ArrayBuffer
+  if (file.size <= chunkSize * 2) {
+    content = await file.arrayBuffer()
+  } else {
+    const firstChunk = await file.slice(0, chunkSize).arrayBuffer()
+    const lastChunk = await file.slice(file.size - chunkSize, file.size).arrayBuffer()
+    const merged = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength)
+    merged.set(new Uint8Array(firstChunk), 0)
+    merged.set(new Uint8Array(lastChunk), firstChunk.byteLength)
+    content = merged.buffer
+  }
+
+  const sizeBytes = new TextEncoder().encode(String(file.size))
+  const final = new Uint8Array(content.byteLength + sizeBytes.byteLength)
+  final.set(new Uint8Array(content), 0)
+  final.set(sizeBytes, content.byteLength)
+
+  const hashBuffer = await crypto.subtle.digest('SHA-256', final)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
