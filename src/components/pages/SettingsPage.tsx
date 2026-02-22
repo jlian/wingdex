@@ -356,7 +356,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     className="text-muted-foreground hover:text-foreground"
                     onClick={async () => {
                       const newName = window.prompt('Rename passkey', passkeyLabel)
-                      if (!newName || newName.trim() === passkeyLabel) return
+                      if (newName === null) return
                       const result = await authClient.passkey.updatePasskey({ id: pk.id, name: newName.trim() })
                       if (result.error) {
                         toast.error(result.error.message || 'Failed to rename passkey')
