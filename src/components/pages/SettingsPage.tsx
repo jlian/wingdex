@@ -175,9 +175,11 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Settings
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Signed in as {user.name}
-        </p>
+        {!user.isAnonymous && (
+          <p className="text-sm text-muted-foreground">
+            Signed in as {user.name}
+          </p>
+        )}
       </div>
 
       {/* Appearance */}
@@ -207,6 +209,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
+      {!user.isAnonymous && (
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Import & Export</h3>
@@ -355,7 +358,9 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           )}
         </div>
       </Card>
+      )}
 
+      {!user.isAnonymous && (
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold text-foreground">Account</h3>
 
@@ -463,6 +468,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           </Button>
         </div>
       </Card>
+      )}
 
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-3">
