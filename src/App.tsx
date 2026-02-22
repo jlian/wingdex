@@ -3,6 +3,7 @@ import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
@@ -115,6 +116,20 @@ function App() {
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
 
+  // Surface OAuth redirect errors as a toast
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    if (!error) return
+    const desc = params.get('error_description')
+    toast.error(`Sign-in failed: ${error}${desc ? ` — ${desc}` : ''}`)
+    params.delete('error')
+    params.delete('error_description')
+    const clean = params.toString()
+    const url = window.location.pathname + (clean ? `?${clean}` : '') + window.location.hash
+    window.history.replaceState(null, '', url)
+  }, [])
+
   useEffect(() => {
     if (session && session.user) {
       hadSessionRef.current = true
@@ -198,7 +213,7 @@ function App() {
 }
 
 function BootShell() {
-  return <div className="min-h-screen bg-background" />
+  return <div className="min-h-dvh bg-background" />
 }
 
 function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {
@@ -301,7 +316,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   ]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-dvh bg-background flex flex-col">
       <Toaster position="bottom-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="flex-1 flex flex-col">
@@ -459,28 +474,29 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </Suspense>
       )}
 
-      {/* Footer */}
-      <div className="mt-auto flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
-        <span>
-          WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} by{' '}
+      {/* Footer – mobile two lines, wide screens one line */}
+      <footer className="flex flex-col items-center gap-2 px-8 sm:px-16 py-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
+        <nav className="order-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:order-2 sm:flex-nowrap">
+          <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">
+            Privacy
+          </button>
+          <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">
+            Terms
+          </button>
+          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+            Issues?
+          </a>
+          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
+            <GithubLogo size={14} />
+          </a>
+        </nav>
+        <span className="order-2 whitespace-nowrap sm:order-1">
+          WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} ©{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
             John Lian
           </a>
         </span>
-        <span>·</span>
-        <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
-          <GithubLogo size={14} />
-        </a>
-        <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">
-          Privacy
-        </button>
-        <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">
-          Terms
-        </button>
-        <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-          Issues?
-        </a>
-      </div>
+      </footer>
 
     </div>
   )

@@ -197,7 +197,7 @@ function AuthGateModal({
 
   const handleSocialSignIn = (provider: 'github' | 'apple') => {
     setErrorMessage(null)
-    void authClient.signIn.social({ provider })
+    void authClient.signIn.social({ provider, errorCallbackURL: '/' })
   }
 
   const handleDemoToggle = async (enabled: boolean) => {
