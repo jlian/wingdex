@@ -1,9 +1,5 @@
 import { createAuth } from '../../lib/auth'
 
-type FinalizeBody = {
-  name?: string
-}
-
 export const onRequestPost: PagesFunction<Env> = async context => {
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
@@ -12,9 +8,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  let body: FinalizeBody = {}
+  let body: { name?: string } = {}
   try {
-    body = await context.request.json() as FinalizeBody
+    body = await context.request.json() as { name?: string }
   } catch {
     body = {}
   }

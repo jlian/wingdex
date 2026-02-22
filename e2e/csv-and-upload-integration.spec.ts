@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test'
 import path from 'path'
 import { readFileSync } from 'fs'
+import { loadApp } from './helpers'
 
 // ── Fixture helpers ──────────────────────────────────────────────
 
@@ -65,20 +66,6 @@ function mockWikimedia(page: Page) {
   return page.route('**/en.wikipedia.org/**', (route: Route) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"query":{"pages":{}}}' })
   })
-}
-
-/** Navigate to app, wait for it to load. */
-async function loadApp(page: Page) {
-  try {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-  } catch (error) {
-    const message = String(error)
-    if (!message.includes('frame was detached') && !message.includes('ERR_ABORTED')) {
-      throw error
-    }
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-  }
-  await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
 }
 
 /** Navigate to Settings page. */

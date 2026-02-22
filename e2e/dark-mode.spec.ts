@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loadApp } from './helpers';
 
 test.describe('Dark mode', () => {
   test('theme CSS variables are defined in light and dark modes', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     const lightVars = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
@@ -43,8 +43,7 @@ test.describe('Dark mode', () => {
   });
 
   test('settings page shows appearance toggle with three options', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Navigate to Settings via avatar button
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -58,8 +57,7 @@ test.describe('Dark mode', () => {
   });
 
   test('clicking Dark applies .dark class to html', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Navigate to Settings via avatar button
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -74,8 +72,7 @@ test.describe('Dark mode', () => {
   });
 
   test('clicking Light removes .dark class from html', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });
@@ -92,8 +89,7 @@ test.describe('Dark mode', () => {
   });
 
   test('dark mode changes background color', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Get light mode background color
     const lightBg = await page.evaluate(() =>
@@ -118,8 +114,7 @@ test.describe('Dark mode', () => {
   test('dark mode preference persists across page reloads', async ({ page }) => {
     // Don't use the beforeEach localStorage.clear for this test — 
     // we need localStorage to persist between navigations
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Switch to dark
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -143,8 +138,7 @@ test.describe('Dark mode', () => {
     // Emulate dark color scheme at OS level
     await page.emulateMedia({ colorScheme: 'dark' });
 
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page, { promote: false });
 
     // With system theme (default), dark preference should apply .dark
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -164,8 +158,7 @@ test.describe('Dark mode', () => {
       }
     });
 
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 });

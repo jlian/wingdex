@@ -14,7 +14,13 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   })
 
   const requestOrigin = options.request ? new URL(options.request.url).origin : null
-  const baseURL = requestOrigin || env.BETTER_AUTH_URL
+  const rawHeaderOrigin = options.request?.headers.get('origin') || null
+  const headerOrigin =
+    rawHeaderOrigin && rawHeaderOrigin !== 'null' && rawHeaderOrigin.trim() !== ''
+      ? rawHeaderOrigin
+      : null
+  const baseURL = headerOrigin || env.BETTER_AUTH_URL || requestOrigin
+  if (!baseURL) throw new Error('Unable to determine a valid base URL for authentication')
   const useSecureCookies = baseURL.startsWith('https://')
 
   const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
@@ -36,6 +42,11 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
       useSecureCookies,
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
+    user: {
+      deleteUser: {
+        enabled: true,
+      },
+    },
     account: {
       accountLinking: {
         enabled: true,
