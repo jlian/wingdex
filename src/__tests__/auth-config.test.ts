@@ -27,15 +27,6 @@ const mockEnv = {
 } satisfies Env
 
 describe('auth config', () => {
-  it('exposes account linking options', () => {
-    const auth = createAuth(mockEnv)
-    expect(auth.options.account?.accountLinking?.enabled).toBe(true)
-    expect(auth.options.account?.accountLinking?.trustedProviders).toContain(
-      'github',
-    )
-    expect(auth.options.account?.accountLinking?.allowDifferentEmails).toBe(true)
-  })
-
   it('includes passkey and anonymous plugins', () => {
     const auth = createAuth(mockEnv)
     const apiKeys = Object.keys(auth.api)

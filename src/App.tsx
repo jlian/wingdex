@@ -3,7 +3,6 @@ import { useTheme } from 'next-themes'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
-import { toast } from 'sonner'
 import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
@@ -239,23 +238,6 @@ function AppContent({ user }: { user: UserInfo }) {
     setOutingsSortField(field)
     setOutingsSortDir('desc')
   }, [outingsSortField])
-
-  // Handle auth error query params (e.g. failed social link redirect)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const error = params.get('error')
-    if (!error) return
-
-    const messages: Record<string, string> = {
-      account_already_linked_to_different_user: 'This GitHub account is already linked to another user',
-      unable_to_link_account: 'Unable to link GitHub account',
-    }
-
-    toast.error(messages[error] || `Account linking failed: ${error.replace(/_/g, ' ')}`)
-    window.history.replaceState(null, '', window.location.pathname)
-    navigate('settings')
-    sessionStorage.removeItem('pendingGitHubLink')
-  }, [navigate])
 
   // Sync <meta name="theme-color"> with current theme (#17)
   useEffect(() => {

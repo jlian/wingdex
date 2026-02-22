@@ -37,13 +37,6 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
           },
         }
       : {}),
-    account: {
-      accountLinking: {
-        enabled: true,
-        trustedProviders: ['github'],
-        allowDifferentEmails: true,
-      },
-    },
     plugins: [
       anonymous(),
       passkey({
