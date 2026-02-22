@@ -61,11 +61,14 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## 5. Codespace Runtime Assumptions
+## 5. Runtime Assumptions
 
-- In this Spark Codespace, assume the app is already running at `http://localhost:5000` unless a user says otherwise.
-- Before starting any dev server, first verify whether `http://localhost:5000` is already available.
-- Do not start an additional `npm run dev` process if port 5000 is already serving the app.
+- This repo runs locally via a two-process dev setup: Vite app on `http://localhost:5000` and Wrangler Functions behind `/api/*`.
+- Prefer VS Code task `ensure-app-on-5000` (or `bootstrap-workspace`) to start/reuse local dev instead of manually launching duplicate servers.
+- Before starting/restarting dev, verify health with both:
+	- `http://localhost:5000/`
+	- `http://localhost:5000/api/auth/get-session`
+- If port state is stale or unhealthy, run `npm run kill` first, then start via task or `npm run dev`.
 - For Playwright/e2e checks, target the existing server on port 5000 by default.
 
 ## 6. PR Review Hygiene
