@@ -25,6 +25,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   const requestedEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
 
+  if (requestedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail)) {
+    return Response.json({ error: 'invalid_email' }, { status: 400 })
+  }
+
   if (requestedEmail) {
     // Check uniqueness
     const existing = await context.env.DB

@@ -67,7 +67,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   // Passkey management
   const [passkeys, setPasskeys] = useState<Array<{ id: string; name?: string; createdAt: Date }>>([]) 
   const [passkeysLoading, setPasskeysLoading] = useState(false)
-  const passkeysLoaded = useRef(false)
 
   const hasPlaceholderEmail = !user.email || user.email.endsWith('@localhost')
   const [displayName, setDisplayName] = useState(user.name)
@@ -101,8 +100,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   }
 
   useEffect(() => {
-    if (user.isAnonymous || passkeysLoaded.current) return
-    passkeysLoaded.current = true
+    if (user.isAnonymous) return
     setPasskeysLoading(true)
     void authClient.passkey.listUserPasskeys().then((result) => {
       if (result.data) {
@@ -112,7 +110,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       }
       setPasskeysLoading(false)
     }).catch(() => setPasskeysLoading(false))
-  }, [user.isAnonymous])
+  }, [user.isAnonymous, user.id])
 
   useEffect(() => {
     setMounted(true)
@@ -335,6 +333,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                   }
                   toast.success('Email saved')
                   setNewEmail('')
+                  await onProfileUpdated?.()
                 }}
               >
                 {emailSaving ? 'Saving…' : 'Save'}

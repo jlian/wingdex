@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Key, GithubLogo, AppleLogo } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
@@ -37,7 +37,7 @@ type AuthMode = 'signup' | 'login'
  * Hook that gates actions behind authentication.
  * Returns `requireAuth(callback)` — if user is anonymous, opens sign-up modal.
  * If user is already authenticated, runs the callback immediately.
- * Also returns `<AuthGateModal />` to render once in the tree.
+ * Also returns `authGateModal` element to render once in the tree.
  */
 export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDemoDataEnabled }: AuthGateOptions) {
   const [open, setOpen] = useState(false)
@@ -80,7 +80,7 @@ export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDem
     />
   )
 
-  return { requireAuth, openSignIn, AuthGateModal: modal }
+  return { requireAuth, openSignIn, authGateModal: modal }
 }
 
 // ─── Modal ──────────────────────────────────────────────
@@ -117,12 +117,13 @@ function AuthGateModal({
 
   // Fetch providers on first open
   const fetchedProviders = useRef(false)
-  if (open && !fetchedProviders.current) {
+  useEffect(() => {
+    if (!open || fetchedProviders.current) return
     fetchedProviders.current = true
     void fetch('/api/auth/providers').then(r => r.ok ? r.json() : null).then(
       (data: { providers: string[] } | null) => { if (data) setProviders(data.providers) },
     )
-  }
+  }, [open])
 
   const handleSignUpWithPasskey = async () => {
     setErrorMessage(null)

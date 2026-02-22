@@ -90,7 +90,7 @@ vi.mock('@/hooks/use-auth-gate', () => ({
   useAuthGate: () => ({
     requireAuth: (cb: () => void) => cb(),
     openSignIn: vi.fn(),
-    AuthGateModal: null,
+    authGateModal: null,
   }),
 }))
 

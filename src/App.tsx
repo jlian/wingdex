@@ -164,6 +164,12 @@ function App() {
     }
 
     // Hosted: auto-bootstrap anonymous session (demo-first)
+    if (anonBootstrapFailed) {
+      // Auth backend unreachable — stop retrying to avoid tight loop.
+      // User must reload to reattempt.
+      return
+    }
+
     if (!isSessionPending && !anonBootstrapStarted.current) {
       anonBootstrapStarted.current = true
       void authClient.signIn.anonymous({
@@ -178,7 +184,6 @@ function App() {
         void refetchSession()
       }).catch(() => {
         setAnonBootstrapFailed(true)
-        anonBootstrapStarted.current = false
       })
     }
 
@@ -201,7 +206,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useWingDexData(user.id)
 
-  const { requireAuth, openSignIn, AuthGateModal } = useAuthGate({
+  const { requireAuth, openSignIn, authGateModal } = useAuthGate({
     isAnonymous: user.isAnonymous,
     onUpgraded: async () => {
       await refetchSession()
@@ -442,7 +447,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </main>
       </Tabs>
 
-      {AuthGateModal}
+      {authGateModal}
 
       {showAddPhotos && (
         <Suspense fallback={null}>

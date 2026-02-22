@@ -65,7 +65,7 @@ vi.mock('@/components/ui/switch', () => ({
 
 function Harness({ onUpgraded, isAnonymous = true }: { onUpgraded: () => void | Promise<void>; isAnonymous?: boolean }) {
   const [actionRan, setActionRan] = useState(false)
-  const { requireAuth, AuthGateModal } = useAuthGate({
+  const { requireAuth, authGateModal } = useAuthGate({
     isAnonymous,
     onUpgraded,
   })
@@ -73,7 +73,7 @@ function Harness({ onUpgraded, isAnonymous = true }: { onUpgraded: () => void | 
   return (
     <>
       <button onClick={() => requireAuth(() => setActionRan(true))}>Open gated action</button>
-      {AuthGateModal}
+      {authGateModal}
       {actionRan && <div>action-ran</div>}
     </>
   )
