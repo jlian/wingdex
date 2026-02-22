@@ -4,6 +4,11 @@ set -euo pipefail
 API_PORT="${API_PORT:-8788}"
 VITE_PORT="${VITE_PORT:-5000}"
 
+running_full_app() {
+  curl -fsS "http://localhost:${VITE_PORT}/" >/dev/null 2>&1 \
+    && curl -fsS "http://localhost:${VITE_PORT}/api/auth/get-session" >/dev/null 2>&1
+}
+
 pick_available_api_port() {
   local port="${API_PORT}"
   while lsof -t -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1; do
@@ -19,6 +24,11 @@ pick_available_api_port() {
 }
 
 ensure_vite_port_available() {
+  if running_full_app; then
+    echo "[dev] App already healthy on :${VITE_PORT}. Reusing existing server."
+    exit 0
+  fi
+
   local pids
   pids="$(lsof -t -nP -iTCP:"${VITE_PORT}" -sTCP:LISTEN 2>/dev/null | tr '\n' ' ' || true)"
   if [[ -z "${pids// }" ]]; then

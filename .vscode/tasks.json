@@ -18,7 +18,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "if curl -fsS http://localhost:5000 >/dev/null 2>&1; then echo \"App already available on :5000\"; else echo \"No app on :5000, starting npm run dev\"; npm run dev; fi"
+        "if curl -fsS http://localhost:5000 >/dev/null 2>&1 && curl -fsS http://localhost:5000/api/auth/get-session >/dev/null 2>&1; then echo \"App already healthy on :5000\"; else echo \"App unhealthy/missing on :5000, restarting dev server\"; npm run kill; npm run dev; fi"
       ],
       "isBackground": true,
       "problemMatcher": {
@@ -28,8 +28,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "No app on :5000, starting npm run dev|App already available on :5000",
-          "endsPattern": "Local:|App already available on :5000"
+          "beginsPattern": "App unhealthy/missing on :5000, restarting dev server|App already healthy on :5000",
+          "endsPattern": "Local:|App already healthy on :5000"
         }
       }
     },

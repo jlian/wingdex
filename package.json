@@ -25,7 +25,7 @@
         "dev:full": "bash scripts/dev-full.sh",
         "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
         "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
-        "kill": "bash -lc 'PIDS=$(lsof -t -nP -iTCP:5000 -sTCP:LISTEN | tr \"\\n\" \" \" ); if [ -n \"$PIDS\" ]; then kill $PIDS; fi'",
+        "kill": "bash -lc 'PIDS=$( { lsof -t -nP -iTCP:5000 -sTCP:LISTEN; lsof -t -nP -iTCP:8788 -sTCP:LISTEN; } 2>/dev/null | sort -u | xargs ); if [ -n \"$PIDS\" ]; then kill $PIDS; fi'",
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
         "deploy": "npm run build && wrangler pages deploy dist --project-name wingdex",
