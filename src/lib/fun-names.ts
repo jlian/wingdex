@@ -47,13 +47,6 @@ const birdEmojiMap: Record<string, string> = {
   cardinal: '🐦', lark: '🐦', raven: '🐦', starling: '🐦', swift: '🐦', tern: '🐦', thrush: '🐦',
 }
 
-/** Check if a name looks like a generated bird name (adjective-modifier-bird). */
-export function isBirdName(name: string): boolean {
-  const parts = name.split('-')
-  if (parts.length !== 3) return false
-  return adjectives.includes(parts[0]) && modifiers.includes(parts[1]) && birds.includes(parts[2])
-}
-
 /** Return a random kebab-case bird name like "sneaky-meadow-warbler". */
 export function generateBirdName(): string {
   const a = adjectives[Math.floor(Math.random() * adjectives.length)]

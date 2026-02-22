@@ -11,7 +11,7 @@ import {
 import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
-import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl, isBirdName } from '@/lib/fun-names'
+import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { toast } from 'sonner'
 import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -70,7 +70,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [displayName, setDisplayName] = useState(user.name)
   const [profileImage, setProfileImage] = useState(user.image)
   const [profileSaving, setProfileSaving] = useState(false)
-  const defaultName = localStorage.getItem(`wingdex:defaultName:${user.id}`)
 
   useEffect(() => {
     setDisplayName(user.name)
@@ -260,19 +259,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             >
               <ArrowsClockwise size={14} weight="bold" />
             </button>
-            {defaultName && isBirdName(displayName) && (
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 cursor-pointer disabled:opacity-50"
-                disabled={profileSaving}
-                onClick={() => {
-                  setDisplayName(defaultName)
-                  void saveProfile(defaultName, profileImage)
-                }}
-              >
-                Reset
-              </button>
-            )}
             <span className="text-foreground font-medium">{displayName}</span>
           </p>
         </div>
