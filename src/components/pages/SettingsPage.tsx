@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, Envelope, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
@@ -68,12 +67,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [passkeys, setPasskeys] = useState<Array<{ id: string; name?: string; createdAt: Date }>>([]) 
   const [passkeysLoading, setPasskeysLoading] = useState(false)
 
-  const hasPlaceholderEmail = !user.email || user.email.endsWith('@localhost')
   const [displayName, setDisplayName] = useState(user.name)
   const [profileImage, setProfileImage] = useState(user.image)
   const [profileSaving, setProfileSaving] = useState(false)
-  const [newEmail, setNewEmail] = useState('')
-  const [emailSaving, setEmailSaving] = useState(false)
 
   useEffect(() => {
     setDisplayName(user.name)
@@ -297,50 +293,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             )
           })}
         </div>
-
-        {/* ── Email recovery ── */}
-        {hasPlaceholderEmail && (
-          <div className="border-t border-border pt-4 space-y-1.5">
-            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Envelope size={14} />
-              Add email for account recovery
-            </label>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                disabled={emailSaving}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                disabled={emailSaving || !newEmail.trim()}
-                onClick={async () => {
-                  setEmailSaving(true)
-                  const res = await fetch('/api/auth/finalize-passkey', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: user.name, email: newEmail.trim().toLowerCase() }),
-                  })
-                  setEmailSaving(false)
-                  if (!res.ok) {
-                    const data = await res.json().catch(() => null) as { error?: string } | null
-                    toast.error(data?.error === 'email_taken' ? 'Email already in use' : 'Failed to save email')
-                    return
-                  }
-                  toast.success('Email saved')
-                  setNewEmail('')
-                  await onProfileUpdated?.()
-                }}
-              >
-                {emailSaving ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* ── Log out ── */}
         <div>

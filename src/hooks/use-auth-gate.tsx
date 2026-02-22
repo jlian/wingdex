@@ -7,7 +7,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 
 /** Safely extract error code from Better Auth error union */
@@ -104,7 +103,6 @@ function AuthGateModal({
   demoDataEnabled,
   onSetDemoDataEnabled,
 }: AuthGateModalProps) {
-  const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -129,43 +127,12 @@ function AuthGateModal({
     setErrorMessage(null)
     setIsLoading(true)
 
-    const trimmedEmail = email.trim().toLowerCase()
-
-    // If email provided, check if account exists — route to sign-in
-    if (trimmedEmail) {
-      try {
-        const checkRes = await fetch(`/api/auth/check-email?email=${encodeURIComponent(trimmedEmail)}`)
-        if (checkRes.ok) {
-          const { exists } = await checkRes.json() as { exists: boolean }
-          if (exists) {
-            // Account exists — sign in with passkey
-            const signInResult = await authClient.signIn.passkey({ autoFill: false })
-            if (signInResult.error) {
-              setIsLoading(false)
-              if (isCancellationLike(signInResult.error)) {
-                return
-              } else {
-                setErrorMessage(signInResult.error.message || 'Sign-in failed.')
-              }
-              return
-            }
-            setIsLoading(false)
-            onUpgraded()
-            return
-          }
-        }
-      } catch {
-        // If check fails, proceed with registration
-      }
-    }
-
     // Create account: the current session is already anonymous, so just
     // register a passkey on it and finalize.
     const birdName = generateBirdName()
-    const passkeyLabel = trimmedEmail || birdName
 
     const passkeyResult = await authClient.passkey.addPasskey({
-      name: passkeyLabel,
+      name: birdName,
       authenticatorAttachment: 'platform',
     })
     if (passkeyResult.error) {
@@ -185,19 +152,11 @@ function AuthGateModal({
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: birdName,
-        ...(trimmedEmail ? { email: trimmedEmail } : {}),
-      }),
+      body: JSON.stringify({ name: birdName }),
     })
     if (!finalizeRes.ok) {
-      const data = await finalizeRes.json().catch(() => null) as { error?: string } | null
       setIsLoading(false)
-      if (data?.error === 'email_taken') {
-        setErrorMessage('That email is already associated with an account. Try signing in instead.')
-      } else {
-        setErrorMessage('Account setup failed. Please try again.')
-      }
+      setErrorMessage('Account setup failed. Please try again.')
       return
     }
 
@@ -322,21 +281,8 @@ function AuthGateModal({
           </div>
           )}
 
-          {/* Email + passkey */}
+          {/* Passkey */}
           <div className="space-y-3">
-            {mode === 'signup' && (
-              <Input
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="Email (optional)"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                aria-label="Email address"
-              />
-            )}
             <Button
               className="w-full"
               onClick={() => void (mode === 'signup' ? handleSignUpWithPasskey() : handlePasskeySignIn())}

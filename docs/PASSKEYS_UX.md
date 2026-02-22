@@ -50,7 +50,6 @@ Reddit-style dual-mode dialog:
 |                                  |
 | -- or --                         |
 |                                  |
-| [  Email (optional)           ]  |
 | [Sign up with a Passkey]         |
 |                                  |
 | Already have a WingDex? Log in   |
@@ -62,11 +61,9 @@ Reddit-style dual-mode dialog:
 ```
 
 **Sign-up flow:**
-1. User optionally enters email
-2. Clicks "Sign up with a Passkey"
-3. If email provided and account exists, route to `signIn.passkey()`
-4. Otherwise, `addPasskey({ name: email || birdName })` via WebAuthn create
-5. `POST /api/auth/finalize-passkey` promotes anonymous user to real
+1. User clicks "Sign up with a Passkey"
+2. `addPasskey({ name: birdName })` via WebAuthn create (auto-generated bird name as keychain label)
+3. `POST /api/auth/finalize-passkey` promotes anonymous user to real
 
 **Log-in flow:**
 1. User clicks "Log in with a Passkey"
@@ -80,9 +77,9 @@ Reddit-style dual-mode dialog:
 ### Passkey keychain labels
 
 The `name` parameter passed to `addPasskey()` becomes the keychain label in
-iOS Settings > Passwords. If user provides email, the label is their email;
-otherwise, an auto-generated bird name (e.g. "Scarlet Tanager"). This is
-cosmetic and cannot be updated programmatically after creation.
+iOS Settings > Passwords. An auto-generated bird name is used (e.g. "Scarlet
+Tanager"). This is cosmetic and cannot be updated programmatically after
+creation.
 
 ## Settings: Account management
 
@@ -90,8 +87,6 @@ cosmetic and cannot be updated programmatically after creation.
 
 - Emoji avatar picker (8 options, stored as `user.image`)
 - Editable nickname (`user.name`)
-- Email section: shows current email, or "Add email for account recovery"
-  with input + save button if placeholder (`@localhost`)
 - Log out button
 
 ### Passkey card
@@ -113,40 +108,39 @@ accountLinking: {
 }
 ```
 
+Auto-merge applies **only to social-to-social** sign-ins. Passkey users never
+have a real email on their account (`anon_xxx@localhost`), so auto-link can
+never match them against a social provider's email. This makes the linking
+config safe without requiring email verification.
+
 | Scenario | Result |
 |----------|--------|
 | Social A (email X) then Social B (email X) | Auto-merge (both trusted) |
 | Social (email X) then add passkey | Passkey added to same user |
-| Passkey (anon email) then Social | Separate accounts (no match key) |
-| Passkey (verified email X) then Social (email X) | Auto-merge (email matches) |
-| Passkey (unverified email X) then Social (email X) | **UNSAFE** — see below |
+| Passkey then Social | Separate accounts (no email match possible) |
 
-### Pre-account hijacking vulnerability
+### Pre-account hijacking (mitigated)
 
 Better Auth's auto-link (`link-account.mjs` line 22) checks whether the
 *incoming* provider is trusted, but does **not** check whether the *existing*
-user's email is verified. This means:
+user's email is verified. If passkey users could set an arbitrary email,
+this would allow pre-account hijacking.
 
-1. Attacker creates passkey account claiming `victim@gmail.com` (unverified)
-2. Victim signs in with GitHub (same email, trusted provider)
-3. Auto-link fires: victim's GitHub linked to attacker's account
-4. Attacker's passkey now accesses victim's data
+**Mitigation:** Passkey users never have a real email. The `anon_xxx@localhost`
+placeholder is permanent — no email input exists in the signup flow or
+Settings. Since auto-link matches on email, it can never fire against a
+passkey account. Social-to-social auto-merge remains safe because both
+providers verify their emails.
 
-**Mitigation:** Never store unverified email on `user.email`. The
-`anon_xxx@localhost` placeholder stays until email is OTP-verified. This
-makes social-to-social auto-merge safe (both emails verified by their
-providers) and prevents passkey email squatting.
-
-See [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) for the verification spec.
+If email collection is added in the future, OTP verification must be
+implemented first. See [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md).
 
 ## Server endpoints
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| POST | `/api/auth/finalize-passkey` | Session | Promote anon to real user (name only, no email) |
+| POST | `/api/auth/finalize-passkey` | Session | Promote anon to real user (name only) |
 | GET | `/api/auth/providers` | None | List configured social providers |
-| POST | `/api/auth/send-email-otp` | Session | Send verification OTP (planned) |
-| POST | `/api/auth/verify-email-otp` | Session | Verify OTP and set email (planned) |
 
 ## Implementation status
 
@@ -157,8 +151,7 @@ See [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) for the verification spec.
 | Passkey signup with bird names | Done |
 | Social sign-in (GitHub) | Done |
 | Settings: account card, passkey management | Done |
-| Email collection at signup | Done (UI only) |
-| Email verification via OTP | Spec'd, not implemented |
-| Finalize-passkey: stop setting unverified email | Pending |
-| Remove check-email endpoint | Pending (account enumeration risk) |
+| Remove email input from signup modal | Pending |
+| Remove email section from Settings | Pending |
+| Remove check-email endpoint | Pending |
 | Apple Sign In | Credentials pending |

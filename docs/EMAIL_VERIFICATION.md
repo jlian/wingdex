@@ -1,23 +1,35 @@
 # Email Verification Spec
 
-> Status: Planned · Depends on: Resend account on `wingdex.app` domain
+> Status: **Deferred** — not currently planned. Retained as a reference if
+> email collection is added in the future.
+
+## Context
+
+As of the `passkey-ux` branch, passkey users do not provide an email at
+signup and have no way to add one in Settings. Their `user.email` stays as
+`anon_xxx@localhost` permanently. This eliminates the pre-account hijacking
+risk (see [PASSKEYS_UX.md](PASSKEYS_UX.md#pre-account-hijacking-mitigated))
+and means auto-merge only applies to social-to-social sign-ins.
+
+If email collection is reintroduced (e.g. for account recovery or
+cross-provider merge), **OTP verification must be implemented first** to
+prevent unverified emails from triggering auto-link. This spec describes
+how that would work.
 
 ## Problem
 
-Email is valuable for account recovery, passkey keychain labels, and
-cross-provider auto-merge. But storing unverified email on `user.email`
-enables **pre-account hijacking**: an attacker claims `victim@gmail.com`
-via passkey, then the real owner signs in with GitHub and Better Auth
-auto-links their account to the attacker's.
+Storing unverified email on `user.email` enables **pre-account hijacking**:
+an attacker claims `victim@gmail.com` via passkey, then the real owner signs
+in with GitHub and Better Auth auto-links their account to the attacker's.
 
-See [PASSKEYS_UX.md — Pre-account hijacking](PASSKEYS_UX.md#pre-account-hijacking-vulnerability) for details.
+See [PASSKEYS_UX.md](PASSKEYS_UX.md#pre-account-hijacking-mitigated) for details.
 
 ## Solution
 
-Reddit-style: collect email at signup, verify later. The app is fully usable
-without a verified email. `user.email` stays as `anon_xxx@localhost` until
-the user completes OTP verification. Email is stored only in the
-`verification` table (as a pending value) until verified.
+Reddit-style: collect email, verify via OTP before writing to `user.email`.
+The app is fully usable without a verified email. `user.email` stays as
+`anon_xxx@localhost` until the user completes OTP verification. Email is
+stored only in the `verification` table (as a pending value) until verified.
 
 ## User flows
 
