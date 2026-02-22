@@ -45,7 +45,7 @@ interface OutingsPageProps {
   onToggleSort?: (field: OutingSortField) => void
 }
 
-export type OutingSortField = 'date' | 'species'
+export type OutingSortField = 'date' | 'species' | 'name'
 export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
@@ -54,6 +54,7 @@ const LOAD_MORE_STEP = 40
 const outingSortOptions: { key: OutingSortField; label: string }[] = [
   { key: 'date', label: 'Date' },
   { key: 'species', label: 'Species' },
+  { key: 'name', label: 'A-Z' },
 ]
 
 export default function OutingsPage({
@@ -103,7 +104,7 @@ export default function OutingsPage({
     }
 
     setInternalSortField(field)
-    setInternalSortDir('desc')
+    setInternalSortDir(field === 'name' ? 'asc' : 'desc')
   }
 
   const sortedOutings = useMemo(() => {
@@ -114,6 +115,13 @@ export default function OutingsPage({
         countMap.set(o.id, data.getOutingObservations(o.id).filter(obs => obs.certainty === 'confirmed').length)
       }
       return [...outings].sort((a, b) => dir * ((countMap.get(a.id) ?? 0) - (countMap.get(b.id) ?? 0)))
+    }
+    if (effectiveSortField === 'name') {
+      return [...outings].sort((a, b) => {
+        const an = (a.locationName || '').toLowerCase()
+        const bn = (b.locationName || '').toLowerCase()
+        return dir * an.localeCompare(bn)
+      })
     }
     // date (default)
     return [...outings].sort((a, b) =>

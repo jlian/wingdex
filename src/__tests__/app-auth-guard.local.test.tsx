@@ -38,6 +38,7 @@ vi.mock('@/components/ui/tabs', () => ({
 
 vi.mock('@/lib/fun-names', () => ({
   generateBirdName: () => 'test-bird-name',
+  getEmojiAvatarColor: () => '',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({
@@ -82,6 +83,14 @@ vi.mock('@/components/pages/SettingsPage', () => ({
 
 vi.mock('@/components/flows/AddPhotosFlow', () => ({
   default: () => null,
+}))
+
+vi.mock('@/hooks/use-auth-gate', () => ({
+  useAuthGate: () => ({
+    requireAuth: (cb: () => void) => cb(),
+    openSignIn: vi.fn(),
+    authGateModal: null,
+  }),
 }))
 
 describe('App auth guard (local runtime)', () => {

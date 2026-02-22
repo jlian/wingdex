@@ -2,18 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, ShieldCheck, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, Envelope, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
+import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { toast } from 'sonner'
 import demoCsv from '../../../e2e/fixtures/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
+
+function errCode(err: { code?: string; message?: string }): string | undefined {
+  return 'code' in err ? err.code : undefined
+}
 
 interface SettingsPageProps {
   data: WingDexDataStore
@@ -22,10 +28,32 @@ interface SettingsPageProps {
     name: string
     image: string
     email: string
+    isAnonymous: boolean
   }
+  onSignIn?: () => void
+  onSignedOut?: () => void
+  onProfileUpdated?: () => Promise<unknown> | void
 }
 
-export default function SettingsPage({ data, user }: SettingsPageProps) {
+const birdEmojiOptions = ['🐦', '🦉', '🦜', '🐧', '🦆', '🦩', '🦅', '🐤'] as const
+
+
+
+function getDeviceLabel(): string {
+  const ua = navigator.userAgent
+  if (/iPad/.test(ua)) return 'iPad'
+  if (/iPhone/.test(ua)) return 'iPhone'
+  if (/Macintosh/.test(ua)) return 'Mac'
+  if (/Windows/.test(ua)) return 'Windows'
+  if (/Android/.test(ua)) return 'Android'
+  if (/Linux/.test(ua)) return 'Linux'
+  if (/CrOS/.test(ua)) return 'ChromeOS'
+  return 'Device'
+}
+
+
+
+export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProfileUpdated }: SettingsPageProps) {
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
@@ -35,6 +63,54 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
   )
   const { theme, setTheme } = useTheme()
+
+  // Passkey management
+  const [passkeys, setPasskeys] = useState<Array<{ id: string; name?: string; createdAt: Date }>>([]) 
+  const [passkeysLoading, setPasskeysLoading] = useState(false)
+
+  const hasPlaceholderEmail = !user.email || user.email.endsWith('@localhost')
+  const [displayName, setDisplayName] = useState(user.name)
+  const [profileImage, setProfileImage] = useState(user.image)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [emailSaving, setEmailSaving] = useState(false)
+
+  useEffect(() => {
+    setDisplayName(user.name)
+    setProfileImage(user.image)
+  }, [user.name, user.image])
+
+  /** Fire-and-forget save for name + image. */
+  const saveProfile = async (name: string, image: string) => {
+    setProfileSaving(true)
+    try {
+      const response = await fetchWithLocalAuthRetry('/api/auth/update-user', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), image }),
+      })
+      if (!response.ok) throw new Error(`Update failed (${response.status})`)
+      await onProfileUpdated?.()
+    } catch {
+      toast.error('Failed to update profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user.isAnonymous) return
+    setPasskeysLoading(true)
+    void authClient.passkey.listUserPasskeys().then((result) => {
+      if (result.data) {
+        setPasskeys(result.data.map((p) => ({
+          id: p.id, name: p.name, createdAt: new Date(p.createdAt),
+        })))
+      }
+      setPasskeysLoading(false)
+    }).catch(() => setPasskeysLoading(false))
+  }, [user.isAnonymous, user.id])
 
   useEffect(() => {
     setMounted(true)
@@ -147,14 +223,249 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     <>
     <Confetti active={showConfetti} />
     <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto animate-fade-in">
-      <div className="space-y-2">
+      <div>
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Settings
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Signed in as {user.name}
-        </p>
       </div>
+
+      {user.isAnonymous && (
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold text-foreground">Account</h3>
+        <p className="text-sm text-muted-foreground">
+          Create account or sign in to access your saved sightings and passkeys.
+        </p>
+        <Button variant="outline" className="w-full justify-start" onClick={onSignIn}>
+          <Key size={20} className="mr-2" />
+          Create account or sign in
+        </Button>
+      </Card>
+      )}
+
+      {!user.isAnonymous && (
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Account</h3>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            Welcome, <span className="text-foreground font-medium">{displayName}</span>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+              disabled={profileSaving}
+              onClick={() => {
+                const name = generateBirdName()
+                const emoji = emojiForBirdName(name)
+                const image = emojiAvatarDataUrl(emoji)
+                setDisplayName(name)
+                setProfileImage(image)
+                void saveProfile(name, image)
+              }}
+              aria-label="Generate new nickname"
+            >
+              <ArrowsClockwise size={14} weight="bold" />
+            </button>
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          {birdEmojiOptions.map((emoji) => {
+            const emojiImage = emojiAvatarDataUrl(emoji)
+            const isSelected = profileImage === emojiImage
+            return (
+              <button
+                key={emoji}
+                type="button"
+                className={`h-9 w-9 rounded-md text-lg flex items-center justify-center cursor-pointer transition-all ${
+                  isSelected
+                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                    : 'hover:scale-110'
+                }`}
+                disabled={profileSaving}
+                onClick={() => {
+                  if (isSelected) {
+                    setProfileImage('')
+                    void saveProfile(displayName, '')
+                  } else {
+                    setProfileImage(emojiImage)
+                    void saveProfile(displayName, emojiImage)
+                  }
+                }}
+                aria-label={isSelected ? 'Remove avatar' : `Use ${emoji} avatar`}
+              >
+                {emoji}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Email recovery ── */}
+        {hasPlaceholderEmail && (
+          <div className="border-t border-border pt-4 space-y-1.5">
+            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <Envelope size={14} />
+              Add email for account recovery
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                disabled={emailSaving}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                disabled={emailSaving || !newEmail.trim()}
+                onClick={async () => {
+                  setEmailSaving(true)
+                  const res = await fetch('/api/auth/finalize-passkey', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: user.name, email: newEmail.trim().toLowerCase() }),
+                  })
+                  setEmailSaving(false)
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => null) as { error?: string } | null
+                    toast.error(data?.error === 'email_taken' ? 'Email already in use' : 'Failed to save email')
+                    return
+                  }
+                  toast.success('Email saved')
+                  setNewEmail('')
+                  await onProfileUpdated?.()
+                }}
+              >
+                {emailSaving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Log out ── */}
+        <div>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={async () => {
+              try {
+                const result = await authClient.signOut()
+                if (result.error) {
+                  console.warn('Sign-out error (proceeding anyway):', result.error.message)
+                }
+              } catch {
+                // Backend unreachable (dev without Wrangler) — proceed
+              }
+              toast.success('Logged out')
+              onSignedOut?.()
+            }}
+          >
+            <SignOut size={20} className="mr-2" />
+            Log out
+          </Button>
+        </div>
+      </Card>
+      )}
+
+      {/* Passkeys */}
+      {!user.isAnonymous && (
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Passkeys</h3>
+          <p className="text-sm text-muted-foreground">
+            Passkeys let you sign in securely with biometrics on your devices.
+          </p>
+        </div>
+        {passkeysLoading ? (
+          <p className="text-sm text-muted-foreground">Loading passkeys…</p>
+        ) : passkeys.length > 0 ? (
+          <div className="space-y-2">
+            {passkeys.map((pk) => (
+              <div key={pk.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Key size={16} className="shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{pk.name || 'Passkey'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Added {pk.createdAt.toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center shrink-0 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      const newName = window.prompt('Rename passkey', pk.name || 'Passkey')
+                      if (!newName || newName.trim() === pk.name) return
+                      const result = await authClient.passkey.updatePasskey({ id: pk.id, name: newName.trim() })
+                      if (result.error) {
+                        toast.error(result.error.message || 'Failed to rename passkey')
+                        return
+                      }
+                      setPasskeys((prev) => prev.map((p) => p.id === pk.id ? { ...p, name: newName.trim() } : p))
+                      toast.success('Passkey renamed')
+                    }}
+                  >
+                    <PencilSimple size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:pointer-events-none"
+                    disabled={passkeys.length <= 1}
+                    onClick={async () => {
+                      const result = await authClient.passkey.deletePasskey({ id: pk.id })
+                      if (result.error) {
+                        toast.error(result.error.message || 'Failed to remove passkey')
+                        return
+                      }
+                      setPasskeys((prev) => prev.filter((p) => p.id !== pk.id))
+                      toast.success('Passkey removed')
+                    }}
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={async () => {
+            const deviceLabel = getDeviceLabel()
+            const ts = new Date().toLocaleString()
+            const passkeyName = `${deviceLabel} (${ts})`
+            const result = await authClient.passkey.addPasskey({
+              name: passkeyName,
+              authenticatorAttachment: 'platform',
+            })
+            if (result.error) {
+              if (errCode(result.error) === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
+                toast.error('This device already has a passkey registered.')
+              } else if (errCode(result.error) !== 'ERROR_CEREMONY_ABORTED') {
+                toast.error(result.error.message || 'Failed to add passkey')
+              }
+              return
+            }
+            const listResult = await authClient.passkey.listUserPasskeys()
+            if (listResult.data) {
+              setPasskeys(listResult.data.map((p) => ({
+                id: p.id, name: p.name, createdAt: new Date(p.createdAt),
+              })))
+            }
+            toast.success('Passkey added')
+          }}
+        >
+          <Key size={20} className="mr-2" />
+          Add a passkey
+        </Button>
+      </Card>
+      )}
 
       {/* Appearance */}
       <Card className="p-4 space-y-4">
@@ -183,6 +494,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
         </div>
       </Card>
 
+      {!user.isAnonymous && (
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Import & Export</h3>
@@ -331,66 +643,21 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
           )}
         </div>
       </Card>
+      )}
 
-      <Card className="p-4 space-y-3">
-        <h3 className="font-semibold text-foreground">Account</h3>
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={async () => {
-              const result = await authClient.passkey.addPasskey({
-                name: 'WingDex passkey',
-                authenticatorAttachment: 'platform',
-              })
-              if (result.error) {
-                toast.error(result.error.message || 'Failed to add passkey')
-                return
-              }
-              toast.success('Passkey added')
-            }}
-          >
-            <Key size={20} className="mr-2" />
-            Add another passkey
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={async () => {
-              const signOutResult = await authClient.signOut()
-              if (signOutResult.error) {
-                toast.error(signOutResult.error.message || 'Failed to sign out')
-                return
-              }
-
-              if (isLocalRuntime()) {
-                const localSignInResult = await authClient.signIn.anonymous()
-                if (localSignInResult.error) {
-                  toast.error(localSignInResult.error.message || 'Signed out, but failed to restore local session')
-                } else {
-                  await data.refresh()
-                }
-              }
-
-              toast.success('Signed out')
-            }}
-          >
-            <SignOut size={20} className="mr-2" />
-            Sign out
-          </Button>
-        </div>
-      </Card>
+      {/* Old Account card removed — now rendered above Appearance */}
 
       {/* Data Storage & Privacy */}
-      <Card className="p-4 space-y-3">
-        <h3 className="font-semibold text-foreground flex items-center gap-2">
-          <ShieldCheck size={18} className="text-primary" />
-          Data Storage &amp; Privacy
-        </h3>
-        <div className="text-sm text-muted-foreground space-y-2">
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Data Storage &amp; Privacy</h3>
+          <p className="text-sm text-muted-foreground">
+            How your data is handled and stored
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground space-y-3 leading-relaxed">
           <p>
-            <strong>Your photos are never stored.</strong> During identification,
+            <strong>Your photos are never stored.</strong>{' '}During identification,
             compressed images are sent to WingDex&apos;s server-side AI endpoint for processing, then
             immediately discarded.
           </p>
@@ -403,15 +670,32 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
             coordinates into place names. Species images are loaded on-demand
             from Wikimedia Commons.
           </p>
+          <p>
+            Learn more in our{' '}
+            <a href="#privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Privacy Policy
+            </a>{' '}
+            and{' '}
+            <a href="#terms" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Terms of Use
+            </a>
+            . Questions or feedback can be shared on{' '}
+            <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              GitHub
+            </a>
+            .
+          </p>
         </div>
       </Card>
 
       {/* Data Management */}
       <Card className="p-4 space-y-4">
-        <h3 className="font-semibold text-foreground flex items-center gap-2">
-          <Database size={18} />
-          Data Management
-        </h3>
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Data Management</h3>
+          <p className="text-sm text-muted-foreground">
+            Load sample data or clear your account
+          </p>
+        </div>
         <div className="space-y-3">
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -510,6 +794,72 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {!user.isAnonymous && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                >
+                  <Trash size={20} className="mr-2" weight="fill" />
+                  Delete Account & All Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-destructive">⚠️ Delete your entire account?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3">
+                      <p>This is <strong className="text-foreground">permanent and irreversible</strong>. The following will be deleted immediately:</p>
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-left">
+                        <li>All your outings and observations</li>
+                        <li>Your entire WingDex species list</li>
+                        <li>All uploaded photos</li>
+                        <li>Your passkeys and login credentials</li>
+                        <li>Your account and profile</li>
+                      </ul>
+                      <p className="font-medium text-destructive">There is no way to recover your data after this.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">I understand, continue</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive">Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete your account and all associated data. You will be signed out immediately. This cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Go back</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            try {
+                              data.clearAllData()
+                              await authClient.deleteUser()
+                              toast.success('Account deleted')
+                              onSignedOut?.()
+                            } catch {
+                              toast.error('Failed to delete account')
+                            }
+                          }}
+                        >
+                          Delete my account forever
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </Card>
 
