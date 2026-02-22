@@ -13,13 +13,12 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     dialect: new D1Dialect({ database: env.DB }),
   })
 
+  // Use the request URL's origin (reliable on Cloudflare Pages) or an explicit
+  // env override.  Do NOT use the Origin header — it reflects the *caller's*
+  // origin and breaks cross-origin POST callbacks (e.g. Apple Sign In form_post
+  // sends Origin: https://appleid.apple.com which would misroute redirects).
   const requestOrigin = options.request ? new URL(options.request.url).origin : null
-  const rawHeaderOrigin = options.request?.headers.get('origin') || null
-  const headerOrigin =
-    rawHeaderOrigin && rawHeaderOrigin !== 'null' && rawHeaderOrigin.trim() !== ''
-      ? rawHeaderOrigin
-      : null
-  const baseURL = headerOrigin || env.BETTER_AUTH_URL || requestOrigin
+  const baseURL = env.BETTER_AUTH_URL || requestOrigin
   if (!baseURL) throw new Error('Unable to determine a valid base URL for authentication')
   const useSecureCookies = baseURL.startsWith('https://')
 
