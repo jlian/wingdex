@@ -1,21 +1,18 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { loadApp } from './helpers';
 
 test.describe('App smoke tests', () => {
   test('loads without crashing and shows header', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for the app to load past the splash screen
-    const header = page.locator('header');
-    await expect(header).toBeVisible({ timeout: 10_000 });
+    await loadApp(page, { promote: false });
 
     // Header should have the WingDex tab in nav
+    const header = page.locator('header');
     await expect(header.getByText('WingDex')).toBeVisible();
   });
 
   test('renders top nav tabs', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page, { promote: false });
 
     // On desktop (default viewport), nav tabs are in the header
     const header = page.locator('header');
@@ -24,8 +21,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('can navigate between tabs', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Click Outings tab
     await page.getByRole('tab', { name: 'Outings' }).first().click();
@@ -56,8 +52,7 @@ test.describe('App smoke tests', () => {
       }
     });
 
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Navigate to Settings via avatar button
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -79,8 +74,7 @@ test.describe('App smoke tests', () => {
 
   test('add photos button opens flow on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // The home page Upload & Identify button should be visible
     const addBtn = page.getByRole('button', { name: 'Upload & Identify' });
@@ -92,8 +86,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('add photos dialog can be closed', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Open dialog via Upload & Identify button
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
@@ -112,8 +105,7 @@ test.describe('App smoke tests', () => {
       }
     });
 
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page, { promote: false });
 
     // Filter out known non-critical errors (network/favicon/transient)
     const criticalErrors = errors.filter(
@@ -126,8 +118,7 @@ test.describe('App smoke tests', () => {
   test('no elements overflow the viewport on mobile', async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page, { promote: false });
 
     // Check no horizontal scrollbar
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
@@ -136,8 +127,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('upload flow processes photos and reaches review outing step', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Open the wizard
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
@@ -165,8 +155,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('upload flow handles multiple photos', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
@@ -186,8 +175,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('closing upload wizard mid-flow shows confirmation dialog', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Open add photos dialog
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
@@ -217,8 +205,7 @@ test.describe('App smoke tests', () => {
   });
 
   test('confirmation dialog discards wizard when clicking Discard', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await loadApp(page);
 
     // Open and advance the wizard
     await page.getByRole('button', { name: 'Upload & Identify' }).click();
