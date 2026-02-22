@@ -7,7 +7,9 @@ import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 import { authClient } from '@/lib/auth-client'
+import { getEmojiAvatarColor } from '@/lib/fun-names'
 import { useAuthGate } from '@/hooks/use-auth-gate'
+import { loadDemoData } from '@/lib/demo-data'
 import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
@@ -16,6 +18,8 @@ import HomePage from '@/components/pages/HomePage'
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
 const SettingsPage = lazy(() => import('@/components/pages/SettingsPage'))
+const TermsPage = lazy(() => import('@/components/pages/TermsPage'))
+const PrivacyPage = lazy(() => import('@/components/pages/PrivacyPage'))
 const loadAddPhotosFlow = () => import('@/components/flows/AddPhotosFlow')
 const AddPhotosFlow = lazy(loadAddPhotosFlow)
 
@@ -49,7 +53,7 @@ function parseHash(): { tab: string; subId?: string } {
   if (!hash) return { tab: 'home' }
   const [segment, ...rest] = hash.split('/')
   const subId = rest.length > 0 ? decodeURIComponent(rest.join('/')) : undefined
-  if (['home', 'outings', 'wingdex', 'settings'].includes(segment)) {
+  if (['home', 'outings', 'wingdex', 'settings', 'terms', 'privacy'].includes(segment)) {
     return { tab: segment, subId }
   }
   return { tab: 'home' }
@@ -107,11 +111,14 @@ function App() {
   const isSessionPending = sessionState.isPending
   const refetchSession = sessionState.refetch
   const anonBootstrapStarted = useRef(false)
+  const hadSessionRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
 
   useEffect(() => {
     if (session && session.user) {
+      hadSessionRef.current = true
+      anonBootstrapStarted.current = false
       const isAnon = Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
 
       setAnonBootstrapFailed(false)
@@ -125,9 +132,12 @@ function App() {
       return
     }
 
-    // No session — reset the bootstrap guard so we can re-create an
-    // anonymous session (e.g. after sign-out destroys the old one).
-    anonBootstrapStarted.current = false
+    // Only reset bootstrap guard when transitioning from a real session
+    // to no session (e.g. after sign-out).
+    if (hadSessionRef.current) {
+      hadSessionRef.current = false
+      anonBootstrapStarted.current = false
+    }
 
     if (isDevRuntime()) {
       if (anonBootstrapFailed) {
@@ -135,7 +145,7 @@ function App() {
         return
       }
 
-      if (!isSessionPending) {
+      if (!isSessionPending && !anonBootstrapStarted.current) {
         anonBootstrapStarted.current = true
         void authClient.signIn.anonymous().then((result) => {
           if (result.error) {
@@ -154,7 +164,7 @@ function App() {
     }
 
     // Hosted: auto-bootstrap anonymous session (demo-first)
-    if (!isSessionPending) {
+    if (!isSessionPending && !anonBootstrapStarted.current) {
       anonBootstrapStarted.current = true
       void authClient.signIn.anonymous({
         fetchOptions: {
@@ -186,13 +196,26 @@ function BootShell() {
   return <div className="min-h-screen bg-background" />
 }
 
-function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => void }) {
+function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
+  const data = useWingDexData(user.id)
 
   const { requireAuth, openSignIn, AuthGateModal } = useAuthGate({
     isAnonymous: user.isAnonymous,
-    onUpgraded: () => void refetchSession(),
+    onUpgraded: async () => {
+      await refetchSession()
+    },
+    demoDataEnabled: user.isAnonymous && (data.dex.length > 0 || data.outings.length > 0),
+    onSetDemoDataEnabled: async (enabled) => {
+      if (!user.isAnonymous) return
+      if (enabled) {
+        await loadDemoData(data)
+        return
+      }
+      data.clearAllData()
+      await data.refresh()
+    },
   })
   const [wingDexSearchQuery, setWingDexSearchQuery] = useState('')
   const [wingDexSortField, setWingDexSortField] = useState<WingDexSortField>('date')
@@ -200,7 +223,6 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   const [outingsSearchQuery, setOutingsSearchQuery] = useState('')
   const [outingsSortField, setOutingsSortField] = useState<OutingSortField>('date')
   const [outingsSortDir, setOutingsSortDir] = useState<OutingSortDir>('desc')
-  const data = useWingDexData(user.id)
   const { resolvedTheme } = useTheme()
 
   const prefetchAddPhotosFlow = useCallback(() => {
@@ -227,7 +249,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
     }
 
     setOutingsSortField(field)
-    setOutingsSortDir('desc')
+    setOutingsSortDir(field === 'name' ? 'asc' : 'desc')
   }, [outingsSortField])
 
   // Sync <meta name="theme-color"> with current theme (#17)
@@ -237,6 +259,12 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
       meta.setAttribute('content', resolvedTheme === 'dark' ? '#262e29' : '#e5ddd0')
     }
   }, [resolvedTheme])
+
+  useEffect(() => {
+    if (user.isAnonymous && tab === 'settings') {
+      navigate('home')
+    }
+  }, [user.isAnonymous, tab, navigate])
 
   useEffect(() => {
     let idleCallbackId: number | null = null
@@ -268,10 +296,10 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   ]
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Toaster position="bottom-center" />
 
-      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual">
+      <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="flex-1 flex flex-col">
         {/* ── Top header — sticky at top, content scrolls beneath ── */}
         <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -307,31 +335,32 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
 
               {/* Right side: sign-in (anonymous) or avatar (authenticated) */}
               <div className="flex items-center gap-3">
-                {user.isAnonymous && !isDevRuntime() && (
+                {user.isAnonymous ? (
                   <button
                     onClick={openSignIn}
-                    className="text-sm font-medium text-primary cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
+                    className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-semibold text-primary cursor-pointer hover:bg-primary/10 active:scale-[0.97] transition-all"
                   >
-                    Sign in
+                    Log in
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate('settings')}
+                    className="cursor-pointer active:scale-[0.97] transition-all"
+                    aria-label="Settings"
+                  >
+                    <Avatar className={`h-8 w-8 ${getEmojiAvatarColor(user.image) || 'bg-muted'} hover:opacity-80 transition-opacity`}>
+                      <AvatarImage src={user.image} alt={user.name} className="scale-[0.65] object-contain" />
+                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">{user.name[0].toUpperCase()}</AvatarFallback>
+                    </Avatar>
                   </button>
                 )}
-                <button
-                  onClick={() => navigate('settings')}
-                  className="cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
-                  aria-label="Settings"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.image} alt={user.name} />
-                    <AvatarFallback>{user.name[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </button>
               </div>
             </div>
           </div>
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="w-full max-w-3xl mx-auto pb-8">
+        <main className="w-full max-w-3xl mx-auto pb-8 flex-1">
           {tab === 'home' && (
             <TabsContent value="home" className="mt-0">
               <HomePage
@@ -384,7 +413,29 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           {tab === 'settings' && (
             <TabsContent value="settings" className="mt-0">
               <Suspense fallback={null}>
-                <SettingsPage data={data} user={user} />
+                <SettingsPage
+                  data={data}
+                  user={user}
+                  onSignIn={openSignIn}
+                  onSignedOut={() => navigate('home')}
+                  onProfileUpdated={refetchSession}
+                />
+              </Suspense>
+            </TabsContent>
+          )}
+
+          {tab === 'terms' && (
+            <TabsContent value="terms" className="mt-0">
+              <Suspense fallback={null}>
+                <TermsPage />
+              </Suspense>
+            </TabsContent>
+          )}
+
+          {tab === 'privacy' && (
+            <TabsContent value="privacy" className="mt-0">
+              <Suspense fallback={null}>
+                <PrivacyPage />
               </Suspense>
             </TabsContent>
           )}
@@ -404,7 +455,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
+      <div className="mt-auto flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground/50">
         <span>
           WingDex {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v1.1.0'} by{' '}
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
@@ -415,8 +466,14 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors" aria-label="GitHub">
           <GithubLogo size={14} />
         </a>
+        <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">
+          Privacy
+        </button>
+        <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">
+          Terms
+        </button>
         <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-          Report Issues
+          Issues?
         </a>
       </div>
 
