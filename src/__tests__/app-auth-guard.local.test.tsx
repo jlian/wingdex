@@ -38,6 +38,7 @@ vi.mock('@/components/ui/tabs', () => ({
 
 vi.mock('@/lib/fun-names', () => ({
   generateBirdName: () => 'test-bird-name',
+  getEmojiAvatarColor: () => '',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({

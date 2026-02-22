@@ -38,6 +38,7 @@ vi.mock('@/components/ui/tabs', () => ({
 
 vi.mock('@/lib/fun-names', () => ({
   generateBirdName: () => 'test-bird-name',
+  getEmojiAvatarColor: () => '',
 }))
 
 vi.mock('@/components/ui/avatar', () => ({
@@ -160,7 +161,7 @@ describe('App auth guard (hosted runtime)', () => {
 
     // Anonymous users see the app (demo-first UX)
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    // Sign-in link should be visible in the header
-    expect(screen.getByText('Sign in')).toBeInTheDocument()
+    // Log-in link should be visible in the header
+    expect(screen.getByText('Log in')).toBeInTheDocument()
   })
 })
