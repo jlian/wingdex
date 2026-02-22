@@ -4,7 +4,7 @@
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
-> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall); CI/CD overhaul — split monolithic `verify:ci` into discrete lint/typecheck/unit/build/migrate/e2e steps, merged `deploy.yml` into `ci.yml`; `dev` branch strategy with separate D1 databases for prod vs preview; GitHub OAuth app registration (prod + dev environments); `computeFileHash` fix for small files (<128KB); skeleton loading state removal for cleaner transitions; Apple Sign In provider registration + dynamic social buttons via `/api/auth/providers`; account linking policy change (removed manual Link button, kept auto-merge for trusted social providers); CI deploy deduplication for `dev`/`main` branches.
+> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall); CI/CD overhaul — split monolithic `verify:ci` into discrete lint/typecheck/unit/build/migrate/e2e steps, merged `deploy.yml` into `ci.yml`; `dev` branch strategy with separate D1 databases for prod vs preview; GitHub OAuth app registration (prod + dev environments); `computeFileHash` fix for small files (<128KB); skeleton loading state removal for cleaner transitions; Apple Sign In provider registration + dynamic social buttons via `/api/auth/providers`; account linking policy change (removed manual Link button, kept auto-merge for trusted social providers); CI deploy deduplication for `dev`/`main` branches; **passkey-ux branch**: demo-first auth gate modal UX rework — replaced `LoginPage.tsx`/`PasskeyAuthDialog.tsx` with `use-auth-gate.tsx` hook + inline modal in `App.tsx`; emoji avatar helpers + bird-to-emoji mapping (`emoji-avatar.ts`); A-Z sort option for outings; in-app Privacy Policy and Terms of Use pages (`PrivacyPage.tsx`, `TermsPage.tsx`, `public/privacy.html`, `public/terms.html`); demo data loader for anonymous users (69 species from bundled `src/assets/ebird-import.csv`); email removal from passkey auth flow (finalize-passkey name-only); Origin header validation in `auth.ts` baseURL; demo CSV decoupled from e2e fixtures → `src/assets/`; `promoteAnonymousUser` e2e helper; `disable-git-signing-local` VS Code task removal; account deletion enabled in Better Auth config; Settings account card with emoji avatars, nickname editing, passkey rename/delete.
 
 ---
 
@@ -677,7 +677,7 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 | Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
 | Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
-| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with passkey-first UX + GitHub OAuth. Anonymous bootstrap used for signup (gated by middleware header). GitHub OAuth fully configured (prod + dev apps, account linking with `allowDifferentEmails`). Apple/Google pending (1.12). |
+| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with demo-first auth gate UX + GitHub OAuth. Anonymous bootstrap used for signup (gated by middleware header). LoginPage/PasskeyAuthDialog replaced by auth gate modal (`use-auth-gate.tsx`). Email removed from passkey flow. Account management (emoji avatars, passkey rename/delete, deletion). Demo data for anon users. GitHub OAuth fully configured (prod + dev apps, account linking with `allowDifferentEmails`). Apple/Google pending (1.12). |
 | Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` implemented. `/api/suggest-location` removed (dead). `textLLM` deleted. |
 | Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` (auth) + `/api/species/wiki-title` (public). Client `taxonomy.ts` fully removed — 876KB saved. |
 | Data Layer: Refactoring `useWingDexData` | ✅ | API-first refactor complete with local fallback. Dead functions (`loadSeedData`, `importFromEBird`) removed. |
@@ -741,9 +741,9 @@ binding = "AI"
 
 #### Phase 1 — Auth (Better Auth) 🟡
 
-> **Status snapshot (2026-02-22)**: ⚠️ Core auth migration implemented with passkey-first UX rework + GitHub OAuth + Apple Sign In (code ready, credentials pending). Login page uses unified "Continue with passkey" button + dialog (`PasskeyAuthDialog.tsx`). Social sign-in buttons ("Sign in with GitHub", "Sign in with Apple") dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Signup: anonymous bootstrap → addPasskey → finalize (gated by `x-wingdex-passkey-signup` header in middleware). "Link GitHub account" button removed from SettingsPage — account linking re-enabled for social-to-social auto-merge only (`trustedProviders: ['github', 'apple']`, `allowDifferentEmails: true`). Skeleton loading states removed for cleaner transitions. App.tsx auth transition jank fixed (eliminated 3-step state waterfall). GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks). Apple provider registered in `auth.ts` (gated on env vars), credentials not yet set. Google ⏳.
+> **Status snapshot (2026-02-22)**: ⚠️ Core auth migration implemented with demo-first UX rework + GitHub OAuth + Apple Sign In (code ready, credentials pending). **UX overhaul (passkey-ux branch)**: `LoginPage.tsx` and `PasskeyAuthDialog.tsx` deleted — replaced by demo-first experience where anonymous users see the full app with demo data (69 species). Auth-gated features (add photos, outings, import/export) trigger a dual-mode Sign up / Log in modal via `use-auth-gate.tsx` hook. Passkey signup: anonymous bootstrap → addPasskey → finalize-passkey (name-only, no email). Settings account card: emoji avatar (bird-to-emoji mapping), nickname editing, passkey rename/delete, account deletion. Origin header validated in `auth.ts` before use as `baseURL`. Demo CSV moved from `e2e/fixtures/` to `src/assets/` (decouples prod from test fixtures). In-app Privacy Policy and Terms of Use pages added. Email collection entirely removed from passkey auth flow. Social sign-in buttons ("Sign in with GitHub", "Sign in with Apple") dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Account linking via `trustedProviders` auto-merge only. GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks). Apple provider registered in `auth.ts` (gated on env vars), credentials not yet set. Google ⏳.
 > **Confidence**: High.
-> **Validation**: Auth guard unit tests ✅ (4/4), full test suite ✅ (486/486), `tsc --noEmit` ✅, authenticated API smoke flow ✅, Playwright e2e smoke ✅, preview deploy auth OK check (`/api/auth/ok` → `{"ok":true}`) ✅.
+> **Validation**: Auth guard unit tests ✅, auth gate unit tests ✅ (8 tests), fun-names tests ✅ (5 tests), full test suite ✅ (505/505), `tsc --noEmit` ✅, `eslint` ✅ (0 errors, 0 warnings), Playwright e2e smoke ✅, preview deploy auth OK check (`/api/auth/ok` → `{"ok":true}`) ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
@@ -756,12 +756,22 @@ binding = "AI"
 | 1.7 | Update `UserInfo` interface in [App.tsx](src/App.tsx) | `id: number` → `id: string`, drop `isOwner`, `login` → `name` | ✅ |
 | 1.8 | Update [App.tsx](src/App.tsx) auth flow | Replace `window.spark.user()` with `authClient.useSession()` or `fetch('/api/auth/get-session')`. Keep `getStableDevUserId()` fallback for local dev (change return type to `string`). | ✅ |
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
-| 1.10 | Create login page component | ⚠️ Implemented as unified passkey-first flow: single "Continue with passkey" button → `PasskeyAuthDialog` (signup with random bird-name + sign-in toggle). Social sign-in buttons dynamically rendered based on `GET /api/auth/providers` response (GitHub and Apple supported). Added `fun-names.ts` (random kebab-case bird names). Fixed App.tsx auth jank (removed `showApp` timer + cascading state waterfall, added `authCompleted`/`initialSessionResolved` refs to gate transition). Skeleton loading states removed for cleaner transitions. | ⚠️ |
-| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. Add "Register passkey" button using `authClient.passkey.addPasskey()`. "Link GitHub account" button removed — account linking handled automatically via `trustedProviders` on social sign-in. Add "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
-| 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ⚠️ (code ready: provider in `auth.ts`, button in `LoginPage.tsx`, dynamic via `/api/auth/providers`; credentials pending Apple Developer Program enrollment). Google ⏳. | ⚠️ |
+| 1.10 | Create login page component | ⚠️ Originally implemented as `LoginPage.tsx` + `PasskeyAuthDialog.tsx` (unified passkey-first flow). **Superseded by passkey-ux branch**: both files deleted — replaced by demo-first auth gate modal (`use-auth-gate.tsx` hook) embedded in `App.tsx`. Anonymous users see the full app with demo data; auth-gated features trigger a dual Sign up / Log in modal with cancellation handling. Social sign-in buttons dynamically rendered based on `GET /api/auth/providers` response. `fun-names.ts` retained (random bird names for signup). | ⚠️ |
+| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. **passkey-ux**: Account card with emoji avatar (bird-to-emoji mapping via `getEmojiAvatarColor`), nickname editing, passkey rename/delete. Account deletion button. Demo data toggle (load/clear) for anonymous users. Email recovery section removed (email stripped from passkey flow). "Link GitHub account" button removed — account linking handled automatically via `trustedProviders`. "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
+| 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ⚠️ (code ready: provider in `auth.ts`, dynamic via `/api/auth/providers`; credentials pending Apple Developer Program enrollment). Google ⏳. | ⚠️ |
 | 1.13 | Dynamic provider buttons | Created `GET /api/auth/providers` endpoint returning configured social providers (checks env vars). LoginPage fetches on mount, conditionally renders GitHub/Apple buttons. 5-minute `Cache-Control`. | ✅ |
 | 1.14 | Account linking policy | Removed manual "Link GitHub account" button from Settings. Re-enabled `accountLinking` with `trustedProviders: ['github', 'apple']` and `allowDifferentEmails: true` for automatic social-to-social account merging. Safe because passkey users use generated emails (`anon_xxx@localhost`), preventing hijacking. | ✅ |
 | 1.15 | Apple client secret rotation | Created `.github/workflows/rotate-apple-secret.yml` — scheduled workflow (cron every 5 months) generates a new Apple client secret JWT from `.p8` private key stored in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
+| 1.16 | Demo-first auth gate modal | Created `src/hooks/use-auth-gate.tsx` — hook + modal component replacing `LoginPage.tsx`/`PasskeyAuthDialog.tsx`. Anonymous users see full app; auth-gated features trigger dual Sign up / Log in modal. Supports cancellation (returns to previous state). 8 unit tests in `use-auth-gate.test.tsx`. | ✅ |
+| 1.17 | Emoji avatar helpers | Created emoji avatar helpers with bird-to-emoji mapping. `getEmojiAvatarColor()` provides consistent avatar colors for header and Settings account card. | ✅ |
+| 1.18 | Demo data loader | Created `src/lib/demo-data.ts` — loads 69 species from bundled `src/assets/ebird-import.csv` for anonymous users. Demo data toggle in Settings (load/clear). CSV moved from `e2e/fixtures/` to `src/assets/` to decouple prod from test fixtures. | ✅ |
+| 1.19 | Account deletion | Enabled `deleteUser` in Better Auth config. Account deletion button in Settings account card. | ✅ |
+| 1.20 | In-app legal pages | Created `src/components/pages/PrivacyPage.tsx`, `TermsPage.tsx`, `public/privacy.html`, `public/terms.html`. Footer links in app. | ✅ |
+| 1.21 | A-Z sort for outings | Added alphabetical sort option to `OutingsPage.tsx`. | ✅ |
+| 1.22 | Remove email from passkey flow | Removed email input from auth gate modal, email handling from `finalize-passkey.ts` (name-only), email recovery section from SettingsPage, deleted `check-email.ts` endpoint. No email collected for passkey-only users. | ✅ |
+| 1.23 | Auth baseURL validation | Added Origin header validation in `functions/lib/auth.ts` — `rawHeaderOrigin` filtered for null/empty/`"null"` string, falls back to `env.BETTER_AUTH_URL` or `requestOrigin`. Throws if no valid URL found. | ✅ |
+| 1.24 | E2e auth helpers | Added `promoteAnonymousUser()` helper in `e2e/helpers.ts` for e2e tests that need auth-gated features. Updated smoke, dark-mode, and CSV integration specs. | ✅ |
+| 1.25 | Auth UX specs | Created `docs/PASSKEYS_UX.md` (auth gate modal spec, no-email approach). Created `docs/EMAIL_VERIFICATION.md` (deferred — future spec for optional email). | ✅ |
 
 **userId type cascade** — changing `id` from `number` to `string` touches:
 - [src/App.tsx](src/App.tsx): `UserInfo.id`, `getFallbackUser()`, `useWingDexData(user.id)`, `AddPhotosFlow userId=`
@@ -903,18 +913,18 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 #### Phase 5 — Testing
 
-> **Status snapshot (2026-02-22)**: ✅ Complete. All 486 unit tests pass across 27 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings).
+> **Status snapshot (2026-02-22)**: ✅ Complete. All 505 unit tests pass across 29 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings). **passkey-ux additions**: `use-auth-gate.test.tsx` (8 tests), `fun-names.test.ts` (5 tests), updated `app-auth-guard.hosted.test.tsx` and `app-auth-guard.local.test.tsx` mocks for auth gate + emoji avatar exports.
 > **Confidence**: High.
-> **Validation**: `npm run test:unit` — 486 tests, 27 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
+> **Validation**: `npm run test:unit` — 505 tests, 29 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
 
-**Note**: Test count updated to 486 as of 2026-02-22 after Apple provider and dynamic provider button tests.
+**Note**: Test count updated to 505 as of 2026-02-22 after passkey-ux branch (auth gate, fun-names, emoji avatar tests).
 
 | Step | What | Details | Status |
 |---|---|---|---|
 | 5.1 | use-kv.spark.test.tsx | Renamed to `use-kv.hosted.test.tsx`. Updated URL to `https://wingdex.app/`, describe block to "useKV (hosted runtime)", key names to `u1_hosted_*`. | ✅ |
 | 5.2 | use-kv.local.test.tsx | Updated comment from "Spark KV" to "network calls". Tests already use correct localStorage-only behavior. | ✅ |
-| 5.3 | app-auth-guard.hosted.test.tsx | Updated URL from `wingdex--jlian.github.app` to `wingdex.app`. Tests already mock `fetch('/api/auth/get-session')` — no Spark dependencies. | ✅ |
-| 5.4 | app-auth-guard.local.test.tsx | Already uses string user IDs and better-auth mocks. No changes needed. | ✅ |
+| 5.3 | app-auth-guard.hosted.test.tsx | Updated URL from `wingdex--jlian.github.app` to `wingdex.app`. Tests mock `fetch('/api/auth/get-session')`. **passkey-ux**: Updated mocks for auth gate modal (removed LoginPage rendering assertions, added `getEmojiAvatarColor` mock export). | ✅ |
+| 5.4 | app-auth-guard.local.test.tsx | Already uses string user IDs and better-auth mocks. **passkey-ux**: Added `getEmojiAvatarColor` mock export. | ✅ |
 | 5.5 | ai-inference.test.ts | Already tests `fetch('/api/identify-bird')` with FormData. No Spark dependencies remain. | ✅ |
 | 5.6 | ai-parse-and-textllm.test.ts | Deleted — `textLLM` function removed as dead code (location search uses Nominatim directly, not LLM suggestion). Server-side prompt/parse logic covered by `bird-id-prompt.test.ts`. | ✅ |
 | 5.7 | ai-fixture-replay.test.ts | Already replays against `/api/identify-bird`. No migration needed. | ✅ |
@@ -929,6 +939,9 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 5.16 | Lint cleanup | Suppressed false-positive `react-hooks/exhaustive-deps` warning in `use-wingdex-data.ts` — mutation functions close over refs, not state. | ✅ |
 | 5.17 | Extract bird-id-helpers.ts | Extracted `safeParseJSON`, `extractAssistantContent`, `buildCropBox` from `bird-id.ts` into `functions/lib/bird-id-helpers.ts` so they can be tested without dragging in Cloudflare `Env` types. | ✅ |
 | 5.18 | Narrow dex-query.ts type | Replaced `D1Database` with minimal `DexQueryDB` interface (same pattern as `RateLimitDB`) to avoid Cloudflare type dependency in tsc. | ✅ |
+| 5.19 | **New**: Auth gate tests | Created `src/__tests__/use-auth-gate.test.tsx` — 8 tests covering modal open/close, sign-up flow, sign-in flow, cancellation, mode switching. | ✅ |
+| 5.20 | **New**: Fun-names tests | Created `src/__tests__/fun-names.test.ts` — 5 tests covering name generation format, randomness, kebab-case validation. | ✅ |
+| 5.21 | **New**: E2e auth helpers | Updated `e2e/helpers.ts` with `promoteAnonymousUser()` for tests requiring auth-gated features. Updated `smoke.spec.ts`, `dark-mode.spec.ts`, `csv-and-upload-integration.spec.ts` to use the helper. | ✅ |
 
 ---
 
@@ -1023,7 +1036,7 @@ jobs:
 | `migrations/0001_initial.sql` | **Create** | Full D1 schema (auth + app tables + indexes) |
 | `functions/env.d.ts` | **Create** | `Env` type (DB, AI, env vars) |
 | `functions/_middleware.ts` | **Create** | Session validation, inject user into context |
-| `functions/lib/auth.ts` | **Create** | Better Auth config (GitHub/Apple/Google/passkeys, D1 adapter) |
+| `functions/lib/auth.ts` | **Create** | Better Auth config (GitHub/Apple/Google/passkeys, D1 adapter). **passkey-ux**: Added Origin header validation for `baseURL`, enabled account deletion (`deleteUser`). |
 | `functions/lib/bird-id.ts` | **Create** | Prompt template, LLM call, response parsing, taxonomy grounding, crop-box math (moved from client) |
 | `functions/lib/taxonomy.ts` | **Create** | `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` (moved from client) |
 | `functions/lib/ebird.ts` | **Create** | `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, export formatters (moved from client) |
@@ -1045,14 +1058,25 @@ jobs:
 | `functions/api/export/dex.ts` | **Create** | GET: export dex as CSV |
 | `functions/api/species/search.ts` | **Create** | GET: taxonomy typeahead search |
 | `src/lib/auth-client.ts` | **Create** | Better Auth client SDK config |
-| `src/components/pages/LoginPage.tsx` | **Create** | ⚠️ Unified passkey-first login: single "Continue with passkey" button → opens `PasskeyAuthDialog`. Dynamic social buttons (GitHub, Apple) fetched from `/api/auth/providers`. |
-| `src/components/flows/PasskeyAuthDialog.tsx` | **Create** | Dialog with signup (random bird-name, re-roll, anonymous→addPasskey→finalize) and sign-in views |
+| `src/components/pages/LoginPage.tsx` | **Create → Delete** | Originally created as passkey-first login page. **Deleted in passkey-ux**: replaced by demo-first auth gate modal in `use-auth-gate.tsx`. |
+| `src/components/flows/PasskeyAuthDialog.tsx` | **Create → Delete** | Originally created for dialog signup/sign-in. **Deleted in passkey-ux**: functionality absorbed into `use-auth-gate.tsx`. |
+| `src/hooks/use-auth-gate.tsx` | **Create** | Auth gate hook + modal component. Dual Sign up / Log in modes, cancellation handling, anonymous bootstrap → addPasskey → finalize flow. |
 | `src/lib/fun-names.ts` | **Create** | Random kebab-case bird-name generator (~249K combos: 77 adjectives × 81 modifiers × 40 birds) |
+| `src/lib/demo-data.ts` | **Create** | Demo data loader for anonymous users (69 species from bundled eBird CSV) |
+| `src/assets/ebird-import.csv` | **Create** | Bundled demo eBird CSV (copied from `e2e/fixtures/`, decouples prod from test fixtures) |
+| `src/components/pages/PrivacyPage.tsx` | **Create** | In-app Privacy Policy page |
+| `src/components/pages/TermsPage.tsx` | **Create** | In-app Terms of Use page |
+| `public/privacy.html` | **Create** | Static Privacy Policy HTML |
+| `public/terms.html` | **Create** | Static Terms of Use HTML |
+| `docs/PASSKEYS_UX.md` | **Create** | Auth gate modal UX spec (no-email passkey approach) |
+| `docs/EMAIL_VERIFICATION.md` | **Create** | Deferred email verification spec |
+| `src/__tests__/use-auth-gate.test.tsx` | **Create** | 8 tests for auth gate hook |
+| `src/__tests__/fun-names.test.ts` | **Create** | 5 tests for random name generation |
 | `.github/workflows/deploy.yml` | **Create** | Cloudflare Pages deploy CI |
 | `public/_redirects` | **Create** | SPA fallback routing |
 | vite.config.ts | **Modify** | Remove Spark plugins, add dev proxy to Wrangler |
 | main.tsx | **Modify** | Remove Spark runtime import, change mount point to `#app` |
-| App.tsx | **Modify** | Replace `window.spark.user()` with Better Auth. Change `UserInfo.id` to `string`. Replace `AuthErrorShell` with login redirect. |
+| App.tsx | **Modify** | Replace `window.spark.user()` with Better Auth. Change `UserInfo.id` to `string`. Replace `AuthErrorShell` with login redirect. **passkey-ux**: Integrated auth gate modal, emoji avatar in header, demo-first user flow (anonymous users see app immediately). |
 | use-wingdex-data.ts | **Modify** | Replace 4x `useKV` with API-backed fetch + granular mutations. Apply `dexUpdates` from responses. Remove `buildDexFromState()`. `userId: number` → `string`. |
 | use-kv.ts | **Modify** | Strip all Spark KV code. Keep simplified localStorage-only version for local dev, or delete entirely and inline. |
 | storage-keys.ts | **Modify** | `userId: number` → `string`. Simplify key pattern. |
@@ -1064,10 +1088,13 @@ jobs:
 | portal-container.ts | **Modify** | `'spark-app'` → `'app'` |
 | src/vite-env.d.ts | **Modify** | Remove `GITHUB_RUNTIME_PERMANENT_NAME`, `BASE_KV_SERVICE_URL` |
 | package.json | **Modify** | Remove `@github/spark`, add `wrangler`, `better-auth`. Update scripts/metadata. |
-| SettingsPage.tsx | **Modify** | `user.id: number` → `string`. Add sign-out + register-passkey. eBird import UI switches to server-driven preview/confirm flow. |
+| SettingsPage.tsx | **Modify** | `user.id: number` → `string`. Add sign-out + register-passkey. eBird import UI switches to server-driven preview/confirm flow. **passkey-ux**: Account card (emoji avatar, nickname editing, passkey rename/delete, account deletion). Demo data toggle. Email recovery section removed. |
 | AddPhotosFlow.tsx | **Modify** | `userId: number` → `string`. Species typeahead uses `/api/species/search`. |
+| functions/api/auth/finalize-passkey.ts | **Modify** | **passkey-ux**: Simplified to name-only (email handling removed). |
+| OutingsPage.tsx | **Modify** | **passkey-ux**: A-Z sort option added. |
+| `.vscode/tasks.json` | **Modify** | **passkey-ux**: Removed `disable-git-signing-local` task and its reference from `bootstrap-workspace` dependsOn. |
 | 6 test files | **Modify/Move** | AI tests move to server-side. Client tests simplified. Auth/userId mocks updated. |
-| 2 e2e files | **Modify** | Update route intercepts and localStorage seeding |
+| 4 e2e files | **Modify** | Update route intercepts and localStorage seeding. **passkey-ux**: Added `promoteAnonymousUser` helper, updated smoke/dark-mode/CSV specs for auth gate. |
 | spark.meta.json | **Delete** | Spark config |
 | runtime.config.json | **Delete** | Spark config |
 | spark-tools | **Delete** | Spark tooling (icon proxy plugin) |
