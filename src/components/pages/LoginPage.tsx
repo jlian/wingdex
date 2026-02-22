@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowsClockwise, Bird, GithubLogo, Key, UserPlus, AppleLogo } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
@@ -16,6 +16,13 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState(() => generateBirdName())
+  const [providers, setProviders] = useState<string[]>([])
+
+  useEffect(() => {
+    void fetch('/api/auth/providers').then(r => r.ok ? r.json() : null).then(
+      (data: { providers: string[] } | null) => { if (data) setProviders(data.providers) },
+    )
+  }, [])
 
   const rerollName = () => setDisplayName(generateBirdName())
 
@@ -136,25 +143,29 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
                   Continue with passkey
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleGitHubSignIn}
-                  disabled={isLoading}
-                >
-                  <GithubLogo size={18} className="mr-2" />
-                  Sign in with GitHub
-                </Button>
+                {providers.includes('github') && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleGitHubSignIn}
+                    disabled={isLoading}
+                  >
+                    <GithubLogo size={18} className="mr-2" />
+                    Sign in with GitHub
+                  </Button>
+                )}
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleAppleSignIn}
-                  disabled={isLoading}
-                >
-                  <AppleLogo size={18} className="mr-2" />
-                  Sign in with Apple
-                </Button>
+                {providers.includes('apple') && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleAppleSignIn}
+                    disabled={isLoading}
+                  >
+                    <AppleLogo size={18} className="mr-2" />
+                    Sign in with Apple
+                  </Button>
+                )}
               </div>
 
               {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}

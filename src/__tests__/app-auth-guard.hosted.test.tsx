@@ -90,6 +90,10 @@ describe('App auth guard (hosted runtime)', () => {
     vi.restoreAllMocks()
     mockUseSession.mockReturnValue({ data: null, isPending: false, refetch: vi.fn() })
     mockSignInAnonymous.mockResolvedValue({ error: null })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ providers: ['github'] }),
+    }))
   })
 
   afterEach(() => {
