@@ -12,7 +12,7 @@
 
 ### TL;DR
 
-> **Phase 2 status**: ✅ Data/API migration complete. All client-side business logic (ebird, taxonomy, seed-data) fully removed — server is sole owner. GitHub OAuth implemented and deployed (prod + dev environments). Apple Sign In code ready (credentials pending Apple Developer enrollment). Google OAuth ⏳.
+> **Phase 2 status**: ✅ Data/API migration complete. All client-side business logic (ebird, taxonomy, seed-data) fully removed — server is sole owner. GitHub OAuth implemented and deployed (prod + dev environments). Apple Sign In fully configured and deployed (prod + dev environments). Google OAuth ⏳.
 
 WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns — this is a platform-integration migration, not a rewrite.
 
@@ -24,7 +24,7 @@ WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV per
 
 ### Architecture
 
-> **Phase 2 status**: ✅ All data/import/export/species/AI API routes implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). GitHub OAuth active; Apple Sign In code ready (credentials pending); Google ⏳.
+> **Phase 2 status**: ✅ All data/import/export/species/AI API routes implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). GitHub OAuth active; Apple Sign In active; Google ⏳.
 
 ```
 Cloudflare Pages
@@ -280,7 +280,7 @@ ORDER BY obs.speciesName;
 
 ### Auth: Better Auth + D1
 
-> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented; auth uses passkey-first signup via anonymous bootstrap (gated by middleware header `x-wingdex-passkey-signup`) with Better Auth's public plugin APIs. GitHub OAuth is now fully configured with two OAuth apps (prod: `wingdex.app` callback, dev: `dev.wingdex.pages.dev` callback) and conditional `socialProviders.github` (only active when `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` env vars are present). Account linking enabled (`trustedProviders: ['github']`, `allowDifferentEmails: true`). Apple/Google OAuth remain pending (Phase 1.12). Decision: keep anonymous bootstrap over custom `@simplewebauthn/server` endpoint — uses stable public BA APIs vs fragile internals. Native BA passkey-only signup isn't supported (v1.4.x `freshSessionMiddleware` requires a session for credential registration).
+> **Phase 2 status**: ⚠️ Better Auth + D1 wiring is implemented; auth uses passkey-first signup via anonymous bootstrap (gated by middleware header `x-wingdex-passkey-signup`) with Better Auth's public plugin APIs. GitHub OAuth is now fully configured with two OAuth apps (prod: `wingdex.app` callback, dev: `dev.wingdex.pages.dev` callback) and conditional `socialProviders.github` (only active when `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` env vars are present). Apple Sign In fully configured — Services ID `app.wingdex.signin` with return URLs for prod + dev, credentials set in Cloudflare Pages for both environments. Account linking enabled (`trustedProviders: ['github', 'apple']`, `allowDifferentEmails: true`). Google OAuth remains pending (Phase 1.12). Decision: keep anonymous bootstrap over custom `@simplewebauthn/server` endpoint — uses stable public BA APIs vs fragile internals. Native BA passkey-only signup isn't supported (v1.4.x `freshSessionMiddleware` requires a session for credential registration).
 
 **Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth — no web-specific coupling.
 
@@ -373,11 +373,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 - "Already have an account? Sign in" link switches to sign-in view (triggers browser WebAuthn prompt directly)
 - Signup uses anonymous bootstrap → `addPasskey` → `finalize-passkey` (3-step, gated by middleware header)
 - GitHub OAuth "Sign in with GitHub" button on login page + "Link GitHub account" in Settings (conditionally shown when `GITHUB_CLIENT_ID` env var is set)
-- Apple/Google OAuth buttons to be added when providers are registered (Phase 1.12)
+- Apple/Google OAuth buttons dynamically rendered based on configured providers via `GET /api/auth/providers`
 
 **OAuth app registration**:
 - **GitHub**: ✅ Two OAuth Apps created — prod (`https://wingdex.app/api/auth/callback/github`) and dev (`https://dev.wingdex.pages.dev/api/auth/callback/github`). Secrets (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments.
-- **Apple**: Create Service ID at developer.apple.com. Callback URL: `https://wingdex.app/api/auth/callback/apple`. Requires paid Apple Developer account ($99/yr).
+- **Apple**: ✅ Services ID `app.wingdex.signin` — domains `wingdex.app` + `dev.wingdex.pages.dev`, return URLs `https://wingdex.app/api/auth/callback/apple` + `https://dev.wingdex.pages.dev/api/auth/callback/apple`. Secrets (`APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments. Client secret JWT valid 180 days from 2026-02-22, auto-rotated via GitHub Actions.
 - **Google**: Create OAuth 2.0 Client at console.cloud.google.com. Callback URL: `https://wingdex.app/api/auth/callback/google`
 
 ---
@@ -672,12 +672,12 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 | Design Section | Phase 2 Status | Note |
 |---|---|---|
-| TL;DR / Overall Migration Direction | ✅ | Data/API migration complete; all client-side business logic removed. GitHub OAuth done; Apple/Google pending (Phase 1.12). |
+| TL;DR / Overall Migration Direction | ✅ | Data/API migration complete; all client-side business logic removed. GitHub OAuth done; Apple Sign In done; Google pending (Phase 1.12). |
 | Architecture | ✅ | `/api/data/*`, import/export, species, and AI routes (`/api/identify-bird`) are implemented. `/api/suggest-location` removed as dead (location search uses Nominatim). |
 | Current Spark Dependency Map | ✅ | Spark KV/runtime/plugin/LLM dependencies are removed from active app paths. |
 | Multi-Platform API Design | ✅ | Data, taxonomy, and bird-ID/location AI server centralization implemented. |
 | D1 Schema Design | ✅ | Relational schema and SQL dex aggregation are implemented and used in production code paths. |
-| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with demo-first auth gate UX + GitHub OAuth. Anonymous bootstrap used for signup (gated by middleware header). LoginPage/PasskeyAuthDialog replaced by auth gate modal (`use-auth-gate.tsx`). Email removed from passkey flow. Account management (emoji avatars, passkey rename/delete, deletion). Demo data for anon users. GitHub OAuth fully configured (prod + dev apps, account linking with `allowDifferentEmails`). Apple/Google pending (1.12). |
+| Auth: Better Auth + D1 | ⚠️ | Better Auth + D1 wired with demo-first auth gate UX + GitHub OAuth + Apple Sign In. Anonymous bootstrap used for signup (gated by middleware header). LoginPage/PasskeyAuthDialog replaced by auth gate modal (`use-auth-gate.tsx`). Email removed from passkey flow. Account management (emoji avatars, passkey rename/delete, deletion). Demo data for anon users. GitHub OAuth fully configured (prod + dev apps, account linking with `allowDifferentEmails`). Apple Sign In fully configured (Services ID + credentials for prod + dev). Google pending (1.12). |
 | Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` implemented. `/api/suggest-location` removed (dead). `textLLM` deleted. |
 | Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` (auth) + `/api/species/wiki-title` (public). Client `taxonomy.ts` fully removed — 876KB saved. |
 | Data Layer: Refactoring `useWingDexData` | ✅ | API-first refactor complete with local fallback. Dead functions (`loadSeedData`, `importFromEBird`) removed. |
@@ -741,7 +741,7 @@ binding = "AI"
 
 #### Phase 1 — Auth (Better Auth) 🟡
 
-> **Status snapshot (2026-02-22)**: ⚠️ Core auth migration implemented with demo-first UX rework + GitHub OAuth + Apple Sign In (code ready, credentials pending). **UX overhaul (passkey-ux branch)**: `LoginPage.tsx` and `PasskeyAuthDialog.tsx` deleted — replaced by demo-first experience where anonymous users see the full app with demo data (69 species). Auth-gated features (add photos, outings, import/export) trigger a dual-mode Sign up / Log in modal via `use-auth-gate.tsx` hook. Passkey signup: anonymous bootstrap → addPasskey → finalize-passkey (name-only, no email). Settings account card: emoji avatar (bird-to-emoji mapping), nickname editing, passkey rename/delete, account deletion. Origin header validated in `auth.ts` before use as `baseURL`. Demo CSV moved from `e2e/fixtures/` to `src/assets/` (decouples prod from test fixtures). In-app Privacy Policy and Terms of Use pages added. Email collection entirely removed from passkey auth flow. Social sign-in buttons ("Sign in with GitHub", "Sign in with Apple") dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Account linking via `trustedProviders` auto-merge only. GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks). Apple provider registered in `auth.ts` (gated on env vars), credentials not yet set. Google ⏳.
+> **Status snapshot (2026-02-22)**: ⚠️ Core auth migration implemented with demo-first UX rework + GitHub OAuth + Apple Sign In. **UX overhaul (passkey-ux branch)**: `LoginPage.tsx` and `PasskeyAuthDialog.tsx` deleted — replaced by demo-first experience where anonymous users see the full app with demo data (69 species). Auth-gated features (add photos, outings, import/export) trigger a dual-mode Sign up / Log in modal via `use-auth-gate.tsx` hook. Passkey signup: anonymous bootstrap → addPasskey → finalize-passkey (name-only, no email). Settings account card: emoji avatar (bird-to-emoji mapping), nickname editing, passkey rename/delete, account deletion. Origin header validated in `auth.ts` before use as `baseURL`. Demo CSV moved from `e2e/fixtures/` to `src/assets/` (decouples prod from test fixtures). In-app Privacy Policy and Terms of Use pages added. Email collection entirely removed from passkey auth flow. Social sign-in buttons ("Sign in with GitHub", "Sign in with Apple") dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Account linking via `trustedProviders` auto-merge only. GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks). Apple Sign In fully configured — Services ID `app.wingdex.signin` with return URLs for prod + dev, credentials (`APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments. Google ⏳.
 > **Confidence**: High.
 > **Validation**: Auth guard unit tests ✅, auth gate unit tests ✅ (8 tests), fun-names tests ✅ (5 tests), full test suite ✅ (505/505), `tsc --noEmit` ✅, `eslint` ✅ (0 errors, 0 warnings), Playwright e2e smoke ✅, preview deploy auth OK check (`/api/auth/ok` → `{"ok":true}`) ✅.
 
@@ -758,7 +758,7 @@ binding = "AI"
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
 | 1.10 | Create login page component | ⚠️ Originally implemented as `LoginPage.tsx` + `PasskeyAuthDialog.tsx` (unified passkey-first flow). **Superseded by passkey-ux branch**: both files deleted — replaced by demo-first auth gate modal (`use-auth-gate.tsx` hook) embedded in `App.tsx`. Anonymous users see the full app with demo data; auth-gated features trigger a dual Sign up / Log in modal with cancellation handling. Social sign-in buttons dynamically rendered based on `GET /api/auth/providers` response. `fun-names.ts` retained (random bird names for signup). | ⚠️ |
 | 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. **passkey-ux**: Account card with emoji avatar (bird-to-emoji mapping via `getEmojiAvatarColor`), nickname editing, passkey rename/delete. Account deletion button. Demo data toggle (load/clear) for anonymous users. Email recovery section removed (email stripped from passkey flow). "Link GitHub account" button removed — account linking handled automatically via `trustedProviders`. "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
-| 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ⚠️ (code ready: provider in `auth.ts`, dynamic via `/api/auth/providers`; credentials pending Apple Developer Program enrollment). Google ⏳. | ⚠️ |
+| 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ✅ (Services ID `app.wingdex.signin`, domains `wingdex.app` + `dev.wingdex.pages.dev`, return URLs for prod + dev; secrets `APPLE_CLIENT_ID` + `APPLE_CLIENT_SECRET` set in Cloudflare Pages for both production and preview environments; client secret JWT valid 180 days from 2026-02-22, auto-rotated via GitHub Actions). Google ⏳. | ⚠️ |
 | 1.13 | Dynamic provider buttons | Created `GET /api/auth/providers` endpoint returning configured social providers (checks env vars). LoginPage fetches on mount, conditionally renders GitHub/Apple buttons. 5-minute `Cache-Control`. | ✅ |
 | 1.14 | Account linking policy | Removed manual "Link GitHub account" button from Settings. Re-enabled `accountLinking` with `trustedProviders: ['github', 'apple']` and `allowDifferentEmails: true` for automatic social-to-social account merging. Safe because passkey users use generated emails (`anon_xxx@localhost`), preventing hijacking. | ✅ |
 | 1.15 | Apple client secret rotation | Created `.github/workflows/rotate-apple-secret.yml` — scheduled workflow (cron every 5 months) generates a new Apple client secret JWT from `.p8` private key stored in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
@@ -1124,7 +1124,7 @@ jobs:
 | **LLM quality regression** if using Workers AI | Bird ID accuracy drops | Use AI Gateway → OpenAI as primary. Offer Workers AI as optional "free mode" |
 | **D1 row limits for power users** | Users with thousands of observations | 5M reads/day free is plenty. Monitor with Cloudflare analytics. Consider pagination for very large datasets. |
 | **Better Auth breaking changes** | Auth breaks on lib updates | Pin version. Better Auth is actively maintained with good semver. |
-| **Apple Sign In complexity** | Requires paid Apple dev account + non-trivial OIDC setup | Code ready (auth.ts provider, LoginPage button, dynamic `/api/auth/providers`). Rotation workflow created. Credentials pending $99/yr Apple Developer enrollment. Client secret requires 6-month JWT rotation (automated via GitHub Actions). |
+| **Apple Sign In complexity** | Requires paid Apple dev account + non-trivial OIDC setup | ✅ Fully configured. Services ID `app.wingdex.signin`, credentials set in Cloudflare Pages (prod + preview). Client secret JWT valid 180 days (expires ~2026-08-21), auto-rotated via GitHub Actions workflow. |
 | **Photo blob storage** | D1 TEXT columns holding base64 can get large | Photos are session-ephemeral per PRD. Wikimedia provides persistent imagery. If persistent photos needed later, add R2. |
 | **Local dev experience** | Wrangler + Vite coordination | Use Vite dev proxy (`/api/* → localhost:8788`). `npm run dev` starts Vite; `wrangler pages dev` starts Workers. Can combine with `concurrently` package. |
 | **Session invalidation on deploy** | D1 sessions persist across deploys (good). No invalidation concern. | N/A |
