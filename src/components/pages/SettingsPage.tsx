@@ -12,6 +12,7 @@ import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash,
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
+import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike, toStandardPasskeyLabel } from '@/lib/passkey-label'
 import { toast } from 'sonner'
 import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -39,15 +40,7 @@ const birdEmojiOptions = ['🐦', '🦉', '🦜', '🐧', '🦆', '🦩', '🦅'
 
 
 function getDeviceLabel(): string {
-  const ua = navigator.userAgent
-  if (/iPad/.test(ua)) return 'iPad'
-  if (/iPhone/.test(ua)) return 'iPhone'
-  if (/Macintosh/.test(ua)) return 'Mac'
-  if (/Windows/.test(ua)) return 'Windows'
-  if (/Android/.test(ua)) return 'Android'
-  if (/Linux/.test(ua)) return 'Linux'
-  if (/CrOS/.test(ua)) return 'ChromeOS'
-  return 'Device'
+  return getDeviceLabelFromNavigator()
 }
 
 
@@ -255,6 +248,21 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
               <ArrowsClockwise size={14} weight="bold" />
             </button>
             <span className="text-foreground font-medium">{displayName}</span>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+              disabled={profileSaving}
+              onClick={() => {
+                const nextName = window.prompt('Update display name', displayName)
+                if (!nextName || nextName.trim() === displayName) return
+                const trimmedName = nextName.trim()
+                setDisplayName(trimmedName)
+                void saveProfile(trimmedName, profileImage)
+              }}
+              aria-label="Edit display name"
+            >
+              <PencilSimple size={14} weight="bold" />
+            </button>
           </p>
         </div>
 
@@ -334,7 +342,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 <div className="flex items-center gap-2 min-w-0">
                   <Key size={16} className="shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{pk.name || 'Passkey'}</p>
+                    <p className="text-sm font-medium truncate">{toStandardPasskeyLabel(pk.name, pk.createdAt, user.name)}</p>
                     <p className="text-xs text-muted-foreground">
                       Added {pk.createdAt.toLocaleDateString()}
                     </p>
@@ -387,13 +395,15 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           className="w-full justify-start"
           onClick={async () => {
             const deviceLabel = getDeviceLabel()
-            const ts = new Date().toLocaleString()
-            const passkeyName = `${deviceLabel} (${ts})`
+            const passkeyName = buildPasskeyName(deviceLabel, new Date(), user.name)
             const result = await authClient.passkey.addPasskey({
               name: passkeyName,
               authenticatorAttachment: 'platform',
             })
             if (result.error) {
+              if (isPasskeyCancellationLike(result.error)) {
+                return
+              }
               if (errCode(result.error) === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
                 toast.error('This device already has a passkey registered.')
               } else if (errCode(result.error) !== 'ERROR_CEREMONY_ABORTED') {

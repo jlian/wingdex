@@ -3,6 +3,7 @@ import { Key, GithubLogo, AppleLogo } from '@phosphor-icons/react'
 
 import { authClient } from '@/lib/auth-client'
 import { generateBirdName } from '@/lib/fun-names'
+import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike } from '@/lib/passkey-label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
@@ -12,15 +13,6 @@ import { Switch } from '@/components/ui/switch'
 /** Safely extract error code from Better Auth error union */
 function errCode(err: { code?: string; message?: string }): string | undefined {
   return 'code' in err ? err.code : undefined
-}
-
-function isCancellationLike(err: { code?: string; message?: string }): boolean {
-  const code = errCode(err)
-  if (code === 'AUTH_CANCELLED' || code === 'ERROR_CEREMONY_ABORTED') return true
-  const msg = (err.message || '').toLowerCase()
-  return msg.includes('not allowed by the user agent')
-    || msg.includes('notallowederror')
-    || msg.includes('request is not allowed')
 }
 
 interface AuthGateOptions {
@@ -130,14 +122,15 @@ function AuthGateModal({
     // Create account: the current session is already anonymous, so just
     // register a passkey on it and finalize.
     const birdName = generateBirdName()
+    const passkeyName = buildPasskeyName(getDeviceLabelFromNavigator(), new Date(), birdName)
 
     const passkeyResult = await authClient.passkey.addPasskey({
-      name: birdName,
+      name: passkeyName,
       authenticatorAttachment: 'platform',
     })
     if (passkeyResult.error) {
       setIsLoading(false)
-      if (isCancellationLike(passkeyResult.error)) {
+      if (isPasskeyCancellationLike(passkeyResult.error)) {
         return
       } else if (errCode(passkeyResult.error) === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
         setErrorMessage('This device already has a passkey. Try Log in instead.')
@@ -171,7 +164,7 @@ function AuthGateModal({
     const result = await authClient.signIn.passkey({ autoFill: false })
     if (result.error) {
       setIsLoading(false)
-      if (isCancellationLike(result.error)) {
+      if (isPasskeyCancellationLike(result.error)) {
         return
       } else {
         setErrorMessage(result.error.message || 'Passkey sign-in failed.')
