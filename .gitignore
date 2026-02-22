@@ -44,5 +44,6 @@ pids
 test-results/
 playwright-report/
 screenshots/
+.playwright-mcp/
 wiki-validation-report.txt
 src/assets/csv/
