@@ -84,6 +84,14 @@ vi.mock('@/components/flows/AddPhotosFlow', () => ({
   default: () => null,
 }))
 
+vi.mock('@/hooks/use-auth-gate', () => ({
+  useAuthGate: () => ({
+    requireAuth: (cb: () => void) => cb(),
+    openSignIn: vi.fn(),
+    AuthGateModal: null,
+  }),
+}))
+
 describe('App auth guard (local runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()

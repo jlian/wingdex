@@ -7,11 +7,11 @@ import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 import { authClient } from '@/lib/auth-client'
+import { useAuthGate } from '@/hooks/use-auth-gate'
 import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pages/OutingsPage'
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
 import HomePage from '@/components/pages/HomePage'
-import LoginPage from '@/components/pages/LoginPage'
 
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
@@ -24,6 +24,7 @@ interface UserInfo {
   image: string
   email: string
   id: string
+  isAnonymous: boolean
 }
 
 function isDevRuntime(): boolean {
@@ -37,6 +38,7 @@ function getFallbackUser(): UserInfo {
     image: '',
     email: 'dev@localhost',
     id: getStableDevUserId(),
+    isAnonymous: false,
   }
 }
 
@@ -104,68 +106,43 @@ function App() {
   const session = sessionState.data
   const isSessionPending = sessionState.isPending
   const refetchSession = sessionState.refetch
-  const localSessionBootstrapStarted = useRef(false)
-  const [localSessionBootstrapFailed, setLocalSessionBootstrapFailed] = useState(false)
+  const anonBootstrapStarted = useRef(false)
+  const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
-  const authCompleted = useRef(false)
-  // Tracks whether the initial session fetch resolved with a valid session
-  // (returning user with a cookie). Set once, never cleared.
-  const initialSessionResolved = useRef(false)
-  const initialSessionChecked = useRef(false)
-
-  // On the first non-pending session result, mark whether a valid session existed
-  useEffect(() => {
-    if (initialSessionChecked.current || isSessionPending) return
-    initialSessionChecked.current = true
-    if (session?.user && !(session.user as { isAnonymous?: boolean }).isAnonymous) {
-      initialSessionResolved.current = true
-    }
-  }, [session, isSessionPending])
 
   useEffect(() => {
     if (session && session.user) {
-      const isAnonymousUser = !isDevRuntime() && Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
-      if (isAnonymousUser) {
-        setUser(null)
-        return
-      }
+      const isAnon = Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
 
-      // On hosted: only promote session → user when the page loaded with a
-      // valid session (returning user) OR after LoginPage signals completion.
-      // This prevents intermediate session changes during signup from causing
-      // flashes of the authenticated UI.
-      if (!isDevRuntime() && !authCompleted.current && !initialSessionResolved.current) {
-        setUser(null)
-        return
-      }
-
-      setLocalSessionBootstrapFailed(false)
+      setAnonBootstrapFailed(false)
       setUser({
         id: session.user.id,
         name: session.user.name || session.user.email || 'user',
         image: session.user.image || '',
         email: session.user.email || '',
+        isAnonymous: isAnon,
       })
       return
     }
 
+    // No session — bootstrap anonymous
     if (isDevRuntime()) {
-      if (localSessionBootstrapFailed) {
+      if (anonBootstrapFailed) {
         setUser(getFallbackUser())
         return
       }
 
-      if (!isSessionPending && !localSessionBootstrapStarted.current) {
-        localSessionBootstrapStarted.current = true
+      if (!isSessionPending && !anonBootstrapStarted.current) {
+        anonBootstrapStarted.current = true
         void authClient.signIn.anonymous().then((result) => {
           if (result.error) {
-            setLocalSessionBootstrapFailed(true)
+            setAnonBootstrapFailed(true)
             return
           }
           void refetchSession()
         }).catch(() => {
-          setLocalSessionBootstrapFailed(true)
-          localSessionBootstrapStarted.current = false
+          setAnonBootstrapFailed(true)
+          anonBootstrapStarted.current = false
         })
       }
 
@@ -173,36 +150,47 @@ function App() {
       return
     }
 
-    setUser(null)
-  }, [session, isSessionPending, refetchSession, localSessionBootstrapFailed])
+    // Hosted: auto-bootstrap anonymous session (demo-first)
+    if (!isSessionPending && !anonBootstrapStarted.current) {
+      anonBootstrapStarted.current = true
+      void authClient.signIn.anonymous({
+        fetchOptions: {
+          headers: { 'x-wingdex-passkey-signup': '1' },
+        },
+      }).then((result) => {
+        if (result.error) {
+          setAnonBootstrapFailed(true)
+          return
+        }
+        void refetchSession()
+      }).catch(() => {
+        setAnonBootstrapFailed(true)
+        anonBootstrapStarted.current = false
+      })
+    }
 
-  const handleAuthenticated = useCallback(() => {
-    authCompleted.current = true
-    void refetchSession()
-  }, [refetchSession])
+    setUser(null)
+  }, [session, isSessionPending, refetchSession, anonBootstrapFailed])
 
   if (!user) {
-    if (isSessionPending && !isDevRuntime() && !initialSessionChecked.current) {
-      return <BootShell />
-    }
-
-    if (!isDevRuntime()) {
-      return <LoginPage onAuthenticated={handleAuthenticated} />
-    }
-
     return <BootShell />
   }
 
-  return <AppContent user={user} />
+  return <AppContent user={user} refetchSession={refetchSession} />
 }
 
 function BootShell() {
   return <div className="min-h-screen bg-background" />
 }
 
-function AppContent({ user }: { user: UserInfo }) {
+function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => void }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
+
+  const { requireAuth, openSignIn, AuthGateModal } = useAuthGate({
+    isAnonymous: user.isAnonymous,
+    onUpgraded: () => void refetchSession(),
+  })
   const [wingDexSearchQuery, setWingDexSearchQuery] = useState('')
   const [wingDexSortField, setWingDexSortField] = useState<WingDexSortField>('date')
   const [wingDexSortDir, setWingDexSortDir] = useState<WingDexSortDir>('desc')
@@ -314,8 +302,16 @@ function AppContent({ user }: { user: UserInfo }) {
                 ))}
               </TabsList>
 
-              {/* Right side: avatar — navigates to Settings */}
+              {/* Right side: sign-in (anonymous) or avatar (authenticated) */}
               <div className="flex items-center gap-3">
+                {user.isAnonymous && !isDevRuntime() && (
+                  <button
+                    onClick={openSignIn}
+                    className="text-sm font-medium text-primary cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
+                  >
+                    Sign in
+                  </button>
+                )}
                 <button
                   onClick={() => navigate('settings')}
                   className="cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
@@ -337,7 +333,7 @@ function AppContent({ user }: { user: UserInfo }) {
             <TabsContent value="home" className="mt-0">
               <HomePage
                 data={data}
-                onAddPhotos={() => setShowAddPhotos(true)}
+                onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
                 onAddPhotosIntent={prefetchAddPhotosFlow}
                 onSelectOuting={(id) => navigate('outings', id)}
                 onSelectSpecies={(name) => navigate('wingdex', name)}
@@ -391,6 +387,8 @@ function AppContent({ user }: { user: UserInfo }) {
           )}
         </main>
       </Tabs>
+
+      {AuthGateModal}
 
       {showAddPhotos && (
         <Suspense fallback={null}>

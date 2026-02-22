@@ -85,6 +85,14 @@ vi.mock('@/components/flows/AddPhotosFlow', () => ({
   default: () => null,
 }))
 
+vi.mock('@/hooks/use-auth-gate', () => ({
+  useAuthGate: () => ({
+    requireAuth: (cb: () => void) => cb(),
+    openSignIn: vi.fn(),
+    AuthGateModal: null,
+  }),
+}))
+
 describe('App auth guard (hosted runtime)', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -100,14 +108,13 @@ describe('App auth guard (hosted runtime)', () => {
     vi.unstubAllGlobals()
   })
 
-  it('shows login page when no hosted session exists', async () => {
+  it('shows boot shell when no session exists yet (anon bootstrap in progress)', async () => {
     const { default: App } = await import('@/App')
-    render(<App />)
+    const { container } = render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-    expect(screen.getByText('Continue with passkey')).toBeInTheDocument()
-    expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument()
-    expect(screen.getByText('Sign in')).toBeInTheDocument()
+    // BootShell: blank background while anonymous session bootstraps
+    expect(container.querySelector('.bg-background')).toBeInTheDocument()
+    expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
   })
 
   it('shows boot shell while hosted session is pending', async () => {
@@ -116,10 +123,9 @@ describe('App auth guard (hosted runtime)', () => {
     const { default: App } = await import('@/App')
     const { container } = render(<App />)
 
-    // Boot shell renders as a blank background div (no skeleton, no login)
+    // Boot shell renders as a blank background div
     expect(container.querySelector('.bg-background')).toBeInTheDocument()
     expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Welcome to WingDex' })).not.toBeInTheDocument()
   })
 
   it('renders app content when hosted session is present', async () => {
@@ -140,74 +146,21 @@ describe('App auth guard (hosted runtime)', () => {
     render(<App />)
 
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    expect(screen.queryByText('Continue with passkey')).not.toBeInTheDocument()
   })
 
-  it('navigates to signup view and back', async () => {
+  it('renders app content for anonymous session (demo-first)', async () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'anon-1', name: 'anon', image: '', email: '', isAnonymous: true } },
+      isPending: false,
+      refetch: vi.fn(),
+    })
+
     const { default: App } = await import('@/App')
     render(<App />)
 
-    // Start on welcome view
-    expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-
-    // Click "Continue with passkey" to enter signup view
-    fireEvent.click(screen.getByText('Continue with passkey'))
-
-    // Signup view should show
-    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Display name')).toBeInTheDocument()
-    expect(screen.getByText('Create account')).toBeInTheDocument()
-    expect(screen.getByText('Back')).toBeInTheDocument()
-    // Sign-in link should be present on signup view too
+    // Anonymous users see the app (demo-first UX)
+    expect(await screen.findByText('HomePage')).toBeInTheDocument()
+    // Sign-in link should be visible in the header
     expect(screen.getByText('Sign in')).toBeInTheDocument()
-
-    // Click back
-    fireEvent.click(screen.getByText('Back'))
-    expect(screen.getByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-  })
-
-  it('does not unmount login page when session flips to pending mid-signup', async () => {
-    const refetch = vi.fn()
-    mockUseSession.mockReturnValue({ data: null, isPending: false, refetch })
-
-    const { default: App } = await import('@/App')
-    const { rerender } = render(<App />)
-
-    // Verify login page is shown
-    expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-
-    // Navigate to signup view (simulates user mid-signup)
-    fireEvent.click(screen.getByText('Continue with passkey'))
-    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
-
-    // Simulate session going pending (e.g. anonymous bootstrap triggered refetch)
-    mockUseSession.mockReturnValue({ data: null, isPending: true, refetch })
-    rerender(<App />)
-
-    // Signup view should still be visible (not replaced by BootShell)
-    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
-    expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
-  })
-
-  it('does not show app content for anonymous session during signup', async () => {
-    const refetch = vi.fn()
-    mockUseSession.mockReturnValue({ data: null, isPending: false, refetch })
-
-    const { default: App } = await import('@/App')
-    const { rerender } = render(<App />)
-
-    expect(await screen.findByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-
-    // Simulate anonymous session appearing (step 1 of signup flow)
-    mockUseSession.mockReturnValue({
-      data: { user: { id: 'anon-1', name: '', image: '', email: '', isAnonymous: true } },
-      isPending: false,
-      refetch,
-    })
-    rerender(<App />)
-
-    // Should still show login page, not app content
-    expect(screen.getByRole('heading', { name: 'Welcome to WingDex' })).toBeInTheDocument()
-    expect(screen.queryByText('HomePage')).not.toBeInTheDocument()
   })
 })

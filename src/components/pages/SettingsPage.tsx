@@ -15,6 +15,10 @@ import { toast } from 'sonner'
 import demoCsv from '../../../e2e/fixtures/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
+function errCode(err: { code?: string; message?: string }): string | undefined {
+  return 'code' in err ? err.code : undefined
+}
+
 interface SettingsPageProps {
   data: WingDexDataStore
   user: {
@@ -22,6 +26,7 @@ interface SettingsPageProps {
     name: string
     image: string
     email: string
+    isAnonymous: boolean
   }
 }
 
@@ -35,6 +40,25 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
   )
   const { theme, setTheme } = useTheme()
+
+  // Passkey management
+  const [passkeys, setPasskeys] = useState<Array<{ id: string; name?: string; createdAt: Date }>>([]) 
+  const [passkeysLoading, setPasskeysLoading] = useState(false)
+  const passkeysLoaded = useRef(false)
+
+  useEffect(() => {
+    if (user.isAnonymous || passkeysLoaded.current) return
+    passkeysLoaded.current = true
+    setPasskeysLoading(true)
+    void authClient.passkey.listUserPasskeys().then((result) => {
+      if (result.data) {
+        setPasskeys(result.data.map((p) => ({
+          id: p.id, name: p.name, createdAt: new Date(p.createdAt),
+        })))
+      }
+      setPasskeysLoading(false)
+    }).catch(() => setPasskeysLoading(false))
+  }, [user.isAnonymous])
 
   useEffect(() => {
     setMounted(true)
@@ -334,25 +358,83 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
 
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold text-foreground">Account</h3>
+
+        {/* Passkey list */}
+        {!user.isAnonymous && (
+          <div className="space-y-2">
+            {passkeysLoading ? (
+              <p className="text-sm text-muted-foreground">Loading passkeys…</p>
+            ) : passkeys.length > 0 ? (
+              passkeys.map((pk) => (
+                <div key={pk.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Key size={16} className="shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{pk.name || 'Passkey'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Added {pk.createdAt.toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  {passkeys.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-2"
+                      onClick={async () => {
+                        const result = await authClient.passkey.deletePasskey({ id: pk.id })
+                        if (result.error) {
+                          toast.error(result.error.message || 'Failed to remove passkey')
+                          return
+                        }
+                        setPasskeys((prev) => prev.filter((p) => p.id !== pk.id))
+                        toast.success('Passkey removed')
+                      }}
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  )}
+                </div>
+              ))
+            ) : null}
+          </div>
+        )}
+
         <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={async () => {
-              const result = await authClient.passkey.addPasskey({
-                name: 'WingDex passkey',
-                authenticatorAttachment: 'platform',
-              })
-              if (result.error) {
-                toast.error(result.error.message || 'Failed to add passkey')
-                return
-              }
-              toast.success('Passkey added')
-            }}
-          >
-            <Key size={20} className="mr-2" />
-            Add another passkey
-          </Button>
+          {!user.isAnonymous && (
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={async () => {
+                const label = user.email && !user.email.endsWith('@localhost')
+                  ? user.email
+                  : user.name
+                const result = await authClient.passkey.addPasskey({
+                  name: label,
+                  authenticatorAttachment: 'platform',
+                })
+                if (result.error) {
+                  if (errCode(result.error) === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
+                    toast.error('This device already has a passkey registered.')
+                  } else if (errCode(result.error) !== 'ERROR_CEREMONY_ABORTED') {
+                    toast.error(result.error.message || 'Failed to add passkey')
+                  }
+                  return
+                }
+                // Refresh the list
+                const listResult = await authClient.passkey.listUserPasskeys()
+                if (listResult.data) {
+                  setPasskeys(listResult.data.map((p) => ({
+                    id: p.id, name: p.name, createdAt: new Date(p.createdAt),
+                  })))
+                }
+                toast.success('Passkey added')
+              }}
+            >
+              <Key size={20} className="mr-2" />
+              Add another passkey
+            </Button>
+          )}
 
           <Button
             variant="outline"
