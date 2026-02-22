@@ -125,14 +125,17 @@ function App() {
       return
     }
 
-    // No session — bootstrap anonymous
+    // No session — reset the bootstrap guard so we can re-create an
+    // anonymous session (e.g. after sign-out destroys the old one).
+    anonBootstrapStarted.current = false
+
     if (isDevRuntime()) {
       if (anonBootstrapFailed) {
         setUser(getFallbackUser())
         return
       }
 
-      if (!isSessionPending && !anonBootstrapStarted.current) {
+      if (!isSessionPending) {
         anonBootstrapStarted.current = true
         void authClient.signIn.anonymous().then((result) => {
           if (result.error) {
@@ -151,7 +154,7 @@ function App() {
     }
 
     // Hosted: auto-bootstrap anonymous session (demo-first)
-    if (!isSessionPending && !anonBootstrapStarted.current) {
+    if (!isSessionPending) {
       anonBootstrapStarted.current = true
       void authClient.signIn.anonymous({
         fetchOptions: {

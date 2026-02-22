@@ -495,16 +495,7 @@ export default function SettingsPage({ data, user }: SettingsPageProps) {
                 toast.error(signOutResult.error.message || 'Failed to sign out')
                 return
               }
-
-              if (isLocalRuntime()) {
-                const localSignInResult = await authClient.signIn.anonymous()
-                if (localSignInResult.error) {
-                  toast.error(localSignInResult.error.message || 'Signed out, but failed to restore local session')
-                } else {
-                  await data.refresh()
-                }
-              }
-
+              // App.tsx will auto-bootstrap a new anonymous session
               toast.success('Signed out')
             }}
           >
