@@ -8,16 +8,30 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 
 /** Safely extract error code from Better Auth error union */
 function errCode(err: { code?: string; message?: string }): string | undefined {
   return 'code' in err ? err.code : undefined
 }
 
+function isCancellationLike(err: { code?: string; message?: string }): boolean {
+  const code = errCode(err)
+  if (code === 'AUTH_CANCELLED' || code === 'ERROR_CEREMONY_ABORTED') return true
+  const msg = (err.message || '').toLowerCase()
+  return msg.includes('not allowed by the user agent')
+    || msg.includes('notallowederror')
+    || msg.includes('request is not allowed')
+}
+
 interface AuthGateOptions {
   isAnonymous: boolean
-  onUpgraded: () => void
+  onUpgraded: () => void | Promise<void>
+  demoDataEnabled?: boolean
+  onSetDemoDataEnabled?: (enabled: boolean) => Promise<void> | void
 }
+
+type AuthMode = 'signup' | 'login'
 
 /**
  * Hook that gates actions behind authentication.
@@ -25,8 +39,9 @@ interface AuthGateOptions {
  * If user is already authenticated, runs the callback immediately.
  * Also returns `<AuthGateModal />` to render once in the tree.
  */
-export function useAuthGate({ isAnonymous, onUpgraded }: AuthGateOptions) {
+export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDemoDataEnabled }: AuthGateOptions) {
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<AuthMode>('signup')
   const pendingCallback = useRef<(() => void) | null>(null)
 
   const requireAuth = useCallback((callback: () => void) => {
@@ -35,28 +50,33 @@ export function useAuthGate({ isAnonymous, onUpgraded }: AuthGateOptions) {
       return
     }
     pendingCallback.current = callback
+    setMode('signup')
     setOpen(true)
   }, [isAnonymous])
 
   const openSignIn = useCallback(() => {
     pendingCallback.current = null
+    setMode('login')
     setOpen(true)
   }, [])
 
-  const handleUpgraded = useCallback(() => {
+  const handleUpgraded = useCallback(async () => {
     setOpen(false)
-    onUpgraded()
-    // Run the pending action after a brief delay so session can refresh
-    const cb = pendingCallback.current
+    await onUpgraded()
+    const callback = pendingCallback.current
     pendingCallback.current = null
-    if (cb) setTimeout(cb, 100)
+    callback?.()
   }, [onUpgraded])
 
   const modal = (
     <AuthGateModal
       open={open}
       onOpenChange={setOpen}
+      mode={mode}
+      onModeChange={setMode}
       onUpgraded={handleUpgraded}
+      demoDataEnabled={demoDataEnabled}
+      onSetDemoDataEnabled={onSetDemoDataEnabled}
     />
   )
 
@@ -68,14 +88,32 @@ export function useAuthGate({ isAnonymous, onUpgraded }: AuthGateOptions) {
 interface AuthGateModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  mode: AuthMode
+  onModeChange: (mode: AuthMode) => void
   onUpgraded: () => void
+  demoDataEnabled?: boolean
+  onSetDemoDataEnabled?: (enabled: boolean) => Promise<void> | void
 }
 
-function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
+function AuthGateModal({
+  open,
+  onOpenChange,
+  mode,
+  onModeChange,
+  onUpgraded,
+  demoDataEnabled,
+  onSetDemoDataEnabled,
+}: AuthGateModalProps) {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [providers, setProviders] = useState<string[] | null>(null)
+  const isLocalRuntime = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname.toLowerCase())
+  const visibleProviders = providers && providers.length > 0
+    ? providers
+    : (isLocalRuntime ? ['github', 'apple'] : [])
 
   // Fetch providers on first open
   const fetchedProviders = useRef(false)
@@ -86,7 +124,7 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
     )
   }
 
-  const handleContinueWithPasskey = async () => {
+  const handleSignUpWithPasskey = async () => {
     setErrorMessage(null)
     setIsLoading(true)
 
@@ -103,8 +141,8 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
             const signInResult = await authClient.signIn.passkey({ autoFill: false })
             if (signInResult.error) {
               setIsLoading(false)
-              if (errCode(signInResult.error) === 'AUTH_CANCELLED') {
-                setErrorMessage('Sign-in cancelled.')
+              if (isCancellationLike(signInResult.error)) {
+                return
               } else {
                 setErrorMessage(signInResult.error.message || 'Sign-in failed.')
               }
@@ -131,10 +169,10 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
     })
     if (passkeyResult.error) {
       setIsLoading(false)
-      if (errCode(passkeyResult.error) === 'ERROR_CEREMONY_ABORTED') {
-        setErrorMessage('Passkey registration cancelled.')
+      if (isCancellationLike(passkeyResult.error)) {
+        return
       } else if (errCode(passkeyResult.error) === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
-        setErrorMessage('This device already has a passkey registered. Try signing in instead.')
+        setErrorMessage('This device already has a passkey. Try Log in instead.')
       } else {
         setErrorMessage(passkeyResult.error.message || 'Passkey registration failed.')
       }
@@ -173,8 +211,8 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
     const result = await authClient.signIn.passkey({ autoFill: false })
     if (result.error) {
       setIsLoading(false)
-      if (errCode(result.error) === 'AUTH_CANCELLED') {
-        setErrorMessage('Sign-in cancelled.')
+      if (isCancellationLike(result.error)) {
+        return
       } else {
         setErrorMessage(result.error.message || 'Passkey sign-in failed.')
       }
@@ -202,21 +240,51 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
     void authClient.signIn.social({ provider })
   }
 
+  const handleDemoToggle = async (enabled: boolean) => {
+    if (!onSetDemoDataEnabled) return
+    setIsTogglingDemo(true)
+    setErrorMessage(null)
+    try {
+      await onSetDemoDataEnabled(enabled)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown error'
+      setErrorMessage(`Demo data update failed: ${detail}`)
+    } finally {
+      setIsTogglingDemo(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Save your sightings</DialogTitle>
+          <DialogTitle>{mode === 'signup' ? 'Sign up' : 'Log in'}</DialogTitle>
           <DialogDescription>
-            Create an account to save your bird observations.
+            By continuing you accept our{' '}
+            <a
+              href="#terms"
+              onClick={() => onOpenChange(false)}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Terms of Use
+            </a>{' '}
+            and{' '}
+            <a
+              href="#privacy"
+              onClick={() => onOpenChange(false)}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Privacy Policy
+            </a>
+            .
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-1">
           {/* Social providers — top, like Reddit */}
-          {providers && providers.length > 0 && (
+          {visibleProviders.length > 0 && (
             <div className="space-y-2">
-              {providers.includes('github') && (
+              {visibleProviders.includes('github') && (
                 <Button
                   variant="outline"
                   className="w-full"
@@ -227,7 +295,7 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
                   Continue with GitHub
                 </Button>
               )}
-              {providers.includes('apple') && (
+              {visibleProviders.includes('apple') && (
                 <Button
                   variant="outline"
                   className="w-full"
@@ -242,6 +310,7 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
           )}
 
           {/* OR divider */}
+          {visibleProviders.length > 0 && (
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -250,39 +319,85 @@ function AuthGateModal({ open, onOpenChange, onUpgraded }: AuthGateModalProps) {
               <span className="bg-background px-2 text-muted-foreground">or</span>
             </div>
           </div>
+          )}
 
           {/* Email + passkey */}
           <div className="space-y-3">
-            <Input
-              type="email"
-              placeholder="Email (optional)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-              aria-label="Email address"
-            />
+            {mode === 'signup' && (
+              <Input
+                type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
+                placeholder="Email (optional)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                aria-label="Email address"
+              />
+            )}
             <Button
               className="w-full"
-              onClick={handleContinueWithPasskey}
+              onClick={() => void (mode === 'signup' ? handleSignUpWithPasskey() : handlePasskeySignIn())}
               disabled={isLoading}
             >
               <Key size={18} className="mr-2" />
-              {isLoading ? 'Working…' : 'Continue with passkey'}
+              {isLoading
+                ? 'Working…'
+                : (mode === 'signup' ? 'Sign up with a Passkey' : 'Log in with a Passkey')}
             </Button>
           </div>
 
           {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <button
-              className="text-primary underline-offset-4 hover:underline cursor-pointer"
-              onClick={handlePasskeySignIn}
-              disabled={isLoading}
-            >
-              Sign in
-            </button>
+            {mode === 'signup' ? (
+              <>
+                Already have a WingDex?{' '}
+                <button
+                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
+                  onClick={() => {
+                    setErrorMessage(null)
+                    onModeChange('login')
+                  }}
+                  disabled={isLoading}
+                >
+                  Log in
+                </button>
+              </>
+            ) : (
+              <>
+                New to WingDex?{' '}
+                <button
+                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
+                  onClick={() => {
+                    setErrorMessage(null)
+                    onModeChange('signup')
+                  }}
+                  disabled={isLoading}
+                >
+                  Sign up
+                </button>
+              </>
+            )}
           </p>
+
+          {mode === 'signup' && typeof demoDataEnabled === 'boolean' && onSetDemoDataEnabled && (
+            <div className="pt-1">
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Demo data</p>
+                  <p className="text-xs text-muted-foreground">Preview WingDex with sample sightings</p>
+                </div>
+                <Switch
+                  checked={demoDataEnabled}
+                  onCheckedChange={(checked) => void handleDemoToggle(checked)}
+                  disabled={isLoading || isTogglingDemo}
+                  aria-label="Toggle demo data"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
