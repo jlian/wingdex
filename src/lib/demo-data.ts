@@ -1,4 +1,4 @@
-import demoCsv from '../../e2e/fixtures/ebird-import.csv?raw'
+import demoCsv from '@/assets/ebird-import.csv?raw'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 

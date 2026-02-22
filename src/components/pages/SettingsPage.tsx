@@ -13,7 +13,7 @@ import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { toast } from 'sonner'
-import demoCsv from '../../../e2e/fixtures/ebird-import.csv?raw'
+import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
 function errCode(err: { code?: string; message?: string }): string | undefined {
