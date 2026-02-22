@@ -70,9 +70,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [displayName, setDisplayName] = useState(user.name)
   const [profileImage, setProfileImage] = useState(user.image)
   const [profileSaving, setProfileSaving] = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [nameInput, setNameInput] = useState(user.name)
-  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setDisplayName(user.name)
@@ -83,13 +80,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const saveProfile = async (name: string, image: string) => {
     setProfileSaving(true)
     try {
-      const response = await fetchWithLocalAuthRetry('/api/auth/update-user', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), image }),
-      })
-      if (!response.ok) throw new Error(`Update failed (${response.status})`)
+      const result = await authClient.updateUser({ name: name.trim(), image })
+      if (result.error) throw new Error(result.error.message || 'Update failed')
       await onProfileUpdated?.()
     } catch {
       toast.error('Failed to update profile')
@@ -246,75 +238,23 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Account</h3>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            Welcome,{' '}
-            {editingName ? (
-              <span className="flex items-center gap-1">
-                <input
-                  ref={nameInputRef}
-                  type="text"
-                  className="border-b border-foreground/30 bg-transparent text-foreground font-medium text-sm outline-none w-40 px-0.5"
-                  value={nameInput}
-                  maxLength={50}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const trimmed = nameInput.trim()
-                      if (trimmed) {
-                        setDisplayName(trimmed)
-                        void saveProfile(trimmed, profileImage)
-                      }
-                      setEditingName(false)
-                    } else if (e.key === 'Escape') {
-                      setNameInput(displayName)
-                      setEditingName(false)
-                    }
-                  }}
-                  onBlur={() => {
-                    const trimmed = nameInput.trim()
-                    if (trimmed && trimmed !== displayName) {
-                      setDisplayName(trimmed)
-                      void saveProfile(trimmed, profileImage)
-                    }
-                    setEditingName(false)
-                  }}
-                />
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-                  disabled={profileSaving}
-                  onClick={() => {
-                    const name = generateBirdName()
-                    const emoji = emojiForBirdName(name)
-                    const image = emojiAvatarDataUrl(emoji)
-                    setNameInput(name)
-                    setDisplayName(name)
-                    setProfileImage(image)
-                    void saveProfile(name, image)
-                    setEditingName(false)
-                  }}
-                  aria-label="Generate random nickname"
-                >
-                  <ArrowsClockwise size={14} weight="bold" />
-                </button>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <span className="text-foreground font-medium">{displayName}</span>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-                  disabled={profileSaving}
-                  onClick={() => {
-                    setNameInput(displayName)
-                    setEditingName(true)
-                    setTimeout(() => nameInputRef.current?.select(), 0)
-                  }}
-                  aria-label="Edit display name"
-                >
-                  <PencilSimple size={14} weight="bold" />
-                </button>
-              </span>
-            )}
+            Welcome, <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+              disabled={profileSaving}
+              onClick={() => {
+                const name = generateBirdName()
+                const emoji = emojiForBirdName(name)
+                const image = emojiAvatarDataUrl(emoji)
+                setDisplayName(name)
+                setProfileImage(image)
+                void saveProfile(name, image)
+              }}
+              aria-label="Generate new nickname"
+            >
+              <ArrowsClockwise size={14} weight="bold" />
+            </button>
+            <span className="text-foreground font-medium">{displayName}</span>
           </p>
         </div>
 
@@ -358,10 +298,12 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
               try {
                 const result = await authClient.signOut()
                 if (result.error) {
-                  console.warn('Sign-out error (proceeding anyway):', result.error.message)
+                  toast.error(result.error.message || 'Failed to log out')
+                  return
                 }
               } catch {
-                // Backend unreachable (dev without Wrangler) — proceed
+                toast.error('Failed to log out')
+                return
               }
               toast.success('Logged out')
               onSignedOut?.()

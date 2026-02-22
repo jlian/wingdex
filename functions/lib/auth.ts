@@ -21,6 +21,11 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   const baseURL = env.BETTER_AUTH_URL || requestOrigin
   if (!baseURL) throw new Error('Unable to determine a valid base URL for authentication')
   const useSecureCookies = baseURL.startsWith('https://')
+  const trustedOrigins = new Set<string>([baseURL])
+  if (requestOrigin && /localhost|127\.0\.0\.1/.test(new URL(requestOrigin).hostname)) {
+    trustedOrigins.add('http://localhost:5000')
+    trustedOrigins.add('http://127.0.0.1:5000')
+  }
 
   const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
   if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
@@ -33,6 +38,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
     baseURL,
+    trustedOrigins: Array.from(trustedOrigins),
     database: {
       db: database,
       type: 'sqlite',
