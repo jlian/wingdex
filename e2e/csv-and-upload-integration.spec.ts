@@ -218,7 +218,7 @@ test.describe('CSV import + photo upload integration', () => {
     await mockWikimedia(page)
 
     // Navigate home and open upload wizard
-    await page.locator('header button').first().click()
+    await page.getByRole('button', { name: 'Home' }).click()
     // After CSV import, home page shows "Add" button (not "Upload & Identify")
     await expect(page.getByRole('button', { name: 'Add' })).toBeVisible({ timeout: 5_000 })
     await page.getByRole('button', { name: 'Add' }).click()
@@ -250,8 +250,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Click into Chukar detail to verify the sighting count increased
     await chukarEntries.first().click()
-    await page.waitForTimeout(1000)
-    await expect(page.getByRole('heading', { name: 'Chukar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Chukar' })).toBeVisible({ timeout: 5_000 })
 
     // Should show 2 outings for this species (one from CSV, one from photo upload)
     await expect(page.getByText(/2.*outing/i)).toBeVisible({ timeout: 5_000 })

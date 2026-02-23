@@ -1,12 +1,8 @@
 import { test, expect, request } from '@playwright/test'
-import { execSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-const API_PORT = 8792
-const API_BASE = `http://127.0.0.1:${API_PORT}`
-
-let wranglerProc: ChildProcessWithoutNullStreams | null = null
+const API_BASE = 'http://localhost:5000'
 
 function buildCookieHeader(setCookieHeaders: string[]) {
   return setCookieHeaders
@@ -31,24 +27,7 @@ async function waitForServerReady(baseURL: string, timeoutMs: number) {
 
 test.describe('API smoke (request context)', () => {
   test.beforeAll(async () => {
-    execSync("printf 'y\\n' | npx wrangler d1 migrations apply wingdex-db --local", {
-      stdio: 'pipe',
-      shell: true,
-    })
-
-    wranglerProc = spawn('npx', ['wrangler', 'pages', 'dev', 'dist', '--port', String(API_PORT)], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-
     await waitForServerReady(API_BASE, 20_000)
-  })
-
-  test.afterAll(async () => {
-    if (!wranglerProc) return
-    wranglerProc.kill('SIGTERM')
-    await new Promise(resolve => setTimeout(resolve, 500))
-    if (!wranglerProc.killed) wranglerProc.kill('SIGKILL')
-    wranglerProc = null
   })
 
   test('anonymous auth + protected data CRUD', async () => {
