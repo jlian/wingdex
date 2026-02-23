@@ -247,9 +247,12 @@ export function useWingDexData(userId: string) {
       })
         .then(savedOuting => {
           setPayload(current => {
+            const alreadyPresent = current.outings.some(item => item.id === savedOuting.id)
             const next = {
               ...current,
-              outings: current.outings.map(item => (item.id === savedOuting.id ? savedOuting : item)),
+              outings: alreadyPresent
+                ? current.outings.map(item => (item.id === savedOuting.id ? savedOuting : item))
+                : [savedOuting, ...current.outings],
             }
             return next
           })
@@ -273,10 +276,15 @@ export function useWingDexData(userId: string) {
         body: JSON.stringify(updates),
       })
         .then(savedOuting => {
-          setPayload(current => ({
-            ...current,
-            outings: current.outings.map(outing => (outing.id === outingId ? savedOuting : outing)),
-          }))
+          setPayload(current => {
+            const alreadyPresent = current.outings.some(outing => outing.id === outingId)
+            return {
+              ...current,
+              outings: alreadyPresent
+                ? current.outings.map(outing => (outing.id === outingId ? savedOuting : outing))
+                : [savedOuting, ...current.outings],
+            }
+          })
         })
         .catch(() => undefined)
     }
@@ -359,9 +367,15 @@ export function useWingDexData(userId: string) {
         .then(response => {
           setPayload(current => {
             const nextObservations = response.observation
-              ? current.observations.map(observation =>
-                  observation.id === observationId ? response.observation as Observation : observation
-                )
+              ? (() => {
+                  const resolved = response.observation as Observation
+                  const alreadyPresent = current.observations.some(observation => observation.id === observationId)
+                  return alreadyPresent
+                    ? current.observations.map(observation =>
+                        observation.id === observationId ? resolved : observation
+                      )
+                    : [...current.observations, resolved]
+                })()
               : current.observations
 
             return {
@@ -400,7 +414,12 @@ export function useWingDexData(userId: string) {
         .then(response => {
           setPayload(current => {
             const updatesById = new Map((response.observations || []).map(observation => [observation.id, observation]))
-            const nextObservations = current.observations.map(observation => updatesById.get(observation.id) || observation)
+            const nextObservations = [
+              ...current.observations.map(observation => updatesById.get(observation.id) || observation),
+              ...(response.observations || []).filter(
+                observation => !current.observations.some(existing => existing.id === observation.id)
+              ),
+            ]
 
             return {
               ...current,
