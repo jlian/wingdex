@@ -53,7 +53,7 @@ export async function verifyTurnstile(
       return false
     }
 
-    if (expectedAction && data.action !== expectedAction) {
+    if (expectedAction && data.action && data.action !== expectedAction) {
       return false
     }
 

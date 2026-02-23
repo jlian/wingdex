@@ -1,6 +1,8 @@
 import { createAuth } from './lib/auth'
 import { verifyTurnstile } from './lib/turnstile'
 
+const TURNSTILE_ACTION = 'anonymous_signin'
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
   const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
@@ -10,13 +12,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
     const turnstileSecret = context.env.TURNSTILE_SECRET_KEY?.trim()
     if (!turnstileSecret) {
-      return new Response('Service temporarily unavailable', { status: 503 })
+      return new Response('Verification service is unavailable. Please try again later.', { status: 503 })
     }
 
     const rawToken = context.request.headers.get('x-turnstile-token')
     const token = rawToken?.trim()
     if (!token) {
-      return new Response('Forbidden', { status: 403 })
+      return new Response('Verification required. Please refresh and try again.', { status: 403 })
     }
 
     const ip = context.request.headers.get('cf-connecting-ip')
@@ -25,9 +27,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       turnstileSecret,
       ip,
       hostname,
+      TURNSTILE_ACTION,
     )
     if (!valid) {
-      return new Response('Forbidden', { status: 403 })
+      return new Response('Verification failed. Please refresh and try again.', { status: 403 })
     }
   }
 

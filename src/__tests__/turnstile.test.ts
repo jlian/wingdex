@@ -138,6 +138,17 @@ describe('verifyTurnstile', () => {
     ).resolves.toBe(false)
   })
 
+  it('returns true when expected action is set but response action is missing', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'wingdex.app' }),
+    })
+
+    await expect(
+      verifyTurnstile('token', 'secret', null, 'wingdex.app', 'anonymous_signin'),
+    ).resolves.toBe(true)
+  })
+
   it('returns true when expected hostname and action both match', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
