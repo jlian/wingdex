@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/jlian/wingdex/compare/v1.6.1...v1.6.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* edge security hardening + Cloudflare AI Gateway ([#180](https://github.com/jlian/wingdex/issues/180)) ([2ef6874](https://github.com/jlian/wingdex/commit/2ef6874440ef056ba2f32382bb7b5d8da09eb3f7))
+
 ## [1.6.1](https://github.com/jlian/wingdex/compare/v1.6.0...v1.6.1) (2026-02-23)
 
 
