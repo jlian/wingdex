@@ -89,3 +89,10 @@ For repository-specific CLI commands in this workspace, use these defaults unles
 - Owner/repo: `jlian/wingdex`
 - Default branch: `main`
 - Active PR checks may include semantic PR title validation requiring Conventional Commit style titles (e.g., `fix: ...`).
+
+## 8. Text Encoding
+
+**Never use em-dashes or other special Unicode punctuation.**
+
+- Use regular hyphens (`-`) or double hyphens (`--`) instead of em-dashes or en-dashes. They cause encoding corruption in CLI tools (e.g., `gh` heredocs) and terminal output.
+- Stick to ASCII punctuation in commit messages, PR descriptions, issue comments, and code comments.
