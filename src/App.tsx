@@ -259,6 +259,13 @@ function App() {
     void finalizeSocialToast()
   }, [user, fetchLinkedProviders])
 
+  useEffect(() => {
+    setTurnstileToken(null)
+    if (turnstileRef.current && typeof turnstileRef.current.reset === 'function') {
+      turnstileRef.current.reset()
+    }
+  }, [session])
+
   if (!user) {
     return (
       <BootShell

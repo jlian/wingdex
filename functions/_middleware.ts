@@ -8,7 +8,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   // Require a valid Turnstile token for anonymous sign-in in production.
   // This prevents automated account creation that bypasses AI rate limits.
   if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
-    const token = context.request.headers.get('x-turnstile-token') || ''
+    const rawToken = context.request.headers.get('x-turnstile-token')
+    const token = rawToken?.trim()
+    if (!token) {
+      return new Response('Forbidden', { status: 403 })
+    }
+
     const ip = context.request.headers.get('cf-connecting-ip')
     const valid = await verifyTurnstile(token, context.env.TURNSTILE_SECRET_KEY, ip)
     if (!valid) {

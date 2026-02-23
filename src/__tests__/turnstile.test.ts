@@ -62,6 +62,28 @@ describe('verifyTurnstile', () => {
     expect(await verifyTurnstile('token', 'secret')).toBe(false)
   })
 
+  it('returns false when token is blank', async () => {
+    globalThis.fetch = vi.fn()
+
+    expect(await verifyTurnstile('   ', 'secret')).toBe(false)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns false when fetch rejects', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
+
+    await expect(verifyTurnstile('token', 'secret')).resolves.toBe(false)
+  })
+
+  it('returns false when response JSON parsing throws', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => { throw new Error('bad json') },
+    })
+
+    await expect(verifyTurnstile('token', 'secret')).resolves.toBe(false)
+  })
+
   it('does not include remoteip when null', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

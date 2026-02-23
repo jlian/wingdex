@@ -13,8 +13,14 @@ migrations_dir = "migrations"
 [ai]
 binding = "AI"
 
+[vars]
+TURNSTILE_SITE_KEY = "0x4AAAAAACgxU1gzIsVdODuZ"
+
 # Preview/dev, uses a separate database
 [env.preview]
+[env.preview.vars]
+TURNSTILE_SITE_KEY = "0x4AAAAAACgxU1gzIsVdODuZ"
+
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "wingdex-db-dev"
