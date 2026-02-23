@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -55,6 +55,33 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
   )
   const { theme, setTheme } = useTheme()
+
+  // Compute timezone option labels with current UTC offset (DST-aware)
+  const timezoneOptions = useMemo(() => {
+    const zones = [
+      { value: 'Pacific/Honolulu', region: 'Hawaii' },
+      { value: 'America/Anchorage', region: 'Alaska' },
+      { value: 'America/Los_Angeles', region: 'Pacific' },
+      { value: 'America/Denver', region: 'Mountain' },
+      { value: 'America/Chicago', region: 'Central' },
+      { value: 'America/New_York', region: 'Eastern' },
+      { value: 'America/Puerto_Rico', region: 'Atlantic' },
+      { value: 'Europe/London', region: 'London' },
+      { value: 'Europe/Paris', region: 'Central Europe' },
+      { value: 'Asia/Kolkata', region: 'India' },
+      { value: 'Asia/Shanghai', region: 'China' },
+      { value: 'Asia/Taipei', region: 'Taipei' },
+      { value: 'Asia/Tokyo', region: 'Japan' },
+      { value: 'Australia/Sydney', region: 'Sydney' },
+      { value: 'Pacific/Auckland', region: 'New Zealand' },
+    ]
+    const now = new Date()
+    return zones.map(z => {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: z.value, timeZoneName: 'shortOffset' }).formatToParts(now)
+      const offset = (parts.find(p => p.type === 'timeZoneName')?.value ?? 'GMT').replace('GMT', 'UTC')
+      return { value: z.value, label: `${offset} - ${z.region}` }
+    })
+  }, [])
 
   // Passkey management
   const [passkeys, setPasskeys] = useState<Array<{ id: string; name?: string; createdAt: Date }>>([]) 
@@ -502,21 +529,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-[length:16px_16px] bg-[position:right_8px_center] bg-no-repeat"
                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E")` }}
                   >
-                    <option value="Pacific/Honolulu">UTC−10 · Hawaii (HST)</option>
-                    <option value="America/Anchorage">UTC−9 · Alaska (AKST/AKDT)</option>
-                    <option value="America/Los_Angeles">UTC−8 · Pacific (PST/PDT)</option>
-                    <option value="America/Denver">UTC−7 · Mountain (MST/MDT)</option>
-                    <option value="America/Chicago">UTC−6 · Central (CST/CDT)</option>
-                    <option value="America/New_York">UTC−5 · Eastern (EST/EDT)</option>
-                    <option value="America/Puerto_Rico">UTC−4 · Atlantic (AST)</option>
-                    <option value="Europe/London">UTC+0 · London (GMT/BST)</option>
-                    <option value="Europe/Paris">UTC+1 · Central Europe (CET/CEST)</option>
-                    <option value="Asia/Kolkata">UTC+5:30 · India (IST)</option>
-                    <option value="Asia/Shanghai">UTC+8 · China (CST)</option>
-                    <option value="Asia/Taipei">UTC+8 · Taipei (CST)</option>
-                    <option value="Asia/Tokyo">UTC+9 · Japan (JST)</option>
-                    <option value="Australia/Sydney">UTC+10 · Sydney (AEST/AEDT)</option>
-                    <option value="Pacific/Auckland">UTC+12 · New Zealand (NZST/NZDT)</option>
+                    {timezoneOptions.map(tz => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
                     <option value="observation-local">None (times already local)</option>
                   </select>
                 </div>
