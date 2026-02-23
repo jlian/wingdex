@@ -43,13 +43,21 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      - name: Pre-release build check
+        if: github.ref == 'refs/heads/main'
+        run: npm run build
+
+      - name: Clean pre-release build output
+        if: github.ref == 'refs/heads/main'
+        run: rm -rf dist
+
       - name: Run semantic-release
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      - name: Build
+      - name: Build deploy artifact
         run: npm run build
 
       - name: Ensure BETTER_AUTH_SECRET in Pages

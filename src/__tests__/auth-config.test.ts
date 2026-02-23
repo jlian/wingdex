@@ -85,4 +85,20 @@ describe('auth config', () => {
     expect(trusted).toContain('http://localhost:5000')
     expect(trusted).toContain('http://localhost:8788')
   })
+
+  it('trusts appleid.apple.com origin when Apple provider is configured', () => {
+    const auth = createAuth({
+      ...mockEnv,
+      APPLE_CLIENT_ID: 'test-apple-id',
+      APPLE_CLIENT_SECRET: 'test-apple-secret',
+    })
+    const trusted = auth.options.trustedOrigins as string[] | undefined
+    expect(trusted).toContain('https://appleid.apple.com')
+  })
+
+  it('does not trust appleid.apple.com when Apple provider is not configured', () => {
+    const auth = createAuth(mockEnv)
+    const trusted = auth.options.trustedOrigins as string[] | undefined
+    expect(trusted).not.toContain('https://appleid.apple.com')
+  })
 })

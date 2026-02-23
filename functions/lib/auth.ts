@@ -46,6 +46,9 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   const trustedOrigins = new Set<string>([baseURL])
   if (requestOrigin) trustedOrigins.add(requestOrigin)
   if (headerOrigin && isLoopbackOrigin(headerOrigin)) trustedOrigins.add(headerOrigin)
+  // Apple Sign-In uses form_post: Apple's server POSTs to our callback with
+  // Origin: https://appleid.apple.com, so we must trust it when Apple is configured.
+  if (env.APPLE_CLIENT_ID) trustedOrigins.add('https://appleid.apple.com')
 
   const passkeyOrigin = baseURL
 
