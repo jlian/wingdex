@@ -1,3 +1,31 @@
+# [1.6.0](https://github.com/jlian/wingdex/compare/v1.5.4...v1.6.0) (2026-02-23)
+
+
+### Bug Fixes
+
+* address remaining PR review comments ([ffb8ace](https://github.com/jlian/wingdex/commit/ffb8ace63d66ee5f1460d4f8ea684e928a83ce20))
+* address review - dynamic timezone offsets, auth provider fallback ([cc2b5b1](https://github.com/jlian/wingdex/commit/cc2b5b14e1f69638cc5f3e7b346982650976b340))
+* address round-3 review comments ([89554cc](https://github.com/jlian/wingdex/commit/89554cc620d14760489167ec7abd1f0a9bfbb432))
+* align hero image block indentation ([fa1194b](https://github.com/jlian/wingdex/commit/fa1194bc7e5b7796115c950b8dbc67ffdb3db3f7))
+* batch UI/UX fixes for issues [#141](https://github.com/jlian/wingdex/issues/141), [#149](https://github.com/jlian/wingdex/issues/149), [#153](https://github.com/jlian/wingdex/issues/153), [#160](https://github.com/jlian/wingdex/issues/160), [#161](https://github.com/jlian/wingdex/issues/161), [#162](https://github.com/jlian/wingdex/issues/162), [#163](https://github.com/jlian/wingdex/issues/163) ([518d745](https://github.com/jlian/wingdex/commit/518d745a7975b67c28dbf4961b2b4319522e7cfd))
+* keep blurred hero base visible and slow full-res crossfade ([7d2d136](https://github.com/jlian/wingdex/commit/7d2d1361ebbab0ad51b548d91ffa772de2b8f39f))
+* make hero full-res crossfade visible for cached loads ([0a16598](https://github.com/jlian/wingdex/commit/0a165987ad66a2fc46cabbd5516bfd21352a604f))
+* remove loading sightings text on homepage ([83da628](https://github.com/jlian/wingdex/commit/83da6284cd5327c9c991c00a479757cb62eb3fb6))
+* replace stale APP_VERSION fallback with 'dev' ([c36bc00](https://github.com/jlian/wingdex/commit/c36bc0032aec2dd280cf21a2f7b89d049704a0c3))
+* update originalSocialImage ref when user.image changes ([e4b72e6](https://github.com/jlian/wingdex/commit/e4b72e66d56123c14bc106e5d6c6eaf1873bad68))
+* use wrangler deployment URL and harden hero image transition ([c072b30](https://github.com/jlian/wingdex/commit/c072b30099aac06754bf56f9e8fc898e0ed9b013))
+
+
+### Features
+
+* add ™ notices and link version to changelog ([6acc0e0](https://github.com/jlian/wingdex/commit/6acc0e058471e56ef088c9d42fe83e7547b7f72f))
+* progressive blur-to-sharp hero image transition ([9ab23d1](https://github.com/jlian/wingdex/commit/9ab23d1c3c066c6157da215a22ba33f93222271c))
+
+
+### Performance Improvements
+
+* share Wikipedia API cache between image and summary lookups ([6519eaf](https://github.com/jlian/wingdex/commit/6519eaf2a4d1f9358a24c5eb134416b754892090))
+
 ## [1.5.4](https://github.com/jlian/wingdex/compare/v1.5.3...v1.5.4) (2026-02-23)
 
 
