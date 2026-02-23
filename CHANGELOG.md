@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/jlian/wingdex/compare/v1.6.0...v1.6.1) (2026-02-23)
+
+
+### Bug Fixes
+
+* add Cloudflare Turnstile to anonymous sign-in ([#173](https://github.com/jlian/wingdex/issues/173)) ([265a4b0](https://github.com/jlian/wingdex/commit/265a4b0c6cb73ef46e643936b8c4c5333b36f1d2))
+
 # [1.6.0](https://github.com/jlian/wingdex/compare/v1.5.4...v1.6.0) (2026-02-23)
 
 
