@@ -36,10 +36,9 @@ test.describe('App with seeded data', () => {
 
     // Click a known outing from the CSV fixture
     await page.locator('p:visible', { hasText: 'Discovery Park' }).first().click()
-    await page.waitForTimeout(1000)
 
     // Detail view should show a heading with the location name
-    await expect(page.getByRole('heading', { name: 'Discovery Park' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Discovery Park' })).toBeVisible({ timeout: 5_000 })
     // Should show species from that outing
     await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
@@ -98,10 +97,9 @@ test.describe('App with seeded data', () => {
     await page.getByPlaceholder('Search species...').fill('bald eagle')
 
     await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
-    await page.waitForTimeout(1000)
 
     // Detail view should show species info
-    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible({ timeout: 5_000 })
     // Should show a back button
     await expect(page.getByRole('button', { name: /back/i })).toBeVisible()
   })
@@ -114,9 +112,8 @@ test.describe('App with seeded data', () => {
     await page.getByPlaceholder('Search species...').fill('bald eagle')
 
     await page.locator('p:visible', { hasText: 'Bald Eagle' }).first().click()
-    await page.waitForTimeout(1000)
 
-    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bald Eagle' })).toBeVisible({ timeout: 5_000 })
 
     // Wikipedia image should load in the detail hero area
     const heroImg = page.getByRole('img', { name: 'Bald Eagle' })
