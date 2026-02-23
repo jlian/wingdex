@@ -19,7 +19,7 @@ TURNSTILE_SITE_KEY = "0x4AAAAAACgxU1gzIsVdODuZ"
 # Preview/dev, uses a separate database
 [env.preview]
 [env.preview.vars]
-TURNSTILE_SITE_KEY = "0x4AAAAAACgxU1gzIsVdODuZ"
+TURNSTILE_SITE_KEY = "0x4AAAAAACgx2bsQvuyKmOn-"
 
 [[env.preview.d1_databases]]
 binding = "DB"
