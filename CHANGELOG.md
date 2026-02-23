@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/jlian/wingdex/compare/v1.5.3...v1.5.4) (2026-02-23)
+
+
+### Bug Fixes
+
+* add robot.txt ([380597b](https://github.com/jlian/wingdex/commit/380597b3b31af784f27189039b60b792a5423113))
+
 ## [1.5.3](https://github.com/jlian/wingdex/compare/v1.5.2...v1.5.3) (2026-02-23)
 
 
