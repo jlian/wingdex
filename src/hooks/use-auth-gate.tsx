@@ -100,10 +100,11 @@ function AuthGateModal({
   const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [providers, setProviders] = useState<string[] | null>(null)
-  // Default to showing common providers before the async fetch resolves to avoid layout shift
-  const visibleProviders = providers && providers.length > 0
-    ? providers
-    : ['github', 'apple']
+  // Before fetch resolves (null) show common providers to avoid layout shift;
+  // after fetch resolves to [] hide them (env vars not configured).
+  const visibleProviders = providers === null
+    ? ['github', 'apple']
+    : providers
 
   const buildSocialCallbackURL = (provider: 'github' | 'apple'): string => {
     if (typeof window === 'undefined') return '/'
