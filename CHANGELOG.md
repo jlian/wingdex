@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/jlian/wingdex/compare/v1.6.2...v1.6.3) (2026-02-23)
+
+
+### Bug Fixes
+
+* enable Workers Observability and request logging ([#184](https://github.com/jlian/wingdex/issues/184)) ([20da3fe](https://github.com/jlian/wingdex/commit/20da3fe629634adb1a8534671543592d7ff60351))
+
 ## [1.6.2](https://github.com/jlian/wingdex/compare/v1.6.1...v1.6.2) (2026-02-23)
 
 
