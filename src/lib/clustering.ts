@@ -16,7 +16,7 @@ const MAX_DISTANCE_KM = 6
  * When a photo's timestamp is very close to an existing outing (within 30 min),
  * relax the distance threshold to 50 km. This handles the Merlin case where the
  * eBird checklist GPS is the device's location (e.g. hotel) while the photo EXIF
- * GPS is the actual observation site — same island/metro but different coords.
+ * GPS is the actual observation site, same island/metro but different coords.
  */
 const TIGHT_TIME_THRESHOLD_MS = 30 * 60 * 1000
 const RELAXED_DISTANCE_KM = 50
@@ -140,7 +140,7 @@ export function findMatchingOuting(
 
     if (!timeOverlap) continue
 
-    // If both have GPS, check distance — relax threshold when times nearly match
+    // If both have GPS, check distance, relax threshold when times nearly match
     if (
       cluster.centerLat !== undefined &&
       cluster.centerLon !== undefined &&

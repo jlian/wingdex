@@ -1,9 +1,9 @@
 # WingDex: Photo-First Bird Identification
 
-A mobile-first web application for **reverse birders** — people who take photos first and identify species later. Upload your bird photos, let AI do the identification, confirm with one tap, and build your WingDex over time.
+A mobile-first web application for **reverse birders**: people who take photos first and identify species later. Upload your bird photos, let AI do the identification, confirm with one tap, and build your WingDex over time.
 
 **Experience Qualities**:
-1. **Photo-first** – The workflow starts with photos you already took. No checklists, no planning — just upload and go
+1. **Photo-first** – The workflow starts with photos you already took. No checklists, no planning: just upload and go
 2. **Effortless** - Upload multiple photos at once and let AI do the heavy lifting of species identification, requiring only confirmation from the user
 3. **Scientific** - Precise data tracking with EXIF metadata extraction, GPS coordinates, timestamps, and eBird CSV compatibility for serious birding records
 4. **Delightful** - Celebrate birding achievements with a Merlin-inspired WingDex that showcases bird photography (via Wikimedia Commons) and sighting milestones
@@ -84,9 +84,9 @@ A mobile-first web application for **reverse birders** — people who take photo
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
 ### 11. Cloud Data Storage
-- **Functionality**: Structured data (outings, observations, WingDex, saved spots) is stored in Cloudflare D1 via authenticated API routes and user-scoped queries, with localStorage fallback for local-only development paths. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the WingDex and outing views comes from Wikimedia Commons
+- **Functionality**: Structured data (outings, observations, WingDex, saved spots) is stored in Cloudflare D1 via authenticated API routes and user-scoped queries, with localStorage fallback for local-only development paths. User-uploaded photos are ephemeral: used only during the identification session and not persisted long-term. Bird imagery in the WingDex and outing views comes from Wikimedia Commons
 - **Purpose**: Zero-configuration cloud persistence for birding records; photo storage limitations are sidestepped by using public-domain reference images
-- **Trigger**: Automatic — no user action required
+- **Trigger**: Automatic, no user action required
 - **Success criteria**: Outing/observation/WingDex data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
 
 ## Implementation Status
@@ -108,9 +108,9 @@ A mobile-first web application for **reverse birders** — people who take photo
 
 ## Upcoming Priorities
 
-1. **eBird import → outings** — Create outing records from imported eBird CSV checklists (currently imports to WingDex only)
-2. **Autocomplete for manual species entry** — eBird taxonomy or local search
-3. **Animations** — Staggered card reveals, new-species celebration, spring transitions
+1. **eBird import → outings**: Create outing records from imported eBird CSV checklists (currently imports to WingDex only)
+2. **Autocomplete for manual species entry**: eBird taxonomy or local search
+3. **Animations**: Staggered card reveals, new-species celebration, spring transitions
 
 ## Edge Case Handling
 

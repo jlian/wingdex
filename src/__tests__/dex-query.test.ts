@@ -13,7 +13,7 @@ type DexRow = {
 }
 
 /**
- * Minimal mock satisfying DexQueryDB — only needs prepare().bind().all().
+ * Minimal mock satisfying DexQueryDB, only needs prepare().bind().all().
  */
 function createMockDB(rows: DexRow[]): DexQueryDB {
   return {

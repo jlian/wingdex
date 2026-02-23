@@ -191,7 +191,7 @@ export default function OutingsPage({
   if (selectedOutingId) {
     const outing = outings.find(o => o.id === selectedOutingId)
     if (!outing) {
-      // Don't call onSelectOuting during render — use effect or return null gracefully
+      // Don't call onSelectOuting during render, use effect or return null gracefully
       return null
     }
     return (

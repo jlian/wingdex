@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { computeFileHash } from '@/lib/photo-utils'
 
-// jsdom's File doesn't implement arrayBuffer() — polyfill it
+// jsdom's File doesn't implement arrayBuffer(), polyfill it
 beforeAll(() => {
   if (!File.prototype.arrayBuffer) {
     File.prototype.arrayBuffer = function () {

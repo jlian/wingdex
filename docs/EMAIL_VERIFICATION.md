@@ -1,6 +1,6 @@
 # Email Verification Spec
 
-> Status: **Deferred** — not currently planned. Retained as a reference if
+> Status: **Deferred**: not currently planned. Retained as a reference if
 > email collection is added in the future.
 
 ## Context
@@ -33,27 +33,27 @@ stored only in the `verification` table (as a pending value) until verified.
 
 ## User flows
 
-### Flow A — Signup with email
+### Flow A: Signup with email
 
 1. User enters email in auth gate modal
 2. Passkey created (email used as keychain label)
-3. `POST /api/auth/finalize-passkey` with `{ name: birdName }` — **no email
+3. `POST /api/auth/finalize-passkey` with `{ name: birdName }`: **no email
    set on user** (only `isAnonymous = 0` and name updated)
-4. `POST /api/auth/send-email-otp` with `{ email }` — generates OTP, stores in
+4. `POST /api/auth/send-email-otp` with `{ email }`: generates OTP, stores in
    `verification` table, sends email via Resend
 5. Modal shows OTP input: "We sent a code to you@example.com"
 6. User enters code → `POST /api/auth/verify-email-otp` with `{ email, otp }`
 7. Server validates OTP → updates `user.email` → returns success
 8. If user dismisses → email stays unverified, app works normally
 
-### Flow B — Verify later from Settings
+### Flow B: Verify later from Settings
 
 1. User sees "Add email for account recovery" in Settings
 2. Enters email → `POST /api/auth/send-email-otp`
 3. OTP input appears inline → enters code → `POST /api/auth/verify-email-otp`
 4. `user.email` updated, UI refreshes
 
-### Flow C — Verify via deep link
+### Flow C: Verify via deep link
 
 1. Verification email contains link: `https://wingdex.app/#verify-email?email=...&otp=...`
 2. App parses hash on mount → auto-submits to `POST /api/auth/verify-email-otp`
@@ -98,7 +98,7 @@ stored only in the `verification` table (as a pending value) until verified.
 
 ## Email provider: Resend
 
-- **Service:** [Resend](https://resend.com) — transactional email API
+- **Service:** [Resend](https://resend.com): transactional email API
 - **Free tier:** 100 emails/day, 3,000/month (sufficient for early stage)
 - **Domain:** `wingdex.app` (requires DNS verification with Resend)
 - **From address:** `WingDex <noreply@wingdex.app>`
@@ -107,7 +107,7 @@ stored only in the `verification` table (as a pending value) until verified.
 ### Why not Cloudflare Email Workers?
 
 Cloudflare's `send_email` binding only sends to pre-configured destination
-addresses. It cannot send to arbitrary user emails — not suitable for
+addresses. It cannot send to arbitrary user emails: not suitable for
 verification flows. Good for contact forms (fixed recipient).
 
 ### Domain setup plan
@@ -116,7 +116,7 @@ The developer's Resend account currently serves `johnlian.net` for a personal
 contact form. To use Resend for `wingdex.app`:
 
 1. Move the `johnlian.net` contact form to Cloudflare Email Workers
-   (both from and to addresses are owned — CF Email Workers can handle this)
+   (both from and to addresses are owned: CF Email Workers can handle this)
 2. Remove `johnlian.net` from Resend
 3. Add `wingdex.app` domain to Resend, verify DNS (DKIM + SPF records)
 4. Set `RESEND_API_KEY` and `EMAIL_FROM` as Cloudflare Pages secrets
@@ -154,7 +154,7 @@ CREATE TABLE verification (
 
 ### Auth client (`src/lib/auth-client.ts`)
 
-No changes needed — the OTP endpoints are custom (not Better Auth plugin
+No changes needed: the OTP endpoints are custom (not Better Auth plugin
 routes), so they use plain `fetch()` calls.
 
 If we later switch to Better Auth's built-in `emailOTP` plugin, add
@@ -180,7 +180,7 @@ Replace the current direct-save email input with:
 
 Add handler in `App.tsx` or router:
 - `#verify-email?email=...&otp=...` → auto-verify on mount
-- Requires active session — if no session, show "Sign in to verify email"
+- Requires active session: if no session, show "Sign in to verify email"
 
 ## Local development
 

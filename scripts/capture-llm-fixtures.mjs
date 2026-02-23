@@ -198,12 +198,12 @@ const IMAGES = [
   // ── Edge cases ───────────────────────────────────────────
   {
     file: 'AI_generated_ambiguous_bird.png',
-    // AI-generated image — no real GPS. Use generic coords.
+    // AI-generated image, no real GPS. Use generic coords.
     lat: 40.0, lon: -100.0, month: 5, location: 'Unknown (AI-generated test image)',
   },
   {
     file: 'Unknown_bird_no_GPS.jpeg',
-    // Intentionally no GPS — tests the "no location" path
+    // Intentionally no GPS, tests the "no location" path
     lat: undefined, lon: undefined, month: undefined, location: undefined,
   },
 ]
@@ -275,7 +275,7 @@ async function captureOne(entry) {
 
   if (!res.ok) {
     const errText = await res.text()
-    console.error(`❌ ${entry.file}: HTTP ${res.status} — ${errText.substring(0, 200)}`)
+    console.error(`❌ ${entry.file}: HTTP ${res.status}, ${errText.substring(0, 200)}`)
     return
   }
 

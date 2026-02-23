@@ -51,7 +51,7 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
       <div className="flex-shrink-0 flex items-center py-1.5">
         {image}
       </div>
-      {/* Text + actions — inset bottom border, stretches to row height */}
+      {/* Text + actions, inset bottom border, stretches to row height */}
       <div className="flex items-center flex-1 min-w-0 gap-2 border-b border-border py-3">
         <div className="flex-1 min-w-0 text-left">
           <div className="md:flex md:items-baseline md:gap-2">

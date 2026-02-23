@@ -112,7 +112,7 @@ test.describe('Dark mode', () => {
   });
 
   test('dark mode preference persists across page reloads', async ({ page }) => {
-    // Don't use the beforeEach localStorage.clear for this test — 
+    // Don't use the beforeEach localStorage.clear for this test, 
     // we need localStorage to persist between navigations
     await loadApp(page);
 

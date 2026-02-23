@@ -5,7 +5,7 @@ interface StatCardProps {
   label: string
   /** Tailwind text color class for the value, e.g. "text-primary" */
   accent?: string
-  /** Optional click handler — makes the card interactive */
+  /** Optional click handler, makes the card interactive */
   onClick?: () => void
 }
 

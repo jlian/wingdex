@@ -247,7 +247,7 @@ export default function OutingReview({
       setLocationName(name)
     } catch (error) {
       console.error('❌ Reverse geocoding failed:', error)
-      toast.warning('Could not look up location name — using coordinates instead')
+      toast.warning('Could not look up location name, using coordinates instead')
       // Fall back to default location or coordinate string
       const fallback = defaultLocationName || `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
       console.log('⚠️ Using fallback:', fallback)
@@ -260,7 +260,7 @@ export default function OutingReview({
 
   const doConfirm = (name: string) => {
     if (useExistingOuting && matchingOuting) {
-      // Merge into existing outing — expand its time window if needed.
+      // Merge into existing outing, expand its time window if needed.
       // cluster.startTime is a proper UTC instant (exifTime is offset-aware),
       // so dateToLocalISOWithOffset correctly formats it in the outing's TZ.
       const clusterStartISO = dateToLocalISOWithOffset(
@@ -471,7 +471,7 @@ export default function OutingReview({
                   </p>
                 )}
 
-                {/* Place search (#13) — search for a place by name */}
+                {/* Place search (#13), search for a place by name */}
                 <div className="space-y-1.5 pt-1">
                   <div className="flex gap-2">
                     <Input

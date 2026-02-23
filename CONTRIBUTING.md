@@ -42,20 +42,20 @@ Thanks for your interest in contributing! Here's how to get started.
 
 ## Code Style
 
-- **TypeScript** — strict types, no `any` unless unavoidable
-- **React** — functional components with hooks
-- **Formatting** — follow the existing style (no trailing semicolons in imports, single quotes, 2-space indent)
-- **Tests** — Vitest, import source functions directly rather than re-implementing logic
+- **TypeScript**: strict types, no `any` unless unavoidable
+- **React**: functional components with hooks
+- **Formatting**: follow the existing style (no trailing semicolons in imports, single quotes, 2-space indent)
+- **Tests**: Vitest, import source functions directly rather than re-implementing logic
 
 ## Project Structure
 
 See [README.md](README.md#project-structure) for a full annotated file tree.
 
 Key areas:
-- `src/lib/` — pure logic (AI inference, EXIF parsing, clustering, eBird import/export)
-- `src/components/` — React UI (pages, flows, primitives)
-- `src/__tests__/` — unit tests
-- `e2e/` — Playwright end-to-end tests
+- `src/lib/`: pure logic (AI inference, EXIF parsing, clustering, eBird import/export)
+- `src/components/`: React UI (pages, flows, primitives)
+- `src/__tests__/`: unit tests
+- `e2e/`: Playwright end-to-end tests
 
 ## Reporting Issues
 

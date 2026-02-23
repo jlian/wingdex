@@ -151,10 +151,10 @@ async function main() {
     return
   }
 
-  log(`\n⚠️  ${misses.length} species not found via Wikidata — verifying against Wikipedia API...\n`)
+  log(`\n⚠️  ${misses.length} species not found via Wikidata, verifying against Wikipedia API...\n`)
 
   // Second pass: check each miss against the actual Wikipedia REST API
-  // This is the ground truth — mirrors exactly what the app does at runtime
+  // This is the ground truth, mirrors exactly what the app does at runtime
   const trueMisses = []
   let apiHits = 0
 
@@ -201,7 +201,7 @@ async function main() {
 
     if (found) {
       apiHits++
-      log(`  ✓ ${common} — found via "${matchedVia}"`)
+      log(`  ✓ ${common}, found via "${matchedVia}"`)
     } else {
       trueMisses.push({ common, scientific })
     }
