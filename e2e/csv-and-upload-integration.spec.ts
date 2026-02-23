@@ -178,6 +178,11 @@ test.describe('CSV import + photo upload integration', () => {
     // Wait for dialog to auto-close
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
+    // Navigate to Outings and verify the new outing is visible immediately (no refresh)
+    await page.getByRole('tab', { name: 'Outings' }).first().click()
+    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByText('Haleakala National Park, Maui')).toBeVisible({ timeout: 10_000 })
+
     // Navigate to WingDex to verify the species was saved
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.getByPlaceholder('Search species...')).toBeVisible({ timeout: 10_000 })

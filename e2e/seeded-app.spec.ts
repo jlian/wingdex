@@ -44,6 +44,24 @@ test.describe('App with seeded data', () => {
     await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
 
+  test('outing detail export button downloads eBird CSV', async ({ page }) => {
+    await seedViaCSVImport(page)
+
+    await page.getByRole('tab', { name: 'Outings' }).first().click()
+    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
+
+    await page.locator('p:visible', { hasText: 'Discovery Park' }).first().click()
+    await expect(page.getByRole('heading', { name: 'Discovery Park' })).toBeVisible()
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export eBird CSV' }).click()
+    const download = await downloadPromise
+
+    expect(download.suggestedFilename()).toContain('wingdex-outing-')
+    expect(download.suggestedFilename()).toContain('.csv')
+    await expect(page.getByText('Outing exported in eBird Record CSV format')).toBeVisible({ timeout: 5_000 })
+  })
+
   test('wingdex page lists species with count', async ({ page }) => {
     await seedViaCSVImport(page)
 
