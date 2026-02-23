@@ -677,12 +677,12 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
       )}
 
       <footer className="flex flex-col-reverse items-center gap-4 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}</a>
           <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-muted-foreground transition-colors">
             <GithubLogo size={16} />
           </a>
-          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">John Lian</a>
+          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">By John Lian</a>
         </div>
         <nav className="flex items-center gap-4">
           <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">Privacy</button>
