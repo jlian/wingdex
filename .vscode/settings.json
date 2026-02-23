@@ -1,5 +1,8 @@
 {
   "terminal.integrated.defaultProfile.osx": "bash",
+  "terminal.integrated.automationProfile.osx": {
+    "path": "/bin/bash"
+  },
   "remote.autoForwardPorts": true,
   "remote.restoreForwardedPorts": true,
   "remote.portsAttributes": {
