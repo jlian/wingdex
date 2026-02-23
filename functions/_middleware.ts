@@ -27,6 +27,11 @@ function withSecurityHeaders(response: Response): Response {
   return patched
 }
 
+/** Emit a structured log line for observability. */
+function logRequest(method: string, path: string, status: number): void {
+  console.log(JSON.stringify({ method, path, status }))
+}
+
 /** Create an error Response with security headers applied. */
 function errorResponse(body: string, status: number, extraHeaders?: Record<string, string>): Response {
   const response = new Response(body, { status })
@@ -45,12 +50,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
 
   // Non-API requests -- pass through with security headers only.
+  // (Static assets are served by the CDN and skip the Function entirely;
+  // only SPA fallback navigations reach here. Skip logging to avoid noise.)
   if (!pathname.startsWith('/api/')) {
     return withSecurityHeaders(await context.next())
   }
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(context.request.method)) {
+    logRequest(context.request.method, pathname, 405)
     return errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -64,12 +72,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
+      logRequest(method, pathname, 400)
       return errorResponse('Invalid Content-Length', 400)
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
+        logRequest(method, pathname, 413)
         return errorResponse('Payload Too Large', 413)
       }
     }
@@ -82,12 +92,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
     const turnstileSecret = context.env.TURNSTILE_SECRET_KEY?.trim()
     if (!turnstileSecret) {
+      logRequest(context.request.method, pathname, 503)
       return errorResponse('Verification service is unavailable. Please try again later.', 503)
     }
 
     const rawToken = context.request.headers.get('x-turnstile-token')
     const token = rawToken?.trim()
     if (!token) {
+      logRequest(context.request.method, pathname, 403)
       return errorResponse('Verification required. Please refresh and try again.', 403)
     }
 
@@ -100,13 +112,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       TURNSTILE_ACTION,
     )
     if (!valid) {
+      logRequest(context.request.method, pathname, 403)
       return errorResponse('Verification failed. Please refresh and try again.', 403)
     }
   }
 
   // Auth routes -- skip session check but still apply security headers.
   if (pathname.startsWith('/api/auth')) {
-    return withSecurityHeaders(await context.next())
+    const response = withSecurityHeaders(await context.next())
+    logRequest(context.request.method, pathname, response.status)
+    return response
   }
 
   const auth = createAuth(context.env, { request: context.request })
@@ -115,11 +130,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
+    logRequest(context.request.method, pathname, 401)
     return errorResponse('Unauthorized', 401)
   }
 
   context.data.user = session.user
   context.data.session = session.session
 
-  return withSecurityHeaders(await context.next())
+  const response = withSecurityHeaders(await context.next())
+  logRequest(context.request.method, pathname, response.status)
+  return response
 }

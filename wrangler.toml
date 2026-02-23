@@ -16,6 +16,9 @@ binding = "AI"
 [vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAACgxU1gzIsVdODuZ"
 
+[observability]
+enabled = true
+
 # Preview/dev, uses a separate database
 [env.preview]
 [env.preview.vars]
