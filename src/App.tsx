@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useTheme } from 'next-themes'
-import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
@@ -32,8 +31,6 @@ interface UserInfo {
   id: string
   isAnonymous: boolean
 }
-
-const TURNSTILE_ACTION = 'anonymous_signin'
 
 function isDevRuntime(): boolean {
   const host = window.location.hostname.toLowerCase()
@@ -115,48 +112,9 @@ function App() {
   const isSessionPending = sessionState.isPending
   const refetchSession = sessionState.refetch
   const anonBootstrapStarted = useRef(false)
-  const turnstileRetryCount = useRef(0)
   const hadSessionRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
-  const [turnstileStatusMessage, setTurnstileStatusMessage] = useState('Verifying your session.')
-  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null)
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const turnstileRef = useRef<TurnstileInstance | null>(null)
-
-  const resetTurnstileWidget = useCallback(() => {
-    if (turnstileRef.current && typeof turnstileRef.current.reset === 'function') {
-      turnstileRef.current.reset()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isDevRuntime()) {
-      setTurnstileSiteKey('')
-      return
-    }
-
-    let active = true
-    void fetch('/api/auth/bootstrap-config', { credentials: 'include' })
-      .then(async (response) => {
-        if (!response.ok) return { turnstileSiteKey: '' }
-        const data = await response.json() as { turnstileSiteKey?: string }
-        return { turnstileSiteKey: (data.turnstileSiteKey || '').trim() }
-      })
-      .catch(() => ({ turnstileSiteKey: '' }))
-      .then((data) => {
-        if (!active) return
-        setTurnstileSiteKey(data.turnstileSiteKey)
-        if (!data.turnstileSiteKey) {
-          setTurnstileStatusMessage('Verification is currently unavailable. Please try again later.')
-          setAnonBootstrapFailed(true)
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [])
 
   const fetchLinkedProviders = useCallback(async (): Promise<string[]> => {
     try {
@@ -189,11 +147,9 @@ function App() {
     if (session && session.user) {
       hadSessionRef.current = true
       anonBootstrapStarted.current = false
-      turnstileRetryCount.current = 0
       const isAnon = Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
 
       setAnonBootstrapFailed(false)
-      setTurnstileStatusMessage('Verifying your session.')
       setUser({
         id: session.user.id,
         name: session.user.name || session.user.email || 'user',
@@ -235,11 +191,6 @@ function App() {
       return
     }
 
-    if (turnstileSiteKey === null) {
-      setUser(null)
-      return
-    }
-
     // Hosted: auto-bootstrap anonymous session (demo-first)
     if (anonBootstrapFailed) {
       // Auth backend unreachable, stop retrying to avoid tight loop.
@@ -247,46 +198,15 @@ function App() {
       return
     }
 
-    // Wait for Turnstile token before proceeding (skipped when no site key)
-    const needsTurnstile = Boolean(turnstileSiteKey)
-    if (needsTurnstile && !turnstileToken) {
-      setUser(null)
-      return
-    }
-
     if (!isSessionPending && !anonBootstrapStarted.current) {
       anonBootstrapStarted.current = true
-      void authClient.signIn.anonymous({
-        fetchOptions: turnstileToken
-          ? { headers: { 'x-turnstile-token': turnstileToken } }
-          : {},
-      }).then((result) => {
+      void authClient.signIn.anonymous().then((result) => {
         if (result.error) {
-          const status = Number((result.error as { status?: number }).status || 0)
-          const message = String((result.error as { message?: string }).message || '').toLowerCase()
-          const shouldRetryWithFreshToken = (
-            needsTurnstile
-            && turnstileRetryCount.current < 1
-            && (status === 403 || message.includes('forbidden') || message.includes('turnstile'))
-          )
-
-          if (shouldRetryWithFreshToken) {
-            turnstileRetryCount.current += 1
-            anonBootstrapStarted.current = false
-            setTurnstileToken(null)
-            setTurnstileStatusMessage('Refreshing verification. Please wait.')
-            resetTurnstileWidget()
-            return
-          }
-
-          setTurnstileStatusMessage('Unable to verify your session. Please reload and try again.')
           setAnonBootstrapFailed(true)
           return
         }
-        turnstileRetryCount.current = 0
         void refetchSession()
       }).catch(() => {
-        setTurnstileStatusMessage('Unable to verify your session. Please reload and try again.')
         setAnonBootstrapFailed(true)
       })
     }
@@ -297,9 +217,6 @@ function App() {
     isSessionPending,
     refetchSession,
     anonBootstrapFailed,
-    turnstileToken,
-    turnstileSiteKey,
-    resetTurnstileWidget,
   ])
 
   useEffect(() => {
@@ -333,70 +250,17 @@ function App() {
     void finalizeSocialToast()
   }, [user, fetchLinkedProviders])
 
-  useEffect(() => {
-    turnstileRetryCount.current = 0
-    setTurnstileToken(null)
-    setTurnstileStatusMessage('Verifying your session.')
-    resetTurnstileWidget()
-  }, [session, resetTurnstileWidget])
-
   if (!user) {
-    return (
-      <BootShell
-        showTurnstile={!isDevRuntime() && !session && Boolean(turnstileSiteKey)}
-        turnstileSiteKey={turnstileSiteKey || ''}
-        turnstileRef={turnstileRef}
-        statusMessage={turnstileStatusMessage}
-        onTurnstileSuccess={setTurnstileToken}
-        onTurnstileError={() => {
-          turnstileRetryCount.current += 1
-          setTurnstileToken(null)
-          setTurnstileStatusMessage('Verification failed. Please reload and try again.')
-          setAnonBootstrapFailed(true)
-        }}
-        onTurnstileExpire={() => {
-          anonBootstrapStarted.current = false
-          setTurnstileToken(null)
-          setTurnstileStatusMessage('Refreshing verification. Please wait.')
-          resetTurnstileWidget()
-        }}
-      />
-    )
+    return <BootShell />
   }
 
   return <AppContent user={user} refetchSession={refetchSession} />
 }
 
-function BootShell({
-  showTurnstile,
-  turnstileSiteKey,
-  turnstileRef,
-  statusMessage,
-  onTurnstileSuccess,
-  onTurnstileError,
-  onTurnstileExpire,
-}: {
-  showTurnstile: boolean
-  turnstileSiteKey: string
-  turnstileRef: React.RefObject<TurnstileInstance | null>
-  statusMessage: string
-  onTurnstileSuccess: (token: string) => void
-  onTurnstileError: () => void
-  onTurnstileExpire: () => void
-}) {
+function BootShell() {
   return (
     <div className="min-h-dvh bg-background">
-      <p className="sr-only" aria-live="polite">{statusMessage}</p>
-      {showTurnstile && (
-        <Turnstile
-          ref={turnstileRef}
-          siteKey={turnstileSiteKey}
-          onSuccess={onTurnstileSuccess}
-          onError={onTurnstileError}
-          onExpire={onTurnstileExpire}
-          options={{ size: 'invisible', action: TURNSTILE_ACTION }}
-        />
-      )}
+      <p className="sr-only" aria-live="polite">Verifying your session.</p>
     </div>
   )
 }

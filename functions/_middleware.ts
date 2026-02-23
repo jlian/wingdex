@@ -1,7 +1,4 @@
 import { createAuth } from './lib/auth'
-import { verifyTurnstile } from './lib/turnstile'
-
-const TURNSTILE_ACTION = 'anonymous_signin'
 
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'])
 
@@ -82,38 +79,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         logRequest(method, pathname, 413)
         return errorResponse('Payload Too Large', 413)
       }
-    }
-  }
-
-  const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
-
-  // Require a valid Turnstile token for anonymous sign-in in production.
-  // This prevents automated account creation that bypasses AI rate limits.
-  if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
-    const turnstileSecret = context.env.TURNSTILE_SECRET_KEY?.trim()
-    if (!turnstileSecret) {
-      logRequest(context.request.method, pathname, 503)
-      return errorResponse('Verification service is unavailable. Please try again later.', 503)
-    }
-
-    const rawToken = context.request.headers.get('x-turnstile-token')
-    const token = rawToken?.trim()
-    if (!token) {
-      logRequest(context.request.method, pathname, 403)
-      return errorResponse('Verification required. Please refresh and try again.', 403)
-    }
-
-    const ip = context.request.headers.get('cf-connecting-ip')
-    const valid = await verifyTurnstile(
-      token,
-      turnstileSecret,
-      ip,
-      hostname,
-      TURNSTILE_ACTION,
-    )
-    if (!valid) {
-      logRequest(context.request.method, pathname, 403)
-      return errorResponse('Verification failed. Please refresh and try again.', 403)
     }
   }
 
