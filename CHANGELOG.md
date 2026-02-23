@@ -1,3 +1,10 @@
+## [1.5.3](https://github.com/jlian/wingdex/compare/v1.5.2...v1.5.3) (2026-02-23)
+
+
+### Bug Fixes
+
+* strip parenthesized scientific name in getEbirdCode ([#164](https://github.com/jlian/wingdex/issues/164)) ([b5844aa](https://github.com/jlian/wingdex/commit/b5844aa5e73fc0709453ad920356ee0157262a5f))
+
 ## [1.5.2](https://github.com/jlian/wingdex/compare/v1.5.1...v1.5.2) (2026-02-23)
 
 
