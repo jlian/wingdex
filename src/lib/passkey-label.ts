@@ -37,6 +37,13 @@ export function buildPasskeyName(deviceLabel: string, displayName: string): stri
 
 export function toStandardPasskeyLabel(name: string | undefined, fallbackDisplayName: string): string {
   const trimmed = (name || '').trim()
+
+  const alreadyParenFormat = trimmed.match(/^([^()]+)\s*\((.+)\)$/)
+  if (alreadyParenFormat) {
+    const [, device, label] = alreadyParenFormat
+    return `${device.trim()} (${label.trim()})`
+  }
+
   const standardized = trimmed.match(/^([^,]+),\s*([^,]+),\s*(.+)$/)
   if (standardized) {
     const [, device, _date, displayName] = standardized
