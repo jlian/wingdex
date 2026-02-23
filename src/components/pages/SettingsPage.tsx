@@ -70,6 +70,10 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   useEffect(() => {
     setDisplayName(user.name)
     setProfileImage(user.image)
+    // Keep the social avatar ref current (skip emoji data-URLs)
+    if (!user.image.startsWith('data:image/svg+xml')) {
+      originalSocialImage.current = user.image
+    }
   }, [user.name, user.image])
 
   /** Fire-and-forget save for name + image. */
