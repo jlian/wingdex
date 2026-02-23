@@ -211,7 +211,7 @@ export default function WingDexPage({
   if (selectedSpecies) {
     const entry = dex.find(e => e.speciesName === selectedSpecies)
     if (!entry) {
-      // Don't call onSelectSpecies during render — return null gracefully
+      // Don't call onSelectSpecies during render -- return null gracefully
       return null
     }
     return (
@@ -305,7 +305,7 @@ export default function WingDexPage({
   )
 }
 
-// ─── Species Detail View ──────────────────────────────────
+// -- Species Detail View ------------------------------------
 
 function SpeciesDetail({
   entry,
@@ -397,6 +397,7 @@ function SpeciesDetail({
               src={fullResUrl}
               alt={displayName}
               onLoad={() => setFullResLoaded(true)}
+              onError={() => setFullResLoaded(true)}
               className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-300 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
@@ -424,7 +425,7 @@ function SpeciesDetail({
           </div>
         </div>
 
-        {/* About — fade in when loaded */}
+        {/* About -- fade in when loaded */}
         {summary?.extract && (
           <div className="space-y-1 animate-fade-in">
             <p className="text-sm text-muted-foreground leading-relaxed">

@@ -27,7 +27,7 @@ type AuthMode = 'signup' | 'login'
 
 /**
  * Hook that gates actions behind authentication.
- * Returns `requireAuth(callback)` — if user is anonymous, opens sign-up modal.
+ * Returns `requireAuth(callback)` -- if user is anonymous, opens sign-up modal.
  * If user is already authenticated, runs the callback immediately.
  * Also returns `authGateModal` element to render once in the tree.
  */
@@ -75,7 +75,7 @@ export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDem
   return { requireAuth, openSignIn, authGateModal: modal }
 }
 
-// ─── Modal ──────────────────────────────────────────────
+// -- Modal ------------------------------------------------
 
 interface AuthGateModalProps {
   open: boolean
@@ -149,7 +149,7 @@ function AuthGateModal({
       return
     }
 
-    // Finalize — flip anonymous → real user
+    // Finalize -- flip anonymous -> real user
     const finalizeRes = await fetch('/api/auth/finalize-passkey', {
       method: 'POST',
       credentials: 'include',
@@ -249,7 +249,7 @@ function AuthGateModal({
         </DialogHeader>
 
         <div className="space-y-3 pt-1 min-h-[280px]">
-          {/* Social providers — top, like Reddit */}
+          {/* Social providers -- top, like Reddit */}
           {visibleProviders.length > 0 && (
             <div className="space-y-2">
               {visibleProviders.includes('github') && (

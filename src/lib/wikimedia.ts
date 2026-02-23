@@ -27,7 +27,7 @@ type FetchResult =
   | { kind: 'miss' }
   | { kind: 'error' }
 
-/** Shared cache for the raw REST API response — populated once, used by both image and summary lookups. */
+/** Shared cache for the raw REST API response -- populated once, used by both image and summary lookups. */
 const restCache = new Map<string, RestSummary | null>()
 const restInFlight = new Map<string, Promise<RestSummary | undefined>>()
 
@@ -130,16 +130,26 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
   const lookupPromise = (async (): Promise<RestSummary | undefined> => {
     const titles = getLookupTitles(speciesName)
     let sawError = false
+    let fallbackHit: RestSummary | undefined
 
     for (const title of titles) {
       const result = await fetchSummary(title)
       if (result.kind === 'hit') {
-        restCache.set(cacheKey, result.data)
-        return result.data
+        if (!fallbackHit) fallbackHit = result.data
+        if (extractThumbnailUrl(result.data)) {
+          restCache.set(cacheKey, result.data)
+          return result.data
+        }
+        continue
       }
       if (result.kind === 'error') {
         sawError = true
       }
+    }
+
+    if (fallbackHit) {
+      restCache.set(cacheKey, fallbackHit)
+      return fallbackHit
     }
 
     if (!sawError) {
