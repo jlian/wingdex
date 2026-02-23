@@ -3,9 +3,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird, ArrowUp, ArrowDown
+  Bird, ArrowUp, ArrowDown, Camera
 } from '@phosphor-icons/react'
-import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
+import { useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
@@ -63,6 +63,8 @@ interface WingDexPageProps {
   selectedSpecies: string | null
   onSelectSpecies: (name: string | null) => void
   onSelectOuting: (id: string) => void
+  onAddPhotos?: () => void
+  onAddPhotosIntent?: () => void
   searchQuery?: string
   onSearchQueryChange?: (value: string) => void
   sortField?: SortField
@@ -75,6 +77,8 @@ export default function WingDexPage({
   selectedSpecies,
   onSelectSpecies,
   onSelectOuting,
+  onAddPhotos,
+  onAddPhotosIntent,
   searchQuery,
   onSearchQueryChange,
   sortField,
@@ -185,7 +189,22 @@ export default function WingDexPage({
         icon={Bird}
         title="Your WingDex is empty"
         description="Upload photos and confirm species to start building your WingDex"
-      />
+      >
+        {onAddPhotos && (
+          <Button
+            size="lg"
+            onClick={onAddPhotos}
+            onPointerDown={onAddPhotosIntent}
+            onMouseEnter={onAddPhotosIntent}
+            onFocus={onAddPhotosIntent}
+            onTouchStart={onAddPhotosIntent}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md mt-2"
+          >
+            <Camera size={20} className="mr-2" weight="bold" />
+            Upload & Identify
+          </Button>
+        )}
+      </EmptyState>
     )
   }
 
@@ -301,7 +320,6 @@ function SpeciesDetail({
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
-  const wikiImage = useBirdImage(entry.speciesName)
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
 
@@ -335,7 +353,8 @@ function SpeciesDetail({
     }
   }
 
-  const heroImage = summary?.imageUrl || wikiImage
+  // Only show full-res image (skip cached thumbnail to avoid low-res flash)
+  const heroImage = summary?.imageUrl
 
   return (
     <div className="max-w-3xl mx-auto pb-8 animate-fade-in">

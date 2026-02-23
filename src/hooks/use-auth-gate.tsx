@@ -100,11 +100,10 @@ function AuthGateModal({
   const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [providers, setProviders] = useState<string[] | null>(null)
-  const isLocalRuntime = typeof window !== 'undefined'
-    && ['localhost', '127.0.0.1'].includes(window.location.hostname.toLowerCase())
+  // Default to showing common providers before the async fetch resolves to avoid layout shift
   const visibleProviders = providers && providers.length > 0
     ? providers
-    : (isLocalRuntime ? ['github', 'apple'] : [])
+    : ['github', 'apple']
 
   const buildSocialCallbackURL = (provider: 'github' | 'apple'): string => {
     if (typeof window === 'undefined') return '/'
@@ -248,7 +247,7 @@ function AuthGateModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 pt-1">
+        <div className="space-y-3 pt-1 min-h-[280px]">
           {/* Social providers — top, like Reddit */}
           {visibleProviders.length > 0 && (
             <div className="space-y-2">

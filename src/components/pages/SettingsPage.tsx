@@ -64,6 +64,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [profileImage, setProfileImage] = useState(user.image)
   const [profileSaving, setProfileSaving] = useState(false)
 
+  // Capture the original social provider avatar so we can restore it on bird-emoji deselect
+  const originalSocialImage = useRef(user.image)
+
   useEffect(() => {
     setDisplayName(user.name)
     setProfileImage(user.image)
@@ -282,8 +285,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 disabled={profileSaving}
                 onClick={() => {
                   if (isSelected) {
-                    setProfileImage('')
-                    void saveProfile(displayName, '')
+                    const restored = originalSocialImage.current || ''
+                    setProfileImage(restored)
+                    void saveProfile(displayName, restored)
                   } else {
                     setProfileImage(emojiImage)
                     void saveProfile(displayName, emojiImage)
@@ -494,21 +498,21 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-[length:16px_16px] bg-[position:right_8px_center] bg-no-repeat"
                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E")` }}
                   >
-                    <option value="America/Los_Angeles">Pacific (PST/PDT)</option>
-                    <option value="America/Denver">Mountain (MST/MDT)</option>
-                    <option value="America/Chicago">Central (CST/CDT)</option>
-                    <option value="America/New_York">Eastern (EST/EDT)</option>
-                    <option value="Pacific/Honolulu">Hawaii (HST)</option>
-                    <option value="America/Anchorage">Alaska (AKST/AKDT)</option>
-                    <option value="America/Puerto_Rico">Atlantic (AST)</option>
-                    <option value="Europe/London">London (GMT/BST)</option>
-                    <option value="Europe/Paris">Central Europe (CET/CEST)</option>
-                    <option value="Asia/Kolkata">India (IST)</option>
-                    <option value="Asia/Shanghai">China (CST)</option>
-                    <option value="Asia/Taipei">Taipei (CST)</option>
-                    <option value="Asia/Tokyo">Japan (JST)</option>
-                    <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
-                    <option value="Pacific/Auckland">New Zealand (NZST/NZDT)</option>
+                    <option value="Pacific/Honolulu">UTC−10 · Hawaii (HST)</option>
+                    <option value="America/Anchorage">UTC−9 · Alaska (AKST/AKDT)</option>
+                    <option value="America/Los_Angeles">UTC−8 · Pacific (PST/PDT)</option>
+                    <option value="America/Denver">UTC−7 · Mountain (MST/MDT)</option>
+                    <option value="America/Chicago">UTC−6 · Central (CST/CDT)</option>
+                    <option value="America/New_York">UTC−5 · Eastern (EST/EDT)</option>
+                    <option value="America/Puerto_Rico">UTC−4 · Atlantic (AST)</option>
+                    <option value="Europe/London">UTC+0 · London (GMT/BST)</option>
+                    <option value="Europe/Paris">UTC+1 · Central Europe (CET/CEST)</option>
+                    <option value="Asia/Kolkata">UTC+5:30 · India (IST)</option>
+                    <option value="Asia/Shanghai">UTC+8 · China (CST)</option>
+                    <option value="Asia/Taipei">UTC+8 · Taipei (CST)</option>
+                    <option value="Asia/Tokyo">UTC+9 · Japan (JST)</option>
+                    <option value="Australia/Sydney">UTC+10 · Sydney (AEST/AEDT)</option>
+                    <option value="Pacific/Auckland">UTC+12 · New Zealand (NZST/NZDT)</option>
                     <option value="observation-local">None (times already local)</option>
                   </select>
                 </div>
@@ -775,7 +779,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                       <ul className="list-disc pl-5 space-y-1 text-sm text-left">
                         <li>All your outings and observations</li>
                         <li>Your entire WingDex species list</li>
-                        <li>All uploaded photos</li>
                         <li>Your passkeys and login credentials</li>
                         <li>Your account and profile</li>
                       </ul>

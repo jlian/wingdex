@@ -72,7 +72,7 @@ describe('getEmojiAvatarColor', () => {
 
   it('returns the correct color for penguin emoji', () => {
     const penguinUrl = emojiAvatarDataUrl('🐧')
-    expect(getEmojiAvatarColor(penguinUrl)).toBe('bg-slate-100 dark:bg-slate-900/40')
+    expect(getEmojiAvatarColor(penguinUrl)).toBe('bg-slate-100 dark:bg-slate-600/50')
   })
 
   it('returns empty string for non-emoji image URLs', () => {
