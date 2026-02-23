@@ -110,19 +110,37 @@ jobs:
             DOMAINS="${{ github.ref_name }}.wingdex.pages.dev"
           fi
 
+          MAX_ATTEMPTS=5
           for DOMAIN in $DOMAINS; do
             echo "Checking ${DOMAIN} for version ${VERSION}"
-            HTML=$(curl --fail --silent --show-error "https://${DOMAIN}/")
-            ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1)
+            VERIFIED=false
+            for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+              if ! HTML=$(curl --fail --silent --show-error "https://${DOMAIN}/" 2>&1); then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: fetch failed, retrying in 10s..."
+                sleep 10
+                continue
+              fi
 
-            if [ -z "$ASSET" ]; then
-              echo "Could not locate index asset on ${DOMAIN}"
-              exit 1
-            fi
+              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1)
+              if [ -z "$ASSET" ]; then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no index asset found, retrying in 10s..."
+                sleep 10
+                continue
+              fi
 
-            JS=$(curl --fail --silent --show-error "https://${DOMAIN}/${ASSET}")
-            if ! printf '%s' "$JS" | grep -F "$VERSION" >/dev/null; then
-              echo "Deployed bundle on ${DOMAIN} does not contain expected version ${VERSION}"
+              JS=$(curl --fail --silent --show-error "https://${DOMAIN}/${ASSET}")
+              if printf '%s' "$JS" | grep -F "$VERSION" >/dev/null; then
+                echo "  Verified ${DOMAIN} serves version ${VERSION}"
+                VERIFIED=true
+                break
+              fi
+
+              echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: version mismatch, retrying in 10s..."
+              sleep 10
+            done
+
+            if [ "$VERIFIED" != "true" ]; then
+              echo "Failed to verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts"
               exit 1
             fi
           done
