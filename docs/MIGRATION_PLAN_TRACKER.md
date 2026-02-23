@@ -1236,7 +1236,7 @@ This section defines how to run the app locally during migration, how auth/data 
 
 > **Status snapshot (2026-02-23)**: ⚠️ Mostly complete. Automated build/unit/smoke checks are validated; remaining items are manual auth/UI/deploy flows or intentionally deferred.
 > **Confidence**: High.
-> **Validation**: `npm run build`, `npm test`, `npm run smoke:api`, `npm run smoke:api:seeded`, focused Playwright API smoke, local health checks on `:5000`, client-bundle artifact audit, MCP Playwright manual UI checks (demo render, auth-gated modal trigger, sign-up/login mode switch, provider buttons visible, photo upload + identify confirm flow, species search autocomplete list populated from `robin` query), user-confirmed GitHub/Apple sign-in + trusted-provider auto-merge behavior, passkey sign-in session verification via MCP (`/api/auth/get-session` → `200` with user+session), direct Wrangler API checks on `:8788` for export/cascade (`API_EXPORT_CASCADE_OK`), and latest full Playwright run (`33 passed / 1 flaky / 1 skipped`; flaky retry-pass in `e2e/csv-and-upload-integration.spec.ts`).
+> **Validation**: `npm run build`, `npm test`, `npm run smoke:api`, `npm run smoke:api:seeded`, focused Playwright API smoke, local health checks on `:5000`, client-bundle artifact audit, MCP Playwright manual UI checks (demo render, auth-gated modal trigger, sign-up/login mode switch, provider buttons visible, photo upload + identify confirm flow, species search autocomplete list populated from `robin` query), user-confirmed GitHub/Apple sign-in + trusted-provider auto-merge behavior, passkey sign-in session verification via MCP (`/api/auth/get-session` → `200` with user+session), direct Wrangler API checks on `:8788` for export/cascade (`API_EXPORT_CASCADE_OK`), and latest full Playwright run (`34 passed / 1 skipped` after stabilizing `e2e/csv-and-upload-integration.spec.ts` upload-flow assertion timing).
 
 - [x] `npm run build` succeeds without `@github/spark`
 - [x] `npm test` — all unit tests pass with updated mocks
@@ -1252,7 +1252,7 @@ This section defines how to run the app locally during migration, how auth/data 
 - [x] Dex computation: Confirm species → mutation response includes correct `dexUpdates`
 - [x] eBird import: Upload CSV → server returns previews with conflict status → confirm → outings + observations created → `dexUpdates` returned
 - [x] eBird export: `GET /api/export/outing/:id` → valid eBird CSV downloaded
-- [ ] E2E: `npx playwright test` passes against local dev server _(latest full run: 33 passed / 1 flaky / 1 skipped; flaky retry-pass at `e2e/csv-and-upload-integration.spec.ts` "full photo upload flow")_
+- [x] E2E: `npx playwright test` passes against local dev server _(latest full run: 34 passed / 1 skipped)_
 - [ ] Deploy: Push to `main` → GitHub Actions deploys to Cloudflare Pages → app live at custom domain
 - [ ] Deploy: Push to `dev` → GitHub Actions deploys to `dev.wingdex.pages.dev` with separate D1 database
 - [x] Passkey: Register passkey in settings → sign out → sign in with passkey _(manually completed by user; MCP session check confirms signed-in passkey session)_

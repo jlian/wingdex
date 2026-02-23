@@ -163,8 +163,14 @@ test.describe('CSV import + photo upload integration', () => {
     // Wait for AI processing, then the confirm step (scope to dialog)
     await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 15_000 })
 
+    const saveObservationsResponse = page.waitForResponse(
+      response => response.url().includes('/api/data/observations') && response.request().method() === 'POST'
+    )
+
     // Confirm the species (high confidence = auto-selected with Confirm button)
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
+
+    await saveObservationsResponse
 
     // Should show completion
     await expect(page.getByText(/All done|species saved/i)).toBeVisible({ timeout: 10_000 })
@@ -174,7 +180,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Navigate to WingDex to verify the species was saved
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByPlaceholder('Search species...')).toBeVisible({ timeout: 10_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
 
     await expect(
