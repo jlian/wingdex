@@ -50,10 +50,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
 
   // Non-API requests -- pass through with security headers only.
+  // (Static assets are served by the CDN and skip the Function entirely;
+  // only SPA fallback navigations reach here. Skip logging to avoid noise.)
   if (!pathname.startsWith('/api/')) {
-    const response = withSecurityHeaders(await context.next())
-    logRequest(context.request.method, pathname, response.status)
-    return response
+    return withSecurityHeaders(await context.next())
   }
 
   // --- HTTP method validation ---
