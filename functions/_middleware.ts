@@ -61,8 +61,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const rawContentLength = context.request.headers.get('content-length')
   const hasBodyMethod = method !== 'GET' && method !== 'OPTIONS'
 
-  if (hasBodyMethod) {
-    const parsedLength = rawContentLength === null ? NaN : Number(rawContentLength)
+  if (hasBodyMethod && rawContentLength !== null) {
+    const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
       return errorResponse('Invalid Content-Length', 400)
     }
