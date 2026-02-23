@@ -19,19 +19,14 @@ interface HomePageProps {
 
 export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
-  const [showLoadingHint, setShowLoadingHint] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
 
   useEffect(() => {
     if (data.isLoading) {
       setContentVisible(false)
-      const timeoutId = window.setTimeout(() => {
-        setShowLoadingHint(true)
-      }, 150)
-      return () => window.clearTimeout(timeoutId)
+      return
     }
 
-    setShowLoadingHint(false)
     const frameId = window.requestAnimationFrame(() => {
       setContentVisible(true)
     })
@@ -57,17 +52,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   const totalPhotos = data.photos.length
 
   if (data.isLoading) {
-    if (!showLoadingHint) {
-      return <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto" aria-hidden="true" />
-    }
-
-    return (
-      <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto">
-        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
-          Loading your sightings...
-        </p>
-      </div>
-    )
+    return <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto" aria-hidden="true" />
   }
 
   if (dex.length === 0) {
