@@ -120,7 +120,7 @@ function AuthGateModal({
     if (!open || fetchedProviders.current) return
     fetchedProviders.current = true
     void fetch('/api/auth/providers').then(r => r.ok ? r.json() : null).then(
-      (data: { providers: string[] } | null) => { if (data) setProviders(data.providers) },
+      (data: { providers: string[] } | null) => setProviders(data?.providers ?? []),
     )
   }, [open])
 
