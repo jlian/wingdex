@@ -119,6 +119,7 @@ function App() {
   const hadSessionRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [turnstileStatusMessage, setTurnstileStatusMessage] = useState('Verifying your session.')
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null)
   const [user, setUser] = useState<UserInfo | null>(null)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<TurnstileInstance | null>(null)
@@ -126,6 +127,34 @@ function App() {
   const resetTurnstileWidget = useCallback(() => {
     if (turnstileRef.current && typeof turnstileRef.current.reset === 'function') {
       turnstileRef.current.reset()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isDevRuntime()) {
+      setTurnstileSiteKey('')
+      return
+    }
+
+    let active = true
+    void fetch('/api/auth/bootstrap-config', { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) return { turnstileSiteKey: '' }
+        const data = await response.json() as { turnstileSiteKey?: string }
+        return { turnstileSiteKey: (data.turnstileSiteKey || '').trim() }
+      })
+      .catch(() => ({ turnstileSiteKey: '' }))
+      .then((data) => {
+        if (!active) return
+        setTurnstileSiteKey(data.turnstileSiteKey)
+        if (!data.turnstileSiteKey) {
+          setTurnstileStatusMessage('Verification is currently unavailable. Please try again later.')
+          setAnonBootstrapFailed(true)
+        }
+      })
+
+    return () => {
+      active = false
     }
   }, [])
 
@@ -206,6 +235,11 @@ function App() {
       return
     }
 
+    if (turnstileSiteKey === null) {
+      setUser(null)
+      return
+    }
+
     // Hosted: auto-bootstrap anonymous session (demo-first)
     if (anonBootstrapFailed) {
       // Auth backend unreachable, stop retrying to avoid tight loop.
@@ -214,7 +248,7 @@ function App() {
     }
 
     // Wait for Turnstile token before proceeding (skipped when no site key)
-    const needsTurnstile = Boolean(TURNSTILE_SITE_KEY)
+    const needsTurnstile = Boolean(turnstileSiteKey)
     if (needsTurnstile && !turnstileToken) {
       setUser(null)
       return
@@ -258,7 +292,15 @@ function App() {
     }
 
     setUser(null)
-  }, [session, isSessionPending, refetchSession, anonBootstrapFailed, turnstileToken, resetTurnstileWidget])
+  }, [
+    session,
+    isSessionPending,
+    refetchSession,
+    anonBootstrapFailed,
+    turnstileToken,
+    turnstileSiteKey,
+    resetTurnstileWidget,
+  ])
 
   useEffect(() => {
     if (!user || user.isAnonymous) return
@@ -301,7 +343,8 @@ function App() {
   if (!user) {
     return (
       <BootShell
-        showTurnstile={!isDevRuntime() && !session && Boolean(TURNSTILE_SITE_KEY)}
+        showTurnstile={!isDevRuntime() && !session && Boolean(turnstileSiteKey)}
+        turnstileSiteKey={turnstileSiteKey || ''}
         turnstileRef={turnstileRef}
         statusMessage={turnstileStatusMessage}
         onTurnstileSuccess={setTurnstileToken}
@@ -326,6 +369,7 @@ function App() {
 
 function BootShell({
   showTurnstile,
+  turnstileSiteKey,
   turnstileRef,
   statusMessage,
   onTurnstileSuccess,
@@ -333,6 +377,7 @@ function BootShell({
   onTurnstileExpire,
 }: {
   showTurnstile: boolean
+  turnstileSiteKey: string
   turnstileRef: React.RefObject<TurnstileInstance | null>
   statusMessage: string
   onTurnstileSuccess: (token: string) => void
@@ -345,7 +390,7 @@ function BootShell({
       {showTurnstile && (
         <Turnstile
           ref={turnstileRef}
-          siteKey={TURNSTILE_SITE_KEY}
+          siteKey={turnstileSiteKey}
           onSuccess={onTurnstileSuccess}
           onError={onTurnstileError}
           onExpire={onTurnstileExpire}
