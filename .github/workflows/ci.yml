@@ -80,6 +80,7 @@ jobs:
       # Skip deploy when the release workflow already handles this branch
       - name: Deploy preview to Cloudflare Pages
         if: github.head_ref != 'dev' && github.head_ref != 'main'
+        id: deploy_preview
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -88,7 +89,10 @@ jobs:
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Branch preview deployment
+        if: github.head_ref != 'dev' && github.head_ref != 'main'
         uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy_preview.outputs.pages-deployment-alias-url || steps.deploy_preview.outputs.deployment-url }}
         with:
           script: |
             const { data: deployment } = await github.rest.repos.createDeployment({
@@ -103,5 +107,5 @@ jobs:
               ...context.repo,
               deployment_id: deployment.id,
               state: 'success',
-              environment_url: 'https://${{ github.head_ref }}.wingdex.pages.dev',
+              environment_url: process.env.DEPLOYMENT_URL,
             });
