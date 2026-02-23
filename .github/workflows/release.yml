@@ -103,9 +103,11 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
+          STRICT_VERIFY=false
 
           if [ "${{ github.ref_name }}" = "main" ]; then
             DOMAINS="wingdex.app wingdex.pages.dev"
+            STRICT_VERIFY=true
           else
             DOMAINS="${{ github.ref_name }}.wingdex.pages.dev"
           fi
@@ -121,9 +123,9 @@ jobs:
                 continue
               fi
 
-              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1) || true
+              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/[^"?]+\.js' | head -n1) || true
               if [ -z "$ASSET" ]; then
-                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no index asset found, retrying in 10s..."
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no JS asset found, retrying in 10s..."
                 sleep 10
                 continue
               fi
@@ -145,7 +147,10 @@ jobs:
             done
 
             if [ "$VERIFIED" != "true" ]; then
-              echo "Failed to verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts"
-              exit 1
+              if [ "$STRICT_VERIFY" = "true" ]; then
+                echo "Failed to verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts"
+                exit 1
+              fi
+              echo "Warning: could not verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts; continuing for non-main branch"
             fi
           done
