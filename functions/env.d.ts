@@ -23,4 +23,6 @@ interface Env {
   AI_GATEWAY_ID: string
   AI_DAILY_LIMIT_IDENTIFY?: string
   AI_DAILY_LIMIT_SUGGEST?: string
+  TURNSTILE_SITE_KEY?: string
+  TURNSTILE_SECRET_KEY: string
 }
