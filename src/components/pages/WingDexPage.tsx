@@ -5,7 +5,7 @@ import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
   Bird, ArrowUp, ArrowDown, Camera
 } from '@phosphor-icons/react'
-import { useBirdSummary } from '@/hooks/use-bird-image'
+import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
@@ -320,6 +320,7 @@ function SpeciesDetail({
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
+  const wikiImage = useBirdImage(entry.speciesName)
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
 
@@ -353,8 +354,8 @@ function SpeciesDetail({
     }
   }
 
-  // Only show full-res image (skip cached thumbnail to avoid low-res flash)
-  const heroImage = summary?.imageUrl
+  // Both resolve from the same shared Wikipedia API cache, so no low-res flash
+  const heroImage = summary?.imageUrl || wikiImage
 
   return (
     <div className="max-w-3xl mx-auto pb-8 animate-fade-in">
