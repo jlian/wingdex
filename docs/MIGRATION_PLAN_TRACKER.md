@@ -1254,7 +1254,7 @@ This section defines how to run the app locally during migration, how auth/data 
 - [x] eBird export: `GET /api/export/outing/:id` → valid eBird CSV downloaded
 - [x] E2E: `npx playwright test` passes against local dev server _(latest full run: 34 passed / 1 skipped)_
 - [ ] Deploy: Push to `main` → GitHub Actions deploys to Cloudflare Pages → app live at custom domain
-- [ ] Deploy: Push to `dev` → GitHub Actions deploys to `dev.wingdex.pages.dev` with separate D1 database
+- [x] Deploy: Push to `dev` → GitHub Actions deploys to `dev.wingdex.pages.dev` with separate D1 database
 - [x] Passkey: Register passkey in settings → sign out → sign in with passkey _(manually completed by user; MCP session check confirms signed-in passkey session)_
 - [x] No active Spark runtime/setup references remain in codebase (excluding migration/changelog history, tests, and taxonomy data)
 - [x] Client bundle size: `taxonomy.json` no longer in client bundle (~300KB reduction)
