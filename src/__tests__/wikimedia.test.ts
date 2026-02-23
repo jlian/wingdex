@@ -226,3 +226,50 @@ describe('getWikimediaSummary', () => {
   })
 })
 
+// ── Shared cache ────────────────────────────────────────────
+
+describe('shared cache between image and summary', () => {
+  beforeEach(() => {
+    mockFetch.mockClear()
+    wikiQueue.length = 0
+    wikiTitleOverride = null
+  })
+
+  it('getWikimediaSummary reuses the fetch from getWikimediaImage (no duplicate API call)', async () => {
+    mockWikiResponse(wikiPageData({
+      title: 'Peregrine Falcon',
+      extract: 'The peregrine falcon is the fastest bird.',
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/peregrine.jpg' },
+      originalimage: { source: 'https://upload.wikimedia.org/peregrine-full.jpg' },
+      content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Peregrine_Falcon' } },
+    }))
+
+    // First: image fetch (like list view BirdRow)
+    const imageUrl = await getWikimediaImage('Unique Peregrine SC1')
+    expect(imageUrl).toContain('peregrine.jpg')
+    const callsAfterImage = wikiCalls().length
+
+    // Second: summary fetch (like detail view) — should NOT make another Wikipedia call
+    const summary = await getWikimediaSummary('Unique Peregrine SC1')
+    expect(summary).toBeDefined()
+    expect(summary!.extract).toContain('fastest bird')
+    expect(summary!.imageUrl).toBe('https://upload.wikimedia.org/peregrine-full.jpg')
+    expect(wikiCalls()).toHaveLength(callsAfterImage) // no new Wikipedia calls
+  })
+
+  it('getWikimediaImage reuses the fetch from getWikimediaSummary', async () => {
+    mockWikiResponse(wikiPageData({
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/osprey.jpg' },
+      originalimage: { source: 'https://upload.wikimedia.org/osprey-full.jpg' },
+    }))
+
+    const summary = await getWikimediaSummary('Unique Osprey SC2')
+    expect(summary).toBeDefined()
+    const callsAfterSummary = wikiCalls().length
+
+    const imageUrl = await getWikimediaImage('Unique Osprey SC2')
+    expect(imageUrl).toContain('osprey.jpg')
+    expect(wikiCalls()).toHaveLength(callsAfterSummary) // no new Wikipedia calls
+  })
+})
+
