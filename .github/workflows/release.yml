@@ -22,6 +22,9 @@ jobs:
   release:
     name: Release & Deploy
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref_name }}
+      url: ${{ github.ref == 'refs/heads/main' && 'https://wingdex.app' || format('https://{0}.wingdex.pages.dev', github.ref_name) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,4 +88,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex ${{ github.ref != 'refs/heads/main' && format('--branch={0}', github.ref_name) || '' }}
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
