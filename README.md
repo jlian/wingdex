@@ -66,39 +66,19 @@ npm run dev
 
 ### AI provider setup (local)
 
-AI calls run through the server endpoint (`/api/identify-bird`) and require local env vars.
+AI calls run through the server endpoint (`/api/identify-bird`) via
+[Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) and
+require local env vars.
 
 1. Copy `.dev.vars.example` to `.dev.vars`
-2. Choose provider with `LLM_PROVIDER=openai|azure|github`
-3. Fill provider credentials and (optionally) model
-
-OpenAI:
+2. Set `CF_ACCOUNT_ID` and `AI_GATEWAY_ID`
+3. Fill `OPENAI_API_KEY` and (optionally) `OPENAI_MODEL`
 
 ```dotenv
-LLM_PROVIDER=openai
+CF_ACCOUNT_ID=...
+AI_GATEWAY_ID=wingdex-prod
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-4.1-mini
-```
-
-Azure OpenAI:
-
-```dotenv
-LLM_PROVIDER=azure
-AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
-AZURE_OPENAI_API_KEY=...
-AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
-# optional
-AZURE_OPENAI_API_VERSION=2024-10-21
-```
-
-GitHub Models:
-
-```dotenv
-LLM_PROVIDER=github
-GITHUB_MODELS_TOKEN=...
-# optional (defaults shown)
-GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
-GITHUB_MODELS_ENDPOINT=https://models.github.ai/inference/chat/completions
 ```
 
 Optional per-user daily limits for AI endpoints (UTC day):

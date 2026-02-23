@@ -5,30 +5,6 @@ import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-
 
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
-const DEFAULT_AZURE_API_VERSION = '2024-10-21'
-const DEFAULT_GITHUB_MODELS_ENDPOINT = 'https://models.github.ai/inference/chat/completions'
-
-function resolveModel(env: Env): string {
-  const provider = resolveProvider(env)
-
-  if (provider === 'azure') {
-    return env.AZURE_OPENAI_DEPLOYMENT || env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
-  }
-
-  if (provider === 'github') {
-    const model = env.GITHUB_MODELS_MODEL || env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
-    return model.includes('/') ? model : `openai/${model}`
-  }
-
-  return env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
-}
-
-function resolveProvider(env: Env): 'openai' | 'azure' | 'github' {
-  const provider = (env.LLM_PROVIDER || 'openai').toLowerCase()
-  if (provider === 'azure') return 'azure'
-  if (provider === 'github') return 'github'
-  return 'openai'
-}
 
 type Candidate = {
   species: string
@@ -54,50 +30,20 @@ type IdentifyBirdInput = {
 export { HttpError } from './http-error'
 
 async function callOpenAI(env: Env, body: unknown): Promise<string> {
-  const provider = resolveProvider(env)
-  let url = ''
+  if (!env.CF_ACCOUNT_ID || !env.AI_GATEWAY_ID) {
+    throw new HttpError(503, 'CF_ACCOUNT_ID and AI_GATEWAY_ID are required')
+  }
+  if (!env.OPENAI_API_KEY) {
+    throw new HttpError(503, 'OPENAI_API_KEY is not configured')
+  }
+
+  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/openai/chat/completions`
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+    ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
   }
   let requestBody = body as Record<string, unknown>
-
-  if (provider === 'azure') {
-    if (!env.AZURE_OPENAI_ENDPOINT || !env.AZURE_OPENAI_API_KEY || !env.AZURE_OPENAI_DEPLOYMENT) {
-      throw new HttpError(503, 'Azure OpenAI is not fully configured')
-    }
-
-    const endpoint = env.AZURE_OPENAI_ENDPOINT.replace(/\/$/, '')
-    if (endpoint.endsWith('/openai/v1')) {
-      url = `${endpoint}/chat/completions`
-      headers.Authorization = `Bearer ${env.AZURE_OPENAI_API_KEY}`
-    } else {
-      const apiVersion = env.AZURE_OPENAI_API_VERSION || DEFAULT_AZURE_API_VERSION
-      url = `${endpoint}/openai/deployments/${env.AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`
-      headers['api-key'] = env.AZURE_OPENAI_API_KEY
-
-      const { model: _dropModel, ...azureBody } = requestBody
-      requestBody = azureBody
-    }
-  } else if (provider === 'github') {
-    if (!env.GITHUB_MODELS_TOKEN) {
-      throw new HttpError(503, 'GITHUB_MODELS_TOKEN is not configured')
-    }
-
-    url = env.GITHUB_MODELS_ENDPOINT || DEFAULT_GITHUB_MODELS_ENDPOINT
-    headers.Accept = 'application/vnd.github+json'
-    headers['X-GitHub-Api-Version'] = '2022-11-28'
-    headers.Authorization = `Bearer ${env.GITHUB_MODELS_TOKEN}`
-  } else {
-    if (!env.OPENAI_API_KEY) {
-      throw new HttpError(503, 'OPENAI_API_KEY is not configured')
-    }
-
-    const useGateway = Boolean(env.AI_GATEWAY_ID) && Boolean(env.CF_ACCOUNT_ID)
-    url = useGateway
-      ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/openai/chat/completions`
-      : 'https://api.openai.com/v1/chat/completions'
-    headers.Authorization = `Bearer ${env.OPENAI_API_KEY}`
-  }
 
   const sendRequest = async (payload: Record<string, unknown>) => fetch(url, {
     method: 'POST',
@@ -209,10 +155,9 @@ function withSamplingOptions(model: string): { temperature?: number; top_p?: num
 
 export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<IdentifyBirdResult> {
   const prompt = buildBirdIdPrompt(input.location, input.month, input.locationName)
-  const provider = resolveProvider(env)
 
   const withReasoningOptions = (model: string): { reasoning_effort?: 'low' } => {
-    if (provider === 'openai' && model.toLowerCase().includes('gpt-5')) {
+    if (model.toLowerCase().includes('gpt-5')) {
       return { reasoning_effort: 'low' }
     }
 
@@ -253,7 +198,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     return parsed
   }
 
-  const model = resolveModel(env)
+  const model = env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
   const parsed = await parseIdentifyResponse(model)
 
   const candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
