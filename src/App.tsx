@@ -537,7 +537,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
 
       <footer className="flex flex-col-reverse items-center gap-4 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
         <div className="flex items-center gap-1">
-          <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1.5.2'}</a>
+          <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}</a>
           <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-muted-foreground transition-colors">
             <GithubLogo size={16} />
           </a>
