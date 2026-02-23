@@ -359,12 +359,10 @@ function SpeciesDetail({
   const thumbnailUrl = wikiImage
   const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
-  const [baseImageLoaded, setBaseImageLoaded] = useState(false)
   const [fullResLoaded, setFullResLoaded] = useState(false)
 
   // Reset loaded state when species changes
   useEffect(() => {
-    setBaseImageLoaded(false)
     setFullResLoaded(false)
   }, [entry.speciesName, baseImageUrl])
 
@@ -387,8 +385,7 @@ function SpeciesDetail({
               src={baseImageUrl}
               alt=""
               aria-hidden
-              onLoad={() => setBaseImageLoaded(true)}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-200 ${fullResUrl && thumbnailUrl && !fullResLoaded ? 'blur-md scale-105' : ''} ${baseImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${fullResUrl && thumbnailUrl && !fullResLoaded ? 'blur-md scale-105' : ''}`}
             />
           )}
           {/* Full-res overlay fades in over the base layer */}
@@ -398,10 +395,10 @@ function SpeciesDetail({
               alt={displayName}
               onLoad={() => setFullResLoaded(true)}
               onError={() => setFullResLoaded(true)}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-300 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-500 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
-          {!baseImageLoaded && (
+          {!baseImageUrl && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Bird size={48} className="text-muted-foreground/40" />
             </div>
