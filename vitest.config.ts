@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 
 export default defineConfig({
+  define: {
+    TURNSTILE_SITE_KEY: JSON.stringify(''),
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useTheme } from 'next-themes'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
@@ -115,6 +116,8 @@ function App() {
   const hadSessionRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance | null>(null)
 
   const fetchLinkedProviders = useCallback(async (): Promise<string[]> => {
     try {
@@ -198,12 +201,19 @@ function App() {
       return
     }
 
+    // Wait for Turnstile token before proceeding (skipped when no site key)
+    const needsTurnstile = Boolean(TURNSTILE_SITE_KEY)
+    if (needsTurnstile && !turnstileToken) {
+      setUser(null)
+      return
+    }
+
     if (!isSessionPending && !anonBootstrapStarted.current) {
       anonBootstrapStarted.current = true
       void authClient.signIn.anonymous({
-        fetchOptions: {
-          headers: { 'x-wingdex-passkey-signup': '1' },
-        },
+        fetchOptions: turnstileToken
+          ? { headers: { 'x-turnstile-token': turnstileToken } }
+          : {},
       }).then((result) => {
         if (result.error) {
           setAnonBootstrapFailed(true)
@@ -216,7 +226,7 @@ function App() {
     }
 
     setUser(null)
-  }, [session, isSessionPending, refetchSession, anonBootstrapFailed])
+  }, [session, isSessionPending, refetchSession, anonBootstrapFailed, turnstileToken])
 
   useEffect(() => {
     if (!user || user.isAnonymous) return
@@ -250,14 +260,39 @@ function App() {
   }, [user, fetchLinkedProviders])
 
   if (!user) {
-    return <BootShell />
+    return (
+      <BootShell
+        showTurnstile={!isDevRuntime() && !session && Boolean(TURNSTILE_SITE_KEY)}
+        turnstileRef={turnstileRef}
+        onTurnstileSuccess={setTurnstileToken}
+      />
+    )
   }
 
   return <AppContent user={user} refetchSession={refetchSession} />
 }
 
-function BootShell() {
-  return <div className="min-h-dvh bg-background" />
+function BootShell({
+  showTurnstile,
+  turnstileRef,
+  onTurnstileSuccess,
+}: {
+  showTurnstile: boolean
+  turnstileRef: React.RefObject<TurnstileInstance | null>
+  onTurnstileSuccess: (token: string) => void
+}) {
+  return (
+    <div className="min-h-dvh bg-background">
+      {showTurnstile && (
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={TURNSTILE_SITE_KEY}
+          onSuccess={onTurnstileSuccess}
+          options={{ size: 'invisible' }}
+        />
+      )}
+    </div>
+  )
 }
 
 function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {

@@ -1,12 +1,17 @@
 import { createAuth } from './lib/auth'
+import { verifyTurnstile } from './lib/turnstile'
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
   const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
 
+  // Require a valid Turnstile token for anonymous sign-in in production.
+  // This prevents automated account creation that bypasses AI rate limits.
   if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
-    const signupHeader = context.request.headers.get('x-wingdex-passkey-signup')
-    if (signupHeader !== '1') {
+    const token = context.request.headers.get('x-turnstile-token') || ''
+    const ip = context.request.headers.get('cf-connecting-ip')
+    const valid = await verifyTurnstile(token, context.env.TURNSTILE_SECRET_KEY, ip)
+    if (!valid) {
       return new Response('Forbidden', { status: 403 })
     }
   }
