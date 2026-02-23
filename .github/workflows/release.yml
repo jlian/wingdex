@@ -100,12 +100,17 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
 
       - name: Verify deployed version
-        if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
 
-          for DOMAIN in wingdex.app wingdex.pages.dev; do
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            DOMAINS="wingdex.app wingdex.pages.dev"
+          else
+            DOMAINS="${{ github.ref_name }}.wingdex.pages.dev"
+          fi
+
+          for DOMAIN in $DOMAINS; do
             echo "Checking ${DOMAIN} for version ${VERSION}"
             HTML=$(curl --fail --silent --show-error "https://${DOMAIN}/")
             ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1)
