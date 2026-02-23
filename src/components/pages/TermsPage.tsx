@@ -9,7 +9,7 @@ export default function TermsPage() {
       <article className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">1. Acceptance of terms</h3>
-          <p>By accessing or using WingDex ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, you must not use the Service. We may update these Terms from time to time; continued use after changes constitutes acceptance.</p>
+          <p>By accessing or using WingDex™ ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, you must not use the Service. We may update these Terms from time to time; continued use after changes constitutes acceptance.</p>
         </section>
 
         <section className="space-y-1">
@@ -53,7 +53,7 @@ export default function TermsPage() {
 
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">8. Intellectual property</h3>
-          <p>The WingDex application, source code, design, and original content (excluding User Content and third-party content) are property of the WingDex project and contributors, licensed under the project's open-source license. Third-party content is subject to its respective licenses.</p>
+          <p>WingDex™ is a trademark of Guan Lun "John" Lian. The WingDex application, source code, design, and original content (excluding User Content and third-party content) are property of the WingDex project and contributors, licensed under the project's open-source license. Third-party content is subject to its respective licenses.</p>
         </section>
 
         <section className="space-y-1">

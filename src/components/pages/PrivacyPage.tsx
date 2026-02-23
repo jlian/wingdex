@@ -9,7 +9,7 @@ export default function PrivacyPage() {
       <article className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">1. Introduction</h3>
-          <p>This Privacy Policy describes how WingDex ("we," "us," or "the Service") collects, uses, and shares information when you use the WingDex web application. By accessing or using WingDex, you acknowledge that you have read and understood this policy.</p>
+          <p>This Privacy Policy describes how WingDex™ ("we," "us," or "the Service") collects, uses, and shares information when you use the WingDex web application. By accessing or using WingDex, you acknowledge that you have read and understood this policy.</p>
         </section>
 
         <section className="space-y-2">
