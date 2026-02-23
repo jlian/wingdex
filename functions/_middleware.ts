@@ -46,7 +46,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // Non-API requests -- pass through with security headers only.
   if (!pathname.startsWith('/api/')) {
-    return withSecurityHeaders(await context.next())
+    const response = withSecurityHeaders(await context.next())
+    console.log(JSON.stringify({ method: context.request.method, path: pathname, status: response.status }))
+    return response
   }
 
   // --- HTTP method validation ---
@@ -106,7 +108,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // Auth routes -- skip session check but still apply security headers.
   if (pathname.startsWith('/api/auth')) {
-    return withSecurityHeaders(await context.next())
+    const response = withSecurityHeaders(await context.next())
+    console.log(JSON.stringify({ method: context.request.method, path: pathname, status: response.status }))
+    return response
   }
 
   const auth = createAuth(context.env, { request: context.request })
@@ -121,5 +125,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   context.data.user = session.user
   context.data.session = session.session
 
-  return withSecurityHeaders(await context.next())
+  const response = withSecurityHeaders(await context.next())
+  console.log(JSON.stringify({ method: context.request.method, path: pathname, status: response.status }))
+  return response
 }
