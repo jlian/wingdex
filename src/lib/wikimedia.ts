@@ -130,15 +130,19 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
   const lookupPromise = (async (): Promise<RestSummary | undefined> => {
     const titles = getLookupTitles(speciesName)
     let sawError = false
-    let fallbackHit: RestSummary | undefined
+    let bestSummary: RestSummary | undefined
 
     for (const title of titles) {
       const result = await fetchSummary(title)
       if (result.kind === 'hit') {
-        if (!fallbackHit) fallbackHit = result.data
+        if (!bestSummary) bestSummary = result.data
         if (extractThumbnailUrl(result.data)) {
-          restCache.set(cacheKey, result.data)
-          return result.data
+          // Merge first hit's text/page with this hit's image
+          const merged = bestSummary === result.data
+            ? result.data
+            : { ...bestSummary, thumbnail: result.data.thumbnail, originalimage: result.data.originalimage }
+          restCache.set(cacheKey, merged)
+          return merged
         }
         continue
       }
@@ -147,9 +151,9 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
       }
     }
 
-    if (fallbackHit) {
-      restCache.set(cacheKey, fallbackHit)
-      return fallbackHit
+    if (bestSummary) {
+      restCache.set(cacheKey, bestSummary)
+      return bestSummary
     }
 
     if (!sawError) {

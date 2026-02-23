@@ -92,7 +92,7 @@ jobs:
         if: github.head_ref != 'dev' && github.head_ref != 'main'
         uses: actions/github-script@v7
         env:
-          DEPLOYMENT_URL: ${{ steps.deploy_preview.outputs.pages-deployment-alias-url || steps.deploy_preview.outputs.deployment-url }}
+          DEPLOYMENT_URL: ${{ steps.deploy_preview.outputs['pages-deployment-alias-url'] || steps.deploy_preview.outputs['deployment-url'] }}
         with:
           script: |
             const { data: deployment } = await github.rest.repos.createDeployment({

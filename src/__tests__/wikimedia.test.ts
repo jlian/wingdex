@@ -227,6 +227,32 @@ describe('getWikimediaSummary', () => {
     expect(wikiCalls()).toHaveLength(1)
   })
 
+  it('uses first hit text with later hit image when first has no image', async () => {
+    wikiTitleOverride = { wikiTitle: 'Textful Bird', common: 'Imageful Bird', scientific: null }
+    mockWikiResponse(wikiPageData({
+      title: 'Textful Bird',
+      extract: 'Best summary text.',
+      thumbnail: undefined,
+      originalimage: undefined,
+      content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Textful_Bird' } },
+    }))
+    mockWikiResponse(wikiPageData({
+      title: 'Imageful Bird',
+      extract: 'Other summary.',
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/img.jpg' },
+      originalimage: { source: 'https://upload.wikimedia.org/img-full.jpg' },
+    }))
+
+    const result = await getWikimediaSummary('Imageful Bird SUM (Testus textus)')
+    expect(result).toBeDefined()
+    // Text from first hit
+    expect(result!.title).toBe('Textful Bird')
+    expect(result!.extract).toBe('Best summary text.')
+    expect(result!.pageUrl).toContain('Textful_Bird')
+    // Image from second hit
+    expect(result!.imageUrl).toContain('img-full.jpg')
+  })
+
   it('caches results for subsequent calls', async () => {
     mockWikiResponse(wikiPageData({ extract: 'Cached bird.' }))
 

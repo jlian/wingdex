@@ -379,7 +379,7 @@ function SpeciesDetail({
   useEffect(() => {
     fullResRevealToken.current += 1
     setFullResLoaded(false)
-  }, [entry.speciesName, baseImageUrl])
+  }, [entry.speciesName])
 
   return (
     <div className="max-w-3xl mx-auto pb-8 animate-fade-in">
@@ -395,14 +395,14 @@ function SpeciesDetail({
         {/* Hero: full-width image with overlaid name + stats */}
         <div className="w-full aspect-[4/3] rounded-xl bg-muted overflow-hidden shadow-sm relative">
           {/* Base image layer always stays visible to avoid blank flashes */}
-          {baseImageUrl && (
+            {baseImageUrl && (
             <img
               src={baseImageUrl}
-              alt=""
-              aria-hidden
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${fullResUrl && thumbnailUrl && !fullResLoaded ? 'blur-md scale-105' : ''}`}
+              alt={fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl ? '' : displayName}
+              aria-hidden={!!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl ? 'blur-sm scale-102' : ''}`}
             />
-          )}
+            )}
           {/* Full-res overlay fades in over the base layer */}
           {fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl && (
             <img
@@ -410,7 +410,7 @@ function SpeciesDetail({
               alt={displayName}
               onLoad={revealFullRes}
               onError={revealFullRes}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-500 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-750 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
           {!baseImageUrl && (
