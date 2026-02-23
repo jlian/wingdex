@@ -30,7 +30,7 @@ describe('server taxonomy', () => {
     })
 
     it('generates a fallback code when the species has no stored code', () => {
-      // Completely fictional species — no stored code, so it generates from name
+      // Completely fictional species, no stored code, so it generates from name
       const code = getEbirdCode('Purple Sparkle Dragon')
       expect(typeof code).toBe('string')
       expect(code.length).toBeGreaterThan(0)

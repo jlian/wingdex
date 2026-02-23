@@ -17,12 +17,12 @@ fixtures/llm-responses/
 ```
 
 Each fixture contains:
-- `imageFile` — source image filename
-- `context` — GPS/month/location passed to the prompt
-- `rawResponse` — exact LLM response string
-- `parsed` — parsed JSON (candidates, birdCenter, birdSize, multipleBirds)
-- `model` — model used (e.g. `openai/gpt-4.1-mini`)
-- `capturedAt` — ISO timestamp
+- `imageFile`, source image filename
+- `context`, GPS/month/location passed to the prompt
+- `rawResponse`, exact LLM response string
+- `parsed`, parsed JSON (candidates, birdCenter, birdSize, multipleBirds)
+- `model`, model used (e.g. `openai/gpt-4.1-mini`)
+- `capturedAt`, ISO timestamp
 
 ## Refreshing fixtures
 

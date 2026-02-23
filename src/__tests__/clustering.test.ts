@@ -474,7 +474,7 @@ describe('findMatchingOuting (Merlin relaxed distance)', () => {
       lat: 20.6826,   // Lahaina / west Maui (device location)
       lon: -156.4427,
     })
-    // Photo EXIF GPS is the actual observation site (central Maui) — 20km away
+    // Photo EXIF GPS is the actual observation site (central Maui), 20km away
     // Same time (within 30 min)
     const cluster = {
       photos: [makePhoto()],
@@ -487,7 +487,7 @@ describe('findMatchingOuting (Merlin relaxed distance)', () => {
   })
 
   it('does not match 20km-apart GPS when times are 2 hours apart', () => {
-    // Same locations as above, but cluster is 2 hours later — normal 6km threshold applies
+    // Same locations as above, but cluster is 2 hours later, normal 6km threshold applies
     const outing = makeOuting({
       startTime: '2024-12-18T15:00:00-10:00',
       endTime: '2024-12-18T16:00:00-10:00',
@@ -505,7 +505,7 @@ describe('findMatchingOuting (Merlin relaxed distance)', () => {
   })
 
   it('does not match 60km-apart GPS even when times are within 30 min', () => {
-    // Relaxed threshold is 50km — 60km should still fail
+    // Relaxed threshold is 50km, 60km should still fail
     const outing = makeOuting({
       startTime: '2024-12-18T17:16:00-10:00',
       endTime: '2024-12-18T18:16:00-10:00',
@@ -524,7 +524,7 @@ describe('findMatchingOuting (Merlin relaxed distance)', () => {
   })
 
   it('matches same-island GPS (30km) when times overlap exactly', () => {
-    // Exact time overlap with ~30km distance — should match with relaxed threshold
+    // Exact time overlap with ~30km distance, should match with relaxed threshold
     const outing = makeOuting({
       startTime: '2025-01-15T09:00:00-08:00',
       endTime: '2025-01-15T11:00:00-08:00',

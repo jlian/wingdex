@@ -473,7 +473,7 @@ describe('timezone utilities', () => {
     it('shows time without abbreviation for legacy Z-suffix strings', () => {
       const result = formatStoredTimeWithTZ('2025-01-15T11:07:00.000Z')
       expect(result).toBeTruthy()
-      // No TZ abbreviation appended — legacy path
+      // No TZ abbreviation appended, legacy path
       expect(result).not.toMatch(/[A-Z]{3,4}$/)
     })
 

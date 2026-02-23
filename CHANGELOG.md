@@ -252,7 +252,7 @@
 - remove header top gap, add bottom fade edge ([2af976a](https://github.com/jlian/birddex/commit/2af976a))
 - update BootShell skeleton to match current header and homepage layout ([29b889c](https://github.com/jlian/birddex/commit/29b889c))
 - scroll to top on navigation, restore position on back ([4894ffa](https://github.com/jlian/birddex/commit/4894ffa))
-- iOS share/PWA icons — split manifest purposes, add sizes attribute ([6e886e0](https://github.com/jlian/birddex/commit/6e886e0))
+- iOS share/PWA icons - split manifest purposes, add sizes attribute ([6e886e0](https://github.com/jlian/birddex/commit/6e886e0))
 - update e2e specs for new nav and address review feedback ([f1494f6](https://github.com/jlian/birddex/commit/f1494f6))
 - update E2E specs for nav redesign ([8e82840](https://github.com/jlian/birddex/commit/8e82840))
 - use visible locator for Northern Cardinal in outing detail test ([c8b0238](https://github.com/jlian/birddex/commit/c8b0238))
@@ -265,9 +265,9 @@
 - use offset-aware ISO for exifTime and outing timestamps ([8c55ecc](https://github.com/jlian/birddex/commit/8c55ecc))
 - convert eBird CSV times from profile TZ to observation-local (#59) ([2a9fe08](https://github.com/jlian/birddex/commit/2a9fe08))
 - add 'None' option to TZ picker for eBird World region users ([e30b613](https://github.com/jlian/birddex/commit/e30b613))
-- update TZ picker help text — region preference doesn't control export ([e2c1a80](https://github.com/jlian/birddex/commit/e2c1a80))
-- update TZ help text — eBird doesn't document export timezone ([f7619a7](https://github.com/jlian/birddex/commit/f7619a7))
-- clarify TZ help text — it's the submitting device's timezone ([150ca17](https://github.com/jlian/birddex/commit/150ca17))
+- update TZ picker help text - region preference doesn't control export ([e2c1a80](https://github.com/jlian/birddex/commit/e2c1a80))
+- update TZ help text - eBird doesn't document export timezone ([f7619a7](https://github.com/jlian/birddex/commit/f7619a7))
+- clarify TZ help text - it's the submitting device's timezone ([150ca17](https://github.com/jlian/birddex/commit/150ca17))
 - relax outing distance threshold when times nearly match (Merlin case) ([b2fd1ce](https://github.com/jlian/birddex/commit/b2fd1ce))
 - sort homepage recent species by firstSeenDate to match BirdDex page ([a6dc546](https://github.com/jlian/birddex/commit/a6dc546))
 - address remaining PR review comments ([385a65d](https://github.com/jlian/birddex/commit/385a65d))
@@ -294,7 +294,7 @@
 - refined rectangular upload button with subtle gradient ([3ef4956](https://github.com/jlian/birddex/commit/3ef4956))
 - inline text upload button, left-aligned with content ([e4c2e09](https://github.com/jlian/birddex/commit/e4c2e09))
 - square upload button with icon above text, right-aligned ([af11fd9](https://github.com/jlian/birddex/commit/af11fd9))
-- minimal hero — species count + Add button, no sub-stats or divider ([8c06d73](https://github.com/jlian/birddex/commit/8c06d73))
+- minimal hero - species count + Add button, no sub-stats or divider ([8c06d73](https://github.com/jlian/birddex/commit/8c06d73))
 - species observed under number, emerald-to-teal gradient Add button ([0c9d796](https://github.com/jlian/birddex/commit/0c9d796))
 - italic subtitle, subtle flat gradient, tighter spacing to content ([c589a7c](https://github.com/jlian/birddex/commit/c589a7c))
 - emerald-to-teal horizontal gradient on Add button ([257fea5](https://github.com/jlian/birddex/commit/257fea5))
@@ -434,7 +434,7 @@
 
 ### Bug Fixes
 - Fix Skip crash and improve 429 error message ([911dff0](https://github.com/jlian/birddex/commit/911dff0))
-- surface errors to user — toast on geocode/import failures, detailed messages ([278487a](https://github.com/jlian/birddex/commit/278487a))
+- surface errors to user - toast on geocode/import failures, detailed messages ([278487a](https://github.com/jlian/birddex/commit/278487a))
 - remove dead suggestBirdCrop, throw on unparseable AI response ([ee4ee19](https://github.com/jlian/birddex/commit/ee4ee19))
 
 ### Code Refactoring

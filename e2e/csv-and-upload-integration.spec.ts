@@ -43,7 +43,7 @@ function mockNominatim(page: Page, locationName: string) {
         }),
       })
     } else {
-      // search endpoint — return a park-like result
+      // search endpoint, return a park-like result
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -82,7 +82,7 @@ test.describe('CSV import + photo upload integration', () => {
     await loadApp(page)
     await goToSettings(page)
 
-    // Profile timezone defaults to America/Los_Angeles (Pacific) — no need to change it
+    // Profile timezone defaults to America/Los_Angeles (Pacific), no need to change it
 
     const previewResponsePromise = page.waitForResponse(
       response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
@@ -212,7 +212,7 @@ test.describe('CSV import + photo upload integration', () => {
     await page.getByPlaceholder('Search species...').fill('chukar')
     await expect(page.locator('p:visible', { hasText: 'Chukar' }).first()).toBeVisible()
 
-    // Now upload a Chukar photo — the same species should converge
+    // Now upload a Chukar photo, the same species should converge
     await mockLLM(page, 'Chukar_partridge_near_Haleakala_summit_Maui')
     await mockNominatim(page, 'Haleakala National Park, Maui')
     await mockWikimedia(page)
@@ -239,12 +239,12 @@ test.describe('CSV import + photo upload integration', () => {
     // Dialog auto-closes after species save
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 15_000 })
 
-    // Go to WingDex — Chukar should still be there (converged, not duplicated)
+    // Go to WingDex, Chukar should still be there (converged, not duplicated)
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
 
-    // Count the Chukar entries — should be exactly 1 (not 2 separate entries)
+    // Count the Chukar entries, should be exactly 1 (not 2 separate entries)
     const chukarEntries = page.locator('p:visible', { hasText: /^Chukar/ })
     await expect(chukarEntries).toHaveCount(1)
 

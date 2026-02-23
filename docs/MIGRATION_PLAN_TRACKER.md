@@ -4,7 +4,7 @@
 >
 > **Legend**: ✅ Done · ⚠️ Done with deviation · ⏳ Pending · _(empty)_ Not started
 >
-> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework — unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall); CI/CD overhaul — split monolithic `verify:ci` into discrete lint/typecheck/unit/build/migrate/e2e steps, merged `deploy.yml` into `ci.yml`; `dev` branch strategy with separate D1 databases for prod vs preview; GitHub OAuth app registration (prod + dev environments); `computeFileHash` fix for small files (<128KB); skeleton loading state removal for cleaner transitions; Apple Sign In provider registration + dynamic social buttons via `/api/auth/providers`; account linking policy change (removed manual Link button, kept auto-merge for trusted social providers); CI deploy deduplication for `dev`/`main` branches; **passkey-ux branch**: demo-first auth gate modal UX rework — replaced `LoginPage.tsx`/`PasskeyAuthDialog.tsx` with `use-auth-gate.tsx` hook + inline modal in `App.tsx`; emoji avatar helpers + bird-to-emoji mapping (consolidated into `fun-names.ts`); A-Z sort option for outings; in-app Privacy Policy and Terms of Use pages (`PrivacyPage.tsx`, `TermsPage.tsx`, `public/privacy.html`, `public/terms.html`); demo data loader for anonymous users (69 species from bundled `src/assets/ebird-import.csv`); email removal from passkey auth flow (finalize-passkey name-only); Origin header validation in `auth.ts` baseURL; demo CSV decoupled from e2e fixtures → `src/assets/`; `promoteAnonymousUser` e2e helper; `disable-git-signing-local` VS Code task removal; account deletion enabled in Better Auth config; Settings account card with emoji avatars, nickname editing, passkey rename/delete; **post-passkey-ux polish**: passkey label standardization (device-display format with custom name preservation); social avatar rendering fix (no emoji scaling on social provider images); auth flow first-load transition polish; footer layout finalization; local dev bootstrap simplification (`ensure-app-on-5000` replaces `dev:full`); OAuth redirect error toasts; request-URL origin for auth `baseURL` (replaced Origin header approach); `wikimedia.ts` Wikimedia Commons/wiki-title client caching wrapper; `utils.ts` display/scientific name parsing helpers; `http-error.ts` consistent server error responses; `linked-providers.ts` endpoint for active social accounts; `ebird-code.ts` species eBird code lookup; import confirm split into separate `ebird-csv/confirm.ts` route file; privacy policy & terms of use content improvement (in-app React components with full legal text).
+> **Extra work outside plan steps**: storage-key format fix for UUID-based user IDs (`storage-keys.ts`, `use-kv.ts`); D1 adapter wiring via Kysely + kysely-d1 (Better Auth doesn't accept raw D1 bindings); full-stack local dev orchestration scripts (`dev:full`, `dev:full:restart`, macOS-safe `kill`); local auth/session hardening for HTTP localhost + in-app UX smoothing (no hard-reload import/sign-out); login UX rework - unified "Continue with passkey" button + dialog-based signup with random bird names (`PasskeyAuthDialog.tsx`, `fun-names.ts`); App.tsx auth transition jank fix (eliminated cascading `useSession` → `user` → `showApp` state waterfall); CI/CD overhaul - split monolithic `verify:ci` into discrete lint/typecheck/unit/build/migrate/e2e steps, merged `deploy.yml` into `ci.yml`; `dev` branch strategy with separate D1 databases for prod vs preview; GitHub OAuth app registration (prod + dev environments); `computeFileHash` fix for small files (<128KB); skeleton loading state removal for cleaner transitions; Apple Sign In provider registration + dynamic social buttons via `/api/auth/providers`; account linking policy change (removed manual Link button, kept auto-merge for trusted social providers); CI deploy deduplication for `dev`/`main` branches; **passkey-ux branch**: demo-first auth gate modal UX rework - replaced `LoginPage.tsx`/`PasskeyAuthDialog.tsx` with `use-auth-gate.tsx` hook + inline modal in `App.tsx`; emoji avatar helpers + bird-to-emoji mapping (consolidated into `fun-names.ts`); A-Z sort option for outings; in-app Privacy Policy and Terms of Use pages (`PrivacyPage.tsx`, `TermsPage.tsx`, `public/privacy.html`, `public/terms.html`); demo data loader for anonymous users (69 species from bundled `src/assets/ebird-import.csv`); email removal from passkey auth flow (finalize-passkey name-only); Origin header validation in `auth.ts` baseURL; demo CSV decoupled from e2e fixtures → `src/assets/`; `promoteAnonymousUser` e2e helper; `disable-git-signing-local` VS Code task removal; account deletion enabled in Better Auth config; Settings account card with emoji avatars, nickname editing, passkey rename/delete; **post-passkey-ux polish**: passkey label standardization (device-display format with custom name preservation); social avatar rendering fix (no emoji scaling on social provider images); auth flow first-load transition polish; footer layout finalization; local dev bootstrap simplification (`ensure-app-on-5000` replaces `dev:full`); OAuth redirect error toasts; request-URL origin for auth `baseURL` (replaced Origin header approach); `wikimedia.ts` Wikimedia Commons/wiki-title client caching wrapper; `utils.ts` display/scientific name parsing helpers; `http-error.ts` consistent server error responses; `linked-providers.ts` endpoint for active social accounts; `ebird-code.ts` species eBird code lookup; import confirm split into separate `ebird-csv/confirm.ts` route file; privacy policy & terms of use content improvement (in-app React components with full legal text).
 
 ---
 
@@ -12,13 +12,13 @@
 
 ### TL;DR
 
-> **Status**: ✅ All phases (0–7) complete. Data/API migration done — server is sole owner of all business logic. Auth: Better Auth with passkey-first signup, GitHub OAuth, Apple Sign In all live. Google OAuth ⏳.
+> **Status**: ✅ All phases (0–7) complete. Data/API migration done - server is sole owner of all business logic. Auth: Better Auth with passkey-first signup, GitHub OAuth, Apple Sign In all live. Google OAuth ⏳.
 
-WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns — this is a platform-integration migration, not a rewrite.
+WingDex has **5 Spark integration points**: auth (`window.spark.user()`), KV persistence (`/_spark/kv`), LLM proxy (`/_spark/llm`), Spark runtime bootstrap (`@github/spark/spark`), and Spark Vite plugins. All live in a small number of files and use standard patterns - this is a platform-integration migration, not a rewrite.
 
-**Target stack**: Cloudflare Pages (SPA hosting) + Pages Functions (API routes) + D1/SQLite (all data — auth + app) + Better Auth (GitHub/Apple/Google + passkeys) + AI Gateway (LLM). Fresh start, no data migration.
+**Target stack**: Cloudflare Pages (SPA hosting) + Pages Functions (API routes) + D1/SQLite (all data - auth + app) + Better Auth (GitHub/Apple/Google + passkeys) + AI Gateway (LLM). Fresh start, no data migration.
 
-**Design principle**: The API layer is the product's brain — bird ID, taxonomy search, dex computation, eBird import logic all live server-side. Clients (web SPA now, native iOS later) are thin UI shells that upload images, display results, and render data. This means adding a native iOS app later requires zero business-logic duplication — just new SwiftUI views calling the same endpoints.
+**Design principle**: The API layer is the product's brain - bird ID, taxonomy search, dex computation, eBird import logic all live server-side. Clients (web SPA now, native iOS later) are thin UI shells that upload images, display results, and render data. This means adding a native iOS app later requires zero business-logic duplication - just new SwiftUI views calling the same endpoints.
 
 ---
 
@@ -93,8 +93,8 @@ The migration is an opportunity to move business logic server-side so that any f
 | **Bird ID pipeline** (prompt, LLM call, taxonomy grounding, crop-box) | Client (ai-inference.ts, ~230 lines) | **Server** (`/api/identify-bird`) | Prompt changes = server deploy, not app updates. No API key on client. Zero duplication for iOS. |
 | **Taxonomy search** (11K species, fuzzy matching) | Client (taxonomy.ts, ~175 lines + 300KB JSON) | **Server** (`/api/species/search`) | One implementation. No need to bundle 300KB JSON in every client. |
 | **eBird CSV parsing & conflict detection** | Client (ebird.ts, ~466 lines) | **Server** (`/api/import/ebird-csv`) | Data processing with no UI dependency. Server has D1 access for conflict detection. |
-| **Dex aggregation** (`buildDexFromState`) | Client (use-wingdex-data.ts, ~150 lines) | **Server** (SQL aggregate) | Already planned — SQL replaces the JS aggregation. |
-| **Location name suggestion** (text LLM call) | Client (ai-inference.ts `textLLM`) | ~~**Server** (`/api/suggest-location`)~~ **Removed** — location search uses Nominatim directly | Originally planned as server LLM endpoint; removed as dead code since Nominatim handles location lookup. |
+| **Dex aggregation** (`buildDexFromState`) | Client (use-wingdex-data.ts, ~150 lines) | **Server** (SQL aggregate) | Already planned - SQL replaces the JS aggregation. |
+| **Location name suggestion** (text LLM call) | Client (ai-inference.ts `textLLM`) | ~~**Server** (`/api/suggest-location`)~~ **Removed** - location search uses Nominatim directly | Originally planned as server LLM endpoint; removed as dead code since Nominatim handles location lookup. |
 | **Photo EXIF extraction, thumbnails, clustering** | Client | **Client** (stays) | Must run on-device where the photos live. Each platform uses native APIs (Canvas/ImageIO). |
 | **Crop UI math** | Client (crop-math.ts, ~105 lines) | **Client** (stays) | Inherently UI interaction logic. Trivial to port (~50 lines of Swift). |
 
@@ -269,16 +269,16 @@ ORDER BY obs.speciesName;
 **Why D1 over KV**:
 - The app already has clear relational entities with foreign keys (Photo → Outing, Observation → Outing, Observation → Photo)
 - Cascading deletes (delete outing → delete its photos + observations) are handled for free by SQL
-- Dex is a materialized view computable via SQL aggregate — no need to maintain a separate denormalized blob
+- Dex is a materialized view computable via SQL aggregate - no need to maintain a separate denormalized blob
 - Per-record CRUD (update one observation, delete one outing) instead of read-modify-write entire arrays
 - Strong consistency (no 60-second propagation delay like KV)
 - D1 pricing is generous (5M rows read + 100K written/day free)
 
 **Design notes**:
-- `Photo.dataUrl`/`Photo.thumbnail` — per the PRD, user photos are "ephemeral, used only during the identification session." These fields store base64 blobs during the session but may be empty strings when loaded later. Bird imagery in the UI comes from Wikimedia Commons, not stored photos. If persistent photo storage is needed later, use Cloudflare R2 (S3-compatible blob storage) and store a URL reference in D1.
-- `Photo.gps` — flattened from `{lat, lon}` object to two columns `gpsLat`/`gpsLon` for SQL friendliness.
-- `Outing.userId` — currently a string already in the type definition, set to `'seed'` for demo data or the user's ID. Will use Better Auth's string user ID directly.
-- Client-generated IDs — the app already generates UUIDs for outings/photos/observations client-side. D1 accepts these as primary keys.
+- `Photo.dataUrl`/`Photo.thumbnail` - per the PRD, user photos are "ephemeral, used only during the identification session." These fields store base64 blobs during the session but may be empty strings when loaded later. Bird imagery in the UI comes from Wikimedia Commons, not stored photos. If persistent photo storage is needed later, use Cloudflare R2 (S3-compatible blob storage) and store a URL reference in D1.
+- `Photo.gps` - flattened from `{lat, lon}` object to two columns `gpsLat`/`gpsLon` for SQL friendliness.
+- `Outing.userId` - currently a string already in the type definition, set to `'seed'` for demo data or the user's ID. Will use Better Auth's string user ID directly.
+- Client-generated IDs - the app already generates UUIDs for outings/photos/observations client-side. D1 accepts these as primary keys.
 
 ---
 
@@ -286,7 +286,7 @@ ORDER BY obs.speciesName;
 
 > **Status**: ⚠️ Better Auth + D1 fully wired. Demo-first auth gate UX with anonymous bootstrap → passkey signup (name-only, no email). GitHub OAuth + Apple Sign In live (prod + dev). Account linking via `trustedProviders` auto-merge. Post-passkey-ux polish: passkey label standardization, social avatar rendering, auth flow transition smoothing, linked-providers endpoint, baseURL from request URL origin. Google OAuth remains pending (Phase 1.12).
 
-**Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth — no web-specific coupling.
+**Why Better Auth**: Native Cloudflare Workers adapter with D1 support. Provides GitHub, Apple, Google, generic OIDC out of the box. WebAuthn/passkey plugin. ~50 lines of config vs ~300+ rolling your own with multi-provider + passkey support. Also works seamlessly with native iOS auth (`ASWebAuthenticationSession`) since it's standard OAuth - no web-specific coupling.
 
 **Setup**:
 
@@ -361,38 +361,38 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 }
 ```
 
-**UserInfo mapping** — current `UserInfo` shape vs Better Auth:
+**UserInfo mapping** - current `UserInfo` shape vs Better Auth:
 
 | Current (`window.spark.user()`) | Better Auth (`session.user`) | Notes |
 |---|---|---|
-| `id: number` | `id: string` (UUID) | **Type change** — all userId references update from `number` → `string` |
+| `id: number` | `id: string` (UUID) | **Type change** - all userId references update from `number` → `string` |
 | `login: string` | `name: string` | Display name (GitHub username, Apple name, etc.) |
 | `avatarUrl: string` | `image: string \| null` | May be null for passkey-only users |
 | `email: string` | `email: string` | Always present |
-| `isOwner: boolean` | N/A | Drop — was Spark-specific |
+| `isOwner: boolean` | N/A | Drop - was Spark-specific |
 
-**Login UI** — implemented as a unified passkey-first flow:
+**Login UI** - implemented as a unified passkey-first flow:
 - Single "Continue with passkey" button on a clean card (`LoginPage.tsx`)
-- Opens `PasskeyAuthDialog.tsx` — defaults to signup view with pre-filled random bird-name (`fun-names.ts`, ~249K kebab-case combos like `sneaky-meadow-warbler`), re-roll button, and "Create account" CTA
+- Opens `PasskeyAuthDialog.tsx` - defaults to signup view with pre-filled random bird-name (`fun-names.ts`, ~249K kebab-case combos like `sneaky-meadow-warbler`), re-roll button, and "Create account" CTA
 - "Already have an account? Sign in" link switches to sign-in view (triggers browser WebAuthn prompt directly)
 - Signup uses anonymous bootstrap → `addPasskey` → `finalize-passkey` (3-step, gated by middleware header)
 - GitHub OAuth "Sign in with GitHub" button on login page + "Link GitHub account" in Settings (conditionally shown when `GITHUB_CLIENT_ID` env var is set)
 - Apple/Google OAuth buttons dynamically rendered based on configured providers via `GET /api/auth/providers`
 
 **OAuth app registration**:
-- **GitHub**: ✅ Two OAuth Apps created — prod (`https://wingdex.app/api/auth/callback/github`) and dev (`https://dev.wingdex.pages.dev/api/auth/callback/github`). Secrets (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments.
-- **Apple**: ✅ Services ID `app.wingdex.signin` — domains `wingdex.app` + `dev.wingdex.pages.dev`, return URLs `https://wingdex.app/api/auth/callback/apple` + `https://dev.wingdex.pages.dev/api/auth/callback/apple`. Secrets (`APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments. Client secret JWT valid 180 days from 2026-02-22, auto-rotated via GitHub Actions.
+- **GitHub**: ✅ Two OAuth Apps created - prod (`https://wingdex.app/api/auth/callback/github`) and dev (`https://dev.wingdex.pages.dev/api/auth/callback/github`). Secrets (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments.
+- **Apple**: ✅ Services ID `app.wingdex.signin` - domains `wingdex.app` + `dev.wingdex.pages.dev`, return URLs `https://wingdex.app/api/auth/callback/apple` + `https://dev.wingdex.pages.dev/api/auth/callback/apple`. Secrets (`APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`) set in Cloudflare Pages for both production and preview environments. Client secret JWT valid 180 days from 2026-02-22, auto-rotated via GitHub Actions.
 - **Google**: Create OAuth 2.0 Client at console.cloud.google.com. Callback URL: `https://wingdex.app/api/auth/callback/google`
 
 ---
 
 ### Bird ID & AI: Smart Server Endpoint
 
-> **Status**: ✅ Implemented. Client uses server-owned `/api/identify-bird` with D1-backed per-user daily rate limiting. `/api/suggest-location` removed — location search uses Nominatim directly; `textLLM` function deleted as dead code. Default model `gpt-4.1-mini`. AI Gateway created but direct OpenAI preferred.
+> **Status**: ✅ Implemented. Client uses server-owned `/api/identify-bird` with D1-backed per-user daily rate limiting. `/api/suggest-location` removed - location search uses Nominatim directly; `textLLM` function deleted as dead code. Default model `gpt-4.1-mini`. AI Gateway created but direct OpenAI preferred.
 
 Instead of a thin LLM proxy (which would force every client to reimplement prompt construction, taxonomy grounding, and crop-box computation), the server owns the entire bird identification pipeline. Clients upload an image with context and receive structured results.
 
-**Client contract** — identical for web and any future native client:
+**Client contract** - identical for web and any future native client:
 
 ```
 POST /api/identify-bird
@@ -424,7 +424,7 @@ Response 200:
 1. Accept multipart upload, validate image size/type
 2. Resize image server-side if needed (Cloudflare Image Resizing or `@cf/image/...`)
 3. Construct the ornithologist prompt (with GPS/month/location context)
-4. Call LLM backend (selectable via `env.LLM_PROVIDER` — see options below)
+4. Call LLM backend (selectable via `env.LLM_PROVIDER` - see options below)
 5. Parse JSON response from LLM
 6. Ground candidate species names against taxonomy via `findBestMatch()` (taxonomy.json loaded in the Worker)
 7. Compute crop box from LLM's `birdCenter`/`birdSize` percentages
@@ -443,7 +443,7 @@ This replaces the client-side `textLLM()` call used for location name suggestion
 
 **LLM backend options** (selectable via `env.LLM_PROVIDER`):
 
-#### Option A — AI Gateway → OpenAI (recommended for production)
+#### Option A - AI Gateway → OpenAI (recommended for production)
 
 Cloudflare AI Gateway proxies requests to OpenAI with added caching, rate limiting, logging, and fallback:
 
@@ -451,7 +451,7 @@ Cloudflare AI Gateway proxies requests to OpenAI with added caching, rate limiti
 - **Cons**: Requires OpenAI API key + pay-per-use (~$0.40/M input tokens, $1.60/M output for GPT-4.1-mini). Not fully Cloudflare-native.
 - **Setup**: Create AI Gateway in Cloudflare dashboard → get `AI_GATEWAY_ID`. Add `OPENAI_API_KEY` as a secret.
 
-#### Option B — Workers AI (fully Cloudflare-native)
+#### Option B - Workers AI (fully Cloudflare-native)
 
 Use Cloudflare's on-edge GPU inference with `@cf/meta/llama-3.2-11b-vision-instruct` (vision) or `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (text):
 
@@ -459,12 +459,12 @@ Use Cloudflare's on-edge GPU inference with `@cf/meta/llama-3.2-11b-vision-instr
 - **Cons**: Bird ID accuracy will likely degrade vs GPT-4.1-mini. Open-source vision models are weaker on specialized species identification.
 - **Cost**: Free: 10,000 neurons/day. Paid: $0.011/1,000 neurons.
 
-#### Option C — Hybrid (recommended long-term)
+#### Option C - Hybrid (recommended long-term)
 
-AI Gateway with Workers AI fallback. AI Gateway supports declarative fallback configuration in the dashboard — no code needed. Consider a user-facing "Free mode" toggle in Settings that routes to Workers AI only (lower quality, zero cost).
+AI Gateway with Workers AI fallback. AI Gateway supports declarative fallback configuration in the dashboard - no code needed. Consider a user-facing "Free mode" toggle in Settings that routes to Workers AI only (lower quality, zero cost).
 
-**Frontend change** — `ai-inference.ts` gets **significantly simplified** (from ~230 lines to ~30 lines):
-- Remove `compressImage()`, `loadImage()` (browser-only canvas stuff — server handles resizing)
+**Frontend change** - `ai-inference.ts` gets **significantly simplified** (from ~230 lines to ~30 lines):
+- Remove `compressImage()`, `loadImage()` (browser-only canvas stuff - server handles resizing)
 - Remove prompt template, `safeParseJSON`, `findBestMatch` call, crop-box computation
 - Remove `sparkVisionLLM()` / `sparkTextLLM()` wrappers
 - Replace with: compress image client-side to ≤800px → `POST /api/identify-bird` with `FormData` → return structured response
@@ -474,7 +474,7 @@ AI Gateway with Workers AI fallback. AI Gateway supports declarative fallback co
 
 ### Species Search: Server-Side Taxonomy
 
-> **Status**: ✅ Implemented. Species autocomplete queries server endpoint (`/api/species/search`) with auth guard; wiki-title lookup uses `/api/species/wiki-title` (public); eBird code lookup via `/api/species/ebird-code`. Client-side `taxonomy.ts` fully removed — 876KB saved from client bundle. Client caching wrapper in `wikimedia.ts`.
+> **Status**: ✅ Implemented. Species autocomplete queries server endpoint (`/api/species/search`) with auth guard; wiki-title lookup uses `/api/species/wiki-title` (public); eBird code lookup via `/api/species/ebird-code`. Client-side `taxonomy.ts` fully removed - 876KB saved from client bundle. Client caching wrapper in `wikimedia.ts`.
 
 The ~11K-species eBird taxonomy currently ships as a 300KB+ JSON bundle in the SPA and is searched client-side. Moving search server-side means any client gets instant typeahead without bundling the taxonomy:
 
@@ -497,7 +497,7 @@ Response 200:
 - Also expose `GET /api/species/:code` for individual species details (ebirdCode, wikiTitle, scientific name)
 - Response time target: <50ms on Cloudflare edge (the taxonomy is in-memory, no D1 query needed)
 
-**Frontend change** — species typeahead in AddPhotosFlow and WingDexPage switches from local `searchSpecies()` to `fetch('/api/species/search?q=...')` (debounced at 150ms). The 300KB `taxonomy.json` import is removed from the client bundle, reducing initial load.
+**Frontend change** - species typeahead in AddPhotosFlow and WingDexPage switches from local `searchSpecies()` to `fetch('/api/species/search?q=...')` (debounced at 150ms). The 300KB `taxonomy.json` import is removed from the client bundle, reducing initial load.
 
 ---
 
@@ -550,7 +550,7 @@ useWingDexData(userId: string)  // userId is now string
       └── loadSeedData(o, obs, d)  → POST /api/data/seed           body: {outings, observations, dex}
 ```
 
-**Dex updates in mutation responses**: Every endpoint that modifies observations recomputes the affected dex entries via the SQL aggregate query and returns `dexUpdates: DexEntry[]`. The client applies these to local state. This eliminates `buildDexFromState()` as a client-side requirement — future iOS/native clients get correct dex state without reimplementing the aggregation logic.
+**Dex updates in mutation responses**: Every endpoint that modifies observations recomputes the affected dex entries via the SQL aggregate query and returns `dexUpdates: DexEntry[]`. The client applies these to local state. This eliminates `buildDexFromState()` as a client-side requirement - future iOS/native clients get correct dex state without reimplementing the aggregation logic.
 
 **Local dev mode**: Keep a localStorage-based fallback. The `useWingDexData` hook checks `isCloudflareDeployed()` (hostname check) and uses either API calls or localStorage. The localStorage path can be simplified from the current `useKV` implementation since we no longer need the Spark KV code path.
 
@@ -635,7 +635,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
 Instead of parsing CSV and detecting conflicts client-side (which would require reimplementing ~400 lines of CSV/timezone/grouping logic for iOS), the server handles the full pipeline:
 
-**Step 1 — Preview** (`POST /api/import/ebird-csv`):
+**Step 1 - Preview** (`POST /api/import/ebird-csv`):
 ```
 Content-Type: multipart/form-data
 Fields:
@@ -651,7 +651,7 @@ Response 200:
 
 Server parses the CSV (porting the existing `parseEBirdCSV()` logic), groups rows into outings via `groupPreviewsIntoOutings()`, and runs conflict detection against D1 (`SELECT speciesName, firstSeenDate, lastSeenDate FROM ...`). The client displays the preview and lets the user select which imports to confirm.
 
-**Step 2 — Confirm** (`POST /api/import/ebird-csv/confirm`):
+**Step 2 - Confirm** (`POST /api/import/ebird-csv/confirm`):
 ```
 Body: { previewIds: string[] }
 
@@ -664,7 +664,7 @@ Response 200:
 
 Server inserts the selected outings + observations via D1 batch transaction and returns the recomputed dex.
 
-**eBird Export** — also server-side for consistency:
+**eBird Export** - also server-side for consistency:
 - `GET /api/export/outing/:id?format=ebird` → returns eBird Record Format CSV
 - `GET /api/export/dex?format=csv` → returns dex CSV
 
@@ -683,7 +683,7 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 | D1 Schema Design | ✅ | Relational schema (4 migrations) and SQL dex aggregation in place. |
 | Auth: Better Auth + D1 | ⚠️ | Demo-first auth gate UX + passkey signup + GitHub OAuth + Apple Sign In. Post-passkey-ux polish (labels, social avatars, transitions, linked-providers). Google pending (1.12). |
 | Bird ID & AI: Smart Server Endpoint | ✅ | `/api/identify-bird` with rate limiting. `gpt-4.1-mini` default. `/api/suggest-location` removed. |
-| Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` + `wiki-title` + `ebird-code`. Client `taxonomy.ts` removed — 876KB saved. |
+| Species Search: Server-Side Taxonomy | ✅ | `/api/species/search` + `wiki-title` + `ebird-code`. Client `taxonomy.ts` removed - 876KB saved. |
 | Data Layer: Refactoring `useWingDexData` | ✅ | API-first with optimistic updates + localStorage fallback. Dead functions removed. |
 | eBird Import: Server-Side Two-Step Flow | ✅ | Server-side preview/confirm. Client `ebird.ts` + `seed-data.ts` removed. Import confirm split to separate route. |
 
@@ -691,7 +691,7 @@ Server inserts the selected outings + observations via D1 batch transaction and 
 
 ### Phased Implementation
 
-#### Phase 0 — Scaffolding (no behavior change) ✅
+#### Phase 0 - Scaffolding (no behavior change) ✅
 
 > **Status snapshot (2026-02-20)**: ✅ Implemented.
 > **Confidence**: High.
@@ -715,7 +715,7 @@ compatibility_date = "2025-11-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
-# Production (default) — uses the main database
+# Production (default) - uses the main database
 [[d1_databases]]
 binding = "DB"
 database_name = "wingdex-db"
@@ -725,7 +725,7 @@ migrations_dir = "migrations"
 [ai]
 binding = "AI"
 
-# Preview/dev — uses a separate database
+# Preview/dev - uses a separate database
 [env.preview]
 [[env.preview.d1_databases]]
 binding = "DB"
@@ -743,9 +743,9 @@ binding = "AI"
 
 ---
 
-#### Phase 1 — Auth (Better Auth) 🟡
+#### Phase 1 - Auth (Better Auth) 🟡
 
-> **Status snapshot (2026-02-23)**: ⚠️ Core auth migration implemented with demo-first UX rework + GitHub OAuth + Apple Sign In. Google ⏳. **UX overhaul (passkey-ux branch)**: `LoginPage.tsx` and `PasskeyAuthDialog.tsx` deleted — replaced by demo-first experience where anonymous users see the full app with demo data (69 species). Auth-gated features (add photos, outings, import/export) trigger a dual-mode Sign up / Log in modal via `use-auth-gate.tsx` hook. Passkey signup: anonymous bootstrap → addPasskey → finalize-passkey (name-only, no email). Settings account card: emoji avatar (bird-to-emoji mapping via `fun-names.ts`), nickname editing, passkey rename/delete, account deletion. Demo CSV moved from `e2e/fixtures/` to `src/assets/` (decouples prod from test fixtures). In-app Privacy Policy and Terms of Use pages (full legal text in React components + static HTML fallbacks). Email collection entirely removed from passkey auth flow. Social sign-in buttons dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Account linking via `trustedProviders` auto-merge only. GitHub OAuth fully configured — two OAuth apps (prod + dev callbacks). Apple Sign In fully configured — Services ID `app.wingdex.signin` with return URLs for prod + dev. **Post-passkey-ux polish**: passkey label standardization (device-display format with custom name preservation); social avatar rendering without emoji scaling; auth flow first-load transition smoothing; OAuth redirect error toast feedback; `baseURL` derived from request URL origin (replaced Origin header approach); footer layout finalized; local dev bootstrap simplified (`ensure-app-on-5000`); `linked-providers.ts` endpoint for querying user's active social accounts.
+> **Status snapshot (2026-02-23)**: ⚠️ Core auth migration implemented with demo-first UX rework + GitHub OAuth + Apple Sign In. Google ⏳. **UX overhaul (passkey-ux branch)**: `LoginPage.tsx` and `PasskeyAuthDialog.tsx` deleted - replaced by demo-first experience where anonymous users see the full app with demo data (69 species). Auth-gated features (add photos, outings, import/export) trigger a dual-mode Sign up / Log in modal via `use-auth-gate.tsx` hook. Passkey signup: anonymous bootstrap → addPasskey → finalize-passkey (name-only, no email). Settings account card: emoji avatar (bird-to-emoji mapping via `fun-names.ts`), nickname editing, passkey rename/delete, account deletion. Demo CSV moved from `e2e/fixtures/` to `src/assets/` (decouples prod from test fixtures). In-app Privacy Policy and Terms of Use pages (full legal text in React components + static HTML fallbacks). Email collection entirely removed from passkey auth flow. Social sign-in buttons dynamically rendered based on configured providers via `GET /api/auth/providers` (5-min cache). Account linking via `trustedProviders` auto-merge only. GitHub OAuth fully configured - two OAuth apps (prod + dev callbacks). Apple Sign In fully configured - Services ID `app.wingdex.signin` with return URLs for prod + dev. **Post-passkey-ux polish**: passkey label standardization (device-display format with custom name preservation); social avatar rendering without emoji scaling; auth flow first-load transition smoothing; OAuth redirect error toast feedback; `baseURL` derived from request URL origin (replaced Origin header approach); footer layout finalized; local dev bootstrap simplified (`ensure-app-on-5000`); `linked-providers.ts` endpoint for querying user's active social accounts.
 > **Confidence**: High.
 > **Validation**: Auth guard unit tests ✅, auth gate unit tests ✅ (8 tests), fun-names tests ✅ (5 tests), full test suite ✅ (505/505), `tsc --noEmit` ✅, `eslint` ✅ (0 errors, 0 warnings), Playwright e2e smoke ✅, preview deploy auth OK check (`/api/auth/ok` → `{"ok":true}`) ✅.
 
@@ -760,42 +760,42 @@ binding = "AI"
 | 1.7 | Update `UserInfo` interface in [App.tsx](src/App.tsx) | `id: number` → `id: string`, drop `isOwner`, `login` → `name` | ✅ |
 | 1.8 | Update [App.tsx](src/App.tsx) auth flow | Replace `window.spark.user()` with `authClient.useSession()` or `fetch('/api/auth/get-session')`. Keep `getStableDevUserId()` fallback for local dev (change return type to `string`). | ✅ |
 | 1.9 | Update [dev-user.ts](src/lib/dev-user.ts) | Return `string` instead of `number`. Generate a UUID-like string instead of a 9-digit integer. | ✅ |
-| 1.10 | Create login page component | ⚠️ Originally implemented as `LoginPage.tsx` + `PasskeyAuthDialog.tsx` (unified passkey-first flow). **Superseded by passkey-ux branch**: both files deleted — replaced by demo-first auth gate modal (`use-auth-gate.tsx` hook) embedded in `App.tsx`. Anonymous users see the full app with demo data; auth-gated features trigger a dual Sign up / Log in modal with cancellation handling. Social sign-in buttons dynamically rendered based on `GET /api/auth/providers` response. `fun-names.ts` retained (random bird names for signup). | ⚠️ |
-| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. **passkey-ux**: Account card with emoji avatar (bird-to-emoji mapping via `getEmojiAvatarColor`), nickname editing, passkey rename/delete. Account deletion button. Demo data toggle (load/clear) for anonymous users. Email recovery section removed (email stripped from passkey flow). "Link GitHub account" button removed — account linking handled automatically via `trustedProviders`. "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
+| 1.10 | Create login page component | ⚠️ Originally implemented as `LoginPage.tsx` + `PasskeyAuthDialog.tsx` (unified passkey-first flow). **Superseded by passkey-ux branch**: both files deleted - replaced by demo-first auth gate modal (`use-auth-gate.tsx` hook) embedded in `App.tsx`. Anonymous users see the full app with demo data; auth-gated features trigger a dual Sign up / Log in modal with cancellation handling. Social sign-in buttons dynamically rendered based on `GET /api/auth/providers` response. `fun-names.ts` retained (random bird names for signup). | ⚠️ |
+| 1.11 | Update `SettingsPage` | `user.id: number` → `string`, `user.login` → `user.name`. **passkey-ux**: Account card with emoji avatar (bird-to-emoji mapping via `getEmojiAvatarColor`), nickname editing, passkey rename/delete. Account deletion button. Demo data toggle (load/clear) for anonymous users. Email recovery section removed (email stripped from passkey flow). "Link GitHub account" button removed - account linking handled automatically via `trustedProviders`. "Sign out" using `authClient.signOut()` with local anonymous re-bootstrap in-app (no hard reload). | ✅ |
 | 1.12 | Register OAuth apps | GitHub ✅ (two apps: prod `wingdex.app` + dev `dev.wingdex.pages.dev`, secrets set in Cloudflare Pages for both environments). Apple ✅ (Services ID `app.wingdex.signin`, domains `wingdex.app` + `dev.wingdex.pages.dev`, return URLs for prod + dev; secrets `APPLE_CLIENT_ID` + `APPLE_CLIENT_SECRET` set in Cloudflare Pages for both production and preview environments; client secret JWT valid 180 days from 2026-02-22, auto-rotated via GitHub Actions). Google ⏳. | ⚠️ |
 | 1.13 | Dynamic provider buttons | Created `GET /api/auth/providers` endpoint returning configured social providers (checks env vars). LoginPage fetches on mount, conditionally renders GitHub/Apple buttons. 5-minute `Cache-Control`. | ✅ |
 | 1.14 | Account linking policy | Removed manual "Link GitHub account" button from Settings. Re-enabled `accountLinking` with `trustedProviders: ['github', 'apple']` and `allowDifferentEmails: true` for automatic social-to-social account merging. Safe because passkey users use generated emails (`anon_xxx@localhost`), preventing hijacking. | ✅ |
-| 1.15 | Apple client secret rotation | Created `.github/workflows/rotate-apple-secret.yml` — scheduled workflow (cron every 5 months) generates a new Apple client secret JWT from `.p8` private key stored in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
-| 1.16 | Demo-first auth gate modal | Created `src/hooks/use-auth-gate.tsx` — hook + modal component replacing `LoginPage.tsx`/`PasskeyAuthDialog.tsx`. Anonymous users see full app; auth-gated features trigger dual Sign up / Log in modal. Supports cancellation (returns to previous state). 8 unit tests in `use-auth-gate.test.tsx`. | ✅ |
-| 1.17 | Emoji avatar helpers | Created emoji avatar helpers with bird-to-emoji mapping — consolidated into `fun-names.ts` (originally separate `emoji-avatar.ts`, merged). `getEmojiAvatarColor()`, `emojiForBirdName()`, `emojiAvatarDataUrl()` provide consistent avatar rendering for header and Settings account card. | ✅ |
-| 1.18 | Demo data loader | Created `src/lib/demo-data.ts` — loads 69 species from bundled `src/assets/ebird-import.csv` for anonymous users. Demo data toggle in Settings (load/clear). CSV moved from `e2e/fixtures/` to `src/assets/` to decouple prod from test fixtures. | ✅ |
+| 1.15 | Apple client secret rotation | Created `.github/workflows/rotate-apple-secret.yml` - scheduled workflow (cron every 5 months) generates a new Apple client secret JWT from `.p8` private key stored in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
+| 1.16 | Demo-first auth gate modal | Created `src/hooks/use-auth-gate.tsx` - hook + modal component replacing `LoginPage.tsx`/`PasskeyAuthDialog.tsx`. Anonymous users see full app; auth-gated features trigger dual Sign up / Log in modal. Supports cancellation (returns to previous state). 8 unit tests in `use-auth-gate.test.tsx`. | ✅ |
+| 1.17 | Emoji avatar helpers | Created emoji avatar helpers with bird-to-emoji mapping - consolidated into `fun-names.ts` (originally separate `emoji-avatar.ts`, merged). `getEmojiAvatarColor()`, `emojiForBirdName()`, `emojiAvatarDataUrl()` provide consistent avatar rendering for header and Settings account card. | ✅ |
+| 1.18 | Demo data loader | Created `src/lib/demo-data.ts` - loads 69 species from bundled `src/assets/ebird-import.csv` for anonymous users. Demo data toggle in Settings (load/clear). CSV moved from `e2e/fixtures/` to `src/assets/` to decouple prod from test fixtures. | ✅ |
 | 1.19 | Account deletion | Enabled `deleteUser` in Better Auth config. Account deletion button in Settings account card. | ✅ |
 | 1.20 | In-app legal pages | Created `src/components/pages/PrivacyPage.tsx`, `TermsPage.tsx`, `public/privacy.html`, `public/terms.html`. Footer links in app. | ✅ |
 | 1.21 | A-Z sort for outings | Added alphabetical sort option to `OutingsPage.tsx`. | ✅ |
 | 1.22 | Remove email from passkey flow | Removed email input from auth gate modal, email handling from `finalize-passkey.ts` (name-only), email recovery section from SettingsPage, deleted `check-email.ts` endpoint. No email collected for passkey-only users. | ✅ |
-| 1.23 | Auth baseURL validation | Added Origin header validation in `functions/lib/auth.ts` — `rawHeaderOrigin` filtered for null/empty/`"null"` string, falls back to `env.BETTER_AUTH_URL` or `requestOrigin`. Throws if no valid URL found. | ✅ |
+| 1.23 | Auth baseURL validation | Added Origin header validation in `functions/lib/auth.ts` - `rawHeaderOrigin` filtered for null/empty/`"null"` string, falls back to `env.BETTER_AUTH_URL` or `requestOrigin`. Throws if no valid URL found. | ✅ |
 | 1.24 | E2e auth helpers | Added `promoteAnonymousUser()` helper in `e2e/helpers.ts` for e2e tests that need auth-gated features. Updated smoke, dark-mode, and CSV integration specs. | ✅ |
-| 1.25 | Auth UX specs | Created `docs/PASSKEYS_UX.md` (auth gate modal spec, no-email approach). Created `docs/EMAIL_VERIFICATION.md` (deferred — future spec for optional email). | ✅ |
+| 1.25 | Auth UX specs | Created `docs/PASSKEYS_UX.md` (auth gate modal spec, no-email approach). Created `docs/EMAIL_VERIFICATION.md` (deferred - future spec for optional email). | ✅ |
 | 1.26 | Passkey label polish | Standardized passkey labels to device-display format (e.g. "iCloud Keychain (Chrome, macOS)"). Preserve custom names on rename. Suppress WebAuthn cancel errors from surfacing as toasts. | ✅ |
 | 1.27 | Social avatar rendering | Fixed social provider avatars (GitHub/Apple) to render as `<img>` without emoji scaling. Emoji avatars only for passkey-only users. | ✅ |
-| 1.28 | Auth flow polish | Smoothed first-load transitions — eliminated flash states during session hydration. Toast feedback for OAuth redirect errors. | ✅ |
-| 1.29 | Linked providers endpoint | Created `GET /api/auth/linked-providers` — returns user's active social account provider IDs for Settings UI. | ✅ |
+| 1.28 | Auth flow polish | Smoothed first-load transitions - eliminated flash states during session hydration. Toast feedback for OAuth redirect errors. | ✅ |
+| 1.29 | Linked providers endpoint | Created `GET /api/auth/linked-providers` - returns user's active social account provider IDs for Settings UI. | ✅ |
 | 1.30 | Auth baseURL from request URL | Changed `auth.ts` to derive `baseURL` from `new URL(request.url).origin` instead of `Origin` header (more reliable for Cloudflare Pages previews). | ✅ |
 
-**userId type cascade** — changing `id` from `number` to `string` touches:
+**userId type cascade** - changing `id` from `number` to `string` touches:
 - [src/App.tsx](src/App.tsx): `UserInfo.id`, `getFallbackUser()`, `useWingDexData(user.id)`, `AddPhotosFlow userId=`
 - [src/hooks/use-wingdex-data.ts](src/hooks/use-wingdex-data.ts): `useWingDexData(userId: number)` → `string`
 - [src/lib/storage-keys.ts](src/lib/storage-keys.ts): `getUserStorageKey(userId: number, ...)` → `string` (for localStorage fallback)
 - [src/lib/dev-user.ts](src/lib/dev-user.ts): return type `number` → `string`
 - [src/components/pages/SettingsPage.tsx](src/components/pages/SettingsPage.tsx): `SettingsPageProps.user.id: number` → `string`
 - [src/components/flows/AddPhotosFlow.tsx](src/components/flows/AddPhotosFlow.tsx): `AddPhotosFlowProps.userId: number` → `string`
-- [src/lib/ebird.ts](src/lib/ebird.ts): `groupPreviewsIntoOutings(previews, userId: string)` — already `string`, but callers pass `` `u${user.id}` `` which needs updating to just `user.id`
+- [src/lib/ebird.ts](src/lib/ebird.ts): `groupPreviewsIntoOutings(previews, userId: string)` - already `string`, but callers pass `` `u${user.id}` `` which needs updating to just `user.id`
 
 ---
 
-#### Phase 2 — Data Layer (D1) + Species Search ✅
+#### Phase 2 - Data Layer (D1) + Species Search ✅
 
-> **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`. Post-Phase-5 cleanup fully removed client-side `ebird.ts`, `taxonomy.ts`, and `seed-data.ts` — all business logic now server-only.
+> **Status snapshot (2026-02-20)**: ✅ Implemented with documented deviations in rows `2.16–2.19`. Post-Phase-5 cleanup fully removed client-side `ebird.ts`, `taxonomy.ts`, and `seed-data.ts` - all business logic now server-only.
 > **Confidence**: High.
 > **Validation**: `npm run lint` ✅ (no errors), `npm run typecheck` ✅, `npm run test:unit` ✅ (485 tests, 27 files), `npm run smoke:api` ✅ (authenticated `/api/data/all` + `/api/data/outings` write/read loop), `npm run smoke:api:seeded` ✅ (realistic eBird CSV preview/confirm), `npx playwright test e2e/api-smoke.spec.ts --project=chromium` ✅, targeted Playwright UI flows for CSV import + full photo upload ✅, functions compile ✅.
 
@@ -810,15 +810,15 @@ binding = "AI"
 | 2.7 | Create `functions/api/import/ebird-csv.ts` | `POST`: Accept CSV upload → parse, group, detect conflicts → return `{ previews, summary }`. `POST /confirm`: Insert selected previews → return `{ imported, dexUpdates }` | ✅ |
 | 2.8 | Create `functions/api/export/outing/[id].ts` | `GET`: Export outing as eBird CSV | ✅ |
 | 2.9 | Create `functions/api/export/dex.ts` | `GET`: Export dex as CSV | ✅ |
-| 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ (subsequently deleted — SettingsPage now uses CSV import API with demo CSV; seed endpoint had zero consumers) |
-| 2.11 | Create `functions/api/data/clear.ts` | `DELETE`: Delete all user data (`DELETE FROM outing WHERE userId = ?` — CASCADE handles the rest, then `DELETE FROM dex_meta WHERE userId = ?`) | ✅ |
+| 2.10 | Create `functions/api/data/seed.ts` | `POST`: Insert seed data (outings, observations), compute dex | ✅ (subsequently deleted - SettingsPage now uses CSV import API with demo CSV; seed endpoint had zero consumers) |
+| 2.11 | Create `functions/api/data/clear.ts` | `DELETE`: Delete all user data (`DELETE FROM outing WHERE userId = ?` - CASCADE handles the rest, then `DELETE FROM dex_meta WHERE userId = ?`) | ✅ |
 | 2.12 | Create `functions/api/species/search.ts` | `GET`: Load taxonomy.json into Worker module scope, implement `searchSpecies()` server-side. Accept `?q=&limit=` params. | ✅ |
 | 2.13 | Create shared `functions/lib/dex-query.ts` | Extract the dex SQL aggregate query into a shared helper used by all endpoints that return `dexUpdates`. | ✅ |
 | 2.14 | Move eBird parsing to `functions/lib/ebird.ts` | Port `parseEBirdCSV()`, `groupPreviewsIntoOutings()`, and export formatters from `src/lib/ebird.ts` to run in the Worker. | ✅ |
 | 2.15 | Move taxonomy to `functions/lib/taxonomy.ts` | Port `searchSpecies()`, `findBestMatch()`, `getWikiTitle()`, `getEbirdCode()` to the Worker. The taxonomy.json file is loaded once at module scope. | ✅ |
-| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ✅ (`buildDexFromState` export intentionally kept — validates local fallback dex logic in `build-dex.test.ts`) |
-| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ✅ (client `src/lib/ebird.ts` fully removed — `seed-data.ts` deleted, all consumers repointed to `functions/lib/ebird.ts`) |
-| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ✅ (`src/lib/taxonomy.ts` fully removed — `wikimedia.ts` now uses `/api/species/wiki-title` endpoint with client-side cache; 876KB saved from client bundle) |
+| 2.16 | Refactor use-wingdex-data.ts | Replaced 4x `useKV` calls with API-first state hydration via `GET /api/data/all` and optimistic mutations that apply server `dexUpdates`. Includes explicit localStorage fallback for local unauthenticated mode. | ✅ (`buildDexFromState` export intentionally kept - validates local fallback dex logic in `build-dex.test.ts`) |
+| 2.17 | Refactor ebird.ts (client) | Settings and Outings UI now use `/api/import/ebird-csv`, `/api/import/ebird-csv/confirm`, and `/api/export/*` endpoints. | ✅ (client `src/lib/ebird.ts` fully removed - `seed-data.ts` deleted, all consumers repointed to `functions/lib/ebird.ts`) |
+| 2.18 | Refactor species typeahead | Replaced local typeahead search with debounced `fetch('/api/species/search?q=...')` in species autocomplete. Removed runtime client imports of taxonomy search/match helpers from active app flows. | ✅ (`src/lib/taxonomy.ts` fully removed - `wikimedia.ts` now uses `/api/species/wiki-title` endpoint with client-side cache; 876KB saved from client bundle) |
 | 2.19 | Rewrite use-kv.ts | Rewrote to simplified localStorage-only fallback behavior; removed Spark KV runtime paths and network sync logic. | ✅ (use-kv tests updated in Phase 5: renamed spark→hosted, updated URLs/keys, removed Spark runtime assumptions) |
 | 2.20 | Update storage-keys.ts | Simplified local storage key prefix to string user IDs directly (removed legacy numeric-id format assumptions). | ✅ |
 | 2.21 | Server-side auth on every endpoint | Verified endpoint auth checks and user scoping; added explicit auth guard to species search endpoint for consistency with protected API contract. | ✅ |
@@ -834,18 +834,18 @@ binding = "AI"
 - Removed hard reload shortcuts from import/sign-out paths; data now refreshes in-app after successful operations.
 
 **Cleanup update (2026-02-20, post-Phase-5)**
-- Deleted `src/lib/seed-data.ts` — SettingsPage now loads demo data via CSV import API with a bundled `ebird-import.csv` fixture.
-- Deleted `src/lib/ebird.ts` — all eBird parsing consumers repointed to `functions/lib/ebird.ts`.
-- Deleted `src/lib/taxonomy.ts` — `wikimedia.ts` wiki-title lookup replaced with `/api/species/wiki-title` endpoint + client-side cache. Saved 876KB from client bundle.
-- Created `functions/api/species/wiki-title.ts` — public (no auth) endpoint for server-side taxonomy lookup by common name.
-- Deleted `functions/api/data/seed.ts` — dead endpoint after SettingsPage refactor to CSV import.
+- Deleted `src/lib/seed-data.ts` - SettingsPage now loads demo data via CSV import API with a bundled `ebird-import.csv` fixture.
+- Deleted `src/lib/ebird.ts` - all eBird parsing consumers repointed to `functions/lib/ebird.ts`.
+- Deleted `src/lib/taxonomy.ts` - `wikimedia.ts` wiki-title lookup replaced with `/api/species/wiki-title` endpoint + client-side cache. Saved 876KB from client bundle.
+- Created `functions/api/species/wiki-title.ts` - public (no auth) endpoint for server-side taxonomy lookup by common name.
+- Deleted `functions/api/data/seed.ts` - dead endpoint after SettingsPage refactor to CSV import.
 - Removed dead `textLLM` function from `ai-inference.ts` and deleted its test file.
 - Removed dead `/api/suggest-location` endpoint, `suggestLocationName` from `bird-id.ts`, and cleaned rate-limit config.
 - Dead code audit: removed `downscaleForInference` (photo-utils), orphaned `ImportPreview` (client types), dead re-exports from `bird-id.ts`, un-exported self-consumed types.
 - Rewrote `e2e/helpers.ts` to use `seedViaCSVImport()` API helper instead of localStorage injection.
-- Replaced Radix UI Select with native `<select>` for timezone picker — SettingsPage chunk 113KB→63KB.
+- Replaced Radix UI Select with native `<select>` for timezone picker - SettingsPage chunk 113KB→63KB.
 
-**D1 transaction support** — for bulk operations like eBird import (insert many outings + observations atomically):
+**D1 transaction support** - for bulk operations like eBird import (insert many outings + observations atomically):
 
 ```typescript
 // functions/api/import/ebird-csv.ts (confirm handler)
@@ -881,7 +881,7 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 
 ---
 
-#### Phase 3 — Bird ID & AI
+#### Phase 3 - Bird ID & AI
 
 > **Status snapshot (2026-02-21)**: ✅ Phase 3 complete. Server-owned AI endpoints, provider-aware inference, simplified client, AI Gateway code path, and D1-backed per-user daily rate limiting are all implemented and tested. AI Gateway dashboard entity created but not actively routing traffic (direct OpenAI preferred for now). Default model is `gpt-4.1-mini` after benchmarking against `gpt-5-mini` and `gpt-5-nano`.
 > **Confidence**: High.
@@ -892,14 +892,14 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 3.1 | Create `functions/api/identify-bird.ts` | Accept multipart image + context. Resize image, construct prompt, call LLM, ground against taxonomy, compute crop box. Return structured `{ candidates, cropBox, multipleBirds }`. | ✅ |
 | 3.2 | Create `functions/api/suggest-location.ts` | Accept coords + optional existing names. Call text LLM with location suggestion prompt. Return `{ name }`. | ✅ |
 | 3.3 | Move prompt + inference logic to `functions/lib/bird-id.ts` | Port prompt template, `safeParseJSON`, retry logic, crop-box computation from `src/lib/ai-inference.ts`. The taxonomy grounding uses the shared `functions/lib/taxonomy.ts` from Phase 2. Prompt deduplicated into shared `functions/lib/bird-id-prompt.js` used by runtime, fixture capture, and benchmark scripts. | ✅ |
-| 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server — clients never see the LLM API directly. | ✅ (OpenAI, Azure OpenAI, and GitHub Models provider selection + unsupported-parameter fallback handling implemented) |
+| 3.4 | Implement LLM backend selection | `env.LLM_PROVIDER` selects between AI Gateway → OpenAI (Option A), Workers AI (Option B), or hybrid (Option C). Internal to the server - clients never see the LLM API directly. | ✅ (OpenAI, Azure OpenAI, and GitHub Models provider selection + unsupported-parameter fallback handling implemented) |
 | 3.5 | Simplify client `ai-inference.ts` | Remove prompt template, `loadImage()`, `sparkVisionLLM()`, `sparkTextLLM()`, `safeParseJSON`, `findBestMatch` call, crop-box math. Keep only lightweight client image compression + multipart upload (`POST /api/identify-bird`) and server text call (`POST /api/suggest-location`) with local auth retry wrapper. | ✅ |
-| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ✅ Gateway created (`wingdex-prod`); code path in `bird-id.ts` routes through gateway when `CF_ACCOUNT_ID` + `AI_GATEWAY_ID` are set. Not actively used — direct OpenAI preferred for simplicity. |
+| 3.6 | Create AI Gateway in Cloudflare dashboard | Configure caching, rate limits, logging. Optionally add fallback to Workers AI model. | ✅ Gateway created (`wingdex-prod`); code path in `bird-id.ts` routes through gateway when `CF_ACCOUNT_ID` + `AI_GATEWAY_ID` are set. Not actively used - direct OpenAI preferred for simplicity. |
 | 3.7 | (Optional) Add per-user rate limiting | Use D1 counter table or in-memory tracking in the Worker to limit LLM calls per user per day | ✅ D1 `ai_daily_usage` table (migration 0003) + `enforceAiDailyLimit` helper. Defaults: 150/day identify, 300/day suggest. Returns 429 + `Retry-After`. Configurable via `AI_DAILY_LIMIT_IDENTIFY`/`AI_DAILY_LIMIT_SUGGEST` env vars. Unit + endpoint tests in `ai-rate-limit.test.ts`. |
 
 ---
 
-#### Phase 4 — Build & Hosting
+#### Phase 4 - Build & Hosting
 
 > **Status snapshot (2026-02-20)**: ✅ All Spark build/runtime/config integrations removed. SPA hosting assets in place.
 > **Confidence**: High.
@@ -916,15 +916,15 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 4.7 | Delete Spark config files | Remove spark.meta.json, runtime.config.json. | ✅ |
 | 4.8 | Add `public/_redirects` | `/* index.html 200` for SPA fallback routing (or rely on Pages' auto-SPA behavior). | ✅ |
 | 4.9 | Update package.json | Remove `@github/spark` from dependencies. Add `wrangler` to devDependencies, `better-auth` to dependencies. Update `description` and `keywords`. Add deploy/CF scripts. | ✅ |
-| 4.10 | Phosphor icon plugin | Drop `createIconImportProxy()` — if a Phosphor icon import is invalid, the build fails with a clear error (better than silent fallback to `Question` icon). All current imports are valid. | ✅ |
+| 4.10 | Phosphor icon plugin | Drop `createIconImportProxy()` - if a Phosphor icon import is invalid, the build fails with a clear error (better than silent fallback to `Question` icon). All current imports are valid. | ✅ |
 
 ---
 
-#### Phase 5 — Testing
+#### Phase 5 - Testing
 
-> **Status snapshot (2026-02-23)**: ✅ Complete. All 507 unit tests pass across 30 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings). **passkey-ux additions**: `use-auth-gate.test.tsx` (8 tests), `fun-names.test.ts` (16 tests — includes merged emoji avatar tests), `wikimedia.test.ts` (14 tests), `utils.test.ts` (9 tests — display/scientific name parsing), updated `app-auth-guard.hosted.test.tsx` and `app-auth-guard.local.test.tsx` mocks for auth gate + emoji avatar exports.
+> **Status snapshot (2026-02-23)**: ✅ Complete. All 507 unit tests pass across 30 files. Server-side function tests added (pure helpers + D1-mocked modules). Spark test naming/URLs updated. E2E helper rewritten to use API-based seeding. Phase 2 deferred items (2.16–2.19) resolved. Dead code cleanup removed `textLLM` test file. Lint fully clean (0 warnings). **passkey-ux additions**: `use-auth-gate.test.tsx` (8 tests), `fun-names.test.ts` (16 tests - includes merged emoji avatar tests), `wikimedia.test.ts` (14 tests), `utils.test.ts` (9 tests - display/scientific name parsing), updated `app-auth-guard.hosted.test.tsx` and `app-auth-guard.local.test.tsx` mocks for auth gate + emoji avatar exports.
 > **Confidence**: High.
-> **Validation**: `npm run test:unit` — 507 tests, 30 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
+> **Validation**: `npm run test:unit` - 507 tests, 30 files ✅. `npm run lint` ✅ (0 errors, 0 warnings). `npm run build` ✅.
 
 **Note**: Test count updated to 507 as of 2026-02-23 after post-passkey-ux polish (wikimedia, utils, expanded fun-names/emoji-avatar tests).
 
@@ -935,37 +935,37 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 5.3 | app-auth-guard.hosted.test.tsx | Updated URL from `wingdex--jlian.github.app` to `wingdex.app`. Tests mock `fetch('/api/auth/get-session')`. **passkey-ux**: Updated mocks for auth gate modal (removed LoginPage rendering assertions, added `getEmojiAvatarColor` mock export). | ✅ |
 | 5.4 | app-auth-guard.local.test.tsx | Already uses string user IDs and better-auth mocks. **passkey-ux**: Added `getEmojiAvatarColor` mock export. | ✅ |
 | 5.5 | ai-inference.test.ts | Already tests `fetch('/api/identify-bird')` with FormData. No Spark dependencies remain. | ✅ |
-| 5.6 | ai-parse-and-textllm.test.ts | Deleted — `textLLM` function removed as dead code (location search uses Nominatim directly, not LLM suggestion). Server-side prompt/parse logic covered by `bird-id-prompt.test.ts`. | ✅ |
+| 5.6 | ai-parse-and-textllm.test.ts | Deleted - `textLLM` function removed as dead code (location search uses Nominatim directly, not LLM suggestion). Server-side prompt/parse logic covered by `bird-id-prompt.test.ts`. | ✅ |
 | 5.7 | ai-fixture-replay.test.ts | Already replays against `/api/identify-bird`. No migration needed. | ✅ |
 | 5.8 | dev-user-id.test.ts | Already tests string user IDs. No changes needed. | ✅ |
 | 5.9 | storage-keys.test.ts | Already uses string userId format. No changes needed. | ✅ |
-| 5.10 | build-dex.test.ts | Kept — `buildDexFromState` validates local fallback dex computation logic. Still valuable for client-side correctness. | ✅ |
+| 5.10 | build-dex.test.ts | Kept - `buildDexFromState` validates local fallback dex computation logic. Still valuable for client-side correctness. | ✅ |
 | 5.11 | ebird-csv.test.ts | Tests repointed to import from `functions/lib/ebird.ts` after client `src/lib/ebird.ts` removal. Server-side ebird also tested in `server-ebird.test.ts`. | ✅ |
 | 5.12 | helpers.ts | Rewritten to use `seedViaCSVImport()` helper that seeds via `/api/import/ebird-csv` + `/api/import/ebird-csv/confirm` API endpoints instead of localStorage injection. | ✅ |
 | 5.13 | csv-and-upload-integration.spec.ts | Already intercepts `**/api/identify-bird`. No Spark routes remain. | ✅ |
 | 5.14 | Other e2e tests | All e2e tests use local dev mode + localStorage. No Spark dependencies. | ✅ |
-| 5.15 | **New**: Server-side function tests | Added 6 test files covering all testable `functions/lib/` modules: `server-taxonomy.test.ts` (14 tests), `server-ebird.test.ts` (9 tests), `bird-id-prompt.test.ts` (8 tests), `bird-id-helpers.test.ts` (27 tests: safeParseJSON, extractAssistantContent, buildCropBox), `ai-rate-limit.test.ts` (7 tests with FakeD1Database mock), `dex-query.test.ts` (3 tests with DexQueryDB mock). Remaining modules (`auth.ts` — betterAuth/Kysely integration, `_middleware.ts` — PagesFunction) require full Wrangler integration tests. | ✅ |
-| 5.16 | Lint cleanup | Suppressed false-positive `react-hooks/exhaustive-deps` warning in `use-wingdex-data.ts` — mutation functions close over refs, not state. | ✅ |
+| 5.15 | **New**: Server-side function tests | Added 6 test files covering all testable `functions/lib/` modules: `server-taxonomy.test.ts` (14 tests), `server-ebird.test.ts` (9 tests), `bird-id-prompt.test.ts` (8 tests), `bird-id-helpers.test.ts` (27 tests: safeParseJSON, extractAssistantContent, buildCropBox), `ai-rate-limit.test.ts` (7 tests with FakeD1Database mock), `dex-query.test.ts` (3 tests with DexQueryDB mock). Remaining modules (`auth.ts` - betterAuth/Kysely integration, `_middleware.ts` - PagesFunction) require full Wrangler integration tests. | ✅ |
+| 5.16 | Lint cleanup | Suppressed false-positive `react-hooks/exhaustive-deps` warning in `use-wingdex-data.ts` - mutation functions close over refs, not state. | ✅ |
 | 5.17 | Extract bird-id-helpers.ts | Extracted `safeParseJSON`, `extractAssistantContent`, `buildCropBox` from `bird-id.ts` into `functions/lib/bird-id-helpers.ts` so they can be tested without dragging in Cloudflare `Env` types. | ✅ |
 | 5.18 | Narrow dex-query.ts type | Replaced `D1Database` with minimal `DexQueryDB` interface (same pattern as `RateLimitDB`) to avoid Cloudflare type dependency in tsc. | ✅ |
-| 5.19 | **New**: Auth gate tests | Created `src/__tests__/use-auth-gate.test.tsx` — 8 tests covering modal open/close, sign-up flow, sign-in flow, cancellation, mode switching. | ✅ |
-| 5.20 | **New**: Fun-names + emoji avatar tests | Created `src/__tests__/fun-names.test.ts` — 16 tests covering name generation (2), emoji-for-bird mapping (6), emoji avatar data URL (2), and emoji avatar color (5). Originally 5 tests; expanded when `emoji-avatar.ts` was merged into `fun-names.ts`. | ✅ |
+| 5.19 | **New**: Auth gate tests | Created `src/__tests__/use-auth-gate.test.tsx` - 8 tests covering modal open/close, sign-up flow, sign-in flow, cancellation, mode switching. | ✅ |
+| 5.20 | **New**: Fun-names + emoji avatar tests | Created `src/__tests__/fun-names.test.ts` - 16 tests covering name generation (2), emoji-for-bird mapping (6), emoji avatar data URL (2), and emoji avatar color (5). Originally 5 tests; expanded when `emoji-avatar.ts` was merged into `fun-names.ts`. | ✅ |
 | 5.21 | **New**: E2e auth helpers | Updated `e2e/helpers.ts` with `promoteAnonymousUser()` for tests requiring auth-gated features. Updated `smoke.spec.ts`, `dark-mode.spec.ts`, `csv-and-upload-integration.spec.ts` to use the helper. | ✅ |
-| 5.22 | **New**: Wikimedia tests | Created `src/__tests__/wikimedia.test.ts` — 14 tests covering Wikimedia Commons image URL construction and `/api/species/wiki-title` client caching wrapper. | ✅ |
-| 5.23 | **New**: Utils tests | Created `src/__tests__/utils.test.ts` — 9 tests covering `getDisplayName()` (5 tests) and `getScientificName()` (4 tests) parsing helpers. | ✅ |
+| 5.22 | **New**: Wikimedia tests | Created `src/__tests__/wikimedia.test.ts` - 14 tests covering Wikimedia Commons image URL construction and `/api/species/wiki-title` client caching wrapper. | ✅ |
+| 5.23 | **New**: Utils tests | Created `src/__tests__/utils.test.ts` - 9 tests covering `getDisplayName()` (5 tests) and `getScientificName()` (4 tests) parsing helpers. | ✅ |
 
 ---
 
-#### Phase 6 — CI/CD & Deploy
+#### Phase 6 - CI/CD & Deploy
 
-> **Status snapshot (2026-02-23)**: ✅ Complete — significantly reworked from original plan. CI pipeline split from monolithic `verify:ci` script into discrete lint/typecheck/unit/build/migrate/e2e steps for better observability. `deploy.yml` merged into `ci.yml` (preview deploy is the last CI step). `release.yml` triggers on pushes to `[main, dev]` — semantic-release only on main, branch-aware deploy + migration. CI deploy step skips redundant preview deploy when PR source branch is `dev` or `main` (release workflow handles those). Dev branch strategy: `main` (production, deploys to `wingdex.app`), `dev` (staging, deploys to `dev.wingdex.pages.dev`). Separate D1 databases: `wingdex-db` (prod, ID `bb0a4504-...`) and `wingdex-db-dev` (preview, ID `7299207b-...`). Both remote DBs have all 4 migrations applied. GitHub + Apple OAuth secrets + `BETTER_AUTH_SECRET` + `OPENAI_API_KEY` set in Cloudflare Pages for both production and preview environments (Apple credentials configured). Custom domain `wingdex.app` added (pending first production deploy). `db:migrate` renamed to `db:migrate:local` for safety. `computeFileHash` fix for small files committed. `tsconfig.json` excludes `auth-config.test.ts` from `tsc -b` (imports Cloudflare Workers types). Apple client secret rotation workflow added (`.github/workflows/rotate-apple-secret.yml`).
+> **Status snapshot (2026-02-23)**: ✅ Complete - significantly reworked from original plan. CI pipeline split from monolithic `verify:ci` script into discrete lint/typecheck/unit/build/migrate/e2e steps for better observability. `deploy.yml` merged into `ci.yml` (preview deploy is the last CI step). `release.yml` triggers on pushes to `[main, dev]` - semantic-release only on main, branch-aware deploy + migration. CI deploy step skips redundant preview deploy when PR source branch is `dev` or `main` (release workflow handles those). Dev branch strategy: `main` (production, deploys to `wingdex.app`), `dev` (staging, deploys to `dev.wingdex.pages.dev`). Separate D1 databases: `wingdex-db` (prod, ID `bb0a4504-...`) and `wingdex-db-dev` (preview, ID `7299207b-...`). Both remote DBs have all 4 migrations applied. GitHub + Apple OAuth secrets + `BETTER_AUTH_SECRET` + `OPENAI_API_KEY` set in Cloudflare Pages for both production and preview environments (Apple credentials configured). Custom domain `wingdex.app` added (pending first production deploy). `db:migrate` renamed to `db:migrate:local` for safety. `computeFileHash` fix for small files committed. `tsconfig.json` excludes `auth-config.test.ts` from `tsc -b` (imports Cloudflare Workers types). Apple client secret rotation workflow added (`.github/workflows/rotate-apple-secret.yml`).
 > **Confidence**: High.
 > **Validation**: CI passes on PR #145 ✅; preview deploys live (e.g. `cbc1648d.wingdex.pages.dev` returns 200, `/api/auth/ok` returns `{"ok":true}`) ✅; `wrangler pages secret list` confirms all secrets for both environments ✅; both remote D1 databases healthy with all migrations ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
 | 6.1 | Create deploy workflows | Original `deploy.yml` (PR preview) merged into `ci.yml` as final step. `release.yml` handles production + dev deploys on push to `[main, dev]`. Semantic-release only on `main` (`if: github.ref == 'refs/heads/main'`). Branch-aware deploy: `--branch=dev` for non-main pushes. Concurrency group: `release-${{ github.ref_name }}`. | ✅ |
-| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `BETTER_AUTH_SECRET` — set via `gh secret set` and used by both CI and release workflows. | ✅ |
+| 6.2 | Add GitHub repo secrets | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `BETTER_AUTH_SECRET` - set via `gh secret set` and used by both CI and release workflows. | ✅ |
 | 6.3 | Add Cloudflare secrets | Production: `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `OPENAI_API_KEY`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`. Preview: `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`. All set via Cloudflare dashboard / `wrangler pages secret put`. Apple credentials configured. | ✅ |
 | 6.4 | Custom domain | `wingdex.app` added to Cloudflare Pages project. Zone active (Cloudflare is registrar). Status: pending first production deploy. | ✅ |
 | 6.5 | Preview deployments | CI workflow deploys preview per PR as `pr-<number>.wingdex.pages.dev` via `wrangler-action` with `gitHubToken` for automatic PR comments + deployment status. | ✅ |
@@ -974,14 +974,14 @@ async function confirmImport(context: EventContext<Env, any, any>, previewIds: s
 | 6.8 | **New**: Dev branch strategy | Created `dev` branch from `main`. CI triggers on PRs to `[main, dev]`. Release triggers on pushes to `[main, dev]`. PR #145 retargeted from `main` to `dev` for preview testing. | ✅ |
 | 6.9 | **New**: Separate D1 databases | Created `wingdex-db-dev` (ID `7299207b-...`) for preview/dev deploys. Added `[env.preview]` section in `wrangler.toml` with separate D1 binding. Release workflow migrates correct DB per branch (`wingdex-db` on main, `wingdex-db-dev` on dev). | ✅ |
 | 6.10 | **New**: Migration script safety | Renamed `db:migrate` → `db:migrate:local` with explicit `--local` flag to prevent accidental remote prod mutations from local machine. | ✅ |
-| 6.11 | **New**: Build/tsc fix | Excluded `src/__tests__/auth-config.test.ts` from `tsconfig.json` — it imports `functions/lib/auth.ts` which uses Cloudflare Workers types not in frontend tsconfig. Tests still run via vitest (separate config). | ✅ |
+| 6.11 | **New**: Build/tsc fix | Excluded `src/__tests__/auth-config.test.ts` from `tsconfig.json` - it imports `functions/lib/auth.ts` which uses Cloudflare Workers types not in frontend tsconfig. Tests still run via vitest (separate config). | ✅ |
 | 6.12 | **New**: Prod D1 database recreation | Original `wingdex-db` was deleted. Recreated with new ID (`bb0a4504-...`), updated `wrangler.toml`, applied all 4 migrations. | ✅ |
 | 6.13 | **New**: CI deploy deduplication | CI deploy step skips preview deploy when PR source branch is `dev` or `main` (`if: github.head_ref != 'dev' && github.head_ref != 'main'`), since the release workflow already deploys those branches on push. Uses `--branch=${{ github.head_ref }}` for consistent aliases. | ✅ |
-| 6.14 | **New**: Apple secret rotation workflow | `.github/workflows/rotate-apple-secret.yml` — scheduled cron (every 5 months) + manual dispatch. Generates Apple client secret JWT (ES256, 6-month expiry) from `.p8` private key in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
+| 6.14 | **New**: Apple secret rotation workflow | `.github/workflows/rotate-apple-secret.yml` - scheduled cron (every 5 months) + manual dispatch. Generates Apple client secret JWT (ES256, 6-month expiry) from `.p8` private key in GitHub secrets, pushes to Cloudflare Pages via `wrangler pages secret put` for both production and preview environments. | ✅ |
 
-**Deploy workflows** — two files:
+**Deploy workflows** - two files:
 
-`ci.yml` (PRs to main/dev — CI + preview):
+`ci.yml` (PRs to main/dev - CI + preview):
 ```yaml
 name: CI & Preview
 on:
@@ -1001,7 +1001,7 @@ jobs:
       - Create branch preview deployment status
 ```
 
-`release.yml` (push to main/dev — release + deploy):
+`release.yml` (push to main/dev - release + deploy):
 ```yaml
 name: Release
 on:
@@ -1022,7 +1022,7 @@ jobs:
 
 ---
 
-#### Phase 7 — Cleanup
+#### Phase 7 - Cleanup
 
 > **Status snapshot (2026-02-23)**: ✅ Done with deviation. Active setup/product docs are migrated to Cloudflare/Better Auth terminology; manifests include explicit root `scope`; package metadata is clean; `spark-tools` is absent. Remaining Spark strings are intentionally historical/contextual (migration tracker narrative, changelog history, test fixtures like “Sparkle/Sparkling”).
 > **Confidence**: High.
@@ -1071,7 +1071,7 @@ jobs:
 | `functions/api/data/photos.ts` | **Create** | POST: bulk insert photos |
 | `functions/api/data/observations.ts` | **Create** | POST/PATCH: create/update observations + return dexUpdates |
 | `functions/api/data/dex.ts` | **Create** | GET: computed dex. PATCH: update dex_meta |
-| `functions/api/data/seed.ts` | **Create → Delete** | Originally POST: insert demo data. Deleted — SettingsPage now uses CSV import API with demo CSV; seed endpoint had zero consumers |
+| `functions/api/data/seed.ts` | **Create → Delete** | Originally POST: insert demo data. Deleted - SettingsPage now uses CSV import API with demo CSV; seed endpoint had zero consumers |
 | `functions/api/data/clear.ts` | **Create** | DELETE: wipe all user data |
 | `functions/api/identify-bird.ts` | **Create** | POST: image + context → species candidates (smart bird ID endpoint) |
 | `functions/api/import/ebird-csv.ts` | **Create** | POST: upload CSV → previews with conflicts |
@@ -1085,7 +1085,7 @@ jobs:
 | `src/components/pages/LoginPage.tsx` | **Create → Delete** | Originally created as passkey-first login page. **Deleted in passkey-ux**: replaced by demo-first auth gate modal in `use-auth-gate.tsx`. |
 | `src/components/flows/PasskeyAuthDialog.tsx` | **Create → Delete** | Originally created for dialog signup/sign-in. **Deleted in passkey-ux**: functionality absorbed into `use-auth-gate.tsx`. |
 | `src/hooks/use-auth-gate.tsx` | **Create** | Auth gate hook + modal component. Dual Sign up / Log in modes, cancellation handling, anonymous bootstrap → addPasskey → finalize flow. |
-| `src/lib/fun-names.ts` | **Create** | Random kebab-case bird-name generator (~249K combos) + emoji avatar helpers (bird-to-emoji mapping, `emojiForBirdName`, `emojiAvatarDataUrl`, `getEmojiAvatarColor` — consolidated from deleted `emoji-avatar.ts`) |
+| `src/lib/fun-names.ts` | **Create** | Random kebab-case bird-name generator (~249K combos) + emoji avatar helpers (bird-to-emoji mapping, `emojiForBirdName`, `emojiAvatarDataUrl`, `getEmojiAvatarColor` - consolidated from deleted `emoji-avatar.ts`) |
 | `src/lib/demo-data.ts` | **Create** | Demo data loader for anonymous users (69 species from bundled eBird CSV) |
 | `src/lib/wikimedia.ts` | **Create** | Wikimedia Commons image URL construction + `/api/species/wiki-title` client caching wrapper |
 | `src/assets/ebird-import.csv` | **Create** | Bundled demo eBird CSV (copied from `e2e/fixtures/`, decouples prod from test fixtures) |
@@ -1157,7 +1157,7 @@ jobs:
 
 | Risk | Impact | Mitigation | Status |
 |---|---|---|---|
-| **LLM quality regression** if using Workers AI | Bird ID accuracy drops | Use AI Gateway → OpenAI as primary. Offer Workers AI as optional "free mode" | ✅ Mitigated — OpenAI is primary path |
+| **LLM quality regression** if using Workers AI | Bird ID accuracy drops | Use AI Gateway → OpenAI as primary. Offer Workers AI as optional "free mode" | ✅ Mitigated - OpenAI is primary path |
 | **D1 row limits for power users** | Users with thousands of observations | 5M reads/day free is plenty. Monitor with Cloudflare analytics. Consider pagination for very large datasets. | ✅ Acceptable for current scale |
 | **Better Auth breaking changes** | Auth breaks on lib updates | Pin version. Better Auth is actively maintained with good semver. | ✅ Pinned |
 | **Apple Sign In complexity** | Requires paid Apple dev account + non-trivial OIDC setup | Services ID `app.wingdex.signin`, credentials set in Cloudflare Pages (prod + preview). Client secret JWT valid 180 days (expires ~2026-08-21), auto-rotated via GitHub Actions workflow. | ✅ Fully configured |
@@ -1202,7 +1202,7 @@ This section defines how to run the app locally during migration, how auth/data 
 | Outing mutations | `POST /api/data/outings`, `PATCH/DELETE /api/data/outings/:id` | create/edit/delete outing and confirm UI + D1 consistency |
 | Observation mutations | `POST/PATCH /api/data/observations` returns `dexUpdates` | confirm/reject species and verify dex rows update immediately |
 | Photo ingestion | `POST /api/data/photos` bulk insert | add photos in flow and confirm subsequent observation linkage |
-| Seed/clear workflows | `DELETE /api/data/clear` (seed removed — demo data via CSV import) | settings actions update state and survive reloads |
+| Seed/clear workflows | `DELETE /api/data/clear` (seed removed - demo data via CSV import) | settings actions update state and survive reloads |
 
 #### Test Execution Plan
 
@@ -1239,10 +1239,10 @@ This section defines how to run the app locally during migration, how auth/data 
 > **Validation**: `npm run build`, `npm test`, `npm run smoke:api`, `npm run smoke:api:seeded`, focused Playwright API smoke, local health checks on `:5000`, client-bundle artifact audit, MCP Playwright manual UI checks (demo render, auth-gated modal trigger, sign-up/login mode switch, provider buttons visible, photo upload + identify confirm flow, species search autocomplete list populated from `robin` query, outing-detail export button download + toast + `/api/export/outing/:id` network `200`), user-confirmed GitHub/Apple sign-in + trusted-provider auto-merge behavior, passkey sign-in session verification via MCP (`/api/auth/get-session` → `200` with user+session), direct Wrangler API checks on `:8788` for export/cascade (`API_EXPORT_CASCADE_OK`), latest full Playwright run (`34 passed / 1 skipped` after stabilizing `e2e/csv-and-upload-integration.spec.ts` upload-flow assertion timing), and targeted new e2e coverage for immediate Outings visibility after upload-save and UI eBird export download.
 
 - [x] `npm run build` succeeds without `@github/spark`
-- [x] `npm test` — all unit tests pass with updated mocks
-- [x] Server-side tests pass — bird ID prompt/parsing, taxonomy search, eBird CSV parsing
+- [x] `npm test` - all unit tests pass with updated mocks
+- [x] Server-side tests pass - bird ID prompt/parsing, taxonomy search, eBird CSV parsing
 - [x] Local dev: Vite serves SPA, localStorage fallback works, bird photos can be uploaded and identified via `/api/identify-bird` (proxied to Wrangler)
-- [x] `wrangler pages dev dist` — Pages Functions respond correctly
+- [x] `wrangler pages dev dist` - Pages Functions respond correctly
 - [x] Auth flow: GitHub sign-in → session cookie set → `/api/auth/get-session` returns user → app renders with user info _(manually verified by user)_
 - [x] Auth flow: Passkey sign-in + social auto-merge via trusted providers (GitHub, Apple) _(GitHub/Apple social sign-in and trusted-provider auto-merge manually verified by user; dedicated passkey lifecycle check remains below)_
 - [x] Data persistence: Create outing → reload page → outing still exists (D1)

@@ -10,7 +10,7 @@ A photo-first bird identification and life list tracker built on Cloudflare Page
 
 WingDex is for **reverse birding**: people who take photos first and identify species later. Instead of checklists and field guides, you upload photos you already took, and AI handles the species identification. You just confirm with a tap.
 
-**Your photos are never stored.** They're used only during identification and immediately discarded. Upload a whole day's worth of photos at once via the **batch upload wizard**, which clusters them into outings, identifies each bird, and lets you confirm results in one flow. Every species in your WingDex links back to the outings where you saw it, and every outing links to its species in the WingDex — so you can always **cross-reference between your WingDex and your field trips**.
+**Your photos are never stored.** They're used only during identification and immediately discarded. Upload a whole day's worth of photos at once via the **batch upload wizard**, which clusters them into outings, identifies each bird, and lets you confirm results in one flow. Every species in your WingDex links back to the outings where you saw it, and every outing links to its species in the WingDex, so you can always **cross-reference between your WingDex and your field trips**.
 
 ### Features
 
@@ -30,9 +30,9 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 
 1. **Upload** bird photos from your device
 2. **EXIF** GPS & timestamps are extracted and photos are clustered into outings
-3. **Review** the outing — confirm date, location (auto-geocoded), and notes
+3. **Review** the outing, confirm date, location (auto-geocoded), and notes
 4. **AI identifies** each bird with ranked suggestions, confidence scores, and a crop box
-5. **Confirm** — accept, mark as possible, pick an alternative, re-crop, or skip
+5. **Confirm**, accept, mark as possible, pick an alternative, re-crop, or skip
 6. **Saved** to your WingDex with species, count, and confidence
 
 ## Tech stack

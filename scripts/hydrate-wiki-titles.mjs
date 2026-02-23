@@ -186,13 +186,13 @@ async function main() {
       }
     }
 
-    // Not found in Wikidata — queue for API fallback
+    // Not found in Wikidata, queue for API fallback
     misses.push({ common, scientific, ebirdCode, index: updated.length })
     updated.push([common, scientific, ebirdCode, null]) // placeholder
   }
 
   console.log(`Wikidata matched: ${taxonomy.length - misses.length}/${taxonomy.length}`)
-  console.log(`Remaining misses: ${misses.length} — checking Wikipedia API...\n`)
+  console.log(`Remaining misses: ${misses.length}, checking Wikipedia API...\n`)
 
   // Pass 2: API fallback for misses (with retry for rate-limited requests)
   let remaining = [...misses]
@@ -234,7 +234,7 @@ async function main() {
     }
   }
 
-  // Write back — compact JSON (one line per entry for reasonable diffs)
+  // Write back, compact JSON (one line per entry for reasonable diffs)
   const json = '[\n' + updated.map(e => JSON.stringify(e)).join(',\n') + '\n]\n'
   writeFileSync(TAXONOMY_PATH, json)
   console.log(`\nWrote updated taxonomy.json`)

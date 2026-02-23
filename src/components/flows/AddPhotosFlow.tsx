@@ -139,13 +139,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       }
 
       if (result.candidates.length === 0 && !imageUrl) {
-        // No species found on full image — ask user to crop and retry
-        console.log('⚠️ No species identified — asking user to crop or skip')
+        // No species found on full image, ask user to crop and retry
+        console.log('⚠️ No species identified, asking user to crop or skip')
         setStep('photo-manual-crop')
       } else if (result.multipleBirds && !imageUrl) {
-        // Multiple bird species detected — let user crop to the one they want
-        console.log('🐦🐦 Multiple species detected — asking user to crop')
-        toast.info('Multiple bird species detected — crop to the one you want')
+        // Multiple bird species detected, let user crop to the one they want
+        console.log('🐦🐦 Multiple species detected, asking user to crop')
+        toast.info('Multiple bird species detected, crop to the one you want')
         setCurrentCandidates(result.candidates)
         setStep('photo-manual-crop')
       } else {
@@ -373,12 +373,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const fullPhoto = photos.find(fp => fp.id === p.id)
       return { ...fullPhoto, outingId }
     })
-    // Persist only metadata — strip large base64 blobs to avoid KV/localStorage overflow
+    // Persist only metadata, strip large base64 blobs to avoid KV/localStorage overflow
     const photosForStorage = updatedPhotos.map((p: any) => ({
       id: p.id,
       outingId: p.outingId,
-      dataUrl: '',      // ephemeral — not persisted
-      thumbnail: '',    // ephemeral — not persisted
+      dataUrl: '',      // ephemeral, not persisted
+      thumbnail: '',    // ephemeral, not persisted
       exifTime: p.exifTime,
       gps: p.gps,
       fileHash: p.fileHash,
@@ -632,7 +632,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 }
 
 // ────────────────────────────────────────────────────────────
-//  AI Zoomed preview — renders the crop box region onto a canvas
+//  AI Zoomed preview, renders the crop box region onto a canvas
 // ────────────────────────────────────────────────────────────
 
 function AiZoomedPreview({
@@ -770,7 +770,7 @@ function PerPhotoConfirm({
 
   return (
     <div className="space-y-4">
-      {/* Photo — zoomed to bird if AI crop box available */}
+      {/* Photo, zoomed to bird if AI crop box available */}
       <div className="flex justify-center gap-3 items-start">
         <div className="flex justify-center" style={{ flex: '1 1 0', minWidth: 0, maxWidth: wikiImage ? '50%' : '100%' }}>
           {aiCropBox && !photo.croppedDataUrl ? (
@@ -836,7 +836,7 @@ function PerPhotoConfirm({
         </div>
 
         {isHighConfidence && !showAlternatives ? (
-          /* HIGH CONFIDENCE — auto-selected, alternatives hidden */
+          /* HIGH CONFIDENCE, auto-selected, alternatives hidden */
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
               <CheckCircle size={16} weight="fill" />

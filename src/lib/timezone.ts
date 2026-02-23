@@ -17,7 +17,7 @@ export function getTimezoneFromCoords(lat: number, lon: number): string {
  */
 export function getUtcOffsetString(timezone: string, date: Date): string {
   // Format the date in the target timezone to get the UTC offset
-  // longOffset may throw on older iOS/Safari — fall back to shortOffset then short
+  // longOffset may throw on older iOS/Safari, fall back to shortOffset then short
   let parts: Intl.DateTimeFormatPart[] | undefined
   for (const tzName of ['longOffset', 'shortOffset', 'short'] as const) {
     try {
@@ -272,7 +272,7 @@ export function getTimezoneAbbreviation(timeStr: string): string {
   const totalMinutes = sign * (hrs * 60 + mins)
 
   // Try to get abbreviation via Intl with 'short' timeZoneName
-  // We need a timezone that matches this offset — use a heuristic approach
+  // We need a timezone that matches this offset, use a heuristic approach
   // by trying common timezones
   const commonTimezones: Record<number, string[]> = {
     [-600]: ['Pacific/Honolulu'],

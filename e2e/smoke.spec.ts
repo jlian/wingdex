@@ -190,7 +190,7 @@ test.describe('App smoke tests', () => {
       page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
     ).toBeVisible({ timeout: 10_000 });
 
-    // Try to close via the X button — should show confirmation
+    // Try to close via the X button, should show confirmation
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
 
     // Confirmation alert dialog should appear
