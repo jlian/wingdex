@@ -65,7 +65,7 @@ const emojiColors: Record<string, string> = {
   '🐦': 'bg-sky-100 dark:bg-sky-900/40',
   '🦉': 'bg-amber-100 dark:bg-amber-900/40',
   '🦜': 'bg-emerald-100 dark:bg-emerald-900/40',
-  '🐧': 'bg-slate-100 dark:bg-slate-900/40',
+  '🐧': 'bg-slate-100 dark:bg-slate-600/50',
   '🦆': 'bg-teal-100 dark:bg-teal-900/40',
   '🦩': 'bg-pink-100 dark:bg-pink-900/40',
   '🦅': 'bg-orange-100 dark:bg-orange-900/40',
@@ -73,7 +73,7 @@ const emojiColors: Record<string, string> = {
 }
 
 export function emojiAvatarDataUrl(emoji: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="44">${emoji}</text></svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" font-size="48">${emoji}</text></svg>`
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 

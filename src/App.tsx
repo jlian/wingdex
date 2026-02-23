@@ -479,6 +479,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                   selectedSpecies={subId ?? null}
                   onSelectSpecies={(name) => navigate('wingdex', name ?? undefined)}
                   onSelectOuting={(id) => navigate('outings', id)}
+                  onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
+                  onAddPhotosIntent={prefetchAddPhotosFlow}
                   searchQuery={wingDexSearchQuery}
                   onSearchQueryChange={setWingDexSearchQuery}
                   sortField={wingDexSortField}
