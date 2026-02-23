@@ -27,6 +27,20 @@ function withSecurityHeaders(response: Response): Response {
   return patched
 }
 
+/** Create an error Response with security headers applied. */
+function errorResponse(body: string, status: number, extraHeaders?: Record<string, string>): Response {
+  const response = new Response(body, { status })
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(key, value)
+  }
+  if (extraHeaders) {
+    for (const [key, value] of Object.entries(extraHeaders)) {
+      response.headers.set(key, value)
+    }
+  }
+  return response
+}
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
 
@@ -37,16 +51,27 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(context.request.method)) {
-    return new Response('Method Not Allowed', { status: 405 })
+    return errorResponse('Method Not Allowed', 405, {
+      Allow: Array.from(ALLOWED_METHODS).join(', '),
+    })
   }
 
   // --- Request body size limit ---
-  const contentLength = Number(context.request.headers.get('content-length') ?? '0')
-  if (contentLength > 0) {
-    const limit =
-      BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
-    if (contentLength > limit) {
-      return new Response('Payload Too Large', { status: 413 })
+  const method = context.request.method
+  const rawContentLength = context.request.headers.get('content-length')
+  const hasBodyMethod = method !== 'GET' && method !== 'OPTIONS'
+
+  if (hasBodyMethod) {
+    const parsedLength = rawContentLength === null ? NaN : Number(rawContentLength)
+    if (!Number.isFinite(parsedLength) || parsedLength < 0) {
+      return errorResponse('Invalid Content-Length', 400)
+    }
+    if (parsedLength > 0) {
+      const limit =
+        BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
+      if (parsedLength > limit) {
+        return errorResponse('Payload Too Large', 413)
+      }
     }
   }
 
@@ -57,13 +82,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (pathname === '/api/auth/sign-in/anonymous' && !isLocalRuntime) {
     const turnstileSecret = context.env.TURNSTILE_SECRET_KEY?.trim()
     if (!turnstileSecret) {
-      return new Response('Verification service is unavailable. Please try again later.', { status: 503 })
+      return errorResponse('Verification service is unavailable. Please try again later.', 503)
     }
 
     const rawToken = context.request.headers.get('x-turnstile-token')
     const token = rawToken?.trim()
     if (!token) {
-      return new Response('Verification required. Please refresh and try again.', { status: 403 })
+      return errorResponse('Verification required. Please refresh and try again.', 403)
     }
 
     const ip = context.request.headers.get('cf-connecting-ip')
@@ -75,7 +100,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       TURNSTILE_ACTION,
     )
     if (!valid) {
-      return new Response('Verification failed. Please refresh and try again.', { status: 403 })
+      return errorResponse('Verification failed. Please refresh and try again.', 403)
     }
   }
 
@@ -90,7 +115,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
-    return new Response('Unauthorized', { status: 401 })
+    return errorResponse('Unauthorized', 401)
   }
 
   context.data.user = session.user
