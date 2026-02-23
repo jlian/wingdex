@@ -84,6 +84,37 @@ describe('verifyTurnstile', () => {
     await expect(verifyTurnstile('token', 'secret')).resolves.toBe(false)
   })
 
+  it('returns false when hostname does not match expected hostname', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'wrong.example.com' }),
+    })
+
+    await expect(verifyTurnstile('token', 'secret', null, 'wingdex.app')).resolves.toBe(false)
+  })
+
+  it('returns false when action does not match expected action', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'wingdex.app', action: 'signup' }),
+    })
+
+    await expect(
+      verifyTurnstile('token', 'secret', null, 'wingdex.app', 'anonymous_signin'),
+    ).resolves.toBe(false)
+  })
+
+  it('returns true when expected hostname and action both match', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'wingdex.app', action: 'anonymous_signin' }),
+    })
+
+    await expect(
+      verifyTurnstile('token', 'secret', null, 'wingdex.app', 'anonymous_signin'),
+    ).resolves.toBe(true)
+  })
+
   it('does not include remoteip when null', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
