@@ -9,25 +9,25 @@ permissions:
 
 jobs:
   cleanup:
-    name: Delete preview environment
+    name: Deactivate preview deployments
     runs-on: ubuntu-latest
     steps:
-      - name: Delete GitHub environment
+      - name: Deactivate preview deployments
         uses: actions/github-script@v7
         with:
           script: |
             const branch = context.payload.pull_request.head.ref;
             const envName = `preview (${branch})`;
-            try {
-              await github.rest.repos.deleteAnEnvironment({
+            const deployments = await github.rest.repos.listDeployments({
+              ...context.repo,
+              environment: envName,
+              per_page: 100,
+            });
+            for (const d of deployments.data) {
+              await github.rest.repos.createDeploymentStatus({
                 ...context.repo,
-                environment_name: envName,
+                deployment_id: d.id,
+                state: 'inactive',
               });
-              core.info(`Deleted environment: ${envName}`);
-            } catch (e) {
-              if (e.status === 404) {
-                core.info(`Environment not found: ${envName}`);
-              } else {
-                throw e;
-              }
             }
+            core.info(`Deactivated ${deployments.data.length} deployment(s) for ${envName}`);
