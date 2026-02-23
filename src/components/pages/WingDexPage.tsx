@@ -354,8 +354,16 @@ function SpeciesDetail({
     }
   }
 
-  // Both resolve from the same shared Wikipedia API cache, so no low-res flash
-  const heroImage = summary?.imageUrl || wikiImage
+  // Both resolve from the same shared Wikipedia API cache, so no API delay.
+  // wikiImage = thumbnail (small, loads fast), summary.imageUrl = full-res.
+  const thumbnailUrl = wikiImage
+  const fullResUrl = summary?.imageUrl
+  const [fullResLoaded, setFullResLoaded] = useState(false)
+
+  // Reset loaded state when species changes
+  useEffect(() => {
+    setFullResLoaded(false)
+  }, [entry.speciesName])
 
   return (
     <div className="max-w-3xl mx-auto pb-8 animate-fade-in">
@@ -370,17 +378,29 @@ function SpeciesDetail({
       <div className="px-4 sm:px-6 space-y-6">
         {/* Hero: full-width image with overlaid name + stats */}
         <div className="w-full aspect-[4/3] rounded-xl bg-muted overflow-hidden shadow-sm relative">
-          {heroImage ? (
+          {/* Blurred thumbnail placeholder -- visible until full-res loads */}
+          {thumbnailUrl && !fullResLoaded && (
             <img
-              src={heroImage}
-              alt={displayName}
-              className="absolute inset-0 w-full h-full object-cover object-[center_10%] animate-fade-in"
+              src={thumbnailUrl}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover object-[center_10%] blur-md scale-105"
             />
-          ) : !summaryLoading ? (
+          )}
+          {/* Full-res image -- fades in over the thumbnail */}
+          {(fullResUrl || thumbnailUrl) && (
+            <img
+              src={fullResUrl || thumbnailUrl}
+              alt={displayName}
+              onLoad={() => setFullResLoaded(true)}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-300 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
+          {!thumbnailUrl && !fullResUrl && !summaryLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Bird size={48} className="text-muted-foreground/40" />
             </div>
-          ) : null}
+          )}
 
           {/* Gradient overlay + text at bottom */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-16 pb-4 px-4 sm:px-5">
