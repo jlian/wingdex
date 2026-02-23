@@ -36,7 +36,6 @@ pids
 .file-manifest
 .devcontainer/
 
-.spark-workbench-id
 
 # Wrangler local dev state/cache
 .wrangler/

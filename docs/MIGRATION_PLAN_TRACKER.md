@@ -1013,18 +1013,18 @@ jobs:
 
 #### Phase 7 — Cleanup
 
-> **Status snapshot (2026-02-21)**: ⚠️ Partially complete (targeted cleanup and tracker/design notes done); full repo-wide cleanup sweep remains pending. GitHub OAuth references updated from `example.com` to actual domains.
-> **Confidence**: Low-Medium.
-> **Validation**: Documentation/tracker updates verified and build still green ✅.
+> **Status snapshot (2026-02-22)**: ✅ Done with deviation. Active setup/product docs are migrated to Cloudflare/Better Auth terminology; manifests include explicit root `scope`; package metadata is clean; `spark-tools` is absent. Remaining Spark strings are intentionally historical/contextual (migration tracker narrative, changelog history, test fixtures like “Sparkle/Sparkling”).
+> **Confidence**: High.
+> **Validation**: Exclusion-based repo audit passed (`rg` excluding changelog/tracker/tests/taxonomy data) + targeted doc updates verified ✅.
 
 | Step | What | Details | Status |
 |---|---|---|---|
-| 7.1 | Grep for `spark` | Remove all references from comments, README, CONTRIBUTING, PRD, etc. | |
-| 7.2 | Update PRD.md | Replace "GitHub Spark" references with "Cloudflare Pages + D1". Update auth description. | |
-| 7.3 | Update README.md | New setup instructions: Wrangler, D1 migrations, local dev workflow. | |
-| 7.4 | Update PWA manifests | manifest.json, site.webmanifest — update start_url, scope if domain changes. | |
-| 7.5 | Remove spark-tools | This directory contains compiled Spark tooling (the icon proxy plugin). No longer needed. | |
-| 7.6 | Update package.json metadata | Remove "github-spark" from keywords. Update description. | |
+| 7.1 | Grep for `spark` | No active runtime/setup references found after exclusions (`CHANGELOG.md`, tracker, tests, taxonomy data). | ✅ |
+| 7.2 | Update PRD.md | Replaced Spark auth/storage wording with Better Auth + Cloudflare D1 language. | ✅ |
+| 7.3 | Update README.md | Updated platform/AI/security/prerequisite wording to current Cloudflare-based local workflow. | ✅ |
+| 7.4 | Update PWA manifests | Added explicit root `scope` in `manifest.json` and `site.webmanifest` (start_url already `/`). | ✅ |
+| 7.5 | Remove spark-tools | `spark-tools` directory is already absent in current repo state. | ✅ |
+| 7.6 | Update package.json metadata | Already clean: no `github-spark` keyword and description reflects current product. | ✅ |
 
 ---
 
@@ -1194,8 +1194,8 @@ This section defines how to run the app locally during migration, how auth/data 
 
 ### Verification Checklist
 
-- [ ] `npm run build` succeeds without `@github/spark`
-- [ ] `npm test` — all unit tests pass with updated mocks
+- [x] `npm run build` succeeds without `@github/spark`
+- [x] `npm test` — all unit tests pass with updated mocks
 - [ ] Server-side tests pass — bird ID prompt/parsing, taxonomy search, eBird CSV parsing
 - [ ] Local dev: Vite serves SPA, localStorage fallback works, bird photos can be uploaded and identified via `/api/identify-bird` (proxied to Wrangler)
 - [ ] `wrangler pages dev dist` — Pages Functions respond correctly
@@ -1212,6 +1212,6 @@ This section defines how to run the app locally during migration, how auth/data 
 - [ ] Deploy: Push to `main` → GitHub Actions deploys to Cloudflare Pages → app live at custom domain
 - [ ] Deploy: Push to `dev` → GitHub Actions deploys to `dev.wingdex.pages.dev` with separate D1 database
 - [ ] Passkey: Register passkey in settings → sign out → sign in with passkey
-- [ ] No `spark` string remains in codebase (except git history)
+- [x] No active Spark runtime/setup references remain in codebase (excluding migration/changelog history, tests, and taxonomy data)
 - [ ] Client bundle size: `taxonomy.json` no longer in client bundle (~300KB reduction)
 - [ ] Audit: `grep -r "findBestMatch\|buildDexFromState\|parseEBirdCSV" src/` returns zero matches (all moved server-side)

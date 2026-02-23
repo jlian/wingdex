@@ -1,8 +1,8 @@
 # WingDex
 
-A photo-first bird identification and life list tracker built on [GitHub Spark](https://github.com/features/spark). Upload your bird photos, let AI identify the species, and build your personal WingDex over time.
+A photo-first bird identification and life list tracker built on Cloudflare Pages + D1. Upload your bird photos, let AI identify the species, and build your personal WingDex over time.
 
-**[Try it →](https://wingdex--jlian.github.app)**
+**[Try it →](https://wingdex.app)**
 
 <img width="1232" height="1187" alt="image" src="https://github.com/user-attachments/assets/b0963b71-bec5-4210-b8b5-009b53e85359" />
 
@@ -39,10 +39,10 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 
 | Layer | Technology |
 |-------|------------|
-| Platform | [GitHub Spark](https://github.com/features/spark) - hosting, KV storage, LLM proxy, GitHub auth |
+| Platform | Cloudflare Pages + Pages Functions + D1 |
 | Frontend | React 19, TypeScript, Vite 7 |
 | Styling | Tailwind CSS 4, Radix UI primitives, Phosphor Icons |
-| AI | GPT-4.1 (vision) via Spark's `/_spark/llm` proxy |
+| AI | GPT-4.1-mini (vision) via server-owned `/api/identify-bird` endpoint |
 | Geocoding | OpenStreetMap Nominatim |
 | Bird imagery | Wikipedia REST API |
 | Testing | Vitest (unit), Playwright (e2e) |
@@ -51,7 +51,7 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 
 ### Prerequisites
 
-This is a GitHub Spark app. The recommended way to develop is inside Spark's Codespace editor, where the dev server starts automatically on port 5000.
+Use Node 25+ (`node --version`) and install dependencies with `npm ci`.
 
 ### Running locally
 
@@ -61,8 +61,6 @@ cd wingdex
 npm ci
 npm run dev
 ```
-
-Requires Node 25+.
 
 `npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
 
@@ -139,9 +137,9 @@ In Codespaces, `.vscode/tasks.json` runs `bootstrap-workspace` on folder open to
 ## Security notes
 
 - WingDex is designed for **low-sensitivity personal birding data** (outings, observations, notes).
-- Data separation is implemented with **user-scoped storage keys** (for example `u123_photos`) and app-level runtime checks.
-- In hosted Spark runtime, WingDex requires a valid Spark user session and does not fall back to a shared dev identity.
-- In local/dev runtime, storage uses browser localStorage and should be treated as development-only data storage.
+- Data separation is enforced server-side with authenticated session user IDs on all protected `/api/*` endpoints.
+- Production/preview persistence uses D1 (with user-scoped queries) rather than client-only key partitioning.
+- In local/dev fallback mode, some flows may use browser localStorage and should be treated as development-only data storage.
 - If you need strong tenant isolation for sensitive data, use a backend that enforces per-user access server-side.
 
 ## License
