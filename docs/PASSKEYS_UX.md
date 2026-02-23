@@ -10,9 +10,9 @@ without signing up. When they attempt a write action (e.g. uploading photos),
 an auth gate modal prompts them to create an account.
 
 Authentication methods:
-- **Passkeys** — primary, zero-password signup via WebAuthn
-- **Social providers** — GitHub (active), Apple (credentials pending)
-- **Anonymous sessions** — auto-created on first visit, promoted on signup
+- **Passkeys**: primary, zero-password signup via WebAuthn
+- **Social providers**: GitHub (active), Apple (credentials pending)
+- **Anonymous sessions**: auto-created on first visit, promoted on signup
 
 ## Architecture
 
@@ -27,10 +27,10 @@ Authentication methods:
 ### Auth gate (use-auth-gate.tsx)
 
 `useAuthGate()` hook returns:
-- `requireAuth(callback)` — if anonymous, opens signup modal; if authenticated,
+- `requireAuth(callback)`: if anonymous, opens signup modal; if authenticated,
   runs callback immediately
-- `openSignIn()` — opens modal in login mode (for header "Sign in" link)
-- `authGateModal` — JSX element rendered once in the component tree
+- `openSignIn()`: opens modal in login mode (for header "Sign in" link)
+- `authGateModal`: JSX element rendered once in the component tree
 
 Gated actions: Add Photos, eBird CSV import.
 Ungated: browsing, demo data, export, appearance settings.
@@ -127,7 +127,7 @@ user's email is verified. If passkey users could set an arbitrary email,
 this would allow pre-account hijacking.
 
 **Mitigation:** Passkey users never have a real email. The `anon_xxx@localhost`
-placeholder is permanent — no email input exists in the signup flow or
+placeholder is permanent: no email input exists in the signup flow or
 Settings. Since auto-link matches on email, it can never fire against a
 passkey account. Social-to-social auto-merge remains safe because both
 providers verify their emails.

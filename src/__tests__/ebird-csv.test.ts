@@ -768,7 +768,7 @@ describe('eBird CSV utilities', () => {
 
   describe('taxonomy normalization during CSV import', () => {
     it('preserves eBird species names as-is from CSV', () => {
-      // The eBird CSV has "Chukar" as the common name — our taxonomy
+      // The eBird CSV has "Chukar" as the common name, our taxonomy
       // matches eBird so it should stay as "Chukar" (not "Chukar Partridge").
       // Wikipedia lookup uses pre-resolved wiki titles from taxonomy.json.
       const csv = ebirdCSV([
@@ -835,7 +835,7 @@ describe('eBird CSV utilities', () => {
     })
 
     it('Seattle observation unchanged when profile TZ matches observation TZ', () => {
-      // Summer: PDT (UTC-7) — profile TZ is also Pacific, so no shift
+      // Summer: PDT (UTC-7), profile TZ is also Pacific, so no shift
       const csvSummer = ebirdCSV([
         'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
       ])
@@ -876,7 +876,7 @@ describe('eBird CSV utilities', () => {
   describe('groupPreviewsIntoOutings timezone edge cases', () => {
     it('groups by local date, not UTC date, for negative offset near midnight', () => {
       // Two Hawaii observations at 11 PM and 11:30 PM local (Dec 18)
-      // In UTC these are Dec 19 09:00 and 09:30 — but should group under Dec 18
+      // In UTC these are Dec 19 09:00 and 09:30, but should group under Dec 18
       const previews = [
         {
           speciesName: 'Chukar (Alectoris chukar)',
@@ -1136,7 +1136,7 @@ describe('eBird CSV utilities', () => {
   describe('missing GPS with profile timezone', () => {
     it('falls back gracefully when lat/lon are missing', () => {
       const csv = ebirdCSV([
-        // No lat/lon — some eBird exports can have empty coordinates
+        // No lat/lon, some eBird exports can have empty coordinates
         'S1,Mallard,Anas platyrhynchos,545,X,US-WA,King,L1,Park,,,2025-01-15,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
       ])
 

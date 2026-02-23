@@ -66,7 +66,7 @@ function useHashRouter() {
 
   useEffect(() => {
     const onChange = () => {
-      // popstate fires on browser back/forward — restore saved scroll position
+      // popstate fires on browser back/forward, restore saved scroll position
       const saved = window.history.state?.scrollY
       setRoute(parseHash())
       if (typeof saved === 'number') {
@@ -135,7 +135,7 @@ function App() {
     const error = params.get('error')
     if (!error) return
     const desc = params.get('error_description')
-    toast.error(`Sign-in failed: ${error}${desc ? ` — ${desc}` : ''}`)
+    toast.error(`Sign-in failed: ${error}${desc ? `, ${desc}` : ''}`)
     params.delete('error')
     params.delete('error_description')
     const clean = params.toString()
@@ -193,7 +193,7 @@ function App() {
 
     // Hosted: auto-bootstrap anonymous session (demo-first)
     if (anonBootstrapFailed) {
-      // Auth backend unreachable — stop retrying to avoid tight loop.
+      // Auth backend unreachable, stop retrying to avoid tight loop.
       // User must reload to reattempt.
       return
     }
@@ -375,11 +375,11 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
       <Toaster position="bottom-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="flex-1 flex flex-col">
-        {/* ── Top header — sticky at top, content scrolls beneath ── */}
+        {/* ── Top header, sticky at top, content scrolls beneath ── */}
         <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
-              {/* Logo — navigates to Home */}
+              {/* Logo, navigates to Home */}
               <button
                 onClick={() => navigate('home')}
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
@@ -388,7 +388,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 <Bird size={28} weight="duotone" className="text-primary" />
               </button>
 
-              {/* Nav tabs — WingDex + Outings (Home via logo, Settings via avatar) */}
+              {/* Nav tabs, WingDex + Outings (Home via logo, Settings via avatar) */}
               <TabsList className="flex bg-transparent gap-1 h-auto p-0">
                 {navItems.map(item => (
                   <TabsTrigger
