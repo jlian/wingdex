@@ -7,6 +7,17 @@ interface SiteverifyResponse {
   'error-codes'?: string[]
 }
 
+function hostnameMatches(expectedHostname: string, actualHostname?: string): boolean {
+  if (!actualHostname) return false
+
+  const expected = expectedHostname.toLowerCase()
+  const actual = actualHostname.toLowerCase()
+
+  if (expected === actual) return true
+
+  return expected.endsWith(`.${actual}`) || actual.endsWith(`.${expected}`)
+}
+
 /**
  * Verify a Cloudflare Turnstile token server-side.
  * Returns `true` when the token is valid.
@@ -38,7 +49,7 @@ export async function verifyTurnstile(
     const data = (await res.json()) as SiteverifyResponse
     if (data.success !== true) return false
 
-    if (expectedHostname && data.hostname?.toLowerCase() !== expectedHostname.toLowerCase()) {
+    if (expectedHostname && !hostnameMatches(expectedHostname, data.hostname)) {
       return false
     }
 

@@ -93,6 +93,40 @@ describe('verifyTurnstile', () => {
     await expect(verifyTurnstile('token', 'secret', null, 'wingdex.app')).resolves.toBe(false)
   })
 
+  it('accepts parent/child hostname match for preview subdomains', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'wingdex.pages.dev', action: 'anonymous_signin' }),
+    })
+
+    await expect(
+      verifyTurnstile(
+        'token',
+        'secret',
+        null,
+        'feat-turnstile-anonymous-sig.wingdex.pages.dev',
+        'anonymous_signin',
+      ),
+    ).resolves.toBe(true)
+  })
+
+  it('rejects unrelated hostname even when action matches', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'evil.example.com', action: 'anonymous_signin' }),
+    })
+
+    await expect(
+      verifyTurnstile(
+        'token',
+        'secret',
+        null,
+        'feat-turnstile-anonymous-sig.wingdex.pages.dev',
+        'anonymous_signin',
+      ),
+    ).resolves.toBe(false)
+  })
+
   it('returns false when action does not match expected action', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
