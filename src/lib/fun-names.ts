@@ -80,7 +80,12 @@ export function emojiAvatarDataUrl(emoji: string): string {
 /** Return the Tailwind color class for an emoji avatar data-URL, or '' if not an emoji avatar. */
 export function getEmojiAvatarColor(imageUrl: string | undefined | null): string {
   if (!imageUrl?.startsWith('data:image/svg+xml')) return ''
-  const decoded = decodeURIComponent(imageUrl)
+  let decoded = imageUrl
+  try {
+    decoded = decodeURIComponent(imageUrl)
+  } catch {
+    return ''
+  }
   for (const [emoji, color] of Object.entries(emojiColors)) {
     if (decoded.includes(emoji)) return color
   }

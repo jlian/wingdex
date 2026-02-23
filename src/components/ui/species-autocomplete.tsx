@@ -34,11 +34,14 @@ export function SpeciesAutocomplete({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const latestSearchIdRef = useRef(0)
+  const isMountedRef = useRef(true)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Debounced search
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const doSearch = useCallback((q: string) => {
     clearTimeout(searchTimeoutRef.current)
+    abortControllerRef.current?.abort()
     if (!q.trim()) {
       setResults([])
       setOpen(false)
@@ -47,7 +50,11 @@ export function SpeciesAutocomplete({
 
     searchTimeoutRef.current = setTimeout(() => {
       const searchId = ++latestSearchIdRef.current
-      void fetchWithLocalAuthRetry(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' })
+      abortControllerRef.current = new AbortController()
+      void fetchWithLocalAuthRetry(`/api/species/search?q=${encodeURIComponent(q)}&limit=8`, {
+        credentials: 'include',
+        signal: abortControllerRef.current.signal,
+      })
         .then(async response => {
           if (!response.ok) {
             return { results: [] as TaxonEntry[] }
@@ -55,18 +62,26 @@ export function SpeciesAutocomplete({
           return response.json() as Promise<{ results?: TaxonEntry[] }>
         })
         .then(payload => {
-          if (searchId !== latestSearchIdRef.current) return
+          if (!isMountedRef.current || searchId !== latestSearchIdRef.current) return
           const hits = payload.results || []
           setResults(hits)
           setOpen(hits.length > 0)
           setHighlightIndex(-1)
         })
         .catch(() => {
-          if (searchId !== latestSearchIdRef.current) return
+          if (!isMountedRef.current || searchId !== latestSearchIdRef.current) return
           setResults([])
           setOpen(false)
         })
     }, 150)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      clearTimeout(searchTimeoutRef.current)
+      abortControllerRef.current?.abort()
+    }
   }, [])
 
   // Close on click outside
