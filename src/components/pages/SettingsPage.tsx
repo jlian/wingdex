@@ -37,6 +37,10 @@ interface SettingsPageProps {
 
 const birdEmojiOptions = ['🐦', '🦉', '🦜', '🐧', '🦆', '🦩', '🦅', '🐤'] as const
 
+function isEmojiAvatarDataUrl(value: string): boolean {
+  return value.startsWith('data:image/svg+xml')
+}
+
 
 
 function getDeviceLabel(): string {
@@ -92,13 +96,13 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [profileSaving, setProfileSaving] = useState(false)
 
   // Capture the original social provider avatar so we can restore it on bird-emoji deselect
-  const originalSocialImage = useRef(user.image)
+  const originalSocialImage = useRef(isEmojiAvatarDataUrl(user.image) ? '' : user.image)
 
   useEffect(() => {
     setDisplayName(user.name)
     setProfileImage(user.image)
     // Keep the social avatar ref current (skip emoji data-URLs)
-    if (!user.image.startsWith('data:image/svg+xml')) {
+    if (!isEmojiAvatarDataUrl(user.image)) {
       originalSocialImage.current = user.image
     }
   }, [user.name, user.image])
@@ -316,7 +320,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 disabled={profileSaving}
                 onClick={() => {
                   if (isSelected) {
-                    const restored = originalSocialImage.current || ''
+                    const restored = isEmojiAvatarDataUrl(originalSocialImage.current)
+                      ? ''
+                      : (originalSocialImage.current || '')
                     setProfileImage(restored)
                     void saveProfile(displayName, restored)
                   } else {
@@ -332,7 +338,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           })}
         </div>
 
-        {/* ── Log out ── */}
+        {/* -- Log out -- */}
         <div>
           <Button
             variant="outline"
@@ -628,7 +634,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       </Card>
       )}
 
-      {/* Old Account card removed — now rendered above Appearance */}
+      {/* Old Account card removed -- now rendered above Appearance */}
 
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-4">

@@ -48,7 +48,7 @@ function wikiPageData(overrides: Record<string, unknown> = {}) {
   }
 }
 
-// ── getWikimediaImage ───────────────────────────────────────
+// == getWikimediaImage ========================================
 
 /** Return only the fetch calls to Wikipedia (not the wiki-title API). */
 function wikiCalls() {
@@ -119,10 +119,29 @@ describe('getWikimediaImage', () => {
     }))
 
     const result = await getWikimediaImage('Small Image Bird R')
-    // Must use the URL exactly as returned by Wikipedia — upsizing beyond the
+    // Must use the URL exactly as returned by Wikipedia -- upsizing beyond the
     // original image dimensions causes a 404 on Wikimedia servers, which
     // breaks thumbnails on iOS Safari and other browsers.
     expect(result).toBe('https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/220px-Bird.jpg')
+  })
+
+  it('tries alternate titles when first hit has no image', async () => {
+    wikiTitleOverride = { wikiTitle: 'Imageless Bird', common: 'Imageful Bird', scientific: null }
+    mockWikiResponse(wikiPageData({
+      title: 'Imageless Bird',
+      thumbnail: undefined,
+      originalimage: undefined,
+    }))
+    mockWikiResponse(wikiPageData({
+      title: 'Imageful Bird',
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/imageful.jpg' },
+    }))
+
+    const result = await getWikimediaImage('Imageful Bird (Testus imagus)')
+    expect(result).toContain('imageful.jpg')
+    expect(wikiCalls()).toHaveLength(2)
+    expect(wikiCalls()[0][0]).toContain('Imageless_Bird')
+    expect(wikiCalls()[1][0]).toContain('Imageful_Bird')
   })
 
   it('caches results for subsequent calls', async () => {
@@ -152,7 +171,7 @@ describe('getWikimediaImage', () => {
   })
 })
 
-// ── getWikimediaSummary ─────────────────────────────────────
+// == getWikimediaSummary ======================================
 
 describe('getWikimediaSummary', () => {
   beforeEach(() => {
@@ -226,7 +245,7 @@ describe('getWikimediaSummary', () => {
   })
 })
 
-// ── Shared cache ────────────────────────────────────────────
+// == Shared cache =============================================
 
 describe('shared cache between image and summary', () => {
   beforeEach(() => {
@@ -249,7 +268,7 @@ describe('shared cache between image and summary', () => {
     expect(imageUrl).toContain('peregrine.jpg')
     const callsAfterImage = wikiCalls().length
 
-    // Second: summary fetch (like detail view) — should NOT make another Wikipedia call
+    // Second: summary fetch (like detail view) -- should NOT make another Wikipedia call
     const summary = await getWikimediaSummary('Unique Peregrine SC1')
     expect(summary).toBeDefined()
     expect(summary!.extract).toContain('fastest bird')
