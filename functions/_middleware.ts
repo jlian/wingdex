@@ -3,8 +3,53 @@ import { verifyTurnstile } from './lib/turnstile'
 
 const TURNSTILE_ACTION = 'anonymous_signin'
 
+const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'])
+
+/** Max request body sizes in bytes, keyed by path prefix. */
+const BODY_LIMITS: Array<{ prefix: string; maxBytes: number }> = [
+  { prefix: '/api/identify-bird', maxBytes: 10 * 1024 * 1024 }, // 10 MB (photos)
+  { prefix: '/api/import/', maxBytes: 5 * 1024 * 1024 }, // 5 MB (CSV)
+]
+const DEFAULT_BODY_LIMIT = 1 * 1024 * 1024 // 1 MB for all other API routes
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+}
+
+/** Append security headers to an existing Response without cloning the body. */
+function withSecurityHeaders(response: Response): Response {
+  const patched = new Response(response.body, response)
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    patched.headers.set(key, value)
+  }
+  return patched
+}
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
+
+  // Non-API requests -- pass through with security headers only.
+  if (!pathname.startsWith('/api/')) {
+    return withSecurityHeaders(await context.next())
+  }
+
+  // --- HTTP method validation ---
+  if (!ALLOWED_METHODS.has(context.request.method)) {
+    return new Response('Method Not Allowed', { status: 405 })
+  }
+
+  // --- Request body size limit ---
+  const contentLength = Number(context.request.headers.get('content-length') ?? '0')
+  if (contentLength > 0) {
+    const limit =
+      BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
+    if (contentLength > limit) {
+      return new Response('Payload Too Large', { status: 413 })
+    }
+  }
+
   const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
 
   // Require a valid Turnstile token for anonymous sign-in in production.
@@ -34,8 +79,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  if (!pathname.startsWith('/api/') || pathname.startsWith('/api/auth')) {
-    return context.next()
+  // Auth routes -- skip session check but still apply security headers.
+  if (pathname.startsWith('/api/auth')) {
+    return withSecurityHeaders(await context.next())
   }
 
   const auth = createAuth(context.env, { request: context.request })
@@ -50,5 +96,5 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   context.data.user = session.user
   context.data.session = session.session
 
-  return context.next()
+  return withSecurityHeaders(await context.next())
 }
