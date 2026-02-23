@@ -117,10 +117,13 @@ export function normalizeSpeciesName(name: string): string {
 }
 
 export function getEbirdCode(commonName: string): string {
-  const match = byCommonLower.get(commonName.toLowerCase())
+  // Strip parenthesized scientific name if present, e.g. "Saffron Finch (Sicalis flaveola)" → "Saffron Finch"
+  const name = commonName.split('(')[0].trim()
+
+  const match = byCommonLower.get(name.toLowerCase())
   if (match?.ebirdCode) return match.ebirdCode
 
-  const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
+  const words = name.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
   const count = words.length
 
   if (count === 0) return ''

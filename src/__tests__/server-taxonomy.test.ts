@@ -41,6 +41,10 @@ describe('server taxonomy', () => {
       // For a real species like "Bald Eagle" it should return the stored code
       expect(getEbirdCode('Bald Eagle')).toBe('baleag')
     })
+
+    it('strips parenthesized scientific name before lookup', () => {
+      expect(getEbirdCode('American Robin (Turdus migratorius)')).toBe('amerob')
+    })
   })
 
   describe('getSpeciesByCode', () => {
