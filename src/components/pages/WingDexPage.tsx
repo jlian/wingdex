@@ -360,9 +360,24 @@ function SpeciesDetail({
   const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
+  const fullResRevealToken = useRef(0)
+
+  const revealFullRes = () => {
+    const token = fullResRevealToken.current
+    if (typeof window === 'undefined') {
+      if (token === fullResRevealToken.current) setFullResLoaded(true)
+      return
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (token === fullResRevealToken.current) setFullResLoaded(true)
+      })
+    })
+  }
 
   // Reset loaded state when species changes
   useEffect(() => {
+    fullResRevealToken.current += 1
     setFullResLoaded(false)
   }, [entry.speciesName, baseImageUrl])
 
@@ -393,8 +408,8 @@ function SpeciesDetail({
             <img
               src={fullResUrl}
               alt={displayName}
-              onLoad={() => setFullResLoaded(true)}
-              onError={() => setFullResLoaded(true)}
+              onLoad={revealFullRes}
+              onError={revealFullRes}
               className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-500 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
