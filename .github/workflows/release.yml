@@ -121,14 +121,19 @@ jobs:
                 continue
               fi
 
-              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1)
+              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/index-[^"]+\.js' | head -n1) || true
               if [ -z "$ASSET" ]; then
                 echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no index asset found, retrying in 10s..."
                 sleep 10
                 continue
               fi
 
-              JS=$(curl --fail --silent --show-error "https://${DOMAIN}/${ASSET}")
+              if ! JS=$(curl --fail --silent --show-error "https://${DOMAIN}/${ASSET}" 2>&1); then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: JS fetch failed, retrying in 10s..."
+                sleep 10
+                continue
+              fi
+
               if printf '%s' "$JS" | grep -F "$VERSION" >/dev/null; then
                 echo "  Verified ${DOMAIN} serves version ${VERSION}"
                 VERIFIED=true
