@@ -43,13 +43,9 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Pre-release build check
+      - name: Pre-release typecheck
         if: github.ref == 'refs/heads/main'
-        run: npm run build
-
-      - name: Clean pre-release build output
-        if: github.ref == 'refs/heads/main'
-        run: rm -rf dist
+        run: npm run typecheck
 
       - name: Run semantic-release
         if: github.ref == 'refs/heads/main'
