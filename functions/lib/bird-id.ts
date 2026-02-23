@@ -43,7 +43,7 @@ async function callOpenAI(env: Env, body: unknown): Promise<string> {
     Authorization: `Bearer ${env.OPENAI_API_KEY}`,
     ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
   }
-  let requestBody = body as Record<string, unknown>
+  const requestBody = body as Record<string, unknown>
 
   const sendRequest = async (payload: Record<string, unknown>) => fetch(url, {
     method: 'POST',
