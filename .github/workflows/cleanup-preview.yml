@@ -1,0 +1,33 @@
+name: Cleanup Preview
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  deployments: write
+
+jobs:
+  cleanup:
+    name: Delete preview environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete GitHub environment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const envName = `preview (${branch})`;
+            try {
+              await github.rest.repos.deleteAnEnvironment({
+                ...context.repo,
+                environment_name: envName,
+              });
+              core.info(`Deleted environment: ${envName}`);
+            } catch (e) {
+              if (e.status === 404) {
+                core.info(`Environment not found: ${envName}`);
+              } else {
+                throw e;
+              }
+            }
