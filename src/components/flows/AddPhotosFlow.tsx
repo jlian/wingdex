@@ -24,7 +24,6 @@ import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { toLocalISOWithOffset } from '@/lib/timezone'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
-import { Confetti } from '@/components/ui/confetti'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 import {
@@ -73,17 +72,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     return sorted[0]?.locationName || ''
   })
 
-  const [showConfetti, setShowConfetti] = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
   const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
   const [pendingDuplicatePhotos, setPendingDuplicatePhotos] = useState<PhotoWithCrop[]>([])
-
-  useEffect(() => {
-    if (!showConfetti) return
-    const timeoutId = window.setTimeout(() => setShowConfetti(false), 3500)
-    return () => window.clearTimeout(timeoutId)
-  }, [showConfetti])
 
   const handleOpenChange = (open: boolean) => {
     if (!open && needsCloseConfirmation(step)) {
@@ -234,7 +226,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
 
       if (newSpeciesCount > 0) {
-        setShowConfetti(true)
         toast.success(
           `🎉 ${newSpeciesCount} new species added to your WingDex!`
         )
@@ -253,7 +244,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       if (confirmed.length > 0) {
         toast.success(`All done! ${confirmed.length} species saved.`)
       }
-      setShowConfetti(false)
       onClose()
     }
   }
@@ -637,8 +627,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           initialCropBox={fullCurrentPhoto.aiCropBox}
         />
       )}
-
-      <Confetti active={showConfetti} />
     </>
   )
 }

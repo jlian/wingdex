@@ -6,10 +6,6 @@ const DEFAULT_LIMITS: Record<AiEndpoint, number> = {
   'identify-bird': 150,
 }
 
-const ENV_LIMIT_KEYS: Record<AiEndpoint, string> = {
-  'identify-bird': 'AI_DAILY_LIMIT_IDENTIFY',
-}
-
 export class RateLimitError extends HttpError {
   retryAfterSeconds: number
 
@@ -70,5 +66,5 @@ export async function enforceAiDailyLimit(
   }
 
   const retryAfterSeconds = secondsUntilNextUtcDay(new Date())
-  throw new RateLimitError('Daily AI request limit reached. Please try again tomorrow.', retryAfterSeconds)
+  throw new RateLimitError('Daily AI request limit reached. Please try again after the daily reset (00:00 UTC).', retryAfterSeconds)
 }

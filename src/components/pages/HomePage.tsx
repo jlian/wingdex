@@ -37,7 +37,15 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
 
   const totalPhotos = data.photos.length
 
-  if (data.isLoading) return null
+  if (data.isLoading) {
+    return (
+      <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto">
+        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+          Loading your sightings...
+        </p>
+      </div>
+    )
+  }
 
   if (dex.length === 0) {
     return (

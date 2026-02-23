@@ -104,7 +104,8 @@ async function ensureWikiTitleCached(speciesName: string): Promise<void> {
       wikiTitleCache.set(cacheKey, { wikiTitle: null, common: null, scientific: null })
     }
   } catch {
-    // Proceed with common name only
+    // Cache negative result to avoid repeated fetches during transient failures
+    wikiTitleCache.set(cacheKey, { wikiTitle: null, common: null, scientific: null })
   }
 }
 
