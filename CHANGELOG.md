@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/jlian/wingdex/compare/v1.5.0...v1.5.1) (2026-02-23)
+
+
+### Bug Fixes
+
+* build after semantic-release and update main deploy checklist ([4a1a8eb](https://github.com/jlian/wingdex/commit/4a1a8eb82ef2ed71830a998785648d74ec06b2f3))
+
 # [1.5.0](https://github.com/jlian/wingdex/compare/v1.4.2...v1.5.0) (2026-02-23)
 
 
