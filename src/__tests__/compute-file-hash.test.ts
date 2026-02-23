@@ -48,8 +48,8 @@ describe('computeFileHash', () => {
     const file = new File([], 'empty.txt')
     const hash = await computeFileHash(file)
 
-    // SHA-256 of empty input is a known value
-    expect(hash).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
+    // Hash includes sampled bytes plus file size metadata
+    expect(hash).toBe('5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9')
   })
 
   it('handles binary content', async () => {

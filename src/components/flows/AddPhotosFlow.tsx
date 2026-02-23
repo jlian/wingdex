@@ -24,7 +24,6 @@ import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { toLocalISOWithOffset } from '@/lib/timezone'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
-import { Confetti } from '@/components/ui/confetti'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { Photo, ObservationStatus } from '@/lib/types'
 import {
@@ -40,7 +39,7 @@ import { useBirdImage } from '@/hooks/use-bird-image'
 interface AddPhotosFlowProps {
   data: WingDexDataStore
   onClose: () => void
-  userId: number
+  userId: string
 }
 
 interface PhotoWithCrop extends Photo {
@@ -73,7 +72,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     return sorted[0]?.locationName || ''
   })
 
-  const [showConfetti, setShowConfetti] = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
   const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
@@ -169,7 +167,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
-      setTimeout(() => runSpeciesId(nextIdx), 300)
+      void runSpeciesId(nextIdx)
     } else {
       saveOuting(finalResults)
     }
@@ -228,11 +226,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
 
       if (newSpeciesCount > 0) {
-        setShowConfetti(true)
         toast.success(
           `🎉 ${newSpeciesCount} new species added to your WingDex!`
         )
-        setTimeout(() => setShowConfetti(false), 3500)
       }
     } else {
       toast.warning('No species were confirmed for this outing')
@@ -248,8 +244,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       if (confirmed.length > 0) {
         toast.success(`All done! ${confirmed.length} species saved.`)
       }
-      setStep('complete')
-      setTimeout(onClose, 3500)
+      onClose()
     }
   }
 
@@ -632,8 +627,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           initialCropBox={fullCurrentPhoto.aiCropBox}
         />
       )}
-
-      <Confetti active={showConfetti} />
     </>
   )
 }

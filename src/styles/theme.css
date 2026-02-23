@@ -63,7 +63,7 @@
 @import '@radix-ui/colors/slate-dark-alpha.css' layer(base);
 
 @layer base {
-  #spark-app {
+  #app {
     --tomato-contrast: #fff;
     --red-contrast: #fff;
     --ruby-contrast: #fff;
@@ -230,8 +230,8 @@
     --font-family: var(--font-sans-serif);
   }
 
-  #spark-app.dark-theme,
-  .dark #spark-app {
+  #app.dark-theme,
+  .dark #app {
     --color-bg: var(--color-neutral-1);
     --color-bg-inset: #000000;
     --color-bg-overlay: var(--color-neutral-3);

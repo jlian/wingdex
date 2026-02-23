@@ -18,6 +18,7 @@ dist-ssr
 !.vscode/extensions.json
 !.vscode/mcp.json
 !.vscode/tasks.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -27,17 +28,22 @@ dist-ssr
 *.sw?
 
 .env
+.dev.vars
+.dev.vars.*
 **/agent-eval-report*
 packages
 pids
 .file-manifest
 .devcontainer/
 
-.spark-workbench-id
+
+# Wrangler local dev state/cache
+.wrangler/
 
 # Playwright
 test-results/
 playwright-report/
 screenshots/
+.playwright-mcp/
 wiki-validation-report.txt
 src/assets/csv/

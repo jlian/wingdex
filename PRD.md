@@ -13,12 +13,12 @@ A mobile-first web application for **reverse birders** — people who take photo
 
 ## Essential Features
 
-### 1. GitHub Authentication & User Isolation
-- **Functionality**: Authenticate users via GitHub Spark's built-in auth system; all data is scoped per GitHub user ID
+### 1. Authentication & User Isolation
+- **Functionality**: Authenticate users via Better Auth (passkey-first plus configured social providers); all data is scoped per authenticated user UUID
 - **Purpose**: Secure, zero-configuration authentication ensuring each birder's data remains private
 - **Trigger**: Landing on the app when not authenticated
-- **Progression**: App loads → User sees sign-in prompt → Click "Sign in with GitHub" → GitHub OAuth flow → Return to authenticated home
-- **Success criteria**: User's GitHub avatar and username displayed; all data queries filtered by user.id; no data leakage between users
+- **Progression**: App loads → User can continue in demo mode or authenticate via passkey/social provider → Session established → Return to authenticated home
+- **Success criteria**: User profile data is displayed when available; all protected data queries filtered by session user.id; no data leakage between users
 
 ### 2. Multi-Photo Upload with EXIF Extraction
 - **Functionality**: Native iOS/mobile file picker supporting multi-select; parse EXIF DateTimeOriginal and GPS coordinates; generate client-side thumbnails
@@ -84,7 +84,7 @@ A mobile-first web application for **reverse birders** — people who take photo
 - **Success criteria**: All outings displayed; detail view loads quickly; photos displayed in grid; notes editable
 
 ### 11. Cloud Data Storage
-- **Functionality**: Structured data (outings, observations, WingDex, saved spots) is stored via Spark's KV store, scoped per GitHub user ID; falls back to localStorage when KV is unavailable. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the WingDex and outing views comes from Wikimedia Commons
+- **Functionality**: Structured data (outings, observations, WingDex, saved spots) is stored in Cloudflare D1 via authenticated API routes and user-scoped queries, with localStorage fallback for local-only development paths. User-uploaded photos are ephemeral — used only during the identification session and not persisted long-term. Bird imagery in the WingDex and outing views comes from Wikimedia Commons
 - **Purpose**: Zero-configuration cloud persistence for birding records; photo storage limitations are sidestepped by using public-domain reference images
 - **Trigger**: Automatic — no user action required
 - **Success criteria**: Outing/observation/WingDex data persists between sessions; Wikimedia images provide visual context after photo data URLs expire; each user's data isolated by user ID; no manual backup steps needed
@@ -93,7 +93,7 @@ A mobile-first web application for **reverse birders** — people who take photo
 
 | Feature | Status | Notes |
 |---|---|---|
-| #1 Auth & User Isolation | ✅ Done | Spark auth with dev-user fallback |
+| #1 Auth & User Isolation | ✅ Done | Better Auth with passkey-first UX and social provider support |
 | #2 Multi-Photo Upload + EXIF | ✅ Done | Multi-select, GPS, timestamps, thumbnails, dedup |
 | #3 Outing Clustering | ✅ Done | 8hr/10km thresholds, merge with existing outings |
 | #4 AI Species ID + Crop | ✅ Done | Single GPT-4.1 call returns candidates + bounding box |
@@ -103,7 +103,7 @@ A mobile-first web application for **reverse birders** — people who take photo
 | #8 eBird Export | ✅ Done | WingDex CSV export + per-outing eBird CSV export from outing detail |
 | #9 Saved Locations | ✅ Done | Add/delete spots with name, lat/lon, geolocation, Google Maps links, outing count in Settings |
 | #10 Outing Detail | ✅ Done | Tappable cards → species list, Wikimedia images, notes editing, manual add, per-outing export, delete |
-| #11 Cloud Storage | ✅ Done | Photo blobs stripped before KV persist; only metadata stored |
+| #11 Cloud Storage | ✅ Done | D1-backed API persistence with user-scoped authorization; photo blobs remain ephemeral |
 | Animations | ❌ Not built | Only spinner pulse; no staggered/spring/confetti |
 
 ## Upcoming Priorities

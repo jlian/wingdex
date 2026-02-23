@@ -47,18 +47,3 @@ export interface DexEntry {
   notes: string
 }
 
-export interface ImportPreview {
-  speciesName: string
-  date: string
-  location: string
-  count: number
-  lat?: number
-  lon?: number
-  time?: string
-  submissionId?: string
-  stateProvince?: string
-  observationNotes?: string
-  checklistNotes?: string
-  conflict?: 'duplicate' | 'update_dates' | 'new'
-  existingEntry?: DexEntry
-}

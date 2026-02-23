@@ -139,12 +139,3 @@ h1, h2, .font-serif {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out both;
 }
-
-/* Crossfade wrapper: children stack and transition opacity */
-.crossfade {
-  display: grid;
-}
-.crossfade > * {
-  grid-area: 1 / 1;
-  transition: opacity 0.2s ease-out;
-}

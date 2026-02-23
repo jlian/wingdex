@@ -3,6 +3,7 @@
   "short_name": "WingDex",
   "description": "Upload bird photos, let AI identify the species, build your WingDex.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f6f1e8",
   "theme_color": "#d9c9a3",

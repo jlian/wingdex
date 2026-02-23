@@ -1,0 +1,15 @@
+{
+  "terminal.integrated.defaultProfile.osx": "bash",
+  "remote.autoForwardPorts": true,
+  "remote.restoreForwardedPorts": true,
+  "remote.portsAttributes": {
+    "5000": {
+      "label": "WingDex App",
+      "onAutoForward": "openBrowser"
+    },
+    "8788": {
+      "label": "WingDex API",
+      "onAutoForward": "silent"
+    }
+  }
+}

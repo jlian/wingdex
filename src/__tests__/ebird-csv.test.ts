@@ -5,7 +5,7 @@ import {
   exportOutingToEBirdCSV,
   groupPreviewsIntoOutings,
   detectImportConflicts,
-} from '@/lib/ebird'
+} from '../../functions/lib/ebird'
 import type { DexEntry, Outing, Observation } from '@/lib/types'
 
 /** Extract local hours/minutes from an ISO string with offset (e.g. "2025-09-28T08:15:00-07:00") */
@@ -123,7 +123,7 @@ describe('eBird CSV utilities', () => {
       },
     ]
 
-    const csv = exportOutingToEBirdCSV(outing, observations)
+    const csv = exportOutingToEBirdCSV(outing, observations, false)
     const cells = csv.split(',')
 
     expect(cells).toHaveLength(19)
@@ -159,7 +159,7 @@ describe('eBird CSV utilities', () => {
       },
     ]
 
-    const csv = exportOutingToEBirdCSV(outing, observations, { includeHeader: true })
+    const csv = exportOutingToEBirdCSV(outing, observations, true)
     const [header] = csv.split('\n')
 
     expect(header).toBe(
@@ -717,7 +717,7 @@ describe('eBird CSV utilities', () => {
         },
       ]
 
-      const csv = exportOutingToEBirdCSV(outing, observations, { includeHeader: true })
+      const csv = exportOutingToEBirdCSV(outing, observations, true)
       const lines = csv.split('\n')
       expect(lines).toHaveLength(3) // header + 2 rows
 
@@ -753,7 +753,7 @@ describe('eBird CSV utilities', () => {
         },
       ]
 
-      const csv = exportOutingToEBirdCSV(outing, observations)
+      const csv = exportOutingToEBirdCSV(outing, observations, false)
       const fields = parseCSVLineForTest(csv)
       // Date (col 8) should be 12/18/2024 (local), not 12/19 (UTC)
       expect(fields[8]).toBe('12/18/2024')
@@ -976,7 +976,7 @@ describe('eBird CSV utilities', () => {
       expect(outings[0].startTime).toContain('2024-12-18')
 
       // Export
-      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       expect(fields[8]).toBe('12/18/2024')
       // Time should be 17:16 (5:16 PM HST, the actual local time)
@@ -992,7 +992,7 @@ describe('eBird CSV utilities', () => {
       const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
 
-      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       expect(fields[8]).toBe('12/28/2025')
       expect(fields[9]).toBe('07:06')
@@ -1007,7 +1007,7 @@ describe('eBird CSV utilities', () => {
       const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
 
-      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       expect(fields[8]).toBe('06/01/2025')
       expect(fields[9]).toBe('11:07')
@@ -1051,7 +1051,7 @@ describe('eBird CSV utilities', () => {
       const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
       expect(outings).toHaveLength(1)
 
-      const exportCsv = exportOutingToEBirdCSV(outings[0], observations)
+      const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       // Export should use the recovered Taipei local time
       expect(fields[8]).toBe('01/15/2025')

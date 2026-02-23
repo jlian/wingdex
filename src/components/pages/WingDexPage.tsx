@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
   Bird, ArrowUp, ArrowDown
@@ -10,7 +9,7 @@ import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
-import { getEbirdUrl } from '@/lib/taxonomy'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
@@ -20,6 +19,44 @@ export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
+
+function getEbirdUrl(commonName: string): string {
+  const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
+  if (words.length === 0) return 'https://ebird.org/species'
+
+  let code = ''
+  if (words.length === 1) {
+    code = words[0].slice(0, 6)
+  } else if (words.length === 2) {
+    code = words[0].slice(0, 3) + words[1].slice(0, 3)
+  } else if (words.length === 3) {
+    code = words[0].slice(0, 2) + words[1].slice(0, 1) + words[2].slice(0, 3)
+  } else {
+    const charsFromLast = Math.max(1, 7 - words.length)
+    const prefixChars = 6 - charsFromLast
+    code = words.slice(0, words.length - 1).map(word => word[0]).join('').slice(0, prefixChars)
+      + words[words.length - 1].slice(0, charsFromLast)
+  }
+
+  return `https://ebird.org/species/${code.toLowerCase()}`
+}
+
+async function fetchEbirdUrl(speciesName: string): Promise<string> {
+  const response = await fetchWithLocalAuthRetry(`/api/species/ebird-code?name=${encodeURIComponent(speciesName)}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    return getEbirdUrl(getDisplayName(speciesName))
+  }
+
+  const payload = await response.json() as { ebirdCode?: string | null }
+  const code = payload.ebirdCode?.trim()
+  if (!code) {
+    return getEbirdUrl(getDisplayName(speciesName))
+  }
+
+  return `https://ebird.org/species/${code.toLowerCase()}`
+}
 
 interface WingDexPageProps {
   data: WingDexDataStore
@@ -266,6 +303,26 @@ function SpeciesDetail({
   const scientificName = getScientificName(entry.speciesName)
   const wikiImage = useBirdImage(entry.speciesName)
   const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
+  const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
+
+  useEffect(() => {
+    let active = true
+    void fetchEbirdUrl(entry.speciesName)
+      .then(url => {
+        if (active) {
+          setEbirdUrl(url)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setEbirdUrl(getEbirdUrl(displayName))
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [entry.speciesName, displayName])
 
   // Find all sightings of this species across outings
   const sightings: Array<{ observation: Observation; outing: { id: string; locationName: string; startTime: string } }> = []
@@ -278,7 +335,6 @@ function SpeciesDetail({
     }
   }
 
-  const ebirdUrl = getEbirdUrl(displayName)
   const heroImage = summary?.imageUrl || wikiImage
 
   return (
@@ -324,24 +380,17 @@ function SpeciesDetail({
           </div>
         </div>
 
-        {/* About — crossfade from skeleton to content */}
-        <div className="crossfade">
-          <div className={`space-y-2 ${summaryLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/6" />
-          </div>
-          {summary?.extract && (
-            <div className={`space-y-1 ${summaryLoading ? 'opacity-0' : 'opacity-100'}`}>
+        {/* About — fade in when loaded */}
+        {summary?.extract && (
+          <div className="space-y-1 animate-fade-in">
             <p className="text-sm text-muted-foreground leading-relaxed">
               {summary.extract}
             </p>
             <p className="text-xs text-muted-foreground/60">
               Source: <a href={summary.pageUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground">Wikipedia</a>. Text and images available under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground">CC BY-SA 4.0</a>.
             </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* External links */}
         <div className="flex flex-wrap gap-2">

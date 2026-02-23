@@ -8,28 +8,39 @@ interface StableDevUserIdOptions {
   random?: () => number
 }
 
-export function getStableDevUserId(options: StableDevUserIdOptions = {}): number {
+function toPseudoUuid(seed: string, random: () => number): string {
+  let hash = 0
+  for (let index = 0; index < seed.length; index++) {
+    hash = (hash * 31 + seed.charCodeAt(index)) | 0
+  }
+
+  const fromInt = (value: number) => Math.abs(value).toString(16).padStart(8, '0')
+  const rand = () => Math.floor(random() * 0xffffffff)
+
+  const a = fromInt(hash ^ rand())
+  const b = fromInt((hash * 17) ^ rand())
+  const c = fromInt((hash * 37) ^ rand())
+  const d = fromInt((hash * 53) ^ rand())
+  const e = fromInt(rand())
+
+  return `${a.slice(0, 8)}-${b.slice(0, 4)}-${b.slice(4, 8)}-${c.slice(0, 4)}-${d}${e.slice(0, 4)}`
+}
+
+export function getStableDevUserId(options: StableDevUserIdOptions = {}): string {
   const storage = options.storage ?? window.localStorage
   const seed = options.seed ?? `${window.location.hostname}:${window.location.pathname}`
   const random = options.random ?? Math.random
 
   try {
     const stored = storage.getItem(DEV_USER_ID_KEY)
-    const parsed = stored ? Number.parseInt(stored, 10) : Number.NaN
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed
+    if (stored && stored.length > 0) {
+      return stored
     }
 
-    let hash = 0
-    for (let index = 0; index < seed.length; index++) {
-      hash = (hash * 31 + seed.charCodeAt(index)) | 0
-    }
-
-    const randomPart = Math.floor(random() * 1_000_000)
-    const generated = (Math.abs(hash * 31 + randomPart) % 900_000_000) + 100_000_000
-    storage.setItem(DEV_USER_ID_KEY, String(generated))
+    const generated = toPseudoUuid(seed, random)
+    storage.setItem(DEV_USER_ID_KEY, generated)
     return generated
   } catch {
-    return Math.floor(random() * 900_000_000) + 100_000_000
+    return toPseudoUuid(seed, random)
   }
 }

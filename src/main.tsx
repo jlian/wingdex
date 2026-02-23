@@ -22,23 +22,12 @@ function ensureManifestLink() {
   document.head.appendChild(link)
 }
 
-async function bootstrap() {
-  ensureManifestLink()
+ensureManifestLink()
 
-  const host = window.location.hostname.toLowerCase()
-  const isSparkHosted = host === 'github.app' || host.endsWith('.github.app')
-
-  if (isSparkHosted) {
-    await import('@github/spark/spark')
-  }
-
-  createRoot(document.getElementById('spark-app')!).render(
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <App />
-      </ThemeProvider>
-    </ErrorBoundary>
-  )
-}
-
-void bootstrap()
+createRoot(document.getElementById('app')!).render(
+  <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <App />
+    </ThemeProvider>
+  </ErrorBoundary>
+)

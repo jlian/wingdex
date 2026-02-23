@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test'
-import { injectSeedData } from './helpers'
+import { seedViaCSVImport } from './helpers'
 
 test.describe('App with seeded data', () => {
   test('home page shows correct stat cards', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     // Hero count should reflect seeded data (count and text are separate <p> tags on home page)
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
   })
 
   test('home page shows recent species section', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await expect(page.getByText('Recent Species')).toBeVisible({ timeout: 5_000 })
     // Recent species carousel should render at least one clickable species card
@@ -18,23 +18,23 @@ test.describe('App with seeded data', () => {
   })
 
   test('outings page lists seeded outings', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
 
-    // Should show location names from synthetic seed data
+    // Should show location names from the CSV fixture
     await expect(page.locator('p:visible', { hasText: 'Discovery Park' }).first()).toBeVisible()
     await expect(page.locator('p:visible', { hasText: 'Hyde Park, London' }).first()).toBeVisible()
   })
 
   test('clicking an outing opens its detail view', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
 
-    // Click a known outing from the synthetic fixture
+    // Click a known outing from the CSV fixture
     await page.locator('p:visible', { hasText: 'Discovery Park' }).first().click()
     await page.waitForTimeout(1000)
 
@@ -44,14 +44,32 @@ test.describe('App with seeded data', () => {
     await expect(page.locator('p:visible', { hasText: 'Northern Cardinal' }).first()).toBeVisible()
   })
 
+  test('outing detail export button downloads eBird CSV', async ({ page }) => {
+    await seedViaCSVImport(page)
+
+    await page.getByRole('tab', { name: 'Outings' }).first().click()
+    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
+
+    await page.locator('p:visible', { hasText: 'Discovery Park' }).first().click()
+    await expect(page.getByRole('heading', { name: 'Discovery Park' })).toBeVisible()
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export eBird CSV' }).click()
+    const download = await downloadPromise
+
+    expect(download.suggestedFilename()).toContain('wingdex-outing-')
+    expect(download.suggestedFilename()).toContain('.csv')
+    await expect(page.getByText('Outing exported in eBird Record CSV format')).toBeVisible({ timeout: 5_000 })
+  })
+
   test('wingdex page lists species with count', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
     const wingdexSearch = page.getByPlaceholder('Search species...')
 
-    // Known synthetic seed species should appear in the list
+    // Known CSV fixture species should appear in the list
     await wingdexSearch.fill('bald eagle')
     await expect(page.locator('p:visible', { hasText: 'Bald Eagle' }).first()).toBeVisible()
     await wingdexSearch.fill('great blue heron')
@@ -59,7 +77,7 @@ test.describe('App with seeded data', () => {
   })
 
   test('wingdex search filters species', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
@@ -73,7 +91,7 @@ test.describe('App with seeded data', () => {
   })
 
   test('clicking a species opens its detail view', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
@@ -89,7 +107,7 @@ test.describe('App with seeded data', () => {
   })
 
   test('species detail view loads Wikipedia image', async ({ page }) => {
-    await injectSeedData(page)
+    await seedViaCSVImport(page)
 
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
     await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })

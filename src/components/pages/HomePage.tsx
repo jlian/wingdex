@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird, ArrowRight
@@ -16,50 +17,26 @@ interface HomePageProps {
   onNavigate: (tab: string) => void
 }
 
-export function HomeContentSkeleton() {
-  return (
-    <>
-      {/* Hero skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-12 w-20 rounded-md bg-muted animate-pulse" />
-          <div className="h-5 w-36 rounded-md bg-muted animate-pulse" />
-        </div>
-        <div className="h-12 w-24 rounded-xl bg-muted animate-pulse" />
-      </div>
-
-      {/* Recent Species skeleton */}
-      <div className="space-y-3 pt-2">
-        <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-        <div className="flex gap-3 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-28 flex-shrink-0 space-y-2">
-              <div className="aspect-square rounded-lg bg-muted animate-pulse" />
-              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Outings skeleton */}
-      <div className="space-y-3 pt-2">
-        <div className="h-6 w-32 rounded-md bg-muted animate-pulse" />
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex gap-3 items-start py-3 border-b border-border last:border-0">
-            <div className="h-4 w-4 rounded-full bg-muted animate-pulse mt-0.5" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-              <div className="h-3 w-40 rounded bg-muted animate-pulse" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-}
-
 export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
+  const [showLoadingHint, setShowLoadingHint] = useState(false)
+  const [contentVisible, setContentVisible] = useState(false)
+
+  useEffect(() => {
+    if (data.isLoading) {
+      setContentVisible(false)
+      const timeoutId = window.setTimeout(() => {
+        setShowLoadingHint(true)
+      }, 150)
+      return () => window.clearTimeout(timeoutId)
+    }
+
+    setShowLoadingHint(false)
+    const frameId = window.requestAnimationFrame(() => {
+      setContentVisible(true)
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [data.isLoading])
 
   const recentOutings = outings
     .slice()
@@ -80,16 +57,22 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   const totalPhotos = data.photos.length
 
   if (data.isLoading) {
+    if (!showLoadingHint) {
+      return <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto" aria-hidden="true" />
+    }
+
     return (
-      <div className="px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
-        <HomeContentSkeleton />
+      <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto">
+        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+          Loading your sightings...
+        </p>
       </div>
     )
   }
 
   if (dex.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 sm:py-24">
+      <div className={`px-4 sm:px-6 py-16 sm:py-24 transition-opacity duration-150 ease-out ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="max-w-md mx-auto text-center space-y-6">
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -123,7 +106,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   }
 
   return (
-    <div className="pb-8 animate-fade-in">
+    <div className={`pb-8 transition-opacity duration-150 ease-out ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-8 sm:pt-10 pb-4 max-w-3xl mx-auto">
         <div className="flex items-center justify-between gap-4">
