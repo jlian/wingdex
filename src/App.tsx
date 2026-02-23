@@ -116,6 +116,19 @@ function App() {
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
 
+  const fetchLinkedProviders = useCallback(async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/api/auth/linked-providers', {
+        credentials: 'include',
+      })
+      if (!response.ok) return []
+      const data = await response.json() as { providers?: string[] }
+      return Array.isArray(data.providers) ? data.providers : []
+    } catch {
+      return []
+    }
+  }, [])
+
   // Surface OAuth redirect errors as a toast
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -205,6 +218,37 @@ function App() {
     setUser(null)
   }, [session, isSessionPending, refetchSession, anonBootstrapFailed])
 
+  useEffect(() => {
+    if (!user || user.isAnonymous) return
+
+    const params = new URLSearchParams(window.location.search)
+    const provider = params.get('auth_provider')
+    const source = params.get('auth_source')
+    if (source !== 'social' || (provider !== 'github' && provider !== 'apple')) return
+
+    const finalizeSocialToast = async () => {
+      const linkedProviders = await fetchLinkedProviders()
+      const otherProvider = provider === 'github' ? 'apple' : 'github'
+      const hasMerge = linkedProviders.includes(provider) && linkedProviders.includes(otherProvider)
+
+      const providerLabel = provider === 'github' ? 'GitHub' : 'Apple'
+      const otherLabel = otherProvider === 'github' ? 'GitHub' : 'Apple'
+      if (hasMerge) {
+        toast.success(`Signed in with ${providerLabel}. ${otherLabel} account found and merged.`)
+      } else {
+        toast.success(`Signed in with ${providerLabel}.`)
+      }
+
+      params.delete('auth_provider')
+      params.delete('auth_source')
+      const clean = params.toString()
+      const nextUrl = window.location.pathname + (clean ? `?${clean}` : '')
+      window.history.replaceState(null, '', nextUrl)
+    }
+
+    void finalizeSocialToast()
+  }, [user, fetchLinkedProviders])
+
   if (!user) {
     return <BootShell />
   }
@@ -218,6 +262,7 @@ function BootShell() {
 
 function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
+  const [initialRevealVisible, setInitialRevealVisible] = useState(false)
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useWingDexData(user.id)
 
@@ -225,6 +270,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
     isAnonymous: user.isAnonymous,
     onUpgraded: async () => {
       await refetchSession()
+      navigate('home')
     },
     demoDataEnabled: user.isAnonymous && (data.dex.length > 0 || data.outings.length > 0),
     onSetDemoDataEnabled: async (enabled) => {
@@ -244,6 +290,13 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   const [outingsSortField, setOutingsSortField] = useState<OutingSortField>('date')
   const [outingsSortDir, setOutingsSortDir] = useState<OutingSortDir>('desc')
   const { resolvedTheme } = useTheme()
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setInitialRevealVisible(true)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [])
 
   const prefetchAddPhotosFlow = useCallback(() => {
     void loadAddPhotosFlow()
@@ -386,9 +439,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="w-full max-w-3xl mx-auto pb-8 flex-1">
+        <main className={`w-full max-w-3xl mx-auto pb-8 flex-1 transition-opacity duration-200 ease-out ${initialRevealVisible ? 'opacity-100' : 'opacity-0'}`}>
           {tab === 'home' && (
-            <TabsContent value="home" className="mt-0">
+            <TabsContent value="home" className="mt-0 animate-fade-in">
               <HomePage
                 data={data}
                 onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
@@ -401,7 +454,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'outings' && (
-            <TabsContent value="outings" className="mt-0">
+            <TabsContent value="outings" className="mt-0 animate-fade-in">
               <Suspense fallback={null}>
                 <OutingsPage
                   data={data}
@@ -419,7 +472,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'wingdex' && (
-            <TabsContent value="wingdex" className="mt-0">
+            <TabsContent value="wingdex" className="mt-0 animate-fade-in">
               <Suspense fallback={null}>
                 <WingDexPage
                   data={data}
@@ -437,7 +490,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'settings' && (
-            <TabsContent value="settings" className="mt-0">
+            <TabsContent value="settings" className="mt-0 animate-fade-in">
               <Suspense fallback={null}>
                 <SettingsPage
                   data={data}
@@ -451,7 +504,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'terms' && (
-            <TabsContent value="terms" className="mt-0">
+            <TabsContent value="terms" className="mt-0 animate-fade-in">
               <Suspense fallback={null}>
                 <TermsPage />
               </Suspense>
@@ -459,7 +512,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'privacy' && (
-            <TabsContent value="privacy" className="mt-0">
+            <TabsContent value="privacy" className="mt-0 animate-fade-in">
               <Suspense fallback={null}>
                 <PrivacyPage />
               </Suspense>

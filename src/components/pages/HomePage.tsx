@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird, ArrowRight
@@ -18,6 +19,24 @@ interface HomePageProps {
 
 export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
+  const [showLoadingHint, setShowLoadingHint] = useState(false)
+  const [contentVisible, setContentVisible] = useState(false)
+
+  useEffect(() => {
+    if (data.isLoading) {
+      setContentVisible(false)
+      const timeoutId = window.setTimeout(() => {
+        setShowLoadingHint(true)
+      }, 150)
+      return () => window.clearTimeout(timeoutId)
+    }
+
+    setShowLoadingHint(false)
+    const frameId = window.requestAnimationFrame(() => {
+      setContentVisible(true)
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [data.isLoading])
 
   const recentOutings = outings
     .slice()
@@ -38,6 +57,10 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   const totalPhotos = data.photos.length
 
   if (data.isLoading) {
+    if (!showLoadingHint) {
+      return <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto" aria-hidden="true" />
+    }
+
     return (
       <div className="px-4 sm:px-6 py-10 max-w-3xl mx-auto">
         <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
@@ -49,7 +72,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
 
   if (dex.length === 0) {
     return (
-      <div className="px-4 sm:px-6 py-16 sm:py-24">
+      <div className={`px-4 sm:px-6 py-16 sm:py-24 transition-opacity duration-150 ease-out ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="max-w-md mx-auto text-center space-y-6">
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -83,7 +106,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   }
 
   return (
-    <div className="pb-8 animate-fade-in">
+    <div className={`pb-8 transition-opacity duration-150 ease-out ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-8 sm:pt-10 pb-4 max-w-3xl mx-auto">
         <div className="flex items-center justify-between gap-4">

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Key, GithubLogo, AppleLogo } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 
 import { authClient } from '@/lib/auth-client'
 import { generateBirdName } from '@/lib/fun-names'
@@ -105,6 +106,14 @@ function AuthGateModal({
     ? providers
     : (isLocalRuntime ? ['github', 'apple'] : [])
 
+  const buildSocialCallbackURL = (provider: 'github' | 'apple'): string => {
+    if (typeof window === 'undefined') return '/'
+    const params = new URLSearchParams()
+    params.set('auth_provider', provider)
+    params.set('auth_source', 'social')
+    return `/?${params.toString()}`
+  }
+
   // Fetch providers on first open
   const fetchedProviders = useRef(false)
   useEffect(() => {
@@ -154,6 +163,7 @@ function AuthGateModal({
     }
 
     setIsLoading(false)
+    toast.success('Signed up with passkey')
     onUpgraded()
   }
 
@@ -185,12 +195,17 @@ function AuthGateModal({
     }
 
     setIsLoading(false)
+    toast.success('Signed in with passkey')
     onUpgraded()
   }
 
   const handleSocialSignIn = (provider: 'github' | 'apple') => {
     setErrorMessage(null)
-    void authClient.signIn.social({ provider, errorCallbackURL: '/' })
+    void authClient.signIn.social({
+      provider,
+      callbackURL: buildSocialCallbackURL(provider),
+      errorCallbackURL: '/',
+    })
   }
 
   const handleDemoToggle = async (enabled: boolean) => {
