@@ -314,6 +314,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
     { value: 'wingdex', label: 'WingDex', icon: Bird },
     { value: 'outings', label: 'Outings', icon: MapPin },
   ]
+  const avatarColorClass = getEmojiAvatarColor(user.image)
+  const isEmojiAvatar = avatarColorClass.length > 0
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -368,8 +370,12 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                     className="cursor-pointer active:scale-[0.97] transition-all"
                     aria-label="Settings"
                   >
-                    <Avatar className={`h-8 w-8 ${getEmojiAvatarColor(user.image) || 'bg-muted'} hover:opacity-80 transition-opacity`}>
-                      <AvatarImage src={user.image} alt={user.name} className="scale-[0.65] object-contain" />
+                    <Avatar className={`h-8 w-8 ${avatarColorClass || 'bg-muted'} hover:opacity-80 transition-opacity`}>
+                      <AvatarImage
+                        src={user.image}
+                        alt={user.name}
+                        className={isEmojiAvatar ? 'scale-[0.65] object-contain' : 'object-cover'}
+                      />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">{user.name[0].toUpperCase()}</AvatarFallback>
                     </Avatar>
                   </button>
