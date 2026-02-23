@@ -1,8 +1,6 @@
 import { createAuth } from './lib/auth'
 import { verifyTurnstile } from './lib/turnstile'
 
-const TURNSTILE_ACTION = 'anonymous_signin'
-
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname, hostname } = new URL(context.request.url)
   const isLocalRuntime = hostname === 'localhost' || hostname === '127.0.0.1'
@@ -27,7 +25,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       turnstileSecret,
       ip,
       hostname,
-      TURNSTILE_ACTION,
     )
     if (!valid) {
       return new Response('Forbidden', { status: 403 })
