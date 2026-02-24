@@ -20,6 +20,7 @@ interface HomePageProps {
 export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelectOuting, onSelectSpecies, onNavigate }: HomePageProps) {
   const { outings, dex } = data
   const [contentVisible, setContentVisible] = useState(false)
+  const [highlightOutingId, setHighlightOutingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (data.isLoading) {
@@ -32,6 +33,16 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [data.isLoading])
+
+  useEffect(() => {
+    const highlighted = window.sessionStorage.getItem('home:highlightOutingId')
+    if (!highlighted) return
+
+    window.sessionStorage.removeItem('home:highlightOutingId')
+    setHighlightOutingId(highlighted)
+    const timeoutId = window.setTimeout(() => setHighlightOutingId(null), 2500)
+    return () => window.clearTimeout(timeoutId)
+  }, [outings.length])
 
   const recentOutings = outings
     .slice()
@@ -179,7 +190,9 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
                 return (
                   <button
                     key={outing.id}
-                    className="flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
+                    className={`flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors ${
+                      highlightOutingId === outing.id ? 'bg-primary/10 ring-1 ring-primary/40' : ''
+                    }`}
                     onClick={() => onSelectOuting(outing.id)}
                   >
                     <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />

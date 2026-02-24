@@ -44,6 +44,8 @@ export default function OutingReview({
   onConfirm
 }: OutingReviewProps) {
   const hasGps = cluster.centerLat !== undefined && cluster.centerLon !== undefined
+  const roundedLat = hasGps ? Number(cluster.centerLat!.toFixed(3)) : undefined
+  const roundedLon = hasGps ? Number(cluster.centerLon!.toFixed(3)) : undefined
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
@@ -85,11 +87,15 @@ export default function OutingReview({
   // Automatically look up location name from GPS when enabled
   useEffect(() => {
     if (autoLookupGps && hasGps && !matchingOuting) {
-      const roundedLat = Number(cluster.centerLat!.toFixed(3))
-      const roundedLon = Number(cluster.centerLon!.toFixed(3))
-      void fetchLocationName(roundedLat, roundedLon)
+      void fetchLocationName(roundedLat!, roundedLon!)
     }
   }, [cluster.startTime, cluster.endTime]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (autoLookupGps && hasGps && matchingOuting && !useExistingOuting) {
+      void fetchLocationName(roundedLat!, roundedLon!)
+    }
+  }, [autoLookupGps, hasGps, matchingOuting, useExistingOuting, roundedLat, roundedLon])
 
   const fetchLocationName = async (lat: number, lon: number) => {
     setIsLoadingLocation(true)

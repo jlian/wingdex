@@ -646,9 +646,9 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         </div>
         <div className="text-sm text-muted-foreground space-y-3 leading-relaxed">
           <p>
-            <strong>Your photos are never stored.</strong>{' '}During identification,
+            <strong>Your photos are not retained.</strong>{' '}During identification,
             compressed images are sent to WingDex&apos;s server-side AI endpoint for processing, then
-            immediately discarded.
+            discarded. We do store a file fingerprint hash to detect duplicate uploads.
           </p>
           <p>
             Your birding records (outings, species, and sightings) are saved
