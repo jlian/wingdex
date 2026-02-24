@@ -16,7 +16,7 @@ export default defineConfig({
       ? 'npx wrangler pages dev dist --port 5000 --show-interactive-dev-session=false'
       : 'npm run dev:full:restart',
     url: 'http://localhost:5000',
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },
   projects: [
