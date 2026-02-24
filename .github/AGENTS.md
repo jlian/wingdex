@@ -3,6 +3,10 @@
 Operational context for AI coding agents working in the WingDex repository.
 Coding style rules live in [copilot-instructions.md](./copilot-instructions.md) - read those too.
 
+## IMPORTANT: USE THE INTERNET
+
+Always prefer using the internet to get the most up-to-date information, documentation, and examples. Don't rely solely on training data or memory. When debugging a problem, search for error messages, check official docs, and look for recent discussions or issues on GitHub. When in doubt, look it up!
+
 ## Project Overview
 
 WingDex is a photo-first bird identification and life-list tracker, deployed on Cloudflare Pages.
