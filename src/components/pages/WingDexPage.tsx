@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird, ArrowUp, ArrowDown, Camera
+  Bird, ArrowUp, ArrowDown, Camera, Hash, TextAa, Leaf
 } from '@phosphor-icons/react'
 import { useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -12,10 +13,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { formatStoredDate } from '@/lib/timezone'
+import { buildSyncOrderLookup } from '@/lib/taxonomy-order'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
-export type SortField = 'date' | 'count' | 'name'
+export type SortField = 'date' | 'count' | 'name' | 'family'
 export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
@@ -93,6 +95,8 @@ export default function WingDexPage({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const visibleCountRef = useRef(visibleCount)
+  const warmedSpeciesRef = useRef<Set<string>>(new Set())
+  const [familyOrderLookup, setFamilyOrderLookup] = useState<((name: string) => number) | null>(null)
 
   useEffect(() => {
     visibleCountRef.current = visibleCount
@@ -101,6 +105,16 @@ export default function WingDexPage({
   const effectiveSearchQuery = searchQuery ?? internalSearchQuery
   const effectiveSortField = sortField ?? internalSortField
   const effectiveSortDir = sortDir ?? internalSortDir
+
+  // Load taxonomic order data lazily when family sort is selected
+  useEffect(() => {
+    if (effectiveSortField !== 'family') return
+    if (familyOrderLookup) return
+    const names = dex.map(e => e.speciesName)
+    void buildSyncOrderLookup(names).then(lookup => {
+      setFamilyOrderLookup(() => lookup)
+    })
+  }, [effectiveSortField, dex, familyOrderLookup])
 
   const handleSearchQueryChange = (value: string) => {
     if (onSearchQueryChange) {
@@ -122,7 +136,7 @@ export default function WingDexPage({
     }
 
     setInternalSortField(field)
-    setInternalSortDir(field === 'name' ? 'asc' : 'desc')
+    setInternalSortDir(field === 'name' || field === 'family' ? 'asc' : 'desc')
   }
 
   const sortedList = useMemo(() => {
@@ -130,9 +144,15 @@ export default function WingDexPage({
       const dir = effectiveSortDir === 'asc' ? 1 : -1
       if (effectiveSortField === 'name') return dir * a.speciesName.localeCompare(b.speciesName)
       if (effectiveSortField === 'count') return dir * (a.totalCount - b.totalCount)
+      if (effectiveSortField === 'family') {
+        if (!familyOrderLookup) return a.speciesName.localeCompare(b.speciesName)
+        const orderDiff = familyOrderLookup(a.speciesName) - familyOrderLookup(b.speciesName)
+        if (orderDiff !== 0) return dir * orderDiff
+        return a.speciesName.localeCompare(b.speciesName)
+      }
       return dir * (new Date(a.firstSeenDate).getTime() - new Date(b.firstSeenDate).getTime())
     })
-  }, [dex, effectiveSortDir, effectiveSortField])
+  }, [dex, effectiveSortDir, effectiveSortField, familyOrderLookup])
 
   const filteredList = useMemo(() => {
     const query = effectiveSearchQuery.toLowerCase()
@@ -225,10 +245,11 @@ export default function WingDexPage({
     )
   }
 
-  const sortOptions: { key: SortField; label: string }[] = [
-    { key: 'date', label: 'Date' },
-    { key: 'count', label: 'Count' },
-    { key: 'name', label: 'A-Z' },
+  const sortOptions: { key: SortField; icon: React.ElementType; label: string }[] = [
+    { key: 'date', icon: CalendarBlank, label: 'Sort by date' },
+    { key: 'count', icon: Hash, label: 'Sort by count' },
+    { key: 'name', icon: TextAa, label: 'Sort A-Z' },
+    { key: 'family', icon: Leaf, label: 'Sort by family' },
   ]
 
   return (
@@ -264,11 +285,13 @@ export default function WingDexPage({
                 key={opt.key}
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="sm"
-                className="text-xs h-9 px-2.5"
+                className="h-9 w-9 p-0"
                 onClick={() => handleToggleSort(opt.key)}
+                aria-label={opt.label}
+                title={opt.label}
               >
-                {opt.label}
-                {isActive && <DirIcon size={12} className="ml-0.5" />}
+                <opt.icon size={16} />
+                {isActive && <DirIcon size={10} className="-ml-0.5" />}
               </Button>
             )
           })}

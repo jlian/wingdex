@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ListRow } from '@/components/ui/list-row'
@@ -21,7 +22,7 @@ import {
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
   Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Hash, TextAa
 } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -52,10 +53,10 @@ export type SortDir = 'asc' | 'desc'
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
 
-const outingSortOptions: { key: OutingSortField; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'species', label: 'Species' },
-  { key: 'name', label: 'A-Z' },
+const outingSortOptions: { key: OutingSortField; icon: React.ElementType; label: string }[] = [
+  { key: 'date', icon: CalendarBlank, label: 'Sort by date' },
+  { key: 'species', icon: Bird, label: 'Sort by species count' },
+  { key: 'name', icon: TextAa, label: 'Sort A-Z' },
 ]
 
 export default function OutingsPage({
@@ -238,11 +239,13 @@ export default function OutingsPage({
                 key={opt.key}
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="sm"
-                className="text-xs h-9 px-2.5"
+                className="h-9 w-9 p-0"
                 onClick={() => handleToggleSort(opt.key)}
+                aria-label={opt.label}
+                title={opt.label}
               >
-                {opt.label}
-                {isActive && <DirIcon size={12} className="ml-0.5" />}
+                <opt.icon size={16} />
+                {isActive && <DirIcon size={10} className="-ml-0.5" />}
               </Button>
             )
           })}
@@ -536,7 +539,7 @@ function OutingDetail({
         <StatCard value={groupedConfirmed.length} label="Confirmed" accent="text-secondary" />
         <StatCard
           value={observations.reduce((sum, o) => sum + o.count, 0)}
-          label="Total Count"
+          label="Total count"
           accent="text-primary"
         />
       </div>

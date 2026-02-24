@@ -87,6 +87,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [pendingNewPhotos, setPendingNewPhotos] = useState<PhotoWithCrop[]>([])
   const [pendingDuplicatePhotos, setPendingDuplicatePhotos] = useState<PhotoWithCrop[]>([])
 
+  const [uploadSummary, setUploadSummary] = useState<{
+    newSpecies: number
+    outings: number
+    totalSpecies: number
+    totalCount: number
+    locationNames: string[]
+  } | null>(null)
   const handleOpenChange = (open: boolean) => {
     if (!open && needsCloseConfirmation(step)) {
       setShowCloseConfirm(true)
@@ -263,6 +270,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     advanceToNextPhoto(updatedResults)
   }
 
+  const uploadStatsRef = useRef({ newSpecies: 0, outings: 0, totalSpecies: 0, totalCount: 0, locationNames: [] as string[] })
+
   // ─── Save all observations and finish ────────────────────
   const saveOuting = (allResults: PhotoResult[]) => {
     const confirmed = filterConfirmedResults(allResults)
@@ -298,11 +307,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     )
 
     let hasNewSpecies = false
+    let newSpeciesCount = 0
     let liferMessage = ''
 
     if (observations.length > 0) {
       data.addObservations(observations)
-      const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
+      const result = data.updateDex(currentOutingId, observations)
+      newSpeciesCount = result.newSpeciesCount
       const newSpeciesNames = observations
         .map(obs => obs.speciesName)
         .filter(species => !existingSpecies.has(species))
@@ -341,6 +352,19 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       window.setTimeout(() => setShowConfetti(false), 1400)
     }
 
+    // Accumulate stats across all clusters
+    const outingName = data.outings.find(o => o.id === currentOutingId)?.locationName
+    const uniqueSpecies = new Set(confirmed.map(r => r.species)).size
+    const totalCount = confirmed.reduce((sum, r) => sum + r.count, 0)
+    const stats = uploadStatsRef.current
+    stats.newSpecies += newSpeciesCount
+    stats.outings += 1
+    stats.totalSpecies += uniqueSpecies
+    stats.totalCount += totalCount
+    if (outingName && !stats.locationNames.includes(outingName)) {
+      stats.locationNames.push(outingName)
+    }
+
     if (currentClusterIndex < clusters.length - 1) {
       setCurrentClusterIndex(prev => prev + 1)
       setCurrentPhotoIndex(0)
@@ -350,15 +374,16 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       return
     }
 
+    window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+    window.dispatchEvent(new Event('home:highlightOuting'))
+
+    // Show upload summary instead of closing immediately
+    setUploadSummary({ ...stats })
     if (hasNewSpecies) {
-      // Delay close so confetti canvas stays mounted
-      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
-      window.dispatchEvent(new Event('home:highlightOuting'))
-      setTimeout(() => onClose(), 1500)
+      // Brief delay so confetti renders before summary
+      window.setTimeout(() => setStep('summary'), 400)
     } else {
-      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
-      window.dispatchEvent(new Event('home:highlightOuting'))
-      onClose()
+      setStep('summary')
     }
   }
 
@@ -539,6 +564,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       case 'photo-manual-crop':
         return `Crop Photo ${currentPhotoIndex + 1}`
       case 'complete': return 'Complete!'
+      case 'summary': return 'Upload complete'
       default: return 'Add Photos'
     }
   }
@@ -708,6 +734,46 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 {photoResults.filter(r => r.status === 'confirmed').length} species
                 confirmed across {clusterPhotos.length} photos
               </p>
+            </div>
+          )}
+
+          {/* Upload summary */}
+          {step === 'summary' && uploadSummary && (
+            <div className="py-4 space-y-5">
+              <div className="flex items-center gap-3">
+                <CheckCircle size={36} weight="fill" className="text-green-500 shrink-0" />
+                <div>
+                  <p className="font-semibold text-foreground">
+                    {uploadSummary.locationNames.length > 0
+                      ? uploadSummary.locationNames.join(', ')
+                      : `${uploadSummary.outings} ${uploadSummary.outings === 1 ? 'outing' : 'outings'} saved`}
+                  </p>
+                  {uploadSummary.locationNames.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {uploadSummary.outings} {uploadSummary.outings === 1 ? 'outing' : 'outings'} saved
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-border bg-muted/20 px-3 py-3 text-center">
+                  <p className="text-2xl font-semibold text-foreground">{uploadSummary.totalSpecies}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Species confirmed</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/20 px-3 py-3 text-center">
+                  <p className="text-2xl font-semibold text-foreground">{uploadSummary.totalCount}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Total sightings</p>
+                </div>
+                <div className={`rounded-lg border px-3 py-3 text-center ${uploadSummary.newSpecies > 0 ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/20'}`}>
+                  <p className={`text-2xl font-semibold ${uploadSummary.newSpecies > 0 ? 'text-primary' : 'text-foreground'}`}>
+                    {uploadSummary.newSpecies}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">New to WingDex</p>
+                </div>
+              </div>
+
+              <Button className="w-full" onClick={onClose}>Done</Button>
             </div>
           )}
         </DialogContent>

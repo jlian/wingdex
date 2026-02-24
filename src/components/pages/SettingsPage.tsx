@@ -8,7 +8,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple, Copy } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
@@ -271,7 +271,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             Welcome, <button
               type="button"
-              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50"
+              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50 transition-opacity duration-200"
               disabled={profileSaving}
               onClick={() => {
                 const name = generateBirdName()
@@ -288,7 +288,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             <span className="text-foreground font-medium">{displayName}</span>
             <button
               type="button"
-              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50"
+              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50 transition-opacity duration-200"
               disabled={profileSaving}
               onClick={() => {
                 const nextName = window.prompt('Update display name', displayName)
@@ -339,7 +339,21 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         </div>
 
         {/* -- Log out -- */}
-        <div>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+            <span>User ID: <span className="font-mono">{user.id.slice(0, 8)}&hellip;</span></span>
+            <button
+              type="button"
+              className="cursor-pointer hover:text-muted-foreground transition-colors"
+              aria-label="Copy user ID"
+              onClick={() => {
+                void navigator.clipboard.writeText(user.id)
+                toast.success('User ID copied')
+              }}
+            >
+              <Copy size={12} />
+            </button>
+          </p>
           <Button
             variant="outline"
             className="w-full justify-start"
@@ -498,7 +512,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {!user.isAnonymous && (
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Import & Export</h3>
+          <h3 className="font-semibold text-foreground">Import &amp; export</h3>
           <p className="text-sm text-muted-foreground">
             Import your eBird life list or export your sightings as CSV
           </p>
@@ -561,7 +575,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     importFileRef.current?.click()
                   }}
                 >
-                  Choose CSV File
+                  Choose CSV file
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -574,7 +588,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             disabled={data.dex.length === 0}
           >
             <Download size={20} className="mr-2" />
-            Export Sightings CSV
+            Export sightings CSV
           </Button>
 
           <input
@@ -639,7 +653,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data Storage &amp; Privacy</h3>
+          <h3 className="font-semibold text-foreground">Data storage &amp; privacy</h3>
           <p className="text-sm text-muted-foreground">
             How your data is handled and stored
           </p>
@@ -680,7 +694,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {/* Data Management */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data Management</h3>
+          <h3 className="font-semibold text-foreground">Data management</h3>
           <p className="text-sm text-muted-foreground">
             Load sample data or clear your account
           </p>
@@ -693,7 +707,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 className="w-full justify-start"
               >
                 <Database size={20} className="mr-2" />
-                Load Demo Data
+                Load demo data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -745,7 +759,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     }
                   }}
                 >
-                  Load Demo Data
+                  Load demo data
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -758,7 +772,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash size={20} className="mr-2" />
-                Delete All Data
+                Delete all data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -778,7 +792,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     toast.success('All data deleted')
                   }}
                 >
-                  Delete Everything
+                  Delete everything
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -792,7 +806,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                   className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
                 >
                   <Trash size={20} className="mr-2" weight="fill" />
-                  Delete Account & All Data
+                  Delete account &amp; all data
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
