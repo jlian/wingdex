@@ -1,17 +1,14 @@
 import { exportOutingToEBirdCSV } from '../../../lib/ebird'
 
-async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  return new Set(info.results.map(column => column.name))
+}
+
+async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return (
-    names.has('stateProvince') &&
-    names.has('countryCode') &&
-    names.has('protocol') &&
-    names.has('numberObservers') &&
-    names.has('allObsReported') &&
-    names.has('effortDistanceMiles') &&
-    names.has('effortAreaAcres')
-  )
+  return names.has('speciesComments')
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -25,10 +22,23 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Missing outing id', { status: 400 })
   }
 
-  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
-  const outingQuery = supportsRegionColumns
-    ? 'SELECT id, startTime, endTime, locationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
-    : 'SELECT id, startTime, endTime, locationName, lat, lon, NULL as stateProvince, NULL as countryCode, NULL as protocol, NULL as numberObservers, NULL as allObsReported, NULL as effortDistanceMiles, NULL as effortAreaAcres, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
+  const columnNames = await getOutingColumnNames(context.env.DB)
+  const outingQuery = `SELECT
+      id,
+      startTime,
+      endTime,
+      locationName,
+      lat,
+      lon,
+      ${columnNames.has('stateProvince') ? 'stateProvince' : 'NULL as stateProvince'},
+      ${columnNames.has('countryCode') ? 'countryCode' : 'NULL as countryCode'},
+      ${columnNames.has('protocol') ? 'protocol' : 'NULL as protocol'},
+      ${columnNames.has('numberObservers') ? 'numberObservers' : 'NULL as numberObservers'},
+      ${columnNames.has('allObsReported') ? 'allObsReported' : 'NULL as allObsReported'},
+      ${columnNames.has('effortDistanceMiles') ? 'effortDistanceMiles' : 'NULL as effortDistanceMiles'},
+      ${columnNames.has('effortAreaAcres') ? 'effortAreaAcres' : 'NULL as effortAreaAcres'},
+      notes
+    FROM outing WHERE id = ? AND userId = ? LIMIT 1`
 
   const outingResult = await context.env.DB
     .prepare(outingQuery)
@@ -55,9 +65,14 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Not found', { status: 404 })
   }
 
+  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
+  const observationNotesSelect = supportsSpeciesCommentsColumn
+    ? 'COALESCE(speciesComments, notes) as notes'
+    : 'notes'
+
   const observationsResult = await context.env.DB
     .prepare(
-      `SELECT speciesName, count, certainty, notes
+      `SELECT speciesName, count, certainty, ${observationNotesSelect}
        FROM observation
        WHERE outingId = ? AND userId = ?`
     )

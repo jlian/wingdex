@@ -38,7 +38,14 @@ type ObservationRow = {
   certainty: 'confirmed' | 'possible' | 'pending' | 'rejected'
   representativePhotoId?: string | null
   aiConfidence?: number | null
+  speciesComments?: string | null
   notes: string
+}
+
+async function hasSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
+  const names = new Set(info.results.map(column => column.name))
+  return names.has('speciesComments')
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -48,13 +55,17 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const db = context.env.DB
+  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
+  const observationSpeciesCommentsSelect = supportsSpeciesComments
+    ? 'speciesComments'
+    : 'NULL as speciesComments'
 
   const [outingsResult, photosResult, observationsResult, dex] = await Promise.all([
     db.prepare('SELECT * FROM outing WHERE userId = ? ORDER BY startTime DESC').bind(userId).all<OutingRow>(),
     db.prepare('SELECT id, outingId, exifTime, gpsLat, gpsLon, fileHash, fileName FROM photo WHERE userId = ?')
       .bind(userId)
       .all<PhotoRow>(),
-    db.prepare('SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes FROM observation WHERE userId = ?')
+    db.prepare(`SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, ${observationSpeciesCommentsSelect}, notes FROM observation WHERE userId = ?`)
       .bind(userId)
       .all<ObservationRow>(),
     computeDex(db, userId),
@@ -89,6 +100,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     ...observation,
     representativePhotoId: observation.representativePhotoId || undefined,
     aiConfidence: observation.aiConfidence ?? undefined,
+    speciesComments: observation.speciesComments || undefined,
   }))
 
   return Response.json({

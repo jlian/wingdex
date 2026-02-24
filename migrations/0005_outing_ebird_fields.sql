@@ -5,3 +5,4 @@ ALTER TABLE outing ADD COLUMN numberObservers INTEGER;
 ALTER TABLE outing ADD COLUMN allObsReported INTEGER;
 ALTER TABLE outing ADD COLUMN effortDistanceMiles REAL;
 ALTER TABLE outing ADD COLUMN effortAreaAcres REAL;
+ALTER TABLE observation ADD COLUMN speciesComments TEXT;

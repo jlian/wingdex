@@ -21,18 +21,15 @@ type ExportRow = {
   observationNotes?: string | null
 }
 
-async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  return new Set(info.results.map(column => column.name))
+}
+
+async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return (
-    names.has('stateProvince') &&
-    names.has('countryCode') &&
-    names.has('protocol') &&
-    names.has('numberObservers') &&
-    names.has('allObsReported') &&
-    names.has('effortDistanceMiles') &&
-    names.has('effortAreaAcres')
-  )
+  return names.has('speciesComments')
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -41,50 +38,30 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
-  const rowsQuery = supportsRegionColumns
-    ? `SELECT
+  const columnNames = await getOutingColumnNames(context.env.DB)
+  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
+  const observationNotesSelect = supportsSpeciesCommentsColumn
+    ? 'COALESCE(ob.speciesComments, ob.notes)'
+    : 'ob.notes'
+  const rowsQuery = `SELECT
          o.id as outingId,
          o.startTime,
          o.endTime,
          o.locationName,
          o.lat,
          o.lon,
-         o.stateProvince,
-         o.countryCode,
-         o.protocol,
-         o.numberObservers,
-         o.allObsReported,
-         o.effortDistanceMiles,
-         o.effortAreaAcres,
+         ${columnNames.has('stateProvince') ? 'o.stateProvince' : 'NULL'} as stateProvince,
+         ${columnNames.has('countryCode') ? 'o.countryCode' : 'NULL'} as countryCode,
+         ${columnNames.has('protocol') ? 'o.protocol' : 'NULL'} as protocol,
+         ${columnNames.has('numberObservers') ? 'o.numberObservers' : 'NULL'} as numberObservers,
+         ${columnNames.has('allObsReported') ? 'o.allObsReported' : 'NULL'} as allObsReported,
+         ${columnNames.has('effortDistanceMiles') ? 'o.effortDistanceMiles' : 'NULL'} as effortDistanceMiles,
+         ${columnNames.has('effortAreaAcres') ? 'o.effortAreaAcres' : 'NULL'} as effortAreaAcres,
          o.notes as outingNotes,
          ob.speciesName,
          ob.count,
          ob.certainty,
-         ob.notes as observationNotes
-       FROM observation ob
-       INNER JOIN outing o ON o.id = ob.outingId
-       WHERE ob.userId = ?
-       ORDER BY o.startTime ASC, o.id ASC, ob.id ASC`
-    : `SELECT
-         o.id as outingId,
-         o.startTime,
-         o.endTime,
-         o.locationName,
-         o.lat,
-         o.lon,
-         NULL as stateProvince,
-         NULL as countryCode,
-         NULL as protocol,
-         NULL as numberObservers,
-         NULL as allObsReported,
-         NULL as effortDistanceMiles,
-         NULL as effortAreaAcres,
-         o.notes as outingNotes,
-         ob.speciesName,
-         ob.count,
-         ob.certainty,
-         ob.notes as observationNotes
+         ${observationNotesSelect} as observationNotes
        FROM observation ob
        INNER JOIN outing o ON o.id = ob.outingId
        WHERE ob.userId = ?

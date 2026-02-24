@@ -40,18 +40,9 @@ function normalizeCountryCode(countryCode?: string, stateProvince?: string): str
   return derived.length === 2 ? derived : null
 }
 
-async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return (
-    names.has('stateProvince') &&
-    names.has('countryCode') &&
-    names.has('protocol') &&
-    names.has('numberObservers') &&
-    names.has('allObsReported') &&
-    names.has('effortDistanceMiles') &&
-    names.has('effortAreaAcres')
-  )
+  return new Set(info.results.map(column => column.name))
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -88,9 +79,16 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     typeof body.effortAreaAcres === 'number' && Number.isFinite(body.effortAreaAcres)
       ? body.effortAreaAcres
       : null
-  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
+  const columnNames = await getOutingColumnNames(context.env.DB)
+  const supportsRegionColumns = columnNames.has('stateProvince') && columnNames.has('countryCode')
+  const supportsChecklistColumns =
+    columnNames.has('protocol') &&
+    columnNames.has('numberObservers') &&
+    columnNames.has('allObsReported') &&
+    columnNames.has('effortDistanceMiles') &&
+    columnNames.has('effortAreaAcres')
 
-  if (supportsRegionColumns) {
+  if (supportsRegionColumns && supportsChecklistColumns) {
     await context.env.DB.prepare(
       `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes, createdAt)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`
@@ -111,6 +109,26 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         allObsReported,
         effortDistanceMiles,
         effortAreaAcres,
+        notes,
+        body.createdAt
+      )
+      .run()
+  } else if (supportsRegionColumns) {
+    await context.env.DB.prepare(
+      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+    )
+      .bind(
+        body.id,
+        userId,
+        body.startTime,
+        body.endTime,
+        body.locationName,
+        body.defaultLocationName ?? null,
+        body.lat ?? null,
+        body.lon ?? null,
+        stateProvince,
+        countryCode,
         notes,
         body.createdAt
       )

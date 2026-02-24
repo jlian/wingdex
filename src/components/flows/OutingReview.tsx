@@ -325,10 +325,15 @@ export default function OutingReview({
       const clusterStartMs = cluster.startTime.getTime()
       const clusterEndMs = cluster.endTime.getTime()
 
-      if (clusterStartMs < existingStartMs || clusterEndMs > existingEndMs) {
+      const needsTimeExpansion = clusterStartMs < existingStartMs || clusterEndMs > existingEndMs
+      const needsRegionFill =
+        (!matchingOuting.stateProvince && !!inferredStateProvince) ||
+        (!matchingOuting.countryCode && !!inferredCountryCode)
+
+      if (needsTimeExpansion || needsRegionFill) {
         data.updateOuting(matchingOuting.id, {
-          startTime: clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
-          endTime: clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
+          startTime: needsTimeExpansion && clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
+          endTime: needsTimeExpansion && clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
           stateProvince: matchingOuting.stateProvince || inferredStateProvince,
           countryCode: matchingOuting.countryCode || inferredCountryCode,
         })

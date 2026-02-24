@@ -39,6 +39,7 @@ export interface Observation {
   certainty: ObservationStatus
   representativePhotoId?: string
   aiConfidence?: number
+  speciesComments?: string
   notes: string
 }
 
