@@ -539,7 +539,7 @@ function OutingDetail({
         <StatCard value={groupedConfirmed.length} label="Confirmed" accent="text-secondary" />
         <StatCard
           value={observations.reduce((sum, o) => sum + o.count, 0)}
-          label="Total count"
+          label="Total Count"
           accent="text-primary"
         />
       </div>

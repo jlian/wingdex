@@ -512,7 +512,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {!user.isAnonymous && (
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Import &amp; export</h3>
+          <h3 className="font-semibold text-foreground">Import &amp; Export</h3>
           <p className="text-sm text-muted-foreground">
             Import your eBird life list or export your sightings as CSV
           </p>
@@ -575,7 +575,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     importFileRef.current?.click()
                   }}
                 >
-                  Choose CSV file
+                  Choose CSV File
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -588,7 +588,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             disabled={data.dex.length === 0}
           >
             <Download size={20} className="mr-2" />
-            Export sightings CSV
+            Export Sightings CSV
           </Button>
 
           <input
@@ -653,7 +653,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data storage &amp; privacy</h3>
+          <h3 className="font-semibold text-foreground">Data Storage &amp; Privacy</h3>
           <p className="text-sm text-muted-foreground">
             How your data is handled and stored
           </p>
@@ -694,7 +694,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {/* Data Management */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data management</h3>
+          <h3 className="font-semibold text-foreground">Data Management</h3>
           <p className="text-sm text-muted-foreground">
             Load sample data or clear your account
           </p>
@@ -707,7 +707,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 className="w-full justify-start"
               >
                 <Database size={20} className="mr-2" />
-                Load demo data
+                Load Demo Data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -759,7 +759,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     }
                   }}
                 >
-                  Load demo data
+                  Load Demo Data
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -772,7 +772,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                 className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash size={20} className="mr-2" />
-                Delete all data
+                Delete All Data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -792,7 +792,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                     toast.success('All data deleted')
                   }}
                 >
-                  Delete everything
+                  Delete Everything
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -806,7 +806,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                   className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
                 >
                   <Trash size={20} className="mr-2" weight="fill" />
-                  Delete account &amp; all data
+                  Delete Account &amp; All Data
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
