@@ -38,6 +38,11 @@ export function Confetti({ active, duration = 3000, count = 80 }: ConfettiProps)
   const animRef = useRef<number>(0)
   const firedRef = useRef(false)
 
+  // Reset firedRef when active goes back to false so next activation can fire
+  useEffect(() => {
+    if (!active) firedRef.current = false
+  }, [active])
+
   useEffect(() => {
     if (!active || firedRef.current) return
     firedRef.current = true
