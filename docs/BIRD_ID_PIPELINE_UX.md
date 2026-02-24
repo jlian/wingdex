@@ -73,13 +73,45 @@
 
 ---
 
+## Group D: UX Polish (post-review, manual testing)
+
+Iterative polish based on manual testing with real photos against the hosted dev server.
+
+**Steps**
+
+- [x] **Widen crop padding** -- In [crop-math.ts](../src/lib/crop-math.ts), increased `padRatio` default from 0.35 to 0.65 so the AI-suggested square crop starts zoomed out more, giving users more context around the bird.
+
+- [x] **Show user's crop during progress** -- In [AddPhotosFlow.tsx](../src/components/flows/AddPhotosFlow.tsx), the processing/progress step now shows `croppedDataUrl` (the user's actual crop) instead of the raw thumbnail when available. Subtitle reads "Your photo (cropped)" when a user crop exists.
+
+- [x] **Consistent confirm image sizes** -- Both the bird photo (left) and Wikipedia reference image (right) in the confirm step use `max-w-48 aspect-square` containers with `object-cover` for uniform visual weight regardless of source aspect ratio.
+
+- [x] **Remove progress bar text** -- Stripped the percentage label from the progress indicator during identification. The animated bar alone communicates progress.
+
+- [x] **Progress title says "Identifying..."** -- Changed the processing step heading from "Processing photo X of Y" to "Identifying photo X of Y..." for clearer intent.
+
+- [x] **Large serif confidence number** -- Replaced the `Badge` pill with a large color-coded number (`text-3xl font-semibold font-serif`) that stands on its own. Colors: green (>=75%), yellow (>=50%), red (<50%).
+
+- [x] **Remove photo dots from progress step** -- The dot indicators for multi-photo sets are hidden during the processing step to reduce visual clutter.
+
+- [x] **Button styling cleanup** -- Confirm step buttons use default sizing (removed `size="sm"`) for better touch targets.
+
+- [x] **Revert multipleBirds prompt** -- Reverted the `multipleBirds` field description in [bird-id-prompt.js](../functions/lib/bird-id-prompt.js) to the original wording from commit a79835a: flags multiple individuals regardless of species (colonies, flocks, perched groups), not just multiple species. This ensures cormorant flocks and similar scenes correctly trigger the multi-bird toast.
+
+- [x] **Shared WikiBirdThumbnail component** -- Extracted a reusable [wiki-bird-thumbnail.tsx](../src/components/ui/wiki-bird-thumbnail.tsx) used by `HomePage.tsx`, `bird-row.tsx`, and `AddPhotosFlow.tsx`. Encapsulates `useBirdImage` hook, portrait-aware `object-position: center top`, and fallback `Bird` icon. Removes duplicated wiki image rendering logic.
+
+- [x] **Confetti on new species** -- Added confetti animation (via [confetti.tsx](../src/components/ui/confetti.tsx)) that fires when a newly discovered species is confirmed. Fixed `firedRef` reset logic so confetti re-fires correctly across multiple new species in the same session. Added 1500ms `onClose` delay so confetti is visible before the dialog advances.
+
+- [x] **Toast improvements** -- Lifer toast uses `toast()` with bird emoji prefix, stacks on top of the "Saved" `toast.success()` (Sonner stacks last-fired = topmost). Both toasts use 6000ms duration. multipleBirds toast shortened to "Multiple birds detected, crop to one".
+
+---
+
 ## Verification
 
-- [x] `npm test` -- all unit tests pass including updated fixture replays, clustering, crop math
+- [x] `npm test` -- all unit tests pass (552 tests across 32 files)
 - [x] `npx playwright test` -- e2e smoke passes (36 passed, 0 failed)
-- [ ] Manual test: upload photos, observe faster ID, verify progress bar animates smoothly, check escalation triggers on low-confidence photos
+- [x] Manual test: upload photos, observe faster ID, verify progress bar animates smoothly, check escalation triggers on low-confidence photos
+- [x] Manual test: verify post-ID toast shows species names and homepage highlights the new outing
 - [ ] Manual test: verify clustering produces tighter outings, declining outing merge auto-fills location
-- [ ] Manual test: verify post-ID toast shows species names and homepage highlights the new outing
 - [ ] Check privacy/settings pages for updated messaging
 
 ## Matrix Insights (latest run)
@@ -105,8 +137,10 @@
 - [x] **Progress bar calibration (#183/#125)** -- tau derived from matrix p50: 1200ms fast, 4400ms strong. Added 300ms ease-out transition for smooth completion snap.
 - [x] **Fixture README update** -- documented in [src/__tests__/fixtures/README.md](../src/__tests__/fixtures/README.md).
 - [x] **E2E verification** -- all 36 Playwright tests pass (fixed pre-existing broken assertions in csv-and-upload-integration e2e).
+- [x] **UX polish round** -- crop padding, confirm layout, confetti, toasts, shared WikiBirdThumbnail, progress title, confidence display, button sizing (see Group D above).
 - [ ] **Strong-tier stability follow-up** -- investigate runtime strong outliers and the single transient runtime failure (non-blocking, tracked separately).
-- [ ] **Manual verification** -- manual upload flow testing with real photos (post-merge).
+- [ ] **Clustering/location manual test** -- verify tighter clustering and outing-decline location auto-fill with real data.
+- [ ] **Privacy messaging review** -- verify settings/privacy pages reflect updated hash/photo messaging.
 
 ## Decisions
 
@@ -115,3 +149,6 @@
 - **Escalation triggers**: confidence < 0.75 OR gap between top-2 < 0.15
 - **Clustering thresholds**: tighten from 5h/6km to ~2h/~3km (exact values to calibrate against existing tests)
 - **Progress bar**: exponential asymptotic curve capping at 90% until completion
+- **Crop padding**: padRatio=0.65 (up from 0.35) for more context around bird
+- **Confetti**: fires on new species discovery, resets correctly for multi-photo uploads
+- **multipleBirds prompt**: flags multiple individuals regardless of species (reverted from species-only wording)
