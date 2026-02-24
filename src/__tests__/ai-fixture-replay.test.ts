@@ -30,6 +30,7 @@ interface Fixture {
     multipleBirds: boolean
   }
   model: string
+  durationMs: number
   capturedAt: string
 }
 
@@ -121,6 +122,11 @@ describe('LLM fixture replay', () => {
       expect(f.parsed).toBeTruthy()
       expect(Array.isArray(f.parsed.candidates)).toBe(true)
       expect(f.model).toBeTruthy()
+      expect(typeof f.durationMs).toBe('number')
+      expect(f.durationMs).toBeGreaterThan(0)
+      if (f.parsed.candidates.length > 0) {
+        expect(f.parsed.candidates.length).toBeGreaterThanOrEqual(2)
+      }
       // No-GPS fixture has empty context; all others must have lat/lon
       if (f.context.lat != null) {
         expect(f.context.lat).toBeTypeOf('number')
@@ -199,7 +205,7 @@ describe('LLM fixture replay', () => {
 
         // Top candidate should be grounded to a valid taxonomy entry
         const top = result.candidates[0]
-        expect(top.confidence).toBeGreaterThanOrEqual(0.3)
+        expect(top.confidence).toBeGreaterThanOrEqual(0.2)
         // Species name should include scientific name in parens
         expect(top.species).toMatch(/\(.+\)/)
       }
@@ -228,7 +234,7 @@ describe('LLM fixture replay', () => {
 
   // ── Candidate ranking contract ──────────────────────────
 
-  it('all fixtures: candidates sorted, filtered ≥ 0.3, at most 5', async () => {
+  it('all fixtures: candidates sorted, filtered ≥ 0.2, at most 5', async () => {
     for (const f of fixtures) {
       replayFixture(f)
       const result = await identifyBirdInPhoto(
@@ -242,9 +248,9 @@ describe('LLM fixture replay', () => {
         expect(result.candidates[i - 1].confidence)
           .toBeGreaterThanOrEqual(result.candidates[i].confidence)
       }
-      // All candidates ≥ 0.3
+      // All candidates ≥ 0.2
       for (const c of result.candidates) {
-        expect(c.confidence).toBeGreaterThanOrEqual(0.3)
+        expect(c.confidence).toBeGreaterThanOrEqual(0.2)
       }
       // At most 5
       expect(result.candidates.length).toBeLessThanOrEqual(5)

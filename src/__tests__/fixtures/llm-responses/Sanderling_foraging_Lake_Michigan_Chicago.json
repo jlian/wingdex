@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Lake Michigan, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.90}],\"birdCenter\":[30,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.9},{\"species\":\"Semipalmated Sandpiper (Calidris pusilla)\",\"confidence\":0.55}],\"birdCenter\":[20,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Sanderling (Calidris alba)",
         "confidence": 0.9
+      },
+      {
+        "species": "Semipalmated Sandpiper (Calidris pusilla)",
+        "confidence": 0.55
       }
     ],
     "birdCenter": [
-      30,
-      60
+      20,
+      65
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:32.529Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1642,
+  "capturedAt": "2026-02-24T00:41:31.333Z",
+  "promotedAt": "2026-02-24T01:18:06.943Z"
 }

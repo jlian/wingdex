@@ -6,12 +6,16 @@
     "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.95}],\"birdCenter\":[40,45],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Mallard (Anas platyrhynchos)\",\"confidence\":0.95},{\"species\":\"American Black Duck (Anas rubripes)\",\"confidence\":0.5}],\"birdCenter\":[40,45],\"birdSize\":\"medium\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
         "species": "Mallard (Anas platyrhynchos)",
         "confidence": 0.95
+      },
+      {
+        "species": "American Black Duck (Anas rubripes)",
+        "confidence": 0.5
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "medium",
     "multipleBirds": true
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:47.413Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1641,
+  "capturedAt": "2026-02-24T00:41:18.471Z",
+  "promotedAt": "2026-02-24T01:18:06.941Z"
 }

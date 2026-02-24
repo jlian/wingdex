@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Lake Como, Italy"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.90}],\"birdCenter\":[45,40],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.9},{\"species\":\"European Shag (Gulosus aristotelis)\",\"confidence\":0.5}],\"birdCenter\":[50,25],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Cormorant (Phalacrocorax carbo)",
         "confidence": 0.9
+      },
+      {
+        "species": "European Shag (Gulosus aristotelis)",
+        "confidence": 0.5
       }
     ],
     "birdCenter": [
-      45,
-      40
+      50,
+      25
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:40.478Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 2296,
+  "capturedAt": "2026-02-24T00:53:20.105Z",
+  "promotedAt": "2026-02-24T01:18:06.937Z"
 }

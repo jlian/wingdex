@@ -6,12 +6,16 @@
     "month": 5,
     "locationName": "Unknown (AI-generated test image)"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Least Flycatcher (Empidonax minimus)\",\"confidence\":0.88}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Eastern Wood-Pewee (Contopus virens)\",\"confidence\":0.88},{\"species\":\"Acadian Flycatcher (Empidonax virescens)\",\"confidence\":0.52}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Least Flycatcher (Empidonax minimus)",
+        "species": "Eastern Wood-Pewee (Contopus virens)",
         "confidence": 0.88
+      },
+      {
+        "species": "Acadian Flycatcher (Empidonax virescens)",
+        "confidence": 0.52
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:55.379Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1936,
+  "capturedAt": "2026-02-24T01:17:46.079Z",
+  "promotedAt": "2026-02-24T01:18:06.932Z"
 }

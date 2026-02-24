@@ -6,12 +6,16 @@
     "month": 8,
     "locationName": "Lake Michigan shore, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Waterthrush (Parkesia noveboracensis)\",\"confidence\":0.80}],\"birdCenter\":[50,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"American Pipit (Anthus rubescens)\",\"confidence\":0.8},{\"species\":\"Rock Wren (Salpinctes obsoletus)\",\"confidence\":0.5}],\"birdCenter\":[50,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Northern Waterthrush (Parkesia noveboracensis)",
+        "species": "American Pipit (Anthus rubescens)",
         "confidence": 0.8
+      },
+      {
+        "species": "Rock Wren (Salpinctes obsoletus)",
+        "confidence": 0.5
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:26.006Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1776,
+  "capturedAt": "2026-02-24T01:02:46.735Z",
+  "promotedAt": "2026-02-24T01:18:06.942Z"
 }

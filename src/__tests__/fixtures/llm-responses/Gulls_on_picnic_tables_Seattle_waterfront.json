@@ -6,21 +6,37 @@
     "month": 7,
     "locationName": "Seattle Waterfront, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.85}],\"birdCenter\":[30,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.88},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.75}],\"birdCenter\":[70,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
         "species": "Western Gull (Larus occidentalis)",
-        "confidence": 0.85
+        "confidence": 0.88
+      },
+      {
+        "species": "Glaucous-winged Gull (Larus glaucescens)",
+        "confidence": 0.75
       }
     ],
     "birdCenter": [
-      30,
+      70,
       75
     ],
     "birdSize": "medium",
     "multipleBirds": true
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:23.243Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1986,
+  "capturedAt": "2026-02-24T00:53:51.557Z",
+  "promotedAt": "2026-02-24T01:18:06.940Z"
 }

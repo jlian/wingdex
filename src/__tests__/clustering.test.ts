@@ -95,7 +95,7 @@ describe('clusterPhotosIntoOutings', () => {
   it('clusters photos within distance threshold', () => {
     const base = '2025-06-01T08:00:00Z'
     const gps1 = { lat: 48.0, lon: -122.0 }
-    const gps2 = gpsOffsetKm(48.0, -122.0, 3) // 3 km apart
+    const gps2 = gpsOffsetKm(48.0, -122.0, 2.5) // 2.5 km apart
     const photos = [
       makePhoto({ exifTime: base, gps: gps1 }),
       makePhoto({ exifTime: hoursAfter(base, 1), gps: gps2 }),
@@ -141,12 +141,12 @@ describe('clusterPhotosIntoOutings', () => {
     const base = '2025-06-01T08:00:00Z'
     const photos = [
       makePhoto({ exifTime: base, gps: { lat: 48.0, lon: -122.0 } }),
-      makePhoto({ exifTime: hoursAfter(base, 1), gps: { lat: 48.04, lon: -122.04 } }), // ~4.4 km apart
+      makePhoto({ exifTime: hoursAfter(base, 1), gps: { lat: 48.018, lon: -122.018 } }),
     ]
     const clusters = clusterPhotosIntoOutings(photos)
     expect(clusters).toHaveLength(1)
-    expect(clusters[0].centerLat).toBeCloseTo(48.02, 2)
-    expect(clusters[0].centerLon).toBeCloseTo(-122.02, 2)
+    expect(clusters[0].centerLat).toBeCloseTo(48.009, 3)
+    expect(clusters[0].centerLon).toBeCloseTo(-122.009, 3)
   })
 
   it('sets start/end times from EXIF', () => {
@@ -217,16 +217,16 @@ describe('findMatchingOuting', () => {
     expect(findMatchingOuting(cluster, [outing])).toBe(outing)
   })
 
-  it('matches a cluster within the +-5hr buffer', () => {
+  it('matches a cluster within the +-2hr buffer', () => {
     const outing = makeOuting({
       startTime: '2025-06-01T08:00:00Z',
       endTime: '2025-06-01T10:00:00Z',
     })
-    // Cluster starts 4 hours after outing ends (within 5hr buffer)
+    // Cluster starts 1 hour after outing ends (within 2hr buffer)
     const cluster = {
       photos: [makePhoto()],
-      startTime: new Date('2025-06-01T14:00:00Z'),
-      endTime: new Date('2025-06-01T15:00:00Z'),
+      startTime: new Date('2025-06-01T11:00:00Z'),
+      endTime: new Date('2025-06-01T12:00:00Z'),
     }
     expect(findMatchingOuting(cluster, [outing])).toBe(outing)
   })

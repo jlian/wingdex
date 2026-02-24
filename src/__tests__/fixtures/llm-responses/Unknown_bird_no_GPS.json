@@ -1,21 +1,37 @@
 {
   "imageFile": "Unknown_bird_no_GPS.jpeg",
   "context": {},
-  "rawResponse": "{\"candidates\":[{\"species\":\"Bushtit (Psaltriparus minimus)\",\"confidence\":0.80}],\"birdCenter\":[44,52],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Eurasian Blackcap (Sylvia atricapilla)\",\"confidence\":0.85},{\"species\":\"Common Chiffchaff (Phylloscopus collybita)\",\"confidence\":0.5}],\"birdCenter\":[44,54],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
-        "species": "Bushtit (Psaltriparus minimus)",
-        "confidence": 0.8
+        "species": "Eurasian Blackcap (Sylvia atricapilla)",
+        "confidence": 0.85
+      },
+      {
+        "species": "Common Chiffchaff (Phylloscopus collybita)",
+        "confidence": 0.5
       }
     ],
     "birdCenter": [
       44,
-      52
+      54
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:24:02.513Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1982,
+  "capturedAt": "2026-02-24T00:54:28.611Z",
+  "promotedAt": "2026-02-24T01:18:06.945Z"
 }

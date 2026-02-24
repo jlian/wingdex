@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Park Ridge, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85}],\"birdCenter\":[50,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85},{\"species\":\"Song Sparrow (Melospiza melodia)\",\"confidence\":0.4}],\"birdCenter\":[50,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "House Sparrow (Passer domesticus)",
         "confidence": 0.85
+      },
+      {
+        "species": "Song Sparrow (Melospiza melodia)",
+        "confidence": 0.4
       }
     ],
     "birdCenter": [
       50,
-      55
+      60
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:19.799Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1905,
+  "capturedAt": "2026-02-24T00:53:59.632Z",
+  "promotedAt": "2026-02-24T01:18:06.940Z"
 }
