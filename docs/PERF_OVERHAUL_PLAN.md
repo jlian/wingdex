@@ -70,15 +70,16 @@ No behavioral change; pure dead-code removal and render optimizations.
   Verify: `npm run test` -- especially outing detail view tests. \
   _Done in `a64ef17`._
 
-- [ ] **#110 -- Stabilize inline arrow handlers with `useCallback`** \
+- [x] **#110 -- Stabilize inline arrow handlers with `useCallback`** \
   In `src/App.tsx`, wrap remaining inline arrow props with `useCallback`:
-  - [ ] `onAddPhotos` (lines 468, 503)
-  - [ ] `onSelectOuting` (lines 470, 483)
-  - [ ] `onSelectSpecies` (lines 471, 484, 501)
-  - [ ] `onNavigate` (line 472)
+  - [x] `onAddPhotos` (lines 468, 503)
+  - [x] `onSelectOuting` (lines 470, 483)
+  - [x] `onSelectSpecies` (lines 471, 484, 501)
+  - [x] `onNavigate` (line 472)
 
   Note: only effective in combination with #109 (`React.memo` on `BirdRow`). \
-  Verify: `npm run typecheck`.
+  Verify: `npm run typecheck`. \
+  _Done in `e7d13b3`._
 
 - [ ] **#113 -- Persist Wikipedia REST cache in `localStorage`** \
   In `src/lib/wikimedia.ts`:
