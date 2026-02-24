@@ -54,7 +54,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let model: BirdIdModelTier = 'fast'
 
     if (contentType.includes('application/json')) {
-      const body = await context.request.json() as {
+      let body: {
         imageDataUrl?: unknown
         lat?: unknown
         lon?: unknown
@@ -63,6 +63,20 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         imageHeight?: unknown
         locationName?: unknown
         model?: unknown
+      }
+      try {
+        body = await context.request.json() as {
+          imageDataUrl?: unknown
+          lat?: unknown
+          lon?: unknown
+          month?: unknown
+          imageWidth?: unknown
+          imageHeight?: unknown
+          locationName?: unknown
+          model?: unknown
+        }
+      } catch {
+        throw new HttpError(400, 'Invalid JSON body')
       }
 
       imageDataUrl = String(body.imageDataUrl || '')
