@@ -81,14 +81,15 @@ No behavioral change; pure dead-code removal and render optimizations.
   Verify: `npm run typecheck`. \
   _Done in `e7d13b3`._
 
-- [ ] **#113 -- Persist Wikipedia REST cache in `localStorage`** \
+- [x] **#113 -- Persist Wikipedia REST cache in `localStorage`** \
   In `src/lib/wikimedia.ts`:
-  - [ ] On startup, hydrate `restCache` Map from `localStorage.getItem('wiki-rest-cache')`
-  - [ ] After each new cache entry, debounce-write the Map back to `localStorage`
-  - [ ] Cap at ~200 entries (LRU eviction by insertion order)
-  - [ ] Wrap in try/catch for quota errors
+  - [x] On startup, hydrate `restCache` Map from `localStorage.getItem('wiki-rest-cache')`
+  - [x] After each new cache entry, debounce-write the Map back to `localStorage`
+  - [x] Cap at ~200 entries (LRU eviction by insertion order)
+  - [x] Wrap in try/catch for quota errors
 
-  Verify: manual browser test (DevTools > Application > Local Storage) + `npm run test`.
+  Verify: manual browser test (DevTools > Application > Local Storage) + `npm run test`. \
+  _Done in `4773b98`._
 
 - [ ] **#118 -- Self-host Google Fonts** \
   - [ ] Download Inter (woff2, weights 400/500/600/700) and Newsreader (woff2, weights 400/600/700) into `public/fonts/`
