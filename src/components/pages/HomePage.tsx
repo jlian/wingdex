@@ -151,7 +151,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               {dex.length > 6 && (
                 <button
                   onClick={() => onNavigate('wingdex')}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer press-feel-light"
+                  className="text-xs text-primary flex items-center gap-1 font-medium cursor-pointer press-feel-light"
                 >
                   View all {dex.length}
                   <ArrowRight size={12} />
@@ -181,7 +181,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               {outings.length > 5 && (
                 <button
                   onClick={() => onNavigate('outings')}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer press-feel-light"
+                  className="text-xs text-primary flex items-center gap-1 font-medium cursor-pointer press-feel-light"
                 >
                   View all {outings.length}
                   <ArrowRight size={12} />

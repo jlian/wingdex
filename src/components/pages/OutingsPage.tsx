@@ -547,7 +547,7 @@ function OutingDetail({
           href={`https://www.google.com/maps?q=${outing.lat},${outing.lon}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-sm text-muted-foreground press-feel-light"
         >
           <MapPin size={16} weight="fill" className="text-primary flex-shrink-0" />
           <span className="truncate">{outing.defaultLocationName || outing.locationName}</span>

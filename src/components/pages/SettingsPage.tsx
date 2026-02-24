@@ -271,7 +271,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             Welcome, <button
               type="button"
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50"
               disabled={profileSaving}
               onClick={() => {
                 const name = generateBirdName()
@@ -288,7 +288,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             <span className="text-foreground font-medium">{displayName}</span>
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+              className="text-muted-foreground cursor-pointer press-feel-light disabled:opacity-50"
               disabled={profileSaving}
               onClick={() => {
                 const nextName = window.prompt('Update display name', displayName)

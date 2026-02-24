@@ -444,7 +444,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium cursor-pointer
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
-                      data-[state=inactive]:text-muted-foreground hover:text-foreground hover:bg-[var(--pressed-highlight-hover)]
+                      data-[state=inactive]:text-muted-foreground hover:bg-[var(--pressed-highlight-hover)]
                       press-feel-light"
                   >
                     <item.icon size={18} />
@@ -465,7 +465,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 ) : (
                   <button
                     onClick={() => navigate('settings')}
-                    className="cursor-pointer rounded-full hover:bg-accent p-0.5 -m-0.5 press-feel-light"
+                    className="cursor-pointer press-feel"
                     aria-label="Settings"
                   >
                     <Avatar className={`h-8 w-8 ${avatarColorClass || 'bg-muted'}`}>
@@ -582,16 +582,16 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
 
       <footer className="flex flex-col-reverse items-center gap-4 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
         <div className="flex items-center gap-2">
-          <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}</a>
-          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-muted-foreground transition-colors">
+          <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="press-feel-light">WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}</a>
+          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="press-feel-light">
             <GithubLogo size={16} />
           </a>
-          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">By John Lian</a>
+          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="press-feel-light">By John Lian</a>
         </div>
         <nav className="flex items-center gap-4">
-          <button onClick={() => navigate('privacy')} className="hover:text-muted-foreground transition-colors cursor-pointer">Privacy</button>
-          <button onClick={() => navigate('terms')} className="hover:text-muted-foreground transition-colors cursor-pointer">Terms</button>
-          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Issues?</a>
+          <button onClick={() => navigate('privacy')} className="cursor-pointer press-feel-light">Privacy</button>
+          <button onClick={() => navigate('terms')} className="cursor-pointer press-feel-light">Terms</button>
+          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="press-feel-light">Issues?</a>
         </nav>
       </footer>
 
