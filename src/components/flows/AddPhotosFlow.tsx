@@ -54,6 +54,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [currentClusterIndex, setCurrentClusterIndex] = useState(0)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [photoProgress, setPhotoProgress] = useState(0)
+  const [photoProgressTauMs, setPhotoProgressTauMs] = useState(1200)
+  const [photoProgressRunKey, setPhotoProgressRunKey] = useState(0)
   const [processingMessage, setProcessingMessage] = useState('')
   const [useGeoContext, setUseGeoContext] = useState(true)
   const [currentOutingId, setCurrentOutingId] = useState('')
@@ -97,6 +100,24 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const fullCurrentPhoto = getFullPhoto(currentPhotoIndex)
 
+  useEffect(() => {
+    if (step !== 'photo-processing') {
+      setPhotoProgress(0)
+      return
+    }
+
+    const startedAt = Date.now()
+    setPhotoProgress(0)
+
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt
+      const next = 90 * (1 - Math.exp(-elapsed / photoProgressTauMs))
+      setPhotoProgress(Math.min(90, next))
+    }, 80)
+
+    return () => window.clearInterval(interval)
+  }, [step, photoProgressRunKey, photoProgressTauMs])
+
   // ─── Step 1: Send full image directly to species ID ─────
   const runSpeciesId = async (
     photoIdx: number,
@@ -108,14 +129,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     setCurrentPhotoIndex(photoIdx)
     setStep('photo-processing')
+    setPhotoProgressTauMs(1200)
+    setPhotoProgressRunKey(prev => prev + 1)
     const analyzeUrl = imageUrl || photo.croppedDataUrl || photo.dataUrl
     setProcessingMessage(
       `Photo ${photoIdx + 1}/${clusterPhotos.length}: Identifying species...`
     )
 
     try {
-      await new Promise(r => setTimeout(r, 500))
-      const result: BirdIdResult = await identifyBirdInPhoto(
+      const fastResult: BirdIdResult = await identifyBirdInPhoto(
         analyzeUrl,
         useGeoContext ? photo.gps : undefined,
         useGeoContext && photo.exifTime
@@ -125,9 +147,39 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           useGeoContext,
           lastLocationName,
           locationNameOverride,
-        )
+        ),
+        'fast'
       )
+
+      const topConfidence = fastResult.candidates[0]?.confidence ?? 0
+      const secondConfidence = fastResult.candidates[1]?.confidence ?? 0
+      const shouldEscalate = topConfidence < 0.75 || (fastResult.candidates.length >= 2 && (topConfidence - secondConfidence) < 0.15)
+
+      const result: BirdIdResult = shouldEscalate
+        ? await (async () => {
+          setProcessingMessage(
+            `Photo ${photoIdx + 1}/${clusterPhotos.length}: Re-analyzing with enhanced model...`
+          )
+          setPhotoProgressTauMs(4400)
+          setPhotoProgressRunKey(prev => prev + 1)
+          return identifyBirdInPhoto(
+            analyzeUrl,
+            useGeoContext ? photo.gps : undefined,
+            useGeoContext && photo.exifTime
+              ? new Date(photo.exifTime).getMonth()
+              : undefined,
+            resolveInferenceLocationName(
+              useGeoContext,
+              lastLocationName,
+              locationNameOverride,
+            ),
+            'strong'
+          )
+        })()
+        : fastResult
+
       console.log(`✅ Found ${result.candidates.length} candidates`)
+      setPhotoProgress(100)
 
       // Store AI crop box on the photo if we got one
       if (result.cropBox) {
@@ -191,6 +243,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   // ─── Save all observations and finish ────────────────────
   const saveOuting = (allResults: PhotoResult[]) => {
     const confirmed = filterConfirmedResults(allResults)
+    const existingSpecies = new Set(data.dex.map(entry => entry.speciesName))
 
     const speciesMap = new Map<
       string,
@@ -224,11 +277,19 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     if (observations.length > 0) {
       data.addObservations(observations)
       const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
+      const newSpeciesNames = observations
+        .map(obs => obs.speciesName)
+        .filter(species => !existingSpecies.has(species))
 
       if (newSpeciesCount > 0) {
-        toast.success(
-          `🎉 ${newSpeciesCount} new species added to your WingDex!`
-        )
+        const preview = newSpeciesNames
+          .slice(0, 3)
+          .map(name => getDisplayName(name))
+          .join(', ')
+        const suffix = newSpeciesNames.length > 3
+          ? ` +${newSpeciesNames.length - 3} more`
+          : ''
+        toast.success(`🎉 ${newSpeciesCount} new species added to your WingDex: ${preview}${suffix}`)
       }
     } else {
       toast.warning('No species were confirmed for this outing')
@@ -242,8 +303,14 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setStep('review')
     } else {
       if (confirmed.length > 0) {
-        toast.success(`All done! ${confirmed.length} species saved.`)
+        const outingName = data.outings.find(outing => outing.id === currentOutingId)?.locationName || 'Outing'
+        const speciesPreview = Array.from(new Set(confirmed.map(result => getDisplayName(result.species))))
+          .slice(0, 3)
+          .join(', ')
+        toast.success(`Saved ${confirmed.length} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`)
       }
+
+      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
       onClose()
     }
   }
@@ -486,7 +553,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 <div className="space-y-1 text-center">
                   <p className="text-sm font-medium text-foreground">Select Photos</p>
                   <p className="text-xs text-muted-foreground">
-                    Bird photos only. Used for ID, never saved.
+                    Bird photos only. Used for ID and not retained; we store a file hash for duplicate detection.
                   </p>
                 </div>
               </button>
@@ -558,7 +625,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                   />
                 </div>
               )}
-              <Progress value={66} className="w-full" />
+              <Progress value={photoProgress} className="w-full" />
               <p className="text-center text-sm text-muted-foreground">
                 {processingMessage}
               </p>
