@@ -46,9 +46,10 @@ No behavioral change; pure dead-code removal and render optimizations.
   Verify: `npm run typecheck`. \
   _Done in `85fc8fa`._
 
-- [ ] **#109 -- Wrap `BirdRow` in `React.memo`** \
+- [x] **#109 -- Wrap `BirdRow` in `React.memo`** \
   Wrap the `BirdRow` export in `src/components/ui/bird-row.tsx` with `React.memo`. Props are strings + ReactNode + callback, so memo will skip re-renders when individual row data hasn't changed. \
-  Verify: `npm run test`.
+  Verify: `npm run test`. \
+  _Done in `de75836`._
 
 - [ ] **#111 -- Memoize derived data on HomePage** \
   Wrap `recentOutings`, `recentSpecies`, `newThisMonth`, and `totalPhotos` in `useMemo` in `src/components/pages/HomePage.tsx` (lines 49-65). WingDexPage and OutingsPage are already memoized. \

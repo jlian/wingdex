@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
@@ -42,21 +42,29 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
     }
   }, [outings.length])
 
-  const recentOutings = outings
-    .slice()
-    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-    .slice(0, 5)
-  const recentSpecies = dex
-    .slice()
-    .sort((a, b) => new Date(b.firstSeenDate).getTime() - new Date(a.firstSeenDate).getTime())
-    .slice(0, 6)
+  const recentOutings = useMemo(() =>
+    outings
+      .slice()
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      .slice(0, 5),
+    [outings]
+  )
+  const recentSpecies = useMemo(() =>
+    dex
+      .slice()
+      .sort((a, b) => new Date(b.firstSeenDate).getTime() - new Date(a.firstSeenDate).getTime())
+      .slice(0, 6),
+    [dex]
+  )
 
-  const thisMonth = new Date()
-  const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)
-  const newThisMonth = dex.filter(entry => {
-    const dateStr = entry.addedDate || entry.firstSeenDate
-    return new Date(dateStr) >= thisMonthStart
-  }).length
+  const newThisMonth = useMemo(() => {
+    const now = new Date()
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    return dex.filter(entry => {
+      const dateStr = entry.addedDate || entry.firstSeenDate
+      return new Date(dateStr) >= thisMonthStart
+    }).length
+  }, [dex])
 
   const totalPhotos = data.photos.length
 
