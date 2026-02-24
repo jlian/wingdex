@@ -106,10 +106,12 @@
 html {
   overflow-y: scroll;
   scrollbar-gutter: stable;
+  background-color: var(--color-background);
 }
 
 body {
   font-family: var(--font-sans);
+  background-color: var(--color-background);
 }
 
 /* react-remove-scroll mutates body overflow/position while dialogs are open.
@@ -127,15 +129,4 @@ html body[data-scroll-locked] {
 
 h1, h2, .font-serif {
   font-family: var(--font-serif);
-}
-
-/* ─── Animations ──────────────────────────────────────── */
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.15s ease-out both;
 }

@@ -135,7 +135,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
       {/* ── Recent Species ─────────────────────────────── */}
       <div className="px-4 sm:px-6 space-y-6 pt-5 max-w-3xl mx-auto">
         {recentSpecies.length > 0 && (
-          <section className="space-y-3 animate-fade-in">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Recent Species
@@ -165,7 +165,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
 
         {/* ── Recent Outings ─────────────────────────────── */}
         {recentOutings.length > 0 && (
-          <section className="space-y-3 animate-fade-in">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Recent Outings

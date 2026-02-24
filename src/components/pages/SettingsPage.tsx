@@ -244,7 +244,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   return (
     <>
     <Confetti active={showConfetti} />
-    <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto">
       <div>
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Settings
@@ -598,7 +598,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           </button>
 
           {showEBirdHelp && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3 text-sm text-muted-foreground animate-fade-in">
+            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3 text-sm text-muted-foreground">
               <p className="font-medium text-foreground">
                 Export your eBird data in 3 steps:
               </p>

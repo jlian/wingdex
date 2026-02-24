@@ -291,7 +291,6 @@ function BootShell() {
 
 function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
-  const [initialRevealVisible, setInitialRevealVisible] = useState(false)
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useWingDexData(user.id)
 
@@ -319,13 +318,6 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   const [outingsSortField, setOutingsSortField] = useState<OutingSortField>('date')
   const [outingsSortDir, setOutingsSortDir] = useState<OutingSortDir>('desc')
   const { resolvedTheme } = useTheme()
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setInitialRevealVisible(true)
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [])
 
   const prefetchAddPhotosFlow = useCallback(() => {
     void loadAddPhotosFlow()
@@ -468,9 +460,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className={`w-full max-w-3xl mx-auto pb-8 flex-1 transition-opacity duration-100 ease-out ${initialRevealVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <main className="w-full max-w-3xl mx-auto pb-8 flex-1">
           {tab === 'home' && (
-            <TabsContent value="home" className="mt-0 animate-fade-in">
+            <TabsContent value="home" className="mt-0">
               <HomePage
                 data={data}
                 onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
@@ -483,7 +475,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'outings' && (
-            <TabsContent value="outings" className="mt-0 animate-fade-in">
+            <TabsContent value="outings" className="mt-0">
               <Suspense fallback={null}>
                 <OutingsPage
                   data={data}
@@ -501,7 +493,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'wingdex' && (
-            <TabsContent value="wingdex" className="mt-0 animate-fade-in">
+            <TabsContent value="wingdex" className="mt-0">
               <Suspense fallback={null}>
                 <WingDexPage
                   data={data}
@@ -521,7 +513,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'settings' && (
-            <TabsContent value="settings" className="mt-0 animate-fade-in">
+            <TabsContent value="settings" className="mt-0">
               <Suspense fallback={null}>
                 <SettingsPage
                   data={data}
@@ -535,7 +527,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'terms' && (
-            <TabsContent value="terms" className="mt-0 animate-fade-in">
+            <TabsContent value="terms" className="mt-0">
               <Suspense fallback={null}>
                 <TermsPage />
               </Suspense>
@@ -543,7 +535,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           )}
 
           {tab === 'privacy' && (
-            <TabsContent value="privacy" className="mt-0 animate-fade-in">
+            <TabsContent value="privacy" className="mt-0">
               <Suspense fallback={null}>
                 <PrivacyPage />
               </Suspense>
