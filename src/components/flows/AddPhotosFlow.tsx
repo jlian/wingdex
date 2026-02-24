@@ -352,9 +352,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         .slice(0, 3)
         .join(', ')
       const uniqueCount = new Set(confirmed.map(r => r.species)).size
-      const savedMessage = `Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`
-      const combinedMessage = hasNewSpecies ? `${savedMessage} ${liferMessage}` : savedMessage
-      toast.success(combinedMessage, { duration: 6000 })
+      toast.success(`Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
+    }
+
+    if (hasNewSpecies) {
+      toast(liferMessage, { duration: 6000 })
     }
 
     if (hasNewSpecies) {
