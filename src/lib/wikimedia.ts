@@ -34,6 +34,45 @@ const restInFlight = new Map<string, Promise<RestSummary | undefined>>()
 /** Cache for wiki-title API lookups. */
 const wikiTitleCache = new Map<string, { wikiTitle: string | null; common: string | null; scientific: string | null }>()
 
+// ── localStorage persistence for restCache ───────────────────────────
+const STORAGE_KEY = 'wiki-rest-cache'
+const MAX_CACHED_ENTRIES = 200
+
+/** Hydrate restCache from localStorage on module load. */
+function hydrateRestCache(): void {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const entries = JSON.parse(raw) as Array<[string, RestSummary | null]>
+    for (const [key, value] of entries) restCache.set(key, value)
+  } catch {
+    // Corrupt or missing -- start fresh
+  }
+}
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Debounce-write restCache to localStorage (100ms). */
+function schedulePersist(): void {
+  if (persistTimer) return
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    try {
+      // Keep only the most recent MAX_CACHED_ENTRIES (by insertion order)
+      const entries = Array.from(restCache.entries())
+      const trimmed = entries.length > MAX_CACHED_ENTRIES
+        ? entries.slice(entries.length - MAX_CACHED_ENTRIES)
+        : entries
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
+    } catch {
+      // Quota exceeded or unavailable -- silently skip
+    }
+  }, 100)
+}
+
+// Run hydration immediately on module load
+if (typeof window !== 'undefined') hydrateRestCache()
+
 /** Fetch a Wikipedia page summary via the REST API. */
 async function fetchSummary(title: string): Promise<FetchResult> {
   try {
@@ -142,6 +181,7 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
             ? result.data
             : { ...bestSummary, thumbnail: result.data.thumbnail, originalimage: result.data.originalimage }
           restCache.set(cacheKey, merged)
+          schedulePersist()
           return merged
         }
         continue
@@ -153,11 +193,13 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
 
     if (bestSummary) {
       restCache.set(cacheKey, bestSummary)
+      schedulePersist()
       return bestSummary
     }
 
     if (!sawError) {
       restCache.set(cacheKey, null)
+      schedulePersist()
     }
     return undefined
   })()
