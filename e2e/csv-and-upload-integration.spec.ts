@@ -218,7 +218,7 @@ test.describe('CSV import + photo upload integration', () => {
     await saveObservationsResponse
 
     // Toast confirms save, then dialog auto-closes
-    await expect(page.getByText(/Saved \d+ species/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 10_000 })
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
     // Navigate to Outings and verify the new outing is visible immediately (no refresh)
@@ -358,6 +358,6 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(dialog).not.toBeVisible({ timeout: 15_000 })
 
     // Completion toast should appear after both clusters are processed
-    await expect(page.getByText(/Saved \d+ species/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 10_000 })
   })
 })
