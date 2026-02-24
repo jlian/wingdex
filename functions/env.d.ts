@@ -14,6 +14,7 @@ interface Env {
   CF_AIG_TOKEN: string
   OPENAI_API_KEY: string
   OPENAI_MODEL: string
+  OPENAI_MODEL_STRONG?: string
   AI_DAILY_LIMIT_IDENTIFY?: string
   AI_DAILY_LIMIT_SUGGEST?: string
 }
