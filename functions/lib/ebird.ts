@@ -79,7 +79,8 @@ type DexEntryForExport = {
 
 const EBIRD_RECORD_HEADERS = [
   'Common Name',
-  'Scientific Name',
+  'Genus',
+  'Species',
   'Number',
   'Species Comments',
   'Location Name',
@@ -112,6 +113,19 @@ function getDisplayName(speciesName: string): string {
 
 function getScientificName(speciesName: string): string | undefined {
   return speciesName.match(/\(([^)]+)\)/)?.[1]
+}
+
+function splitScientificName(scientificName: string): { genus: string; species: string } {
+  const cleaned = sanitizeForEBird(scientificName)
+  if (!cleaned) return { genus: '', species: '' }
+
+  const parts = cleaned.split(/\s+/)
+  if (parts.length < 2) return { genus: parts[0] || '', species: '' }
+
+  return {
+    genus: parts[0],
+    species: parts.slice(1).join(' '),
+  }
 }
 
 function formatISODate(isoString: string): string {
@@ -249,8 +263,11 @@ export function parseEBirdCSV(csvContent: string, profileTimezone?: string): Imp
       row[header] = values[headerIndex] || ''
     })
 
-    const speciesName = row['common name'] || row['species'] || row['species name']
-    const scientificName = row['scientific name'] || row['species']
+    const speciesName = row['common name'] || row['species name']
+    const scientificName =
+      row['scientific name'] ||
+      (row['genus'] && row['species'] ? `${row['genus']} ${row['species']}` : '') ||
+      row['species']
     const date = row['date'] || row['observation date'] || row['obs date']
     const location = row['location'] || row['location name'] || row['locality']
     const rawCount = (row['count'] || row['number'] || '').trim()
@@ -262,7 +279,7 @@ export function parseEBirdCSV(csvContent: string, profileTimezone?: string): Imp
     const observationNotes = row['observation details'] || row['species comments'] || ''
     const checklistNotes = row['checklist comments'] || row['submission comments'] || ''
 
-    if (speciesName && date) {
+    if ((speciesName || scientificName) && date) {
       const normalizedDate = normalizeDate(
         date,
         time,
@@ -272,8 +289,11 @@ export function parseEBirdCSV(csvContent: string, profileTimezone?: string): Imp
       )
       if (!normalizedDate) continue
 
-      const count = rawCount.toUpperCase() === 'X' ? 1 : Number.parseInt(rawCount || '1', 10)
-      const fullName = scientificName && !speciesName.includes('(') ? `${speciesName} (${scientificName})` : speciesName
+      const normalizedCountToken = rawCount.trim().toUpperCase()
+      const count = ['X', '+', '*'].includes(normalizedCountToken) ? 1 : Number.parseInt(rawCount || '1', 10)
+      const baseName = speciesName || scientificName
+      const fullName =
+        scientificName && speciesName && !speciesName.includes('(') ? `${speciesName} (${scientificName})` : baseName
 
       previews.push({
         speciesName: fullName,
@@ -414,10 +434,10 @@ export function exportOutingToEBirdCSV(
   const localMatch = outing.startTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
 
   const date = localMatch
-    ? `${localMatch[1]}-${localMatch[2]}-${localMatch[3]}`
+    ? `${localMatch[2]}/${localMatch[3]}/${localMatch[1]}`
     : (() => {
         const parsed = new Date(outing.startTime)
-        return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`
+        return `${String(parsed.getMonth() + 1).padStart(2, '0')}/${String(parsed.getDate()).padStart(2, '0')}/${parsed.getFullYear()}`
       })()
 
   const time = localMatch
@@ -431,11 +451,13 @@ export function exportOutingToEBirdCSV(
     .filter(observation => observation.certainty === 'confirmed')
     .map(observation => {
       const commonName = sanitizeForEBird(getDisplayName(observation.speciesName))
-      const scientificName = sanitizeForEBird(getScientificName(observation.speciesName) || '')
+      const scientificName = getScientificName(observation.speciesName) || ''
+      const { genus, species } = splitScientificName(scientificName)
 
       return [
         commonName,
-        scientificName,
+        genus,
+        species,
         observation.count > 0 ? String(observation.count) : 'X',
         sanitizeForEBird(observation.notes || ''),
         sanitizeForEBird(outing.locationName),
