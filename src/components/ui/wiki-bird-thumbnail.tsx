@@ -42,6 +42,7 @@ export function WikiBirdThumbnail({
         <img
           src={url}
           alt={alt ?? speciesName}
+          loading="lazy"
           onLoad={(e) => {
             const img = e.currentTarget
             setPortrait(img.naturalHeight > img.naturalWidth)
