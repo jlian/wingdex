@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -84,20 +84,7 @@ export default function OutingReview({
   const matchingOuting = findMatchingOuting(cluster, data.outings)
   const [useExistingOuting, setUseExistingOuting] = useState(!!matchingOuting)
 
-  // Automatically look up location name from GPS when enabled
-  useEffect(() => {
-    if (autoLookupGps && hasGps && !matchingOuting) {
-      void fetchLocationName(roundedLat!, roundedLon!)
-    }
-  }, [cluster.startTime, cluster.endTime]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (autoLookupGps && hasGps && matchingOuting && !useExistingOuting) {
-      void fetchLocationName(roundedLat!, roundedLon!)
-    }
-  }, [autoLookupGps, hasGps, matchingOuting, useExistingOuting, roundedLat, roundedLon])
-
-  const fetchLocationName = async (lat: number, lon: number) => {
+  const fetchLocationName = useCallback(async (lat: number, lon: number) => {
     setIsLoadingLocation(true)
     try {
       // Prefer Nominatim-native place hierarchy:
@@ -262,7 +249,20 @@ export default function OutingReview({
     } finally {
       setIsLoadingLocation(false)
     }
-  }
+  }, [defaultLocationName])
+
+  // Automatically look up location name from GPS when enabled
+  useEffect(() => {
+    if (autoLookupGps && hasGps && !matchingOuting) {
+      void fetchLocationName(roundedLat!, roundedLon!)
+    }
+  }, [autoLookupGps, hasGps, matchingOuting, fetchLocationName, roundedLat, roundedLon])
+
+  useEffect(() => {
+    if (autoLookupGps && hasGps && matchingOuting && !useExistingOuting) {
+      void fetchLocationName(roundedLat!, roundedLon!)
+    }
+  }, [autoLookupGps, hasGps, matchingOuting, useExistingOuting, roundedLat, roundedLon, fetchLocationName])
 
   const doConfirm = (name: string) => {
     if (useExistingOuting && matchingOuting) {
