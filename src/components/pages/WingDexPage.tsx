@@ -384,7 +384,7 @@ function SpeciesDetail({
   return (
     <div className="max-w-3xl mx-auto pb-8">
       {/* Back button */}
-      <div className="px-4 sm:px-6 pt-4 pb-2">
+      <div className="px-4 sm:px-6 pt-6 pb-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft size={20} />
           Back
