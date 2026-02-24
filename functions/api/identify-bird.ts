@@ -79,10 +79,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         throw new HttpError(400, 'Invalid JSON body')
       }
 
-      imageDataUrl = String(body.imageDataUrl || '')
-      if (!imageDataUrl.startsWith('data:image/')) {
+      const rawImageDataUrl = body.imageDataUrl
+      if (typeof rawImageDataUrl !== 'string' || !rawImageDataUrl.startsWith('data:image/')) {
         throw new HttpError(400, 'imageDataUrl must be a data URL')
       }
+      imageDataUrl = rawImageDataUrl
 
       lat = body.lat == null ? undefined : Number(body.lat)
       lon = body.lon == null ? undefined : Number(body.lon)
