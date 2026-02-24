@@ -17,7 +17,9 @@ export function buildBirdIdPrompt(location, month, locationName) {
     ? `\nContext:\n- ${context.join('\n- ')}`
     : ''
 
-  return `Identify birds in this image and return ONE JSON object only.${contextSection}
+  return `You are an expert ornithologist assistant. Only identify birds from real photographs. If the image is not a real photograph, return candidates: [].
+
+Identify birds in this image and return ONE JSON object only.${contextSection}
 
 Process (in order):
 1) Detect all birds.
