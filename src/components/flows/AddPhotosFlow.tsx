@@ -34,7 +34,9 @@ import {
   resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
-import { useBirdImage } from '@/hooks/use-bird-image'
+import { useBirdImageWithStatus } from '@/hooks/use-bird-image'
+import { getWikimediaImage } from '@/lib/wikimedia'
+import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
 
 interface AddPhotosFlowProps {
   data: WingDexDataStore
@@ -46,6 +48,29 @@ interface PhotoWithCrop extends Photo {
   croppedDataUrl?: string
   aiCropped?: boolean
   aiCropBox?: { x: number; y: number; width: number; height: number }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => window.setTimeout(resolve, ms))
+}
+
+async function waitForImageLoad(url: string, timeoutMs = 1500): Promise<void> {
+  await Promise.race([
+    new Promise<void>(resolve => {
+      const img = new Image()
+      img.onload = () => resolve()
+      img.onerror = () => resolve()
+      img.src = url
+    }),
+    wait(timeoutMs),
+  ])
+}
+
+async function prefetchWikiReference(speciesName?: string): Promise<void> {
+  if (!speciesName) return
+  const url = await getWikimediaImage(speciesName)
+  if (!url) return
+  await waitForImageLoad(url)
 }
 
 export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
@@ -151,6 +176,21 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         'fast'
       )
 
+      if (!imageUrl && (fastResult.candidates.length === 0 || fastResult.multipleBirds)) {
+        setPhotoProgress(100)
+        await wait(240)
+        if (fastResult.multipleBirds) {
+          console.log('🐦🐦 Multiple species detected by fast model, asking user to crop before escalation')
+          toast.info('Multiple bird species detected, crop to the one you want')
+          setCurrentCandidates(fastResult.candidates)
+        } else {
+          console.log('⚠️ No species identified by fast model, asking user to crop before escalation')
+          setCurrentCandidates([])
+        }
+        setStep('photo-manual-crop')
+        return
+      }
+
       const topConfidence = fastResult.candidates[0]?.confidence ?? 0
       const secondConfidence = fastResult.candidates[1]?.confidence ?? 0
       const shouldEscalate = topConfidence < 0.75 || (fastResult.candidates.length >= 2 && (topConfidence - secondConfidence) < 0.15)
@@ -180,6 +220,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
       console.log(`✅ Found ${result.candidates.length} candidates`)
       setPhotoProgress(100)
+      await wait(240)
 
       // Store AI crop box on the photo if we got one
       if (result.cropBox) {
@@ -202,6 +243,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setStep('photo-manual-crop')
       } else {
         setCurrentCandidates(result.candidates)
+        setProcessingMessage(
+          `Photo ${photoIdx + 1}/${clusterPhotos.length}: Loading reference image...`
+        )
+        await prefetchWikiReference(result.candidates[0]?.species)
         setStep('photo-confirm')
       }
     } catch (error) {
@@ -716,10 +761,11 @@ function AiZoomedPreview({
     img.onload = () => {
       const canvas = canvasRef.current
       if (!canvas) return
-      const rawSx = (cropBox.x / 100) * img.naturalWidth
-      const rawSy = (cropBox.y / 100) * img.naturalHeight
-      const rawSw = (cropBox.width / 100) * img.naturalWidth
-      const rawSh = (cropBox.height / 100) * img.naturalHeight
+      const paddedSquare = computePaddedSquareCropFromPercent(cropBox, img.naturalWidth, img.naturalHeight)
+      const rawSx = paddedSquare.x
+      const rawSy = paddedSquare.y
+      const rawSw = paddedSquare.width
+      const rawSh = paddedSquare.height
       // Defensive clamp in case AI crop values are slightly out of range
       const sx = Math.max(0, Math.min(rawSx, img.naturalWidth - 1))
       const sy = Math.max(0, Math.min(rawSy, img.naturalHeight - 1))
@@ -788,9 +834,14 @@ function PerPhotoConfirm({
   const [selectedSpecies, setSelectedSpecies] = useState(topCandidate?.species ?? '')
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const isHighConfidence = selectedConfidence >= 0.8
+  const [wikiPortrait, setWikiPortrait] = useState(false)
   
   // Fetch Wikipedia reference image for the selected species
-  const wikiImage = useBirdImage(selectedSpecies)
+  const { imageUrl: wikiImage, loading: wikiLoading } = useBirdImageWithStatus(selectedSpecies)
+
+  useEffect(() => {
+    setWikiPortrait(false)
+  }, [wikiImage])
 
   // No candidates
   if (candidates.length === 0) {
@@ -839,7 +890,7 @@ function PerPhotoConfirm({
     <div className="space-y-4">
       {/* Photo, zoomed to bird if AI crop box available */}
       <div className="flex justify-center gap-3 items-start">
-        <div className="flex justify-center" style={{ flex: '1 1 0', minWidth: 0, maxWidth: wikiImage ? '50%' : '100%' }}>
+        <div className="flex justify-center" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
           {aiCropBox && !photo.croppedDataUrl ? (
             <AiZoomedPreview
               imageUrl={photo.dataUrl || photo.thumbnail}
@@ -857,16 +908,25 @@ function PerPhotoConfirm({
         </div>
         
         {/* Wikipedia reference image */}
-        {wikiImage && (
-          <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
-            <img
-              src={wikiImage}
-              alt={`${displayName} reference`}
-              className="max-h-48 max-w-full rounded-lg object-contain border-2 border-muted"
-            />
-            <p className="text-xs text-muted-foreground">Wikipedia reference</p>
+        <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
+          <div className="w-full max-w-48 aspect-square rounded-lg border-2 border-muted overflow-hidden bg-muted/20">
+            {wikiImage ? (
+              <img
+                src={wikiImage}
+                alt={`${displayName} reference`}
+                onLoad={(event) => {
+                  const img = event.currentTarget
+                  setWikiPortrait(img.naturalHeight > img.naturalWidth)
+                }}
+                className="w-full h-full object-cover"
+                style={{ objectPosition: wikiPortrait ? 'center top' : 'center center' }}
+              />
+            ) : (
+              <div className={`w-full h-full ${wikiLoading ? 'animate-pulse' : ''}`} />
+            )}
           </div>
-        )}
+          <p className="text-xs text-muted-foreground">Wikipedia reference</p>
+        </div>
       </div>
 
       {/* Species result card */}

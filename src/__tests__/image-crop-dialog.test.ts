@@ -4,6 +4,7 @@ import {
   computePointerPosition,
   isInsideCrop,
   clampDragPosition,
+  computePaddedSquareCropFromPercent,
 } from '@/lib/crop-math'
 
 /**
@@ -137,5 +138,32 @@ describe('Crop resize logic', () => {
     // Center should be preserved
     expect(newCrop.x + newCrop.width / 2).toBe(centerX)
     expect(newCrop.y + newCrop.height / 2).toBe(centerY)
+  })
+
+  it('computes a padded square crop from percent box', () => {
+    const crop = computePaddedSquareCropFromPercent(
+      { x: 25, y: 20, width: 20, height: 30 },
+      1000,
+      800
+    )
+
+    expect(crop.width).toBeCloseTo(crop.height, 5)
+    expect(crop.x).toBeGreaterThanOrEqual(0)
+    expect(crop.y).toBeGreaterThanOrEqual(0)
+    expect(crop.x + crop.width).toBeLessThanOrEqual(1000)
+    expect(crop.y + crop.height).toBeLessThanOrEqual(800)
+  })
+
+  it('clamps padded square crop to image bounds near edges', () => {
+    const crop = computePaddedSquareCropFromPercent(
+      { x: 92, y: 90, width: 12, height: 15 },
+      1200,
+      900
+    )
+
+    expect(crop.x + crop.width).toBeLessThanOrEqual(1200)
+    expect(crop.y + crop.height).toBeLessThanOrEqual(900)
+    expect(crop.x).toBeGreaterThanOrEqual(0)
+    expect(crop.y).toBeGreaterThanOrEqual(0)
   })
 })
