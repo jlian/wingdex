@@ -148,10 +148,11 @@ describe('identifyBirdInPhoto', () => {
 
     const [url, opts] = mockFetch.mock.calls[0]
     expect(url).toBe('/api/identify-bird')
-    const body = opts.body as FormData
-    expect(body.get('lat')).toBe('40.7128')
-    expect(body.get('lon')).toBe('-74.006')
-    expect(body.get('month')).toBe('5')
+    const body = JSON.parse(opts.body as string)
+    expect(body.lat).toBe(40.7128)
+    expect(body.lon).toBe(-74.006)
+    expect(body.month).toBe(5)
+    expect(body.model).toBe('fast')
   })
 
   it('passes location name context field to the identify API request', async () => {
@@ -168,11 +169,11 @@ describe('identifyBirdInPhoto', () => {
     )
 
     const [, opts] = mockFetch.mock.calls[0]
-    const body = opts.body as FormData
-    expect(body.get('locationName')).toBe("Da'an District, Taipei, Taiwan")
-    expect(body.get('lat')).toBe('25.0306')
-    expect(body.get('lon')).toBe('121.5354')
-    expect(body.get('month')).toBe('11')
+    const body = JSON.parse(opts.body as string)
+    expect(body.locationName).toBe("Da'an District, Taipei, Taiwan")
+    expect(body.lat).toBe(25.0306)
+    expect(body.lon).toBe(121.5354)
+    expect(body.month).toBe(11)
   })
 
   it('compresses oversized images to max 640px with quality 0.7 before upload', async () => {
@@ -186,8 +187,26 @@ describe('identifyBirdInPhoto', () => {
     expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.7)
 
     const [, opts] = mockFetch.mock.calls[0]
-    const body = opts.body as FormData
-    expect(body.get('imageWidth')).toBe('640')
-    expect(body.get('imageHeight')).toBe('320')
+    const body = JSON.parse(opts.body as string)
+    expect(body.imageWidth).toBe(640)
+    expect(body.imageHeight).toBe(320)
+  })
+
+  it('passes strong model tier when requested', async () => {
+    mockApiResponse({
+      candidates: [{ species: 'Great Blue Heron', confidence: 0.91 }],
+    })
+
+    await identifyBirdInPhoto(
+      'data:image/jpeg;base64,test',
+      undefined,
+      undefined,
+      undefined,
+      'strong'
+    )
+
+    const [, opts] = mockFetch.mock.calls[0]
+    const body = JSON.parse(opts.body as string)
+    expect(body.model).toBe('strong')
   })
 })

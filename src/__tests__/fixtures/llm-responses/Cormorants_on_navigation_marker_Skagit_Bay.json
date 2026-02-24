@@ -6,7 +6,7 @@
     "month": 6,
     "locationName": "Skagit Bay, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Pelagic Cormorant (Urile pelagicus)\",\"confidence\":0.85},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.70}],\"birdCenter\":[50,40],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Pelagic Cormorant (Urile pelagicus)\",\"confidence\":0.85},{\"species\":\"Double-crested Cormorant (Nannopterum auritum)\",\"confidence\":0.65}],\"birdCenter\":[50,40],\"birdSize\":\"small\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
@@ -14,17 +14,29 @@
         "confidence": 0.85
       },
       {
-        "species": "Glaucous-winged Gull (Larus glaucescens)",
-        "confidence": 0.7
+        "species": "Double-crested Cormorant (Nannopterum auritum)",
+        "confidence": 0.65
       }
     ],
     "birdCenter": [
       50,
       40
     ],
-    "birdSize": "medium",
+    "birdSize": "small",
     "multipleBirds": true
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:27.868Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1683,
+  "capturedAt": "2026-02-24T00:53:24.196Z",
+  "promotedAt": "2026-02-24T01:18:06.937Z"
 }

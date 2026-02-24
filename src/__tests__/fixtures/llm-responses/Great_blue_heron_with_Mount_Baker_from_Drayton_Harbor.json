@@ -6,12 +6,16 @@
     "month": 9,
     "locationName": "Drayton Harbor, Blaine, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.90}],\"birdCenter\":[50,85],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.9},{\"species\":\"Double-crested Cormorant (Phalacrocorax auritus)\",\"confidence\":0.4}],\"birdCenter\":[50,85],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Blue Heron (Ardea herodias)",
         "confidence": 0.9
+      },
+      {
+        "species": "Double-crested Cormorant (Phalacrocorax auritus)",
+        "confidence": 0.4
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:15.633Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1678,
+  "capturedAt": "2026-02-24T00:40:57.997Z",
+  "promotedAt": "2026-02-24T01:18:06.939Z"
 }

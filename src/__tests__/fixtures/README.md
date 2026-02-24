@@ -1,58 +1,62 @@
 # AI Test Fixtures
 
-Golden response fixtures for deterministic AI tests. No network calls needed in CI.
+Golden fixtures for deterministic replay tests in `src/__tests__/ai-fixture-replay.test.ts`.
+No network calls are made in CI when replaying these files.
 
-## Structure
+## Current refresh workflow (matrix-first)
 
-```
-fixtures/llm-responses/
-  American_goldfinch_in_maple_at_Union_Bay_Natural_Area.json
-  Anna's_hummingbird_in_Seattle_garden.json
-  Chukar_partridge_near_Haleakala_summit_Maui.json
-  Cormorants_on_navigation_marker_Skagit_Bay.json
-  Dark-eyed_junco_in_foliage_Seattle_Arboretum.json
-  Geese_in_misty_rice_paddies_Dehua_Fujian.json
-  Pigeons_near_Museumplein_Amsterdam.json
-  Stellers_Jay_eating_cherries_Seattle_backyard.json
-```
-
-Each fixture contains:
-- `imageFile`, source image filename
-- `context`, GPS/month/location passed to the prompt
-- `rawResponse`, exact LLM response string
-- `parsed`, parsed JSON (candidates, birdCenter, birdSize, multipleBirds)
-- `model`, model used (e.g. `openai/gpt-4.1-mini`)
-- `capturedAt`, ISO timestamp
-
-## Refreshing fixtures
-
-Requires `GITHUB_MODELS_TOKEN` (or `GITHUB_TOKEN`) with access to GitHub Models:
+Use the consolidated matrix capture first, then promote a stable baseline:
 
 ```bash
-# Delete existing fixtures to force re-capture
-rm src/__tests__/fixtures/llm-responses/*.json
+# 1) Run matrix capture (LLM + runtime x fast + strong x 3 runs)
+npm run fixtures:matrix
 
-# Capture fresh responses
-GITHUB_MODELS_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
+# 2) Promote baseline fixtures (default source: llm, model: fast)
+npm run fixtures:baseline:promote
 
-# Or overwrite existing files in-place
-FIXTURE_OVERWRITE=true GITHUB_MODELS_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
-
-# Optional tuning (defaults shown)
-FIXTURE_RESIZE_MAX_DIM=640 FIXTURE_JPEG_QUALITY=70 GITHUB_MODELS_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
+# Optional: promote strong-tier baseline instead
+npm run fixtures:baseline:promote:strong
 ```
 
-The script skips fixtures that already exist. To add a new image, edit the
-`IMAGES` array in `scripts/capture-llm-fixtures.mjs`.
+This flow writes:
+- matrix artifacts to `test-results/fixture-matrix/`
+- promoted golden fixtures to `src/__tests__/fixtures/llm-responses/`
+
+## Fixture fields
+
+Each promoted fixture contains:
+- `imageFile`: source image filename
+- `context`: GPS/month/location passed to prompt/runtime
+- `rawResponse`: JSON string of promoted response
+- `parsed`: parsed JSON (candidates, birdCenter, birdSize, multipleBirds)
+- `model`: model used for promoted baseline
+- `requestConfig`: includes promotion metadata (`promotedFromMatrix`, source/model tier)
+- `durationMs`: promoted request latency
+- `capturedAt`: timestamp from selected matrix run
+- `promotedAt`: timestamp when fixture was promoted
+
+## Matrix configuration
+
+`scripts/run-fixture-matrix.mjs` supports:
+- `MATRIX_RUNS` (default `3`)
+- `MATRIX_FIXTURE_LIMIT` (default `0` = all fixtures)
+- `MATRIX_DELAY_MS` (default `300`)
+- `FIXTURE_RESIZE_MAX_DIM` (default `640`)
+- `FIXTURE_JPEG_QUALITY` (default `70`)
+
+Required credentials/env for matrix capture:
+- `OPENAI_API_KEY` (or `.dev.vars`)
+- `CF_ACCOUNT_ID` + `AI_GATEWAY_ID` (or `FIXTURE_API_URL`)
+- healthy local runtime API (auto-detected on `:5000`/`:8788`, or set `RUNTIME_BASE_URL`)
 
 ## When to refresh
 
-- After changing the vision prompt or parsing flow in `functions/lib/bird-id.ts`
-- After updating the taxonomy (`src/lib/taxonomy.json`)
-- After model upgrades (e.g. `gpt-5-nano` → `gpt-4.1-mini`)
-- Periodically to catch model drift (quarterly suggested)
+- After prompt changes in `functions/lib/bird-id-prompt.js`
+- After taxonomy updates in `src/lib/taxonomy.json`
+- After model changes (`OPENAI_MODEL` / `OPENAI_MODEL_STRONG`)
+- After runtime API behavior changes in `functions/api/identify-bird.ts` or `functions/lib/bird-id.ts`
 
-## Resize behavior note
+## Notes
 
-Fixture capture resizes and converts to JPEG before send to mirror production/runtime bird ID behavior.
-Defaults: `640px` max dimension and JPEG quality `70` (equivalent to runtime quality `0.7`).
+- Matrix files are analysis artifacts and include response variance; they are not direct golden fixtures.
+- Golden fixtures should come from baseline promotion to keep replay tests stable.

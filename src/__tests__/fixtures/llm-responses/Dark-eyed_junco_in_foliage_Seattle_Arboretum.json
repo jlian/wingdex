@@ -6,21 +6,37 @@
     "month": 10,
     "locationName": "Washington Park Arboretum, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Dark-eyed Junco (Junco hyemalis)\",\"confidence\":0.90}],\"birdCenter\":[65,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Dark-eyed Junco (Junco hyemalis)\",\"confidence\":0.9},{\"species\":\"White-crowned Sparrow (Zonotrichia leucophrys)\",\"confidence\":0.5}],\"birdCenter\":[55,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Dark-eyed Junco (Junco hyemalis)",
         "confidence": 0.9
+      },
+      {
+        "species": "White-crowned Sparrow (Zonotrichia leucophrys)",
+        "confidence": 0.5
       }
     ],
     "birdCenter": [
-      65,
-      50
+      55,
+      65
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:35.087Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1760,
+  "capturedAt": "2026-02-24T00:40:42.287Z",
+  "promotedAt": "2026-02-24T01:18:06.938Z"
 }

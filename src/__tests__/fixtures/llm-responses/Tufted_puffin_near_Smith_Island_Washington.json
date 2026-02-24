@@ -6,21 +6,37 @@
     "month": 7,
     "locationName": "Smith Island, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95}],\"birdCenter\":[25,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95},{\"species\":\"Horned Puffin (Fratercula corniculata)\",\"confidence\":0.6}],\"birdCenter\":[35,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Tufted Puffin (Fratercula cirrhata)",
         "confidence": 0.95
+      },
+      {
+        "species": "Horned Puffin (Fratercula corniculata)",
+        "confidence": 0.6
       }
     ],
     "birdCenter": [
-      25,
+      35,
       55
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:55.462Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1453,
+  "capturedAt": "2026-02-24T00:54:24.720Z",
+  "promotedAt": "2026-02-24T01:18:06.944Z"
 }

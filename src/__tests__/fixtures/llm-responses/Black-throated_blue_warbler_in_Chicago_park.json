@@ -6,12 +6,16 @@
     "month": 8,
     "locationName": "Montrose Point, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Black-throated Blue Warbler (Setophaga caerulescens)\",\"confidence\":0.85}],\"birdCenter\":[50,75],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Black-throated Blue Warbler (Setophaga caerulescens)\",\"confidence\":0.9},{\"species\":\"Black-and-white Warbler (Mniotilta varia)\",\"confidence\":0.55}],\"birdCenter\":[50,75],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Black-throated Blue Warbler (Setophaga caerulescens)",
-        "confidence": 0.85
+        "confidence": 0.9
+      },
+      {
+        "species": "Black-and-white Warbler (Mniotilta varia)",
+        "confidence": 0.55
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:08.337Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1724,
+  "capturedAt": "2026-02-24T00:53:04.848Z",
+  "promotedAt": "2026-02-24T01:18:06.935Z"
 }

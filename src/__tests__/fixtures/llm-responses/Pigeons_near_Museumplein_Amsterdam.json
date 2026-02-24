@@ -1,26 +1,42 @@
 {
   "imageFile": "Pigeons_near_Museumplein_Amsterdam.jpg",
   "context": {
-    "lat": 52.3579,
-    "lon": 4.8815,
-    "month": 4,
+    "lat": 52.3581,
+    "lon": 4.8826,
+    "month": 11,
     "locationName": "Museumplein, Amsterdam, Netherlands"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Rock Pigeon (Columba livia)\",\"confidence\":0.90}],\"birdCenter\":[75,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Rock Pigeon (Columba livia)\",\"confidence\":0.9},{\"species\":\"Common Wood-Pigeon (Columba palumbus)\",\"confidence\":0.4}],\"birdCenter\":[65,60],\"birdSize\":\"small\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
         "species": "Rock Pigeon (Columba livia)",
         "confidence": 0.9
+      },
+      {
+        "species": "Common Wood-Pigeon (Columba palumbus)",
+        "confidence": 0.4
       }
     ],
     "birdCenter": [
-      75,
-      65
+      65,
+      60
     ],
     "birdSize": "small",
-    "multipleBirds": false
+    "multipleBirds": true
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:14:49.817Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1570,
+  "capturedAt": "2026-02-24T00:54:14.172Z",
+  "promotedAt": "2026-02-24T01:18:06.942Z"
 }

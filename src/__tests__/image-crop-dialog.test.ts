@@ -117,23 +117,23 @@ describe('Crop resize logic', () => {
   it('resizes crop centered and clamps to image bounds', () => {
     const naturalWidth = 4000
     const naturalHeight = 3000
-    const crop = { x: 1000, y: 750, width: 2000, height: 1500 }
+    const crop = { x: 1000, y: 500, width: 2000, height: 2000 }
 
     // Simulate resize by delta
     const delta = 500
-    const newWidth = Math.max(50, Math.min(crop.width + delta, naturalWidth))
-    const newHeight = Math.max(50, Math.min(crop.height + delta, naturalHeight))
+    const maxSize = Math.min(naturalWidth, naturalHeight)
+    const newSize = Math.max(50, Math.min(crop.width + delta, maxSize))
     const centerX = crop.x + crop.width / 2
     const centerY = crop.y + crop.height / 2
     const newCrop = {
-      x: Math.max(0, Math.min(centerX - newWidth / 2, naturalWidth - newWidth)),
-      y: Math.max(0, Math.min(centerY - newHeight / 2, naturalHeight - newHeight)),
-      width: newWidth,
-      height: newHeight,
+      x: Math.max(0, Math.min(centerX - newSize / 2, naturalWidth - newSize)),
+      y: Math.max(0, Math.min(centerY - newSize / 2, naturalHeight - newSize)),
+      width: newSize,
+      height: newSize,
     }
 
     expect(newCrop.width).toBe(2500)
-    expect(newCrop.height).toBe(2000)
+    expect(newCrop.height).toBe(2500)
     // Center should be preserved
     expect(newCrop.x + newCrop.width / 2).toBe(centerX)
     expect(newCrop.y + newCrop.height / 2).toBe(centerY)

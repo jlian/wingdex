@@ -6,21 +6,37 @@
     "month": 8,
     "locationName": "Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Cardinal (Cardinalis cardinalis)\",\"confidence\":0.90}],\"birdCenter\":[40,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Northern Cardinal (Cardinalis cardinalis)\",\"confidence\":0.87},{\"species\":\"Pyrrhuloxia (Cardinalis sinuatus)\",\"confidence\":0.52}],\"birdCenter\":[70,75],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Northern Cardinal (Cardinalis cardinalis)",
-        "confidence": 0.9
+        "confidence": 0.87
+      },
+      {
+        "species": "Pyrrhuloxia (Cardinalis sinuatus)",
+        "confidence": 0.52
       }
     ],
     "birdCenter": [
-      40,
-      60
+      70,
+      75
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:23:13.585Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1711,
+  "capturedAt": "2026-02-24T00:53:36.090Z",
+  "promotedAt": "2026-02-24T01:18:06.938Z"
 }

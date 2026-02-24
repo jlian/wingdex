@@ -6,21 +6,37 @@
     "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Lesser Scaup (Aythya affinis)\",\"confidence\":0.85}],\"birdCenter\":[45,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Lesser Scaup (Aythya affinis)\",\"confidence\":0.85},{\"species\":\"Ring-necked Duck (Aythya collaris)\",\"confidence\":0.65}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Lesser Scaup (Aythya affinis)",
         "confidence": 0.85
+      },
+      {
+        "species": "Ring-necked Duck (Aythya collaris)",
+        "confidence": 0.65
       }
     ],
     "birdCenter": [
-      45,
+      40,
       55
     ],
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:40.443Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1992,
+  "capturedAt": "2026-02-24T00:41:14.818Z",
+  "promotedAt": "2026-02-24T01:18:06.941Z"
 }

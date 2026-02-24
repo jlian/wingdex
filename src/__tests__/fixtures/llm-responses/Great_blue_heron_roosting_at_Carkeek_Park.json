@@ -6,12 +6,16 @@
     "month": 7,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.95}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Blue Heron (Ardea herodias)\",\"confidence\":0.95},{\"species\":\"Gray Heron (Ardea cinerea)\",\"confidence\":0.4}],\"birdCenter\":[40,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Blue Heron (Ardea herodias)",
         "confidence": 0.95
+      },
+      {
+        "species": "Gray Heron (Ardea cinerea)",
+        "confidence": 0.4
       }
     ],
     "birdCenter": [
@@ -21,6 +25,18 @@
     "birdSize": "medium",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:07.441Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1643,
+  "capturedAt": "2026-02-24T00:53:44.067Z",
+  "promotedAt": "2026-02-24T01:18:06.939Z"
 }

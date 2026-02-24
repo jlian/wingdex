@@ -6,21 +6,37 @@
     "month": 6,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Leuconotopicus villosus)\",\"confidence\":0.90}],\"birdCenter\":[38,52],\"birdSize\":\"medium\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Leuconotopicus villosus)\",\"confidence\":0.9},{\"species\":\"Downy Woodpecker (Dryobates pubescens)\",\"confidence\":0.6}],\"birdCenter\":[40,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Hairy Woodpecker (Leuconotopicus villosus)",
         "confidence": 0.9
+      },
+      {
+        "species": "Downy Woodpecker (Dryobates pubescens)",
+        "confidence": 0.6
       }
     ],
     "birdCenter": [
-      38,
-      52
+      40,
+      50
     ],
-    "birdSize": "medium",
+    "birdSize": "small",
     "multipleBirds": false
   },
-  "model": "openai/gpt-4.1-mini",
-  "capturedAt": "2026-02-16T04:22:30.580Z"
+  "model": "gpt-4.1-mini",
+  "requestConfig": {
+    "promotedFromMatrix": true,
+    "source": "llm",
+    "modelTier": "fast",
+    "tokenParam": "max_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": null,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70
+  },
+  "durationMs": 1738,
+  "capturedAt": "2026-02-24T00:41:07.184Z",
+  "promotedAt": "2026-02-24T01:18:06.940Z"
 }
