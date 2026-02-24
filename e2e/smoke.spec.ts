@@ -143,10 +143,10 @@ test.describe('App smoke tests', () => {
     // Should show the extracting step with progress
     await expect(
       page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 5_000 });
 
     // Should eventually reach the review outing step
-    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 10_000 });
 
     // Review step should show outing details and a continue button
     await expect(
@@ -168,7 +168,7 @@ test.describe('App smoke tests', () => {
     ]);
 
     // Should reach the review outing step
-    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 10_000 });
 
     // Should show the photo count somewhere in the review
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -188,7 +188,7 @@ test.describe('App smoke tests', () => {
     // Wait for the wizard to advance past the upload step
     await expect(
       page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 5_000 });
 
     // Try to close via the X button, should show confirmation
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
@@ -216,7 +216,7 @@ test.describe('App smoke tests', () => {
 
     await expect(
       page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 5_000 });
 
     // Try to close
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();

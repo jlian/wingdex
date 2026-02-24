@@ -25,7 +25,7 @@ test.describe('Passkey upgrade auth gate', () => {
       expect(anonymousIdentify.status()).not.toBe(403)
     }
 
-    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 5_000 })
     await expect(page.getByRole('button', { name: 'Log in' })).toHaveCount(0)
 
     const upgradedIdentify = await page.request.post('/api/identify-bird', {

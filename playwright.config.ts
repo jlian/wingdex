@@ -1,10 +1,13 @@
 import { defineConfig } from '@playwright/test';
 
+const isCI = !!process.env.CI;
+
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30_000,
-  retries: 1,
-  reporter: process.env.CI ? 'line' : 'list',
+  timeout: isCI ? 15_000 : 10_000,
+  retries: isCI ? 1 : 0,
+  workers: isCI ? 2 : 4,
+  reporter: isCI ? 'line' : 'list',
   use: {
     baseURL: 'http://localhost:5000',
     headless: true,
@@ -12,12 +15,12 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: process.env.CI
+    command: isCI
       ? 'npx wrangler pages dev dist --port 5000 --show-interactive-dev-session=false'
       : 'npm run dev:full:restart',
     url: 'http://localhost:5000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    reuseExistingServer: !isCI,
+    timeout: isCI ? 45_000 : 20_000,
   },
   projects: [
     {

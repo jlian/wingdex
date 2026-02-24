@@ -27,7 +27,7 @@ async function waitForServerReady(baseURL: string, timeoutMs: number) {
 
 test.describe('API smoke (request context)', () => {
   test.beforeAll(async () => {
-    await waitForServerReady(API_BASE, 20_000)
+    await waitForServerReady(API_BASE, 10_000)
   })
 
   test('anonymous auth + protected data CRUD', async () => {

@@ -48,7 +48,7 @@ async function registerVirtualPasskey(page: Page) {
     await page.getByRole('button', { name: 'Sign up' }).click()
     await page.getByRole('button', { name: 'Sign up with a Passkey' }).click()
 
-    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 10_000 })
   } finally {
     await cdp
       .send('WebAuthn.removeVirtualAuthenticator', { authenticatorId: added.authenticatorId })
@@ -73,7 +73,7 @@ export async function loadApp(page: Page, { promote = true } = {}) {
     }
     await page.goto('/', { waitUntil: 'domcontentloaded' })
   }
-  await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('header')).toBeVisible({ timeout: 5_000 })
 
   if (promote) {
     await promoteAnonymousUser(page)
@@ -105,7 +105,7 @@ export async function promoteAnonymousUser(page: Page) {
   const sessionAfter = await getSessionState(page)
   if (sessionAfter.hasUser && !sessionAfter.isAnonymous) {
     await page.reload()
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('header')).toBeVisible({ timeout: 5_000 })
     return
   }
 
@@ -132,7 +132,7 @@ export async function seedViaCSVImport(page: Page) {
   await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
 
   // Wait for the import to fully complete
-  await expect(page.getByText(/Imported.*species/i)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/Imported.*species/i)).toBeVisible({ timeout: 10_000 })
 
   // Navigate back to Home
   await page.getByRole('button', { name: 'Home' }).click()

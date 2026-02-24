@@ -128,7 +128,7 @@ test.describe('Dark mode', () => {
 
     // Reload the page (without clearing localStorage)
     await page.reload();
-    await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('header')).toBeVisible({ timeout: 5_000 });
 
     // .dark class should still be present
     await expect(page.locator('html')).toHaveClass(/dark/);

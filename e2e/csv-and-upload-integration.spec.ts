@@ -200,13 +200,13 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Should reach Review Outing step
     const dialog = page.getByRole('dialog')
-    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
 
     // Click continue to species identification
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
 
     // Wait for AI processing, then the confirm step (scope to dialog)
-    await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 10_000 })
 
     const saveObservationsResponse = page.waitForResponse(
       response => response.url().includes('/api/data/observations') && response.request().method() === 'POST'
@@ -218,18 +218,18 @@ test.describe('CSV import + photo upload integration', () => {
     await saveObservationsResponse
 
     // Toast confirms save, then dialog auto-closes
-    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
 
     // Navigate to Outings and verify the new outing is visible immediately (no refresh)
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
     const outingsPanel = page.getByRole('tabpanel', { name: 'Outings' })
-    await expect(outingsPanel.getByText('Haleakala National Park, Maui')).toBeVisible({ timeout: 10_000 })
+    await expect(outingsPanel.getByText('Haleakala National Park, Maui')).toBeVisible({ timeout: 5_000 })
 
     // Navigate to WingDex to verify the species was saved
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.getByPlaceholder('Search species...')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByPlaceholder('Search species...')).toBeVisible({ timeout: 5_000 })
     await page.getByPlaceholder('Search species...').fill('chukar')
 
     await expect(
@@ -245,10 +245,10 @@ test.describe('CSV import + photo upload integration', () => {
     // Set timezone and import CSV (default is already Pacific, no need to change)
     const csvInput = page.locator('input[type="file"][accept*=".csv"]')
     await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
-    await expect(page.getByText(/Imported.*species/)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Imported.*species/)).toBeVisible({ timeout: 5_000 })
 
     // Wait for the toast to dismiss
-    await expect(page.getByText(/Imported.*species/)).not.toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Imported.*species/)).not.toBeVisible({ timeout: 5_000 })
 
     // Verify Chukar is in the dex from CSV
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
@@ -274,13 +274,13 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Review outing → continue → confirm (scope to dialog)
     const dialog = page.getByRole('dialog')
-    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
-    await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
     // Dialog auto-closes after species save
-    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
     // Go to WingDex, Chukar should still be there (converged, not duplicated)
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
@@ -335,29 +335,29 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Should reach Review Outing step for the first cluster
     const dialog = page.getByRole('dialog')
-    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
 
     // The wizard should indicate multiple clusters (e.g., "Review Outing 1 of 2")
     await expect(dialog.getByRole('heading', { name: /Review Outing 1 of 2/i })).toBeVisible({ timeout: 5_000 })
 
     // Confirm first outing → identify species → confirm
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
-    await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
     // Should advance to second cluster's Review Outing step
-    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
     await expect(dialog.getByRole('heading', { name: /Review Outing 2 of 2/i })).toBeVisible({ timeout: 5_000 })
 
     // Confirm second outing
     await dialog.getByRole('button', { name: /Continue to Species/i }).click()
-    await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 15_000 })
+    await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
     // Dialog auto-closes after all clusters are saved
-    await expect(dialog).not.toBeVisible({ timeout: 15_000 })
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 })
 
     // Completion toast should appear after both clusters are processed
-    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 5_000 })
   })
 })
