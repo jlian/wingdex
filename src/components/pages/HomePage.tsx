@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
@@ -71,18 +70,21 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               WingDex. <em>Reverse birding</em> at its finest.
             </p>
           </div>
-          <Button
-            size="lg"
+          <button
             onClick={onAddPhotos}
             onPointerDown={onAddPhotosIntent}
             onMouseEnter={onAddPhotosIntent}
             onFocus={onAddPhotosIntent}
             onTouchStart={onAddPhotosIntent}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
+              bg-gradient-to-r from-emerald-600 to-teal-500
+              text-white text-base
+              shadow-sm hover:brightness-105 active:scale-[0.97]
+              transition-all duration-150 cursor-pointer flex-shrink-0"
           >
-            <Camera size={20} className="mr-2" weight="bold" />
+            <Camera size={20} weight="bold" />
             Upload & Identify
-          </Button>
+          </button>
         </div>
       </div>
     )
