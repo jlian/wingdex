@@ -25,7 +25,15 @@ function decodePreviewId(previewId: string): ImportPreview | null {
 async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return names.has('stateProvince') && names.has('countryCode')
+  return (
+    names.has('stateProvince') &&
+    names.has('countryCode') &&
+    names.has('protocol') &&
+    names.has('numberObservers') &&
+    names.has('allObsReported') &&
+    names.has('effortDistanceMiles') &&
+    names.has('effortAreaAcres')
+  )
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -68,8 +76,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       insertStatements.push(
         context.env.DB
           .prepare(
-            `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+            `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes, createdAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`
           )
           .bind(
             outing.id,
@@ -82,6 +90,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
             outing.lon ?? null,
             outing.stateProvince ?? null,
             outing.countryCode ?? null,
+            outing.protocol ?? null,
+            outing.numberObservers ?? null,
+            outing.allObsReported == null ? null : outing.allObsReported ? 1 : 0,
+            outing.effortDistanceMiles ?? null,
+            outing.effortAreaAcres ?? null,
             outing.notes,
             outing.createdAt
           )

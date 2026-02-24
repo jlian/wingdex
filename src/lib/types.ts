@@ -20,6 +20,11 @@ export interface Outing {
   lon?: number
   stateProvince?: string
   countryCode?: string
+  protocol?: string
+  numberObservers?: number
+  allObsReported?: boolean
+  effortDistanceMiles?: number
+  effortAreaAcres?: number
   notes: string
   createdAt: string
 }

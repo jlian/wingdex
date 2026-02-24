@@ -1230,4 +1230,27 @@ describe('eBird CSV utilities', () => {
       expect(previews[0].date).toContain('2025-01-15')
       expect(previews[0].date).toContain('11:07')
     })
+
+    it('imports checklist effort metadata and re-exports it', () => {
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,3,US-WA,King,L1,Park,47.6,-122.4,2025-01-15,11:07 AM,Traveling,45,1,2.5,20,2,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv, 'America/Los_Angeles')
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+
+      expect(outings).toHaveLength(1)
+      expect(outings[0].protocol).toBe('Traveling')
+      expect(outings[0].numberObservers).toBe(2)
+      expect(outings[0].allObsReported).toBe(true)
+      expect(outings[0].effortDistanceMiles).toBeCloseTo(2.5 * 0.621371, 6)
+      expect(outings[0].effortAreaAcres).toBeCloseTo(20 * 2.47105, 6)
+
+      const exported = exportOutingToEBirdCSV(outings[0], observations, false)
+      const cells = parseCSVLineForTest(exported).map(value => value.replace(/^"|"$/g, ''))
+
+      expect(cells[12]).toBe('Traveling')
+      expect(cells[13]).toBe('2')
+      expect(cells[15]).toBe('Y')
+    })
   })

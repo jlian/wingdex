@@ -9,6 +9,11 @@ type ExportRow = {
   lon?: number | null
   stateProvince?: string | null
   countryCode?: string | null
+  protocol?: string | null
+  numberObservers?: number | null
+  allObsReported?: number | null
+  effortDistanceMiles?: number | null
+  effortAreaAcres?: number | null
   outingNotes?: string | null
   speciesName: string
   count: number
@@ -19,7 +24,15 @@ type ExportRow = {
 async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return names.has('stateProvince') && names.has('countryCode')
+  return (
+    names.has('stateProvince') &&
+    names.has('countryCode') &&
+    names.has('protocol') &&
+    names.has('numberObservers') &&
+    names.has('allObsReported') &&
+    names.has('effortDistanceMiles') &&
+    names.has('effortAreaAcres')
+  )
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -39,6 +52,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
          o.lon,
          o.stateProvince,
          o.countryCode,
+         o.protocol,
+         o.numberObservers,
+         o.allObsReported,
+         o.effortDistanceMiles,
+         o.effortAreaAcres,
          o.notes as outingNotes,
          ob.speciesName,
          ob.count,
@@ -57,6 +75,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
          o.lon,
          NULL as stateProvince,
          NULL as countryCode,
+         NULL as protocol,
+         NULL as numberObservers,
+         NULL as allObsReported,
+         NULL as effortDistanceMiles,
+         NULL as effortAreaAcres,
          o.notes as outingNotes,
          ob.speciesName,
          ob.count,
@@ -116,6 +139,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         lon: first.lon,
         stateProvince: first.stateProvince,
         countryCode: first.countryCode,
+        protocol: first.protocol,
+        numberObservers: first.numberObservers,
+        allObsReported: first.allObsReported == null ? null : first.allObsReported === 1,
+        effortDistanceMiles: first.effortDistanceMiles,
+        effortAreaAcres: first.effortAreaAcres,
         notes: first.outingNotes,
       },
       outingRows.map(row => ({
