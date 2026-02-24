@@ -77,6 +77,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Apply D1 migrations to preview DB
+        if: github.head_ref != 'dev' && github.head_ref != 'main'
+        run: printf 'y\n' | npx wrangler d1 migrations apply wingdex-db-dev --remote --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       # Skip deploy when the release workflow already handles this branch
       - name: Deploy preview to Cloudflare Pages
         if: github.head_ref != 'dev' && github.head_ref != 'main'
