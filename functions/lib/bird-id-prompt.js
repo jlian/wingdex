@@ -58,8 +58,9 @@ Output JSON only:
 - No bird: {"candidates":[],"birdCenter":null,"birdSize":null,"multipleBirds":false}
 
 multipleBirds:
-- Set true only when more than one bird species is confidently detected in the image.
-- Set false when all visible birds appear to be the same species, or when any additional species are too uncertain to identify.
+- Set true whenever more than one individual bird is visible, even if all appear to be the same species.
+- Set true for colonies/flocks/perched groups where multiple birds are clearly visible.
+- Set false only when exactly one bird is visible or when additional birds are too uncertain to count.
 
 birdCenter: [x, y] percentage position of the focal bird's center.
 - Values 0-100 (percentage of image width and height)
