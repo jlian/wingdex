@@ -136,6 +136,51 @@ test.describe('CSV import + photo upload integration', () => {
     }
   })
 
+  test('CSV import handles variant realistic eBird rows via UI flow', async ({ page }) => {
+    await loadApp(page)
+    await goToSettings(page)
+
+    const previewResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
+    )
+    const confirmResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/import/ebird-csv/confirm') && response.request().method() === 'POST'
+    )
+
+    await page.getByRole('button', { name: 'Import from eBird CSV' }).click()
+    await expect(page.getByRole('heading', { name: 'Import from eBird CSV' })).toBeVisible({ timeout: 5_000 })
+
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Choose CSV File' }).click()
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles(path.resolve('e2e/fixtures/ebird-import-variant.csv'))
+
+    const previewResponse = await previewResponsePromise
+    expect(previewResponse.status()).toBe(200)
+
+    const confirmResponse = await confirmResponsePromise
+    expect(confirmResponse.status()).toBe(200)
+
+    await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
+
+    await page.getByRole('tab', { name: 'Outings' }).first().click()
+    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
+    await expect(
+      page.locator('p:visible', { hasText: 'Point Reyes National Seashore' }).first()
+    ).toBeVisible({ timeout: 5_000 })
+
+    await page.getByRole('tab', { name: 'WingDex' }).first().click()
+    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
+    const wingdexSearch = page.getByPlaceholder('Search species...')
+
+    for (const species of ['Rock Pigeon', 'Northern Cardinal', 'Chukar']) {
+      await wingdexSearch.fill(species)
+      await expect(
+        page.locator('p:visible', { hasText: species }).first()
+      ).toBeVisible({ timeout: 5_000 })
+    }
+  })
+
   test('full photo upload flow: upload → AI identify → confirm → saved to WingDex', async ({ page }) => {
     await mockLLM(page, 'Chukar_partridge_near_Haleakala_summit_Maui')
     await mockNominatim(page, 'Haleakala National Park, Maui')
