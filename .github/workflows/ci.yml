@@ -15,6 +15,9 @@ jobs:
   build-and-test:
     name: Verify & Deploy Preview
     runs-on: ubuntu-latest
+    # Chromium + OS deps pre-installed; update tag when @playwright/test is bumped.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     permissions:
       contents: read
       deployments: write
@@ -36,17 +39,6 @@ jobs:
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Install Playwright browsers and deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium > /dev/null
 
       - name: Lint
         run: npm run lint
