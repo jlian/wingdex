@@ -109,12 +109,11 @@ export default function WingDexPage({
   // Load taxonomic order data lazily when family sort is selected
   useEffect(() => {
     if (effectiveSortField !== 'family') return
-    if (familyOrderLookup) return
     const names = dex.map(e => e.speciesName)
     void buildSyncOrderLookup(names).then(lookup => {
       setFamilyOrderLookup(() => lookup)
     })
-  }, [effectiveSortField, dex, familyOrderLookup])
+  }, [effectiveSortField, dex])
 
   const handleSearchQueryChange = (value: string) => {
     if (onSearchQueryChange) {

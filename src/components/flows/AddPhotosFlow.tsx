@@ -392,6 +392,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
+    // Reset accumulated stats for this new upload session
+    uploadStatsRef.current = { newSpecies: 0, outings: 0, totalSpecies: 0, totalCount: 0, locationNames: [] }
+
     setStep('extracting')
     setProgress(0)
     setProcessingMessage('Reading photo data...')
