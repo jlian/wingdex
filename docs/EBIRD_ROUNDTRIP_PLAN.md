@@ -52,7 +52,7 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Existing import of fixture-style eBird CSV remains functional.
 
 ## Execution log
-- [x] Created branch `feat/issue-73-ebird-roundtrip-export` from `main`.
+- [x] Created branch `feat/ebird-roundtrip-export` from `main`.
 - [x] Added this plan doc.
 - [x] Updated this doc to match the detailed implementation plan from chat.
 - [x] Implemented core export/import compatibility changes (library + API + UI + tests).
