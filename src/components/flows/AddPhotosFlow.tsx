@@ -7,13 +7,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { Confetti } from '@/components/ui/confetti'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
   CloudArrowUp, MapPin, CheckCircle, Question,
-  Crop, ArrowRight, ArrowLeft, SkipForward, Scissors
+  Crop, ArrowRight, ArrowLeft, SkipForward
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
@@ -37,6 +37,7 @@ import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 import { useBirdImageWithStatus } from '@/hooks/use-bird-image'
 import { getWikimediaImage } from '@/lib/wikimedia'
 import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
+import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 
 interface AddPhotosFlowProps {
   data: WingDexDataStore
@@ -85,6 +86,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [processingMessage, setProcessingMessage] = useState('')
   const [useGeoContext, setUseGeoContext] = useState(true)
   const [currentOutingId, setCurrentOutingId] = useState('')
+  const [showConfetti, setShowConfetti] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [photoResults, setPhotoResults] = useState<PhotoResult[]>([])
@@ -180,15 +182,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setPhotoProgress(100)
         await wait(240)
         if (fastResult.multipleBirds) {
-          console.log('🐦🐦 Multiple species detected by fast model, asking user to crop before escalation')
-          toast.info('Multiple bird species detected, crop to the one you want')
+          console.log('Multiple birds detected by fast model, asking user to crop before escalation')
+          toast.info('Multiple birds detected, crop to one')
           setCurrentCandidates(fastResult.candidates)
         } else {
-          console.log('⚠️ No species identified by fast model, asking user to crop before escalation')
+          console.log('No species identified by fast model, asking user to crop before escalation')
           setCurrentCandidates([])
         }
         setStep('photo-manual-crop')
-        return
+        return;
       }
 
       const topConfidence = fastResult.candidates[0]?.confidence ?? 0
@@ -233,12 +235,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
       if (result.candidates.length === 0 && !imageUrl) {
         // No species found on full image, ask user to crop and retry
-        console.log('⚠️ No species identified, asking user to crop or skip')
+        console.log('No species identified, asking user to crop or skip')
         setStep('photo-manual-crop')
       } else if (result.multipleBirds && !imageUrl) {
-        // Multiple bird species detected, let user crop to the one they want
-        console.log('🐦🐦 Multiple species detected, asking user to crop')
-        toast.info('Multiple bird species detected, crop to the one you want')
+        // Multiple birds detected, let user crop to the one they want
+        console.log('Multiple birds detected, asking user to crop')
+        toast.info('Multiple birds detected, crop to one')
         setCurrentCandidates(result.candidates)
         setStep('photo-manual-crop')
       } else {
@@ -319,6 +321,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       })
     )
 
+    let hasNewSpecies = false
+    let liferMessage = ''
+
     if (observations.length > 0) {
       data.addObservations(observations)
       const { newSpeciesCount } = data.updateDex(currentOutingId, observations)
@@ -327,6 +332,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         .filter(species => !existingSpecies.has(species))
 
       if (newSpeciesCount > 0) {
+        hasNewSpecies = true
         const preview = newSpeciesNames
           .slice(0, 3)
           .map(name => getDisplayName(name))
@@ -334,7 +340,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         const suffix = newSpeciesNames.length > 3
           ? ` +${newSpeciesNames.length - 3} more`
           : ''
-        toast.success(`🎉 ${newSpeciesCount} new species added to your WingDex: ${preview}${suffix}`)
+        liferMessage = '\uD83C\uDF89 ' + preview + suffix + ' added to your WingDex'
       }
     } else {
       toast.warning('No species were confirmed for this outing')
@@ -352,11 +358,21 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         const speciesPreview = Array.from(new Set(confirmed.map(result => getDisplayName(result.species))))
           .slice(0, 3)
           .join(', ')
-        toast.success(`Saved ${confirmed.length} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`)
+        // Fire saved toast first so the lifer toast stacks on top (Sonner shows last = topmost)
+        toast.success(`Saved ${confirmed.length} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
       }
 
-      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
-      onClose()
+      if (hasNewSpecies) {
+        toast(liferMessage, { duration: 6000 })
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3500)
+        // Delay close so confetti canvas stays mounted
+        window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+        setTimeout(() => onClose(), 1500)
+      } else {
+        window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+        onClose()
+      }
     }
   }
 
@@ -531,6 +547,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       case 'review':
         return `Review Outing${clusters.length > 1 ? ` ${currentClusterIndex + 1} of ${clusters.length}` : ''}`
       case 'photo-processing':
+        return `Identifying photo ${currentPhotoIndex + 1} of ${clusterPhotos.length}...`
       case 'photo-confirm':
         return `Photo ${currentPhotoIndex + 1} of ${clusterPhotos.length}`
       case 'photo-manual-crop':
@@ -542,6 +559,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   return (
     <>
+      <Confetti active={showConfetti} />
       <AlertDialog open={showDuplicateConfirm} onOpenChange={setShowDuplicateConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -664,31 +682,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               {fullCurrentPhoto && (
                 <div className="flex justify-center">
                   <img
-                    src={fullCurrentPhoto.thumbnail}
+                    src={fullCurrentPhoto.croppedDataUrl || fullCurrentPhoto.thumbnail}
                     alt="Current photo"
                     className="w-32 h-32 object-cover rounded-lg border-2 border-border"
                   />
                 </div>
               )}
               <Progress value={photoProgress} className="w-full" />
-              <p className="text-center text-sm text-muted-foreground">
-                {processingMessage}
-              </p>
-              {/* Photo dots */}
-              <div className="flex items-center justify-center gap-1">
-                {clusterPhotos.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 rounded-full ${
-                      i < currentPhotoIndex
-                        ? 'bg-green-500'
-                        : i === currentPhotoIndex
-                        ? 'bg-primary animate-pulse'
-                        : 'bg-muted'
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
           )}
 
@@ -771,27 +771,21 @@ function AiZoomedPreview({
       const sy = Math.max(0, Math.min(rawSy, img.naturalHeight - 1))
       const sw = Math.max(1, Math.min(rawSw, img.naturalWidth - sx))
       const sh = Math.max(1, Math.min(rawSh, img.naturalHeight - sy))
-      // Scale down to fit within max display size while preserving aspect ratio
-      const MAX_DIM = 280
-      const scale = Math.min(1, MAX_DIM / sw, MAX_DIM / sh)
-      canvas.width = Math.max(1, Math.round(sw * scale))
-      canvas.height = Math.max(1, Math.round(sh * scale))
+      // Render at a reasonable resolution for the square container
+      const OUTPUT_DIM = 384
+      canvas.width = OUTPUT_DIM
+      canvas.height = OUTPUT_DIM
       const ctx = canvas.getContext('2d')
-      if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
+      if (ctx) ctx.drawImage(img, sx, sy, sw, sh, 0, 0, OUTPUT_DIM, OUTPUT_DIM)
     }
     img.src = imageUrl
   }, [imageUrl, cropBox])
 
   return (
-    <div className="relative inline-block max-w-full">
-      <canvas
-        ref={canvasRef}
-        className="rounded-lg border-2 border-accent max-w-full h-auto"
-      />
-      <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-accent/80 text-accent-foreground shadow" title="AI auto-cropped">
-        <Scissors size={14} weight="bold" />
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="w-full h-full object-cover"
+    />
   )
 }
 
@@ -828,20 +822,14 @@ function PerPhotoConfirm({
   aiCropBox
 }: PerPhotoConfirmProps) {
   const displayImage = photo.croppedDataUrl || photo.thumbnail
-  const isAICropped = !!photo.aiCropped
   const topCandidate = candidates[0]
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [selectedSpecies, setSelectedSpecies] = useState(topCandidate?.species ?? '')
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const isHighConfidence = selectedConfidence >= 0.8
-  const [wikiPortrait, setWikiPortrait] = useState(false)
   
   // Fetch Wikipedia reference image for the selected species
   const { imageUrl: wikiImage, loading: wikiLoading } = useBirdImageWithStatus(selectedSpecies)
-
-  useEffect(() => {
-    setWikiPortrait(false)
-  }, [wikiImage])
 
   // No candidates
   if (candidates.length === 0) {
@@ -890,41 +878,35 @@ function PerPhotoConfirm({
     <div className="space-y-4">
       {/* Photo, zoomed to bird if AI crop box available */}
       <div className="flex justify-center gap-3 items-start">
-        <div className="flex justify-center" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
-          {aiCropBox && !photo.croppedDataUrl ? (
-            <AiZoomedPreview
-              imageUrl={photo.dataUrl || photo.thumbnail}
-              cropBox={aiCropBox}
-            />
-          ) : (
-            <img
-              src={displayImage}
-              alt="Your photo"
-              className={`max-h-48 max-w-full rounded-lg object-contain border-2 ${
-                isAICropped ? 'border-accent' : 'border-border'
-              }`}
-            />
+        <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
+          <div className="w-full max-w-48 aspect-square rounded-lg border-2 border-border overflow-hidden bg-muted/20">
+            {aiCropBox && !photo.croppedDataUrl ? (
+              <AiZoomedPreview
+                imageUrl={photo.dataUrl || photo.thumbnail}
+                cropBox={aiCropBox}
+              />
+            ) : (
+              <img
+                src={displayImage}
+                alt="Your photo"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+          {photo.croppedDataUrl && (
+            <p className="text-xs text-muted-foreground">Your photo (cropped)</p>
           )}
         </div>
         
         {/* Wikipedia reference image */}
         <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
-          <div className="w-full max-w-48 aspect-square rounded-lg border-2 border-muted overflow-hidden bg-muted/20">
-            {wikiImage ? (
-              <img
-                src={wikiImage}
-                alt={`${displayName} reference`}
-                onLoad={(event) => {
-                  const img = event.currentTarget
-                  setWikiPortrait(img.naturalHeight > img.naturalWidth)
-                }}
-                className="w-full h-full object-cover"
-                style={{ objectPosition: wikiPortrait ? 'center top' : 'center center' }}
-              />
-            ) : (
-              <div className={`w-full h-full ${wikiLoading ? 'animate-pulse' : ''}`} />
-            )}
-          </div>
+          <WikiBirdThumbnail
+            speciesName={selectedSpecies}
+            imageUrl={wikiImage}
+            alt={`${displayName} reference`}
+            className="w-full max-w-48 border-2 border-muted"
+            loading={wikiLoading}
+          />
           <p className="text-xs text-muted-foreground">Wikipedia reference</p>
         </div>
       </div>
@@ -940,12 +922,17 @@ function PerPhotoConfirm({
               <p className="text-sm text-muted-foreground italic">{scientificName}</p>
             )}
           </div>
-          <Badge
-            variant={isHighConfidence ? 'default' : 'secondary'}
-            className={isHighConfidence ? 'bg-green-500 text-white' : ''}
+          <span
+            className={`font-serif text-3xl font-semibold tabular-nums leading-none ${
+              confidencePct >= 80
+                ? 'text-green-600 dark:text-green-400'
+                : confidencePct >= 50
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-500 dark:text-red-400'
+            }`}
           >
             {confidencePct}%
-          </Badge>
+          </span>
         </div>
 
         {/* Confidence bar */}
@@ -972,7 +959,7 @@ function PerPhotoConfirm({
 
             <div className="flex gap-2">
               <Button
-                className="flex-1 bg-accent text-accent-foreground"
+                className="flex-1"
                 onClick={() => handleConfirm('confirmed')}
               >
                 <CheckCircle size={16} className="mr-1" weight="bold" />
@@ -984,7 +971,6 @@ function PerPhotoConfirm({
               {candidates.length > 1 && (
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => setShowAlternatives(true)}
                 >
                   {candidates.length - 1} more
@@ -996,12 +982,11 @@ function PerPhotoConfirm({
           /* LOW CONFIDENCE or alternatives expanded */
           <div className="space-y-3">
             <div className="flex gap-2">
-              <Button size="sm" className="flex-1" onClick={() => handleConfirm('confirmed')}>
+              <Button className="flex-1" onClick={() => handleConfirm('confirmed')}>
                 <CheckCircle size={16} className="mr-1" weight="bold" />
                 Confirm
               </Button>
               <Button
-                size="sm"
                 variant="outline"
                 className="flex-1"
                 onClick={() => handleConfirm('possible')}
