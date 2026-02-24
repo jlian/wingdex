@@ -3,10 +3,10 @@
  * Capture real LLM responses for test fixtures.
  *
  * Usage:
- *   GITHUB_MODELS_TOKEN=ghp_xxx node scripts/capture-llm-fixtures.mjs
+ *   OPENAI_API_KEY=sk-xxx CF_ACCOUNT_ID=... AI_GATEWAY_ID=... node scripts/capture-llm-fixtures.mjs
  *   FIXTURE_OVERWRITE=true node scripts/capture-llm-fixtures.mjs
  *
- * Reads images from src/assets/images/, sends each to the GitHub Models
+ * Reads images from src/assets/images/, sends each to the Cloudflare AI Gateway
  * vision API with the same prompt used in production, and writes the raw
  * response to src/__tests__/fixtures/llm-responses/<image-key>.json.
  *
@@ -26,6 +26,11 @@ import { basename, join } from 'node:path'
 import sharp from 'sharp'
 import { buildBirdIdPrompt } from '../functions/lib/bird-id-prompt.js'
 
+const TAXONOMY = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'src', 'lib', 'taxonomy.json'), 'utf8'))
+const SCIENTIFIC_TO_COMMON = new Map(
+  TAXONOMY.map(entry => [String(entry[1]).toLowerCase(), String(entry[0])])
+)
+
 function parseDevVars() {
   if (!existsSync('.dev.vars')) return {}
 
@@ -42,12 +47,24 @@ function parseDevVars() {
 }
 
 const DEV_VARS = parseDevVars()
-const API_URL = process.env.FIXTURE_API_URL || 'https://models.github.ai/inference/chat/completions'
-const MODEL = process.env.FIXTURE_MODEL || 'openai/gpt-4.1-mini'
-const TOKEN = process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN || DEV_VARS.GITHUB_MODELS_TOKEN || DEV_VARS.GITHUB_TOKEN
-if (!TOKEN) { console.error('GITHUB_MODELS_TOKEN (or GITHUB_TOKEN) required'); process.exit(1) }
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || DEV_VARS.CF_ACCOUNT_ID
+const AI_GATEWAY_ID = process.env.AI_GATEWAY_ID || DEV_VARS.AI_GATEWAY_ID
+const CF_AIG_TOKEN = process.env.CF_AIG_TOKEN || DEV_VARS.CF_AIG_TOKEN
+const API_URL = process.env.FIXTURE_API_URL || (
+  CF_ACCOUNT_ID && AI_GATEWAY_ID
+    ? `https://gateway.ai.cloudflare.com/v1/${CF_ACCOUNT_ID}/${AI_GATEWAY_ID}/openai/chat/completions`
+    : ''
+)
+const MODEL = process.env.FIXTURE_MODEL || 'gpt-4.1-mini'
+const TOKEN = process.env.OPENAI_API_KEY || DEV_VARS.OPENAI_API_KEY
+if (!TOKEN) { console.error('OPENAI_API_KEY required'); process.exit(1) }
+if (!API_URL) {
+  console.error('CF_ACCOUNT_ID and AI_GATEWAY_ID required unless FIXTURE_API_URL is set')
+  process.exit(1)
+}
 
 const FIXTURE_OVERWRITE = process.env.FIXTURE_OVERWRITE === 'true'
+const FIXTURE_TIMING_ONLY = process.env.FIXTURE_TIMING_ONLY === 'true'
 const MAX_COMPLETION_TOKENS = Number(process.env.FIXTURE_MAX_COMPLETION_TOKENS || 1400)
 const RESIZE_MAX_DIM = Number(process.env.FIXTURE_RESIZE_MAX_DIM || 640)
 const JPEG_QUALITY = Number(process.env.FIXTURE_JPEG_QUALITY || 70)
@@ -82,6 +99,32 @@ function withReasoningOptions(model) {
   }
 
   return {}
+}
+
+function canonicalizeSpeciesLabel(species) {
+  const label = String(species || '').trim()
+  if (!label) return label
+
+  const match = label.match(/^(.+?)\s*\(([^()]+)\)$/)
+  if (!match) return label
+
+  const scientific = match[2].trim()
+  const canonicalCommon = SCIENTIFIC_TO_COMMON.get(scientific.toLowerCase())
+  if (!canonicalCommon) return label
+
+  return `${canonicalCommon} (${scientific})`
+}
+
+function canonicalizeParsed(parsed) {
+  if (!parsed || !Array.isArray(parsed.candidates)) return parsed
+
+  return {
+    ...parsed,
+    candidates: parsed.candidates.map(candidate => ({
+      ...candidate,
+      species: canonicalizeSpeciesLabel(candidate?.species),
+    })),
+  }
 }
 
 const FIXTURE_DIR = join(import.meta.dirname, '..', 'src', '__tests__', 'fixtures', 'llm-responses')
@@ -217,7 +260,7 @@ async function captureOne(entry) {
 
   const key = entry.file.replace(/\.[^.]+$/, '')
   const outPath = join(FIXTURE_DIR, `${key}.json`)
-  if (!FIXTURE_OVERWRITE && existsSync(outPath)) {
+  if (!FIXTURE_TIMING_ONLY && !FIXTURE_OVERWRITE && existsSync(outPath)) {
     console.log(`⏭️  ${key}: fixture exists, skipping`)
     return
   }
@@ -264,76 +307,115 @@ async function captureOne(entry) {
     response_format: { type: 'json_object' },
   }
 
+  const startedAt = Date.now()
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${TOKEN}`,
       'Content-Type': 'application/json',
+      ...(CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${CF_AIG_TOKEN}` } : {}),
     },
     body: JSON.stringify(body),
   })
+  const durationMs = Date.now() - startedAt
 
   if (!res.ok) {
     const errText = await res.text()
     console.error(`❌ ${entry.file}: HTTP ${res.status}, ${errText.substring(0, 200)}`)
-    return
+    return null
   }
 
   const json = await res.json()
-  const rawResponse = json.choices[0].message.content
+  const modelRawResponse = json.choices[0].message.content
 
   let parsed = null
-  try { parsed = JSON.parse(rawResponse) } catch {}
+  try { parsed = JSON.parse(modelRawResponse) } catch {}
+  const canonicalParsed = canonicalizeParsed(parsed)
+  const rawResponse = canonicalParsed ? JSON.stringify(canonicalParsed) : modelRawResponse
 
-  const fixture = {
-    imageFile: entry.file,
-    context: {
-      lat: entry.lat,
-      lon: entry.lon,
-      month: entry.month,
-      locationName: entry.location,
-    },
-    rawResponse,
-    parsed,
-    model: MODEL,
-    requestConfig: {
-      tokenParam: shouldUseMaxCompletionTokens(MODEL) ? 'max_completion_tokens' : 'max_tokens',
-      maxCompletionTokens: MAX_COMPLETION_TOKENS,
-      reasoningEffort: withReasoningOptions(MODEL).reasoning_effort || null,
-      resizedBeforeSend: true,
-      resizeMaxDim: RESIZE_MAX_DIM,
-      jpegQuality: JPEG_QUALITY,
-      sourceDimensions: {
-        width: sourceMeta.width || null,
-        height: sourceMeta.height || null,
+  if (!FIXTURE_TIMING_ONLY) {
+    const fixture = {
+      imageFile: entry.file,
+      context: {
+        lat: entry.lat,
+        lon: entry.lon,
+        month: entry.month,
+        locationName: entry.location,
       },
-      uploadedDimensions: {
-        width: resizedMeta.width || null,
-        height: resizedMeta.height || null,
+      rawResponse,
+      parsed: canonicalParsed,
+      model: MODEL,
+      requestConfig: {
+        tokenParam: shouldUseMaxCompletionTokens(MODEL) ? 'max_completion_tokens' : 'max_tokens',
+        maxCompletionTokens: MAX_COMPLETION_TOKENS,
+        reasoningEffort: withReasoningOptions(MODEL).reasoning_effort || null,
+        resizedBeforeSend: true,
+        resizeMaxDim: RESIZE_MAX_DIM,
+        jpegQuality: JPEG_QUALITY,
+        sourceDimensions: {
+          width: sourceMeta.width || null,
+          height: sourceMeta.height || null,
+        },
+        uploadedDimensions: {
+          width: resizedMeta.width || null,
+          height: resizedMeta.height || null,
+        },
       },
-    },
-    capturedAt: new Date().toISOString(),
+      durationMs,
+      capturedAt: new Date().toISOString(),
+    }
+
+    writeFileSync(outPath, JSON.stringify(fixture, null, 2) + '\n')
   }
-
-  writeFileSync(outPath, JSON.stringify(fixture, null, 2) + '\n')
-  console.log(`✅ ${key}: ${parsed?.candidates?.length ?? 0} candidates`)
-  if (parsed?.candidates) {
-    for (const c of parsed.candidates) {
+  console.log(`✅ ${key}: ${canonicalParsed?.candidates?.length ?? 0} candidates`)
+  if (canonicalParsed?.candidates) {
+    for (const c of canonicalParsed.candidates) {
       console.log(`   ${c.species} (${c.confidence})`)
     }
   }
+
+  return durationMs
+}
+
+function percentile(sortedValues, p) {
+  if (sortedValues.length === 0) return null
+  const index = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil((p / 100) * sortedValues.length) - 1))
+  return sortedValues[index]
 }
 
 async function main() {
-  console.log(`\n🐦 Capturing LLM fixtures for ${IMAGES.length} images...\n`)
-  if (FIXTURE_OVERWRITE) {
+  console.log(`\n🐦 ${FIXTURE_TIMING_ONLY ? 'Capturing LLM timing' : 'Capturing LLM fixtures'} for ${IMAGES.length} images...\n`)
+  if (FIXTURE_TIMING_ONLY) {
+    console.log('ℹ️  FIXTURE_TIMING_ONLY=true → no fixture files will be written')
+  } else if (FIXTURE_OVERWRITE) {
     console.log('ℹ️  FIXTURE_OVERWRITE=true → existing fixture files will be replaced')
   }
+
+  const durations = []
+
   for (const entry of IMAGES) {
-    await captureOne(entry)
+    const durationMs = await captureOne(entry)
+    if (typeof durationMs === 'number') {
+      durations.push(durationMs)
+    }
     // Small delay to avoid rate limits
     await new Promise(r => setTimeout(r, 1000))
   }
+
+  if (durations.length > 0) {
+    const sorted = [...durations].sort((a, b) => a - b)
+    const median = percentile(sorted, 50)
+    const p95 = percentile(sorted, 95)
+    const min = sorted[0]
+    const max = sorted[sorted.length - 1]
+
+    console.log('\n⏱️ Timing summary (ms):')
+    console.log(`   min: ${min}`)
+    console.log(`   median: ${median}`)
+    console.log(`   p95: ${p95}`)
+    console.log(`   max: ${max}`)
+  }
+
   console.log('\n✅ Done! Fixtures written to src/__tests__/fixtures/llm-responses/')
 }
 
