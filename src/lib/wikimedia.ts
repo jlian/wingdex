@@ -34,7 +34,7 @@ const restInFlight = new Map<string, Promise<RestSummary | undefined>>()
 /** Cache for wiki-title API lookups. */
 const wikiTitleCache = new Map<string, { wikiTitle: string | null; common: string | null; scientific: string | null }>()
 
-// ── localStorage persistence for restCache ───────────────────────────
+// -- localStorage persistence for restCache ---------------------------
 const STORAGE_KEY = 'wiki-rest-cache'
 const MAX_CACHED_ENTRIES = 200
 

@@ -52,7 +52,7 @@ No behavioral change; pure dead-code removal and render optimizations.
   _Done in `de75836`._
 
 - [x] **#111 -- Memoize derived data on HomePage** \
-  Wrap `recentOutings`, `recentSpecies`, `newThisMonth`, and `totalPhotos` in `useMemo` in `src/components/pages/HomePage.tsx` (lines 49-65). WingDexPage and OutingsPage are already memoized. \
+  Wrap `recentOutings`, `recentSpecies`, and `newThisMonth` in `useMemo` in `src/components/pages/HomePage.tsx`. WingDexPage and OutingsPage are already memoized. \
   Verify: `npm run test`. \
   _Done in `e01fc0b`._
 

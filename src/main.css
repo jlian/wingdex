@@ -4,7 +4,7 @@
 @import './index.css';
 @import "tw-animate-css";
 
-/* ── Self-hosted fonts (Inter + Newsreader) ──────────────── */
+/* Self-hosted fonts (Inter + Newsreader) ---------------- */
 /* latin-ext */
 @font-face {
   font-family: 'Inter';
