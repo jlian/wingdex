@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/jlian/wingdex/compare/v1.9.0...v1.9.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* simplify PWA manifest setup and add service worker ([#200](https://github.com/jlian/wingdex/issues/200)) ([98eef83](https://github.com/jlian/wingdex/commit/98eef8341b1e193f4009b4d6f6626b346425ee74))
+
 # [1.9.0](https://github.com/jlian/wingdex/compare/v1.8.0...v1.9.0) (2026-02-24)
 
 
