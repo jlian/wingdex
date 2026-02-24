@@ -22,6 +22,16 @@
         "dev:ensure-5000"
       ],
       "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      },
       "problemMatcher": {
         "owner": "custom",
         "pattern": {
