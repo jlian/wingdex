@@ -44,13 +44,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browsers and deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium > /dev/null
-
-      - name: Install Playwright deps
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium > /dev/null
 
       - name: Lint
         run: npm run lint
