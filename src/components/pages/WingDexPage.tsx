@@ -10,6 +10,7 @@ import { BirdRow } from '@/components/ui/bird-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
+import { getWikimediaImage } from '@/lib/wikimedia'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
@@ -19,6 +20,14 @@ export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
+// Mirrors the thumbnail component behavior: apply iOS-only mitigations where
+// interactive swipe-back can otherwise expose decode-time flashes.
+const SHOULD_PREWARM_IOS_THUMBNAILS = (() => {
+  if (typeof navigator === 'undefined') return false
+  const userAgent = navigator.userAgent
+  return /iPad|iPhone|iPod/.test(userAgent)
+    || (userAgent.includes('Mac') && navigator.maxTouchPoints > 1)
+})()
 
 function getEbirdUrl(commonName: string): string {
   const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
@@ -92,6 +101,7 @@ export default function WingDexPage({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const visibleCountRef = useRef(visibleCount)
+  const warmedSpeciesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     visibleCountRef.current = visibleCount
@@ -147,6 +157,46 @@ export default function WingDexPage({
     [filteredList, visibleCount]
   )
   const hasMore = visibleCount < filteredList.length
+
+  useEffect(() => {
+    // On iOS list view, prewarm a few visible thumbnails so decode work is less
+    // likely to occur during interactive back-swipe compositing.
+    if (!SHOULD_PREWARM_IOS_THUMBNAILS || selectedSpecies) return
+
+    const speciesToWarm = visibleList
+      .map((entry) => entry.speciesName)
+      .filter((speciesName) => !warmedSpeciesRef.current.has(speciesName))
+      .slice(0, 8)
+
+    if (speciesToWarm.length === 0) return
+
+    let cancelled = false
+
+    void (async () => {
+      for (const speciesName of speciesToWarm) {
+        if (cancelled) return
+        warmedSpeciesRef.current.add(speciesName)
+
+        const url = await getWikimediaImage(speciesName)
+        if (!url || cancelled) continue
+
+        const img = new Image()
+        img.decoding = 'async'
+        img.src = url
+        if (typeof img.decode === 'function') {
+          try {
+            await img.decode()
+          } catch {
+            // Ignore decode failures and let normal rendering continue
+          }
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSpecies, visibleList])
 
   useEffect(() => {
     const node = loadMoreRef.current
@@ -486,7 +536,7 @@ function SpeciesDetail({
               {sightings.map(({ observation, outing }) => (
                 <button
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-2 rounded-lg text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors"
+                  className="flex w-full items-center gap-3 px-2 rounded-lg text-left cursor-pointer hover:bg-muted/30 active:bg-muted press-feel-subtle"
                   onClick={() => onSelectOuting(outing.id)}
                 >
                   <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />
