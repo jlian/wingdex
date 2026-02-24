@@ -690,9 +690,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {fullCurrentPhoto.croppedDataUrl ? 'Your photo (cropped)' : 'Your photo'}
-                  </p>
                 </div>
               )}
               <Progress value={photoProgress} className="w-full" />
@@ -901,7 +898,7 @@ function PerPhotoConfirm({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            {photo.croppedDataUrl ? 'Your photo (cropped)' : 'Your photo'}
+            {photo.croppedDataUrl || aiCropBox ? 'Your photo (cropped)' : 'Your photo'}
           </p>
         </div>
         
