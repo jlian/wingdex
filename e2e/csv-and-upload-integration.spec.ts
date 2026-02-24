@@ -218,9 +218,8 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Navigate home and open upload wizard
     await page.getByRole('button', { name: 'Home' }).click()
-    // After CSV import, home page shows "Add" button (not "Upload & Identify")
-    await expect(page.getByRole('button', { name: 'Add' })).toBeVisible({ timeout: 5_000 })
-    await page.getByRole('button', { name: 'Add' }).click()
+    await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 })
+    await page.getByRole('button', { name: 'Upload & Identify' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
 
     const fileInput = page.getByRole('dialog').locator('input[type="file"]')
