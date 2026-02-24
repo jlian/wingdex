@@ -1,4 +1,5 @@
 import { createAuth } from '../../lib/auth'
+import { waitForPasskeyOwnership } from '../../lib/passkey-ownership'
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const auth = createAuth(context.env, { request: context.request })
@@ -8,11 +9,21 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  let body: { name?: string } = {}
+  let body: { name?: string; passkeyId?: string } = {}
   try {
-    body = await context.request.json() as { name?: string }
+    body = await context.request.json() as { name?: string; passkeyId?: string }
   } catch {
     body = {}
+  }
+
+  const passkeyId = typeof body.passkeyId === 'string' ? body.passkeyId.trim() : ''
+  const ownsPasskey = await waitForPasskeyOwnership(
+    context.env.DB,
+    session.user.id,
+    passkeyId || undefined,
+  )
+  if (!ownsPasskey) {
+    return new Response('Passkey required', { status: 403 })
   }
 
   const requestedName = typeof body.name === 'string' ? body.name.trim() : ''
