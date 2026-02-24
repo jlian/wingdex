@@ -311,7 +311,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     const observations = Array.from(speciesMap.entries()).map(
       ([species, info]) => ({
-        id: `obs_${Date.now()}_${species.replace(/\s/g, '_')}`,
+        id: `obs_${crypto.randomUUID()}`,
         outingId: currentOutingId,
         speciesName: species,
         count: info.count,

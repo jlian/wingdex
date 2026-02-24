@@ -226,10 +226,17 @@ export function useWingDexData(userId: string) {
         fileName: photo.fileName,
       }))
 
-      void apiJson<Photo[]>('/api/data/photos', {
-        method: 'POST',
-        body: JSON.stringify(requestBody),
-      }).catch(() => undefined)
+      const postPhotos = () =>
+        apiJson<Photo[]>('/api/data/photos', {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        })
+
+      void postPhotos().catch(() => {
+        window.setTimeout(() => {
+          void postPhotos().catch(() => undefined)
+        }, 600)
+      })
     }
   }
 
