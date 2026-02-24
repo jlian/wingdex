@@ -8,6 +8,11 @@ type CreateOutingBody = {
   lon?: number
   stateProvince?: string
   countryCode?: string
+  protocol?: string
+  numberObservers?: number
+  allObsReported?: boolean
+  effortDistanceMiles?: number
+  effortAreaAcres?: number
   notes?: string
   createdAt: string
 }
@@ -38,7 +43,15 @@ function normalizeCountryCode(countryCode?: string, stateProvince?: string): str
 async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return names.has('stateProvince') && names.has('countryCode')
+  return (
+    names.has('stateProvince') &&
+    names.has('countryCode') &&
+    names.has('protocol') &&
+    names.has('numberObservers') &&
+    names.has('allObsReported') &&
+    names.has('effortDistanceMiles') &&
+    names.has('effortAreaAcres')
+  )
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -61,12 +74,26 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const notes = body.notes ?? ''
   const stateProvince = body.stateProvince?.trim() || null
   const countryCode = normalizeCountryCode(body.countryCode, stateProvince || undefined)
+  const protocol = body.protocol?.trim() || null
+  const numberObservers =
+    typeof body.numberObservers === 'number' && Number.isFinite(body.numberObservers)
+      ? Math.max(0, Math.trunc(body.numberObservers))
+      : null
+  const allObsReported = typeof body.allObsReported === 'boolean' ? (body.allObsReported ? 1 : 0) : null
+  const effortDistanceMiles =
+    typeof body.effortDistanceMiles === 'number' && Number.isFinite(body.effortDistanceMiles)
+      ? body.effortDistanceMiles
+      : null
+  const effortAreaAcres =
+    typeof body.effortAreaAcres === 'number' && Number.isFinite(body.effortAreaAcres)
+      ? body.effortAreaAcres
+      : null
   const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
 
   if (supportsRegionColumns) {
     await context.env.DB.prepare(
-      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes, createdAt)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`
     )
       .bind(
         body.id,
@@ -79,6 +106,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         body.lon ?? null,
         stateProvince,
         countryCode,
+        protocol,
+        numberObservers,
+        allObsReported,
+        effortDistanceMiles,
+        effortAreaAcres,
         notes,
         body.createdAt
       )
@@ -114,6 +146,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     lon: body.lon,
     stateProvince: stateProvince ?? undefined,
     countryCode: countryCode ?? undefined,
+    protocol: protocol ?? undefined,
+    numberObservers: numberObservers ?? undefined,
+    allObsReported: typeof body.allObsReported === 'boolean' ? body.allObsReported : undefined,
+    effortDistanceMiles: effortDistanceMiles ?? undefined,
+    effortAreaAcres: effortAreaAcres ?? undefined,
     notes,
     createdAt: body.createdAt,
   })

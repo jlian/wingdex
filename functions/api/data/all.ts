@@ -11,6 +11,11 @@ type OutingRow = {
   lon?: number | null
   stateProvince?: string | null
   countryCode?: string | null
+  protocol?: string | null
+  numberObservers?: number | null
+  allObsReported?: number | null
+  effortDistanceMiles?: number | null
+  effortAreaAcres?: number | null
   notes: string
   createdAt: string
 }
@@ -62,6 +67,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     lon: outing.lon ?? undefined,
     stateProvince: outing.stateProvince ?? undefined,
     countryCode: outing.countryCode ?? undefined,
+    protocol: outing.protocol ?? undefined,
+    numberObservers: outing.numberObservers ?? undefined,
+    allObsReported: outing.allObsReported == null ? undefined : outing.allObsReported === 1,
+    effortDistanceMiles: outing.effortDistanceMiles ?? undefined,
+    effortAreaAcres: outing.effortAreaAcres ?? undefined,
   }))
 
   const photos = photosResult.results.map(photo => ({

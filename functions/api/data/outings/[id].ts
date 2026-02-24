@@ -9,6 +9,11 @@ type UpdateOutingBody = {
   lon?: number
   stateProvince?: string
   countryCode?: string
+  protocol?: string
+  numberObservers?: number
+  allObsReported?: boolean
+  effortDistanceMiles?: number
+  effortAreaAcres?: number
   notes?: string
 }
 
@@ -74,6 +79,38 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     updateFields.push('countryCode = ?')
     bindings.push(updates.countryCode ? updates.countryCode.trim().toUpperCase() : null)
   }
+  if ('protocol' in updates) {
+    updateFields.push('protocol = ?')
+    bindings.push(updates.protocol?.trim() || null)
+  }
+  if ('numberObservers' in updates) {
+    updateFields.push('numberObservers = ?')
+    bindings.push(
+      typeof updates.numberObservers === 'number' && Number.isFinite(updates.numberObservers)
+        ? Math.max(0, Math.trunc(updates.numberObservers))
+        : null
+    )
+  }
+  if ('allObsReported' in updates) {
+    updateFields.push('allObsReported = ?')
+    bindings.push(typeof updates.allObsReported === 'boolean' ? (updates.allObsReported ? 1 : 0) : null)
+  }
+  if ('effortDistanceMiles' in updates) {
+    updateFields.push('effortDistanceMiles = ?')
+    bindings.push(
+      typeof updates.effortDistanceMiles === 'number' && Number.isFinite(updates.effortDistanceMiles)
+        ? updates.effortDistanceMiles
+        : null
+    )
+  }
+  if ('effortAreaAcres' in updates) {
+    updateFields.push('effortAreaAcres = ?')
+    bindings.push(
+      typeof updates.effortAreaAcres === 'number' && Number.isFinite(updates.effortAreaAcres)
+        ? updates.effortAreaAcres
+        : null
+    )
+  }
   if (typeof updates.notes === 'string') {
     updateFields.push('notes = ?')
     bindings.push(updates.notes)
@@ -107,6 +144,11 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       lon?: number | null
       stateProvince?: string | null
       countryCode?: string | null
+      protocol?: string | null
+      numberObservers?: number | null
+      allObsReported?: number | null
+      effortDistanceMiles?: number | null
+      effortAreaAcres?: number | null
       notes: string
       createdAt: string
     }>()
@@ -123,6 +165,11 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     lon: outing.lon ?? undefined,
     stateProvince: outing.stateProvince ?? undefined,
     countryCode: outing.countryCode ?? undefined,
+    protocol: outing.protocol ?? undefined,
+    numberObservers: outing.numberObservers ?? undefined,
+    allObsReported: outing.allObsReported == null ? undefined : outing.allObsReported === 1,
+    effortDistanceMiles: outing.effortDistanceMiles ?? undefined,
+    effortAreaAcres: outing.effortAreaAcres ?? undefined,
   })
 }
 

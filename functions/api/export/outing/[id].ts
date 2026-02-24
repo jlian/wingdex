@@ -3,7 +3,15 @@ import { exportOutingToEBirdCSV } from '../../../lib/ebird'
 async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return names.has('stateProvince') && names.has('countryCode')
+  return (
+    names.has('stateProvince') &&
+    names.has('countryCode') &&
+    names.has('protocol') &&
+    names.has('numberObservers') &&
+    names.has('allObsReported') &&
+    names.has('effortDistanceMiles') &&
+    names.has('effortAreaAcres')
+  )
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -19,8 +27,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
   const outingQuery = supportsRegionColumns
-    ? 'SELECT id, startTime, endTime, locationName, lat, lon, stateProvince, countryCode, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
-    : 'SELECT id, startTime, endTime, locationName, lat, lon, NULL as stateProvince, NULL as countryCode, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
+    ? 'SELECT id, startTime, endTime, locationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
+    : 'SELECT id, startTime, endTime, locationName, lat, lon, NULL as stateProvince, NULL as countryCode, NULL as protocol, NULL as numberObservers, NULL as allObsReported, NULL as effortDistanceMiles, NULL as effortAreaAcres, notes FROM outing WHERE id = ? AND userId = ? LIMIT 1'
 
   const outingResult = await context.env.DB
     .prepare(outingQuery)
@@ -34,6 +42,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       lon?: number | null
       stateProvince?: string | null
       countryCode?: string | null
+      protocol?: string | null
+      numberObservers?: number | null
+      allObsReported?: number | null
+      effortDistanceMiles?: number | null
+      effortAreaAcres?: number | null
       notes?: string | null
     }>()
 
@@ -56,7 +69,14 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       notes?: string | null
     }>()
 
-  const csv = exportOutingToEBirdCSV(outing, observationsResult.results, true)
+  const csv = exportOutingToEBirdCSV(
+    {
+      ...outing,
+      allObsReported: outing.allObsReported == null ? null : outing.allObsReported === 1,
+    },
+    observationsResult.results,
+    true
+  )
   const safeOutingId = outingId.replace(/[^a-zA-Z0-9._-]/g, '_')
 
   return new Response(csv, {

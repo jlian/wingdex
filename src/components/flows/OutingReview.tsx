@@ -35,6 +35,40 @@ interface OutingReviewProps {
   ) => void
 }
 
+function normalizeStateProvinceCode(raw?: string): string | undefined {
+  if (!raw) return undefined
+  const value = raw.trim().toUpperCase()
+  if (!value) return undefined
+  return /^[A-Z]{2}-[A-Z0-9]{1,6}$/.test(value) ? value : undefined
+}
+
+function extractRegionCodes(result: any): { stateProvince?: string; countryCode?: string } {
+  const address = result?.address as Record<string, string> | undefined
+  if (!address) return {}
+
+  const countryCode = address.country_code?.trim().toUpperCase()
+  const directState =
+    normalizeStateProvinceCode(address['ISO3166-2-lvl4']) ||
+    normalizeStateProvinceCode(address['ISO3166-2-lvl3']) ||
+    normalizeStateProvinceCode(address['ISO3166-2-lvl5'])
+
+  if (directState || !countryCode) {
+    return { stateProvince: directState, countryCode: countryCode || undefined }
+  }
+
+  const stateCode =
+    address.state_code?.trim().toUpperCase() ||
+    address.region_code?.trim().toUpperCase()
+  if (stateCode && /^[A-Z0-9]{1,6}$/.test(stateCode)) {
+    return {
+      stateProvince: `${countryCode}-${stateCode}`,
+      countryCode,
+    }
+  }
+
+  return { countryCode }
+}
+
 export default function OutingReview({
   cluster,
   data,
@@ -49,6 +83,8 @@ export default function OutingReview({
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
+  const [inferredStateProvince, setInferredStateProvince] = useState<string | undefined>(undefined)
+  const [inferredCountryCode, setInferredCountryCode] = useState<string | undefined>(undefined)
 
   // Compute observation-local ISO string for display and manual editing.
   // cluster.startTime is a UTC-correct Date (exifTime is offset-aware),
@@ -68,7 +104,7 @@ export default function OutingReview({
 
   // Place search (#13)
   const [placeQuery, setPlaceQuery] = useState('')
-  const [placeResults, setPlaceResults] = useState<Array<{ display_name: string; lat: string; lon: string }>>([])
+  const [placeResults, setPlaceResults] = useState<Array<{ display_name: string; lat: string; lon: string; address?: Record<string, string> }>>([])
   const [isSearchingPlace, setIsSearchingPlace] = useState(false)
   const [overriddenCoords, setOverriddenCoords] = useState<{ lat: number; lon: number } | null>(null)
 
@@ -214,23 +250,27 @@ export default function OutingReview({
       const naturePoiResult = await fetchNearbyNaturePlace()
       const naturePoiScore = scoreResult(naturePoiResult)
       let name = naturePoiScore >= 60 ? formatLabel(naturePoiResult) : ''
+      let sourceResult: any = naturePoiScore >= 60 ? naturePoiResult : null
 
       if (!name) {
         const naturalResult = await fetchReverse({ layer: 'natural', zoom: '15' })
         const naturalScore = scoreResult(naturalResult)
         if (naturalScore >= 60) {
           name = formatLabel(naturalResult)
+          sourceResult = naturalResult
         }
       }
 
       if (!name) {
         const neighborhoodResult = await fetchReverse({ layer: 'address', zoom: '14' })
         name = formatLabel(neighborhoodResult)
+        sourceResult = neighborhoodResult
       }
 
       if (!name) {
         const cityResult = await fetchReverse({ layer: 'address', zoom: '10' })
         name = formatLabel(cityResult)
+        sourceResult = cityResult
       }
 
       if (!name) throw new Error('No location name returned')
@@ -238,6 +278,9 @@ export default function OutingReview({
       console.log('✅ Location identified:', name)
       setSuggestedLocation(name)
       setLocationName(name)
+      const region = extractRegionCodes(sourceResult)
+      setInferredStateProvince(region.stateProvince)
+      setInferredCountryCode(region.countryCode)
     } catch (error) {
       console.error('❌ Reverse geocoding failed:', error)
       toast.warning('Could not look up location name, using coordinates instead')
@@ -246,6 +289,8 @@ export default function OutingReview({
       console.log('⚠️ Using fallback:', fallback)
       setSuggestedLocation(fallback)
       setLocationName(fallback)
+      setInferredStateProvince(undefined)
+      setInferredCountryCode(undefined)
     } finally {
       setIsLoadingLocation(false)
     }
@@ -284,6 +329,8 @@ export default function OutingReview({
         data.updateOuting(matchingOuting.id, {
           startTime: clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
           endTime: clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
+          stateProvince: matchingOuting.stateProvince || inferredStateProvince,
+          countryCode: matchingOuting.countryCode || inferredCountryCode,
         })
       }
 
@@ -301,6 +348,8 @@ export default function OutingReview({
       defaultLocationName: name || 'Unknown Location',
       lat: effectiveLat,
       lon: effectiveLon,
+      stateProvince: inferredStateProvince,
+      countryCode: inferredCountryCode,
       notes: '',
       createdAt: new Date().toISOString()
     }
@@ -333,6 +382,7 @@ export default function OutingReview({
       url.searchParams.set('format', 'jsonv2')
       url.searchParams.set('q', placeQuery)
       url.searchParams.set('limit', '5')
+      url.searchParams.set('addressdetails', '1')
       url.searchParams.set('accept-language', 'en')
       const res = await fetch(url.toString())
       if (!res.ok) throw new Error(`Nominatim ${res.status}`)
@@ -346,7 +396,7 @@ export default function OutingReview({
     }
   }
 
-  const selectPlace = (place: { display_name: string; lat: string; lon: string }) => {
+  const selectPlace = (place: { display_name: string; lat: string; lon: string; address?: Record<string, string> }) => {
     const lat = parseFloat(place.lat)
     const lon = parseFloat(place.lon)
     setOverriddenCoords({ lat, lon })
@@ -354,6 +404,9 @@ export default function OutingReview({
     const shortName = place.display_name.split(',').slice(0, 3).join(',').trim()
     setLocationName(shortName)
     setSuggestedLocation(shortName)
+    const region = extractRegionCodes(place)
+    setInferredStateProvince(region.stateProvince)
+    setInferredCountryCode(region.countryCode)
     setPlaceResults([])
     setPlaceQuery('')
   }

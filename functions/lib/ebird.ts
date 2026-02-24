@@ -7,6 +7,11 @@ type OutingForExport = {
   lon?: number | null
   stateProvince?: string | null
   countryCode?: string | null
+  protocol?: string | null
+  numberObservers?: number | null
+  allObsReported?: boolean | null
+  effortDistanceMiles?: number | null
+  effortAreaAcres?: number | null
   notes?: string | null
 }
 
@@ -29,6 +34,11 @@ export type ImportPreview = {
   time?: string
   submissionId?: string
   stateProvince?: string
+  protocol?: string
+  numberObservers?: number
+  allObsReported?: boolean
+  effortDistanceMiles?: number
+  effortAreaAcres?: number
   observationNotes?: string
   checklistNotes?: string
   conflict?: 'duplicate' | 'update_dates' | 'new'
@@ -46,6 +56,11 @@ export type OutingForImport = {
   lon?: number
   stateProvince?: string
   countryCode?: string
+  protocol?: string
+  numberObservers?: number
+  allObsReported?: boolean
+  effortDistanceMiles?: number
+  effortAreaAcres?: number
   notes: string
   createdAt: string
 }
@@ -302,6 +317,24 @@ export function parseEBirdCSV(csvContent: string, profileTimezone?: string): Imp
     const time = row['time'] || row['start time'] || ''
     const submissionId = row['submission id'] || ''
     const stateProvince = row['state/province'] || row['state'] || ''
+    const protocol = row['protocol'] || ''
+    const numberObservers = Number.parseInt(row['number of observers'] || '', 10)
+    const allObsToken = (row['all observations reported?'] || row['all obs reported'] || '').trim().toLowerCase()
+    const allObsReported = allObsToken === 'y' || allObsToken === 'yes' || allObsToken === '1' || allObsToken === 'true'
+    const effortDistanceMilesRaw = Number.parseFloat(row['effort distance miles'] || '')
+    const distanceKm = Number.parseFloat(row['distance traveled (km)'] || '')
+    const effortDistanceMiles = Number.isNaN(effortDistanceMilesRaw)
+      ? Number.isNaN(distanceKm)
+        ? Number.NaN
+        : distanceKm * 0.621371
+      : effortDistanceMilesRaw
+    const effortAreaAcresRaw = Number.parseFloat(row['effort area acres'] || '')
+    const areaHectares = Number.parseFloat(row['area covered (ha)'] || '')
+    const effortAreaAcres = Number.isNaN(effortAreaAcresRaw)
+      ? Number.isNaN(areaHectares)
+        ? Number.NaN
+        : areaHectares * 2.47105
+      : effortAreaAcresRaw
     const observationNotes = row['observation details'] || row['species comments'] || ''
     const checklistNotes = row['checklist comments'] || row['submission comments'] || ''
 
@@ -331,6 +364,12 @@ export function parseEBirdCSV(csvContent: string, profileTimezone?: string): Imp
         time: time || undefined,
         submissionId: submissionId || undefined,
         stateProvince: stateProvince || undefined,
+        protocol: protocol || undefined,
+        numberObservers: Number.isNaN(numberObservers) ? undefined : numberObservers,
+        allObsReported:
+          row['all observations reported?'] || row['all obs reported'] ? allObsReported : undefined,
+        effortDistanceMiles: Number.isNaN(effortDistanceMiles) ? undefined : effortDistanceMiles,
+        effortAreaAcres: Number.isNaN(effortAreaAcres) ? undefined : effortAreaAcres,
         observationNotes: observationNotes || undefined,
         checklistNotes: checklistNotes || undefined,
       })
@@ -422,6 +461,11 @@ export function groupPreviewsIntoOutings(
       lon: first.lon,
       stateProvince: first.stateProvince,
       countryCode: parseCountryCodeFromStateProvince(first.stateProvince),
+      protocol: first.protocol,
+      numberObservers: first.numberObservers,
+      allObsReported: first.allObsReported,
+      effortDistanceMiles: first.effortDistanceMiles,
+      effortAreaAcres: first.effortAreaAcres,
       notes: outingNotes,
       createdAt: new Date().toISOString(),
     })
@@ -478,6 +522,20 @@ export function exportOutingToEBirdCSV(
   const duration = computeDurationMinutes(outing.startTime, outing.endTime)
   const stateProvince = outing.stateProvince?.trim() || ''
   const countryCode = (outing.countryCode?.trim().toUpperCase() || parseCountryCodeFromStateProvince(stateProvince) || '')
+  const protocol = outing.protocol?.trim() || 'Incidental'
+  const numberObservers =
+    typeof outing.numberObservers === 'number' && Number.isFinite(outing.numberObservers)
+      ? String(Math.max(0, Math.trunc(outing.numberObservers)))
+      : '1'
+  const allObsReported = outing.allObsReported == null ? 'N' : outing.allObsReported ? 'Y' : 'N'
+  const effortDistanceMiles =
+    typeof outing.effortDistanceMiles === 'number' && Number.isFinite(outing.effortDistanceMiles)
+      ? String(outing.effortDistanceMiles)
+      : ''
+  const effortAreaAcres =
+    typeof outing.effortAreaAcres === 'number' && Number.isFinite(outing.effortAreaAcres)
+      ? String(outing.effortAreaAcres)
+      : ''
 
   const rows = observations
     .filter(observation => observation.certainty === 'confirmed')
@@ -499,12 +557,12 @@ export function exportOutingToEBirdCSV(
         time,
         stateProvince,
         countryCode,
-        'Incidental',
-        '1',
+        protocol,
+        numberObservers,
         duration,
-        'N',
-        '',
-        '',
+        allObsReported,
+        effortDistanceMiles,
+        effortAreaAcres,
         sanitizeForEBird(outing.notes || ''),
       ]
     })
