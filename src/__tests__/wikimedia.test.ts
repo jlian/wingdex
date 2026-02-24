@@ -19,6 +19,31 @@ const mockFetch = vi.fn((url: string) => {
 
 vi.stubGlobal('fetch', mockFetch)
 
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
+const localStorageMock = createLocalStorageMock()
+vi.stubGlobal('localStorage', localStorageMock)
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    configurable: true,
+  })
+}
+
 // Import after mocking
 const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
@@ -315,6 +340,52 @@ describe('shared cache between image and summary', () => {
     const imageUrl = await getWikimediaImage('Unique Osprey SC2')
     expect(imageUrl).toContain('osprey.jpg')
     expect(wikiCalls()).toHaveLength(callsAfterSummary) // no new Wikipedia calls
+  })
+})
+
+describe('localStorage cache persistence', () => {
+  beforeEach(() => {
+    mockFetch.mockClear()
+    wikiQueue.length = 0
+    wikiTitleOverride = null
+    localStorage.clear()
+  })
+
+  it('writes restCache to localStorage after a fetch', async () => {
+    mockWikiResponse(wikiPageData({
+      title: 'Persist Bird',
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/persist-bird.jpg' },
+    }))
+
+    const imageUrl = await getWikimediaImage('Persist Bird LS1')
+    expect(imageUrl).toContain('persist-bird.jpg')
+
+    await new Promise(resolve => setTimeout(resolve, 150))
+
+    const stored = localStorage.getItem('wiki-rest-cache')
+    expect(stored).toBeTruthy()
+    const entries = JSON.parse(stored as string) as Array<[string, unknown]>
+    expect(entries.some(([key]) => key === 'persist bird ls1')).toBe(true)
+  })
+
+  it('hydrates from localStorage on module re-import and avoids new Wikipedia fetch', async () => {
+    const seeded = wikiPageData({
+      title: 'Hydrate Bird',
+      thumbnail: { source: 'https://upload.wikimedia.org/thumb/hydrate-bird.jpg' },
+    })
+    localStorage.setItem('wiki-rest-cache', JSON.stringify([
+      ['hydrate bird', seeded],
+    ]))
+
+    vi.resetModules()
+    vi.stubGlobal('fetch', mockFetch)
+    const { getWikimediaImage: freshGetWikimediaImage } = await import('@/lib/wikimedia')
+
+    const callsBefore = wikiCalls().length
+    const imageUrl = await freshGetWikimediaImage('Hydrate Bird (Hydratus birdus)')
+
+    expect(imageUrl).toContain('hydrate-bird.jpg')
+    expect(wikiCalls()).toHaveLength(callsBefore)
   })
 })
 
