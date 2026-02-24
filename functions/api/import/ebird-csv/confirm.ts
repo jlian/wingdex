@@ -1,5 +1,6 @@
 import { computeDex } from '../../../lib/dex-query'
 import { groupPreviewsIntoOutings, type ImportPreview } from '../../../lib/ebird'
+import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
 
 type ConfirmBody = { previewIds: string[] }
 
@@ -20,17 +21,6 @@ function decodePreviewId(previewId: string): ImportPreview | null {
   } catch {
     return null
   }
-}
-
-async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
-  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
-  return new Set(info.results.map(column => column.name))
-}
-
-async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
-  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return names.has('speciesComments')
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -72,7 +62,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     columnNames.has('allObsReported') &&
     columnNames.has('effortDistanceMiles') &&
     columnNames.has('effortAreaAcres')
-  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
+  const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
 
   const insertStatements: D1PreparedStatement[] = []
 
@@ -165,7 +155,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
             observation.count,
             observation.certainty,
             observation.notes || null,
-            observation.notes
+            null
           )
       )
     } else {

@@ -1,15 +1,5 @@
 import { exportOutingToEBirdCSV } from '../../../lib/ebird'
-
-async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
-  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
-  return new Set(info.results.map(column => column.name))
-}
-
-async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
-  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return names.has('speciesComments')
-}
+import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
@@ -65,7 +55,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Not found', { status: 404 })
   }
 
-  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
+  const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
   const observationNotesSelect = supportsSpeciesCommentsColumn
     ? 'COALESCE(speciesComments, notes) as notes'
     : 'notes'

@@ -1,4 +1,5 @@
 import { computeDex } from '../../lib/dex-query'
+import { hasObservationColumn } from '../../lib/schema'
 
 type OutingRow = {
   id: string
@@ -42,12 +43,6 @@ type ObservationRow = {
   notes: string
 }
 
-async function hasSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
-  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return names.has('speciesComments')
-}
-
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
@@ -55,7 +50,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const db = context.env.DB
-  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
+  const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
   const observationSpeciesCommentsSelect = supportsSpeciesComments
     ? 'speciesComments'
     : 'NULL as speciesComments'
