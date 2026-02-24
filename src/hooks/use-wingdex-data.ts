@@ -472,16 +472,41 @@ export function useWingDexData(userId: string) {
     return { newSpeciesCount }
   }
 
+  const observationsByOuting = useMemo(() => {
+    const map = new Map<string, Observation[]>()
+    for (const obs of payload.observations) {
+      const list = map.get(obs.outingId)
+      if (list) list.push(obs)
+      else map.set(obs.outingId, [obs])
+    }
+    return map
+  }, [payload.observations])
+
+  const photosByOuting = useMemo(() => {
+    const map = new Map<string, Photo[]>()
+    for (const photo of payload.photos) {
+      const list = map.get(photo.outingId)
+      if (list) list.push(photo)
+      else map.set(photo.outingId, [photo])
+    }
+    return map
+  }, [payload.photos])
+
+  const dexBySpecies = useMemo(() =>
+    new Map(payload.dex.map(entry => [entry.speciesName, entry])),
+    [payload.dex]
+  )
+
   const getOutingObservations = (outingId: string) => {
-    return payload.observations.filter(observation => observation.outingId === outingId)
+    return observationsByOuting.get(outingId) ?? []
   }
 
   const getOutingPhotos = (outingId: string) => {
-    return payload.photos.filter(photo => photo.outingId === outingId)
+    return photosByOuting.get(outingId) ?? []
   }
 
   const getDexEntry = (speciesName: string) => {
-    return payload.dex.find(entry => entry.speciesName === speciesName)
+    return dexBySpecies.get(speciesName)
   }
 
   const importDexEntries = (entries: DexEntry[]) => {
