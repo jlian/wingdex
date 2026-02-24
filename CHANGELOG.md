@@ -1,3 +1,17 @@
+## [1.7.2](https://github.com/jlian/wingdex/compare/v1.7.1...v1.7.2) (2026-02-24)
+
+
+### Performance Improvements
+
+* add loading=lazy to bird thumbnail images ([#112](https://github.com/jlian/wingdex/issues/112)) ([6e0983f](https://github.com/jlian/wingdex/commit/6e0983fb236b3450e088dcf051fb2b016ab0f880))
+* build Map indices for O(1) outing/dex lookups ([#108](https://github.com/jlian/wingdex/issues/108)) ([1728766](https://github.com/jlian/wingdex/commit/17287660a636695304a12f93b11ce2e91fcf7b6e))
+* memoize derived data on HomePage ([#111](https://github.com/jlian/wingdex/issues/111)) ([4ac5e1d](https://github.com/jlian/wingdex/commit/4ac5e1dff08e9a32d0222acbcdddf9db3ac57152))
+* persist Wikipedia REST cache in localStorage ([#113](https://github.com/jlian/wingdex/issues/113)) ([83c6692](https://github.com/jlian/wingdex/commit/83c66924764c57e99b7276cced3af0e8e5480d3b))
+* remove 7 unused scaffold deps and UI files ([#114](https://github.com/jlian/wingdex/issues/114)) ([8bb00d0](https://github.com/jlian/wingdex/commit/8bb00d0fcc877339a7c68904b0952e841cca3db9))
+* self-host Inter and Newsreader fonts, remove Google Fonts CDN ([#118](https://github.com/jlian/wingdex/issues/118)) ([6224d9a](https://github.com/jlian/wingdex/commit/6224d9a9ec31b1227024f2b1f4620a53e783a5de))
+* stabilize inline handlers with useCallback in App.tsx ([#110](https://github.com/jlian/wingdex/issues/110)) ([429c647](https://github.com/jlian/wingdex/commit/429c647e047fc7adca2af548a0c3fdddc511e56c))
+* wrap BirdRow in React.memo ([#109](https://github.com/jlian/wingdex/issues/109)) ([d815848](https://github.com/jlian/wingdex/commit/d8158485ba71f18d5eaeda56e6492b909236da41))
+
 ## [1.7.1](https://github.com/jlian/wingdex/compare/v1.7.0...v1.7.1) (2026-02-24)
 
 
