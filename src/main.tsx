@@ -7,6 +7,7 @@ import { ErrorFallback } from './ErrorFallback.tsx'
 import manifestUrl from './assets/manifest.webmanifest?url&no-inline'
 
 import "./main.css"
+import "./lib/touch-press" // iOS-style delayed press highlight for touch
 
 function ensureManifestLink() {
   const existing = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null

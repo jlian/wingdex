@@ -29,9 +29,15 @@
   --ring: oklch(0.45 0.08 155);
 
   --radius: 0.75rem;
+
+  --pressed-highlight: oklch(0.82 0.03 85);
+  --pressed-highlight-hover: oklch(0.86 0.03 85);
 }
 
 .dark {
+  --pressed-highlight: oklch(0.24 0.02 155);
+  --pressed-highlight-hover: oklch(0.20 0.02 155);
+
   --background: oklch(0.18 0.02 155);
   --foreground: oklch(0.92 0.01 85);
 
@@ -129,4 +135,69 @@ html body[data-scroll-locked] {
 
 h1, h2, .font-serif {
   font-family: var(--font-serif);
+}
+
+/* Press-feel: iOS-style tactile press feedback.
+   -----------------------------------------------
+   Buttons: instant opacity dim on press, smooth fade-back on release.
+   List rows: instant background highlight on press, smooth fade-out.
+   Touch: 70ms delay before highlight (matching iOS UIKit) so scroll
+   gestures never flash. Highlight lingers briefly after lift.
+   The global touch-press.ts script manages [data-pressed] for touch.
+
+   Tuning guide (touch delay/linger live in touch-press.ts):
+   --pressed-highlight       solid bg color on press (must be opaque to hide borders)
+   --pressed-highlight-hover lighter bg color on hover (must be opaque to hide borders)
+   opacity values            lower = more visible dim; 1.0 = no dim
+   transition durations      higher = slower fade-back after release              */
+
+/* Standard: dims the whole element via opacity.
+   Good for solid buttons, gradient CTAs, text-only buttons. */
+@utility press-feel {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 100ms ease-out;          /* fade-back speed after release */
+  &[data-pressed] { opacity: 0.7; transition-duration: 0ms; }   /* touch press dim */
+  @media (hover: hover) {
+    &:hover { opacity: 0.85; }                 /* desktop hover dim (subtle) */
+    &:active { opacity: 0.7; transition-duration: 0ms; }        /* desktop click dim */
+  }
+}
+
+/* Light: touch/active dim only, no hover and no transition override.
+   Good for elements with their own hover styles (tabs, icon buttons, avatar). */
+@utility press-feel-light {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  &[data-pressed] { opacity: 0.7; }           /* touch press dim */
+  @media (hover: hover) {
+    &:active { opacity: 0.7; }                /* desktop click dim */
+  }
+}
+
+/* Subtle: opaque bg highlight instead of opacity dim.
+   Good for full-width list rows where the highlight should cover borders. */
+@utility press-feel-subtle {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 200ms ease-out; /* fade-out speed after release */
+  &[data-pressed] {
+    background-color: var(--pressed-highlight); /* touch press bg */
+    transition-duration: 0ms;                   /* instant on */
+    position: relative;
+    z-index: 1;                                 /* sit above neighbors to hide their borders */
+  }
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--pressed-highlight-hover); /* desktop hover bg (lighter) */
+      position: relative;
+      z-index: 1;
+    }
+    &:active {
+      background-color: var(--pressed-highlight); /* desktop click bg (stronger) */
+      transition-duration: 0ms;
+      position: relative;
+      z-index: 1;
+    }
+  }
 }
