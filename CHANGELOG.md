@@ -1,3 +1,32 @@
+# [1.7.0](https://github.com/jlian/wingdex/compare/v1.6.4...v1.7.0) (2026-02-24)
+
+
+### Bug Fixes
+
+* address PR review comments ([d6c5f81](https://github.com/jlian/wingdex/commit/d6c5f81f495154721dbd951a351b61175963ce56))
+* address remaining PR review comments ([502e324](https://github.com/jlian/wingdex/commit/502e324727f698288959df526a9f1d132c92a53d))
+* align crop previews and prioritize recrop before escalation ([bd92edc](https://github.com/jlian/wingdex/commit/bd92edcb22aff78a12dc6bd8655f64dd6ad6ef09))
+* dedupe species count in toast and fix useEffect deps warning ([b815d3f](https://github.com/jlian/wingdex/commit/b815d3f19d485028748cf6b9cabb82d6c5f4d2ab))
+* **e2e:** update csv-upload assertions to match completion flow ([930d98e](https://github.com/jlian/wingdex/commit/930d98e478f450cf3321d05c35fa027e0bf82f3f))
+* **ios:** remove page fade animations causing swipe-back flash ([9aa0967](https://github.com/jlian/wingdex/commit/9aa0967bb25123df72b43091ad41f833607283a2))
+* **ios:** remove remaining HomePage fade on restore ([c7524a8](https://github.com/jlian/wingdex/commit/c7524a8ad8f8683f080442afdf0ae23d46968157))
+* match logged-out button style to logged-in gradient ([c81ea3c](https://github.com/jlian/wingdex/commit/c81ea3cee80730857a6bcd6af057e6aa7bdc2767))
+* match progress image size to confirm step and always show subtitle ([1eda8d9](https://github.com/jlian/wingdex/commit/1eda8d9b116b9be6e6d565ebd950a13ce212ba70))
+* normalize WingDex detail top spacing under header ([d982945](https://github.com/jlian/wingdex/commit/d982945fdd607374ea72e3276c7091b55f330eef))
+* remove invalid location_hint from d1_databases config ([c1618eb](https://github.com/jlian/wingdex/commit/c1618eba72e3aa7f2f0a23b966115b6dfca5f12b))
+* rename Add button to Upload & Identify ([d0deb89](https://github.com/jlian/wingdex/commit/d0deb890943f0723442fce0f5940a6643d7b5b0b))
+* revert multipleBirds prompt to flag individuals not species ([cf166a8](https://github.com/jlian/wingdex/commit/cf166a87fcba60378b5b22b6763b841334d12b2e))
+* stricter imageDataUrl validation in JSON branch ([44bcc5c](https://github.com/jlian/wingdex/commit/44bcc5c38bdafc52333abb3929f4300cac9068b9))
+
+
+### Features
+
+* confetti, toast polish, and confirm step redesign ([29ce8e3](https://github.com/jlian/wingdex/commit/29ce8e3d88dc792ac8e0803b1df1ab147c5c27d3))
+* dual-condition escalation and calibrated progress bar ([e117f65](https://github.com/jlian/wingdex/commit/e117f6546cf29883a230237889c66d4d622990f6))
+* shared WikiBirdThumbnail component and wider crop padding ([579d6d8](https://github.com/jlian/wingdex/commit/579d6d8b70180af02e5efc80cb3477a0a6523bd8))
+* two-tier bird ID pipeline with JSON API ([cdc6f33](https://github.com/jlian/wingdex/commit/cdc6f337ba4c8851b0a053556dde40896737838f))
+* upload flow UX improvements ([09530e1](https://github.com/jlian/wingdex/commit/09530e1f144c0daa732b8bde216afd7985bd3c57))
+
 ## [1.6.4](https://github.com/jlian/wingdex/compare/v1.6.3...v1.6.4) (2026-02-24)
 
 
