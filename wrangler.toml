@@ -9,7 +9,6 @@ binding = "DB"
 database_name = "wingdex-db"
 database_id = "bb0a4504-8009-4ea3-b462-ce2b9de3d615"
 migrations_dir = "migrations"
-location_hint = "wnam"
 
 [ai]
 binding = "AI"
@@ -28,7 +27,6 @@ binding = "DB"
 database_name = "wingdex-db-dev"
 database_id = "7299207b-ddc7-4ecd-bc36-b6838f278c78"
 migrations_dir = "migrations"
-location_hint = "wnam"
 
 [env.preview.ai]
 binding = "AI"
