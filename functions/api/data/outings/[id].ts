@@ -1,4 +1,5 @@
-import { computeDex } from '../../../lib/dex-query'\nimport { getOutingColumnNames } from '../../../lib/schema'
+import { computeDex } from '../../../lib/dex-query'
+import { getOutingColumnNames } from '../../../lib/schema'
 
 type UpdateOutingBody = {
   startTime?: string
