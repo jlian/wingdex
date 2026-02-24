@@ -155,7 +155,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
             observation.count,
             observation.certainty,
             observation.notes || null,
-            null
+            ''
           )
       )
     } else {

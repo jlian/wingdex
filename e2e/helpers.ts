@@ -50,8 +50,11 @@ async function registerVirtualPasskey(page: Page) {
 
     await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 15_000 })
   } finally {
-    await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId: added.authenticatorId })
-    await cdp.send('WebAuthn.disable')
+    await cdp
+      .send('WebAuthn.removeVirtualAuthenticator', { authenticatorId: added.authenticatorId })
+      .catch(() => undefined)
+    await cdp.send('WebAuthn.disable').catch(() => undefined)
+    await cdp.detach().catch(() => undefined)
   }
 }
 
@@ -87,6 +90,11 @@ export async function loadApp(page: Page, { promote = true } = {}) {
  * so this is a silent no-op.
  */
 export async function promoteAnonymousUser(page: Page) {
+  const hasLoginButton = (await page.getByRole('button', { name: 'Log in' }).count()) > 0
+  if (!hasLoginButton) {
+    return
+  }
+
   const sessionBefore = await getSessionState(page)
   if (sessionBefore.hasUser && !sessionBefore.isAnonymous) {
     return
