@@ -1,3 +1,10 @@
+## [1.9.2](https://github.com/jlian/wingdex/compare/v1.9.1...v1.9.2) (2026-02-24)
+
+
+### Bug Fixes
+
+* **dev:** prevent orphaned wrangler/esbuild processes ([a661e30](https://github.com/jlian/wingdex/commit/a661e3017d2746a8cad3fe551e20d35d31a58029))
+
 ## [1.9.1](https://github.com/jlian/wingdex/compare/v1.9.0...v1.9.1) (2026-02-24)
 
 
