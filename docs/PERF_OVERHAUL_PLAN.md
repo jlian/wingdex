@@ -41,9 +41,10 @@ No behavioral change; pure dead-code removal and render optimizations.
   Verify: `npm run build` succeeds and bundle size decreases. \
   _Done in `6796a16`._
 
-- [ ] **#112 -- Add `loading="lazy"` to bird thumbnail images** \
+- [x] **#112 -- Add `loading="lazy"` to bird thumbnail images** \
   Add `loading="lazy"` to the `<img>` element in `src/components/ui/wiki-bird-thumbnail.tsx`. \
-  Verify: `npm run typecheck`.
+  Verify: `npm run typecheck`. \
+  _Done in `85fc8fa`._
 
 - [ ] **#109 -- Wrap `BirdRow` in `React.memo`** \
   Wrap the `BirdRow` export in `src/components/ui/bird-row.tsx` with `React.memo`. Props are strings + ReactNode + callback, so memo will skip re-renders when individual row data hasn't changed. \

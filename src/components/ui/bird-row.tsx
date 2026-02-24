@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { getDisplayName, getScientificName } from '@/lib/utils'
@@ -11,7 +12,7 @@ interface BirdRowProps {
   actions?: React.ReactNode
 }
 
-export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProps) {
+export const BirdRow = memo(function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProps) {
   const displayName = getDisplayName(speciesName)
   const scientificName = getScientificName(speciesName)
   const wikiImage = useBirdImage(speciesName)
@@ -71,4 +72,4 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
       </div>
     </div>
   )
-}
+})
