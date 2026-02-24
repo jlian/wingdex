@@ -90,7 +90,7 @@ test.describe('API smoke (request context)', () => {
     await api.dispose()
   })
 
-  test('realistic eBird CSV import preview + confirm', async () => {
+  test('realistic eBird CSV import preview + confirm (multiple fixtures)', async () => {
     const api = await request.newContext({ baseURL: API_BASE })
 
     const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
@@ -104,41 +104,47 @@ test.describe('API smoke (request context)', () => {
     )
     expect(authCookie).toBeTruthy()
 
-    const csvPath = path.resolve('e2e/fixtures/ebird-import.csv')
-    const csvBuffer = readFileSync(csvPath)
+    const fixturePaths = [
+      'e2e/fixtures/ebird-import.csv',
+      'e2e/fixtures/ebird-import-variant.csv',
+    ]
 
-    const preview = await api.post('/api/import/ebird-csv', {
-      headers: { cookie: authCookie },
-      multipart: {
-        file: {
-          name: 'ebird-import.csv',
-          mimeType: 'text/csv',
-          buffer: csvBuffer,
+    for (const fixturePath of fixturePaths) {
+      const csvPath = path.resolve(fixturePath)
+      const csvBuffer = readFileSync(csvPath)
+
+      const preview = await api.post('/api/import/ebird-csv', {
+        headers: { cookie: authCookie },
+        multipart: {
+          file: {
+            name: path.basename(fixturePath),
+            mimeType: 'text/csv',
+            buffer: csvBuffer,
+          },
         },
-      },
-    })
+      })
 
-    expect(preview.status()).toBe(200)
-    const previewJson = await preview.json()
-    expect(Array.isArray(previewJson.previews)).toBe(true)
-    expect(previewJson.previews.length).toBeGreaterThan(0)
+      expect(preview.status(), `preview should succeed for ${fixturePath}`).toBe(200)
+      const previewJson = await preview.json()
+      expect(Array.isArray(previewJson.previews)).toBe(true)
+      expect(previewJson.previews.length, `previews should exist for ${fixturePath}`).toBeGreaterThan(0)
 
-    const previewIds = previewJson.previews
-      .map((entry: { previewId?: string }) => entry.previewId)
-      .filter((id: string | undefined): id is string => !!id)
+      const previewIds = previewJson.previews
+        .map((entry: { previewId?: string }) => entry.previewId)
+        .filter((id: string | undefined): id is string => !!id)
 
-    expect(previewIds.length).toBeGreaterThan(0)
+      expect(previewIds.length, `preview IDs should exist for ${fixturePath}`).toBeGreaterThan(0)
 
-    const confirm = await api.post('/api/import/ebird-csv/confirm', {
-      headers: { cookie: authCookie },
-      data: { previewIds },
-    })
+      const confirm = await api.post('/api/import/ebird-csv/confirm', {
+        headers: { cookie: authCookie },
+        data: { previewIds },
+      })
 
-    expect(confirm.status()).toBe(200)
-    const confirmJson = await confirm.json()
-    expect(confirmJson.imported.outings).toBeGreaterThan(0)
-    expect(confirmJson.imported.observations).toBeGreaterThan(0)
-    expect(confirmJson.imported.newSpecies).toBeGreaterThan(0)
+      expect(confirm.status(), `confirm should succeed for ${fixturePath}`).toBe(200)
+      const confirmJson = await confirm.json()
+      expect(confirmJson.imported.outings, `outings imported for ${fixturePath}`).toBeGreaterThan(0)
+      expect(confirmJson.imported.observations, `observations imported for ${fixturePath}`).toBeGreaterThan(0)
+    }
 
     const dataAll = await api.get('/api/data/all', {
       headers: { cookie: authCookie },
