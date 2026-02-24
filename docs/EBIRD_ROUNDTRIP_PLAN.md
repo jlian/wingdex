@@ -51,10 +51,27 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Persist inferred region metadata onto created/updated outings.
 - [x] Keep graceful fallback behavior when region inference is unavailable.
 
+### 9) Harden API endpoints for partial-migration safety
+- [x] Centralize PRAGMA `table_info` helpers into `functions/lib/schema.ts` (`getTableColumnNames`, `getOutingColumnNames`, `hasObservationColumn`) with module-scoped cache per isolate.
+- [x] Gate PATCH outing columns behind `columnNames.has()` checks in `functions/api/data/outings/[id].ts`.
+- [x] Gate POST outing response fields (`stateProvince`, `countryCode`, `protocol`, `effort*`) behind schema capability flags.
+- [x] Gate POST observation response `speciesComments` behind `hasObservationColumn` check.
+- [x] Bind empty string (not `null`) for `observation.notes` in import confirm to satisfy `NOT NULL` constraint.
+- [x] Remove duplicated PRAGMA helpers from 6 endpoint files in favor of shared module.
+
+### 10) CI pipeline and E2E stabilization
+- [x] Add "Apply D1 migrations to preview DB" step to `.github/workflows/ci.yml` before preview deploy.
+- [x] Fix strict mode violation from stacked per-outing toasts (`.first()` on toast assertions).
+- [x] Switch Playwright config to `dev:full:restart` with `reuseExistingServer: false` so tests always get a healthy server.
+- [x] Make WebAuthn CDP teardown best-effort (`.catch()`) to avoid crashes when page closes early.
+- [x] Make passkey promotion helper skip gracefully when "Log in" button is absent.
+- [x] Harden passkey-upgrade spec assertions for environment-agnostic behavior.
+
 ## Decisions
 - [x] Format choice: strict eBird Record Format (19 columns), including separate `Genus` and `Species` columns.
 - [x] Scope choice: replace Settings aggregate export with importable sightings export.
 - [x] Consistency choice: align per-outing export format with bulk export format.
+- [x] Unit system: export targets eBird Record Format (miles/acres), not "My eBird Data" download format (km/ha). Import auto-detects and converts both.
 
 ## Verification checklist
 - [x] Importing exported sightings CSV succeeds via `/api/import/ebird-csv`.
@@ -62,6 +79,9 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Date/time values remain stable across import-export-import for timezone-sensitive rows.
 - [x] Existing import of fixture-style eBird CSV remains functional.
 - [x] New checklist effort metadata roundtrips in unit tests.
+- [x] API responses never echo fields that were not persisted to the DB on partial migrations.
+- [x] Full E2E suite passes locally (38 passed, 1 skipped) and in CI.
+- [x] All Copilot PR review threads addressed and resolved.
 
 ## Execution log
 - [x] Created branch `feat/ebird-roundtrip-export` from `main`.
@@ -72,3 +92,10 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Final verification and commit pass completed.
 - [x] Renamed migration file to `migrations/0005_outing_ebird_fields.sql` to match expanded scope.
 - [x] Implemented schema-first eBird checklist field support and no-extra-call geocode metadata reuse.
+- [x] Fixed upload flow bugs: region field persistence, photo write race, observation id collisions, toast stacking.
+- [x] Added CI migration step for preview DB and fixed E2E strict mode toast assertion.
+- [x] Centralized PRAGMA schema helpers into `functions/lib/schema.ts` with per-isolate cache.
+- [x] Gated PATCH/POST response payloads behind schema capability checks across all data endpoints.
+- [x] Stabilized local E2E suite: fresh server startup, resilient WebAuthn teardown, robust passkey promotion.
+- [x] Addressed and resolved all 4 Copilot PR review threads across 2 review rounds.
+- [x] PR #196 CI green (lint + unit + e2e + preview deploy). Ready to merge.
