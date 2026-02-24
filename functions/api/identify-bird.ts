@@ -29,6 +29,14 @@ function parseModelTier(value: unknown): BirdIdModelTier {
   return value === 'strong' ? 'strong' : 'fast'
 }
 
+function validateMonth(month: number | undefined): number | undefined {
+  if (month == null) return undefined
+  if (!Number.isInteger(month) || month < 0 || month > 11) {
+    throw new HttpError(400, 'month must be an integer between 0 and 11')
+  }
+  return month
+}
+
 export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
@@ -109,6 +117,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       locationName = String(formData.get('locationName') || '').trim() || undefined
       model = parseModelTier(formData.get('model'))
     }
+
+    month = validateMonth(month)
 
     const result = await identifyBird(context.env, {
       imageDataUrl,

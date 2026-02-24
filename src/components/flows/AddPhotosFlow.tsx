@@ -366,12 +366,13 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       if (hasNewSpecies) {
         toast(liferMessage, { duration: 6000 })
         setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 3500)
         // Delay close so confetti canvas stays mounted
         window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+        window.dispatchEvent(new Event('home:highlightOuting'))
         setTimeout(() => onClose(), 1500)
       } else {
         window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+        window.dispatchEvent(new Event('home:highlightOuting'))
         onClose()
       }
     }
