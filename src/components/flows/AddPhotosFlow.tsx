@@ -112,7 +112,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const interval = window.setInterval(() => {
       const elapsed = Date.now() - startedAt
       const next = 90 * (1 - Math.exp(-elapsed / photoProgressTauMs))
-      setPhotoProgress(Math.min(90, next))
+      setPhotoProgress(prev => Math.max(prev, Math.min(90, next)))
     }, 80)
 
     return () => window.clearInterval(interval)
