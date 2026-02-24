@@ -8,7 +8,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple, Copy } from '@phosphor-icons/react'
+import { Download, Upload, Info, Database, CaretDown, Sun, Moon, Desktop, Trash, GlobeHemisphereWest, Key, SignOut, ArrowsClockwise, PencilSimple } from '@phosphor-icons/react'
 import { authClient } from '@/lib/auth-client'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
@@ -340,20 +340,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
 
         {/* -- Log out -- */}
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
-            <span>User ID: <span className="font-mono">{user.id.slice(0, 8)}&hellip;</span></span>
-            <button
-              type="button"
-              className="cursor-pointer hover:text-muted-foreground transition-colors"
-              aria-label="Copy user ID"
-              onClick={() => {
-                void navigator.clipboard.writeText(user.id)
-                toast.success('User ID copied')
-              }}
-            >
-              <Copy size={12} />
-            </button>
-          </p>
           <Button
             variant="outline"
             className="w-full justify-start"
