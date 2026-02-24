@@ -114,7 +114,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               transition-all duration-150 cursor-pointer flex-shrink-0"
           >
             <Camera size={18} weight="bold" />
-            Add
+            Upload & Identify
           </button>
         </div>
       </div>
