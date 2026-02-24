@@ -359,7 +359,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           .slice(0, 3)
           .join(', ')
         // Fire saved toast first so the lifer toast stacks on top (Sonner shows last = topmost)
-        toast.success(`Saved ${confirmed.length} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
+        const uniqueCount = new Set(confirmed.map(r => r.species)).size
+        toast.success(`Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
       }
 
       if (hasNewSpecies) {
