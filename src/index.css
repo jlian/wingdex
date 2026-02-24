@@ -156,7 +156,7 @@ h1, h2, .font-serif {
 @utility press-feel {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: opacity 100ms ease-out;          /* fade-back speed after release */
+  transition: opacity 200ms ease-out;          /* fade-back speed after release */
   &[data-pressed] { opacity: 0.7; transition-duration: 0ms; }   /* touch press dim */
   @media (hover: hover) {
     &:hover { opacity: 0.85; }                 /* desktop hover dim (subtle) */
