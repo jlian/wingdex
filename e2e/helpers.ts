@@ -128,11 +128,14 @@ export async function seedViaCSVImport(page: Page) {
 
   // Set the hidden CSV file input directly (bypasses the timezone dialog;
   // default timezone is America/Los_Angeles which matches the fixture)
+  const confirmDone = page.waitForResponse(
+    r => r.url().includes('/api/import/ebird-csv/confirm') && r.status() === 200
+  )
   const csvInput = page.locator('input[type="file"][accept*=".csv"]')
   await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
 
-  // Wait for the import to fully complete
-  await expect(page.getByText(/Imported.*species/i)).toBeVisible({ timeout: 10_000 })
+  // Wait for the confirm API response instead of a transient toast
+  await confirmDone
 
   // Navigate back to Home
   await page.getByRole('button', { name: 'Home' }).click()

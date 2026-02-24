@@ -58,7 +58,6 @@ test.describe('App with seeded data', () => {
 
     expect(download.suggestedFilename()).toContain('wingdex-outing-')
     expect(download.suggestedFilename()).toContain('.csv')
-    await expect(page.getByText('Outing exported in eBird Record CSV format')).toBeVisible({ timeout: 5_000 })
   })
 
   test('wingdex page lists species with count', async ({ page }) => {

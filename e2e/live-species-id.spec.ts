@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
+import { loadApp } from './helpers'
 
-const runLiveE2E = process.env.RUN_LIVE_E2E === '1'
+const isCI = !!process.env.CI
 
 test.describe('Live Species ID', () => {
-  test.skip(!runLiveE2E, 'Set RUN_LIVE_E2E=1 to run live OpenAI e2e')
-  test.skip(!process.env.OPENAI_API_KEY, 'OPENAI_API_KEY not set')
+  // Locally the wrangler dev server has OPENAI_API_KEY via .dev.vars,
+  // so always run. In CI, skip unless explicitly opted in.
+  test.skip(isCI && process.env.RUN_LIVE_E2E !== '1', 'Skipped in CI - set RUN_LIVE_E2E=1 to run')
 
   test('hits live /api/identify-bird and reaches species step', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.locator('header')).toBeVisible({ timeout: 15_000 })
+    await loadApp(page)
 
     await page.getByRole('button', { name: 'Upload & Identify' }).click()
     const dialog = page.getByRole('dialog')

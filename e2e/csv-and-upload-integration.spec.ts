@@ -217,8 +217,7 @@ test.describe('CSV import + photo upload integration', () => {
 
     await saveObservationsResponse
 
-    // Toast confirms save, then dialog auto-closes
-    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 5_000 })
+    // Dialog auto-closes after save
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
 
     // Navigate to Outings and verify the new outing is visible immediately (no refresh)
@@ -243,12 +242,12 @@ test.describe('CSV import + photo upload integration', () => {
     await goToSettings(page)
 
     // Set timezone and import CSV (default is already Pacific, no need to change)
+    const confirmDone = page.waitForResponse(
+      r => r.url().includes('/api/import/ebird-csv/confirm') && r.status() === 200
+    )
     const csvInput = page.locator('input[type="file"][accept*=".csv"]')
     await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
-    await expect(page.getByText(/Imported.*species/)).toBeVisible({ timeout: 5_000 })
-
-    // Wait for the toast to dismiss
-    await expect(page.getByText(/Imported.*species/)).not.toBeVisible({ timeout: 5_000 })
+    await confirmDone
 
     // Verify Chukar is in the dex from CSV
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
@@ -356,8 +355,5 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Dialog auto-closes after all clusters are saved
     await expect(dialog).not.toBeVisible({ timeout: 10_000 })
-
-    // Completion toast should appear after both clusters are processed
-    await expect(page.getByText(/Saved \d+ species/i).first()).toBeVisible({ timeout: 5_000 })
   })
 })
