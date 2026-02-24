@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ListRow } from '@/components/ui/list-row'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { SpeciesAutocomplete } from '@/components/ui/species-autocomplete'
@@ -294,23 +295,23 @@ function OutingRow({
   onClick: () => void
 }) {
   return (
-    <button className="flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors" onClick={onClick}>
-      <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
-      <div className="flex-1 min-w-0 border-b border-border py-3">
-        <p className="font-serif font-semibold text-sm text-foreground truncate">
-          {outing.locationName || 'Outing'}
+    <ListRow
+      icon={<MapPin size={16} className="text-muted-foreground/50" />}
+      onClick={onClick}
+    >
+      <p className="font-serif font-semibold text-sm text-foreground truncate">
+        {outing.locationName || 'Outing'}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {formatStoredDate(outing.startTime)} · {confirmed.length} species
+      </p>
+      {confirmed.length > 0 && (
+        <p className="text-xs text-muted-foreground truncate mt-0.5">
+          {confirmed.slice(0, 4).map(obs => getDisplayName(obs.speciesName)).join(', ')}
+          {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {formatStoredDate(outing.startTime)} · {confirmed.length} species
-        </p>
-        {confirmed.length > 0 && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {confirmed.slice(0, 4).map(obs => getDisplayName(obs.speciesName)).join(', ')}
-            {confirmed.length > 4 && ` +${confirmed.length - 4} more`}
-          </p>
-        )}
-      </div>
-    </button>
+      )}
+    </ListRow>
   )
 }
 

@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react'
 import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
+import { ListRow } from '@/components/ui/list-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
@@ -534,24 +535,21 @@ function SpeciesDetail({
             </h3>
             <div>
               {sightings.map(({ observation, outing }) => (
-                <button
+                <ListRow
                   key={observation.id}
-                  className="flex w-full items-center gap-3 px-2 rounded-lg text-left cursor-pointer hover:bg-muted/30 active:bg-muted press-feel-subtle"
+                  icon={<CalendarBlank size={16} className="text-muted-foreground/60" />}
                   onClick={() => onSelectOuting(outing.id)}
                 >
-                  <CalendarBlank size={16} className="text-muted-foreground/60 flex-shrink-0" />
-                  <div className="flex-1 min-w-0 border-b border-border py-3">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {outing.locationName || 'Unknown location'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatStoredDate(outing.startTime, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                      {observation.count > 1 && ` · x${observation.count}`}
-                      {' · '}
-                      {observation.certainty.charAt(0).toUpperCase() + observation.certainty.slice(1)}
-                    </p>
-                  </div>
-                </button>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {outing.locationName || 'Unknown location'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatStoredDate(outing.startTime, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    {observation.count > 1 && ` · x${observation.count}`}
+                    {' · '}
+                    {observation.certainty.charAt(0).toUpperCase() + observation.certainty.slice(1)}
+                  </p>
+                </ListRow>
               ))}
             </div>
           </div>

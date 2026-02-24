@@ -3,6 +3,7 @@ import {
   MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
+import { ListRow } from '@/components/ui/list-row'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -99,8 +100,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
             className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
               bg-gradient-to-r from-emerald-600 to-teal-500
               text-white text-base
-              shadow-sm hover:brightness-105 active:scale-[0.97]
-              transition-all duration-150 cursor-pointer flex-shrink-0"
+              shadow-sm press-feel cursor-pointer flex-shrink-0"
           >
             <Camera size={20} weight="bold" />
             Upload & Identify
@@ -132,8 +132,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
             className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
               bg-gradient-to-r from-emerald-600 to-teal-500
               text-white text-base
-              shadow-sm hover:brightness-105 active:scale-[0.97]
-              transition-all duration-150 cursor-pointer flex-shrink-0"
+              shadow-sm press-feel cursor-pointer flex-shrink-0"
           >
             <Camera size={18} weight="bold" />
             Upload & Identify
@@ -152,7 +151,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               {dex.length > 6 && (
                 <button
                   onClick={() => onNavigate('wingdex')}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer press-feel-light"
                 >
                   View all {dex.length}
                   <ArrowRight size={12} />
@@ -182,7 +181,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               {outings.length > 5 && (
                 <button
                   onClick={() => onNavigate('outings')}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer press-feel-light"
                 >
                   View all {outings.length}
                   <ArrowRight size={12} />
@@ -197,29 +196,25 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
                 )
 
                 return (
-                  <button
+                  <ListRow
                     key={outing.id}
-                    className={`flex items-center gap-3 px-2 rounded-lg w-full text-left cursor-pointer hover:bg-muted/30 active:bg-muted transition-colors ${
-                      highlightOutingId === outing.id ? 'bg-primary/10 ring-1 ring-primary/40' : ''
-                    }`}
+                    className={highlightOutingId === outing.id ? 'bg-primary/10 ring-1 ring-primary/40' : undefined}
+                    icon={<MapPin size={16} className="text-muted-foreground/50" />}
                     onClick={() => onSelectOuting(outing.id)}
                   >
-                    <MapPin size={16} className="text-muted-foreground/50 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 border-b border-border py-3">
-                      <p className="font-serif font-semibold text-sm text-foreground truncate">
-                        {outing.locationName || 'Outing'}
+                    <p className="font-serif font-semibold text-sm text-foreground truncate">
+                      {outing.locationName || 'Outing'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatStoredDate(outing.startTime)} · {confirmed.length} species
+                    </p>
+                    {confirmed.length > 0 && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {confirmed.slice(0, 3).map(obs => getDisplayName(obs.speciesName)).join(', ')}
+                        {confirmed.length > 3 && ` +${confirmed.length - 3}`}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatStoredDate(outing.startTime)} · {confirmed.length} species
-                      </p>
-                      {confirmed.length > 0 && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {confirmed.slice(0, 3).map(obs => getDisplayName(obs.speciesName)).join(', ')}
-                          {confirmed.length > 3 && ` +${confirmed.length - 3}`}
-                        </p>
-                      )}
-                    </div>
-                  </button>
+                    )}
+                  </ListRow>
                 )
               })}
             </div>
@@ -236,7 +231,7 @@ function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date
 
   return (
     <button
-      className="overflow-hidden rounded-lg bg-card border border-border hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98] text-left"
+      className="overflow-hidden rounded-lg bg-card border border-border cursor-pointer press-feel text-left"
       onClick={onClick}
     >
       <WikiBirdThumbnail speciesName={speciesName} alt={displayName} className="rounded-b-none" />
