@@ -91,12 +91,13 @@ No behavioral change; pure dead-code removal and render optimizations.
   Verify: manual browser test (DevTools > Application > Local Storage) + `npm run test`. \
   _Done in `4773b98`._
 
-- [ ] **#118 -- Self-host Google Fonts** \
-  - [ ] Download Inter (woff2, weights 400/500/600/700) and Newsreader (woff2, weights 400/600/700) into `public/fonts/`
-  - [ ] Add `@font-face` declarations in `src/main.css` with `font-display: swap`
-  - [ ] Remove the Google Fonts `<link>` and `<link rel="preconnect">` tags from `index.html`
+- [x] **#118 -- Self-host Google Fonts** \
+  - [x] Download Inter (woff2, weights 400/500/600/700) and Newsreader (woff2, weights 400/600/700) into `public/fonts/`
+  - [x] Add `@font-face` declarations in `src/main.css` with `font-display: swap`
+  - [x] Remove the Google Fonts `<link>` and `<link rel="preconnect">` tags from `index.html`
 
-  Verify: `npm run build` + Lighthouse font audit.
+  Verify: `npm run build` + Lighthouse font audit. \
+  _Done in `8f66ef6`._
 
 ---
 
