@@ -346,35 +346,38 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       toast.warning('No species were confirmed for this outing')
     }
 
+    if (confirmed.length > 0) {
+      const outingName = data.outings.find(outing => outing.id === currentOutingId)?.locationName || 'Outing'
+      const speciesPreview = Array.from(new Set(confirmed.map(result => getDisplayName(result.species))))
+        .slice(0, 3)
+        .join(', ')
+      const uniqueCount = new Set(confirmed.map(r => r.species)).size
+      toast.success(`Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
+    }
+
+    if (hasNewSpecies) {
+      toast(liferMessage, { duration: 6000 })
+    }
+
     if (currentClusterIndex < clusters.length - 1) {
       setCurrentClusterIndex(prev => prev + 1)
       setCurrentPhotoIndex(0)
       setPhotoResults([])
       setCurrentCandidates([])
       setStep('review')
-    } else {
-      if (confirmed.length > 0) {
-        const outingName = data.outings.find(outing => outing.id === currentOutingId)?.locationName || 'Outing'
-        const speciesPreview = Array.from(new Set(confirmed.map(result => getDisplayName(result.species))))
-          .slice(0, 3)
-          .join(', ')
-        // Fire saved toast first so the lifer toast stacks on top (Sonner shows last = topmost)
-        const uniqueCount = new Set(confirmed.map(r => r.species)).size
-        toast.success(`Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
-      }
+      return
+    }
 
-      if (hasNewSpecies) {
-        toast(liferMessage, { duration: 6000 })
-        setShowConfetti(true)
-        // Delay close so confetti canvas stays mounted
-        window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
-        window.dispatchEvent(new Event('home:highlightOuting'))
-        setTimeout(() => onClose(), 1500)
-      } else {
-        window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
-        window.dispatchEvent(new Event('home:highlightOuting'))
-        onClose()
-      }
+    if (hasNewSpecies) {
+      setShowConfetti(true)
+      // Delay close so confetti canvas stays mounted
+      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+      window.dispatchEvent(new Event('home:highlightOuting'))
+      setTimeout(() => onClose(), 1500)
+    } else {
+      window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
+      window.dispatchEvent(new Event('home:highlightOuting'))
+      onClose()
     }
   }
 

@@ -22,18 +22,15 @@ function decodePreviewId(previewId: string): ImportPreview | null {
   }
 }
 
-async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
   const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  return new Set(info.results.map(column => column.name))
+}
+
+async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
   const names = new Set(info.results.map(column => column.name))
-  return (
-    names.has('stateProvince') &&
-    names.has('countryCode') &&
-    names.has('protocol') &&
-    names.has('numberObservers') &&
-    names.has('allObsReported') &&
-    names.has('effortDistanceMiles') &&
-    names.has('effortAreaAcres')
-  )
+  return names.has('speciesComments')
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -67,12 +64,20 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const priorSpecies = new Set(priorDex.map(row => row.speciesName))
 
   const { outings, observations } = groupPreviewsIntoOutings(selectedPreviews, userId)
-  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
+  const columnNames = await getOutingColumnNames(context.env.DB)
+  const supportsRegionColumns = columnNames.has('stateProvince') && columnNames.has('countryCode')
+  const supportsChecklistColumns =
+    columnNames.has('protocol') &&
+    columnNames.has('numberObservers') &&
+    columnNames.has('allObsReported') &&
+    columnNames.has('effortDistanceMiles') &&
+    columnNames.has('effortAreaAcres')
+  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
 
   const insertStatements: D1PreparedStatement[] = []
 
   for (const outing of outings) {
-    if (supportsRegionColumns) {
+    if (supportsRegionColumns && supportsChecklistColumns) {
       insertStatements.push(
         context.env.DB
           .prepare(
@@ -95,6 +100,28 @@ export const onRequestPost: PagesFunction<Env> = async context => {
             outing.allObsReported == null ? null : outing.allObsReported ? 1 : 0,
             outing.effortDistanceMiles ?? null,
             outing.effortAreaAcres ?? null,
+            outing.notes,
+            outing.createdAt
+          )
+      )
+    } else if (supportsRegionColumns) {
+      insertStatements.push(
+        context.env.DB
+          .prepare(
+            `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+          )
+          .bind(
+            outing.id,
+            userId,
+            outing.startTime,
+            outing.endTime,
+            outing.locationName,
+            outing.defaultLocationName ?? null,
+            outing.lat ?? null,
+            outing.lon ?? null,
+            outing.stateProvince ?? null,
+            outing.countryCode ?? null,
             outing.notes,
             outing.createdAt
           )
@@ -123,22 +150,42 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   for (const observation of observations) {
-    insertStatements.push(
-      context.env.DB
-        .prepare(
-          `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, notes)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-        )
-        .bind(
-          observation.id,
-          observation.outingId,
-          userId,
-          observation.speciesName,
-          observation.count,
-          observation.certainty,
-          observation.notes
-        )
-    )
+    if (supportsSpeciesCommentsColumn) {
+      insertStatements.push(
+        context.env.DB
+          .prepare(
+            `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, speciesComments, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+          )
+          .bind(
+            observation.id,
+            observation.outingId,
+            userId,
+            observation.speciesName,
+            observation.count,
+            observation.certainty,
+            observation.notes || null,
+            observation.notes
+          )
+      )
+    } else {
+      insertStatements.push(
+        context.env.DB
+          .prepare(
+            `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+          )
+          .bind(
+            observation.id,
+            observation.outingId,
+            userId,
+            observation.speciesName,
+            observation.count,
+            observation.certainty,
+            observation.notes
+          )
+      )
+    }
   }
 
   if (insertStatements.length > 0) {

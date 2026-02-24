@@ -10,6 +10,7 @@ type CreateObservationInput = {
   certainty: ObservationCertainty
   representativePhotoId?: string
   aiConfidence?: number
+  speciesComments?: string
   notes?: string
 }
 
@@ -20,6 +21,7 @@ type ObservationPatch = {
   certainty?: ObservationCertainty
   representativePhotoId?: string | null
   aiConfidence?: number | null
+  speciesComments?: string
   notes?: string
 }
 
@@ -75,6 +77,10 @@ function getPatchBindings(patch: ObservationPatch): {
     updateFields.push('aiConfidence = ?')
     bindings.push(patch.aiConfidence ?? null)
   }
+  if (typeof patch.speciesComments === 'string') {
+    updateFields.push('speciesComments = ?')
+    bindings.push(patch.speciesComments)
+  }
   if (typeof patch.notes === 'string') {
     updateFields.push('notes = ?')
     bindings.push(patch.notes)
@@ -83,13 +89,22 @@ function getPatchBindings(patch: ObservationPatch): {
   return { updateFields, bindings }
 }
 
+async function hasSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
+  const names = new Set(info.results.map(column => column.name))
+  return names.has('speciesComments')
+}
+
 async function listObservationsByIds(db: D1Database, userId: string, ids: string[]) {
   if (ids.length === 0) return []
+
+  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
+  const speciesCommentsSelect = supportsSpeciesComments ? 'speciesComments' : 'NULL as speciesComments'
 
   const placeholders = ids.map(() => '?').join(', ')
   const result = await db
     .prepare(
-      `SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes
+      `SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, ${speciesCommentsSelect}, notes
        FROM observation
        WHERE userId = ? AND id IN (${placeholders})`
     )
@@ -102,6 +117,7 @@ async function listObservationsByIds(db: D1Database, userId: string, ids: string
       certainty: ObservationCertainty
       representativePhotoId?: string | null
       aiConfidence?: number | null
+      speciesComments?: string | null
       notes: string
     }>()
 
@@ -109,6 +125,7 @@ async function listObservationsByIds(db: D1Database, userId: string, ids: string
     ...observation,
     representativePhotoId: observation.representativePhotoId || undefined,
     aiConfidence: observation.aiConfidence ?? undefined,
+    speciesComments: observation.speciesComments || undefined,
   }))
 }
 
@@ -156,8 +173,28 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return new Response('Invalid outing reference', { status: 400 })
   }
 
-  const statements = body.map(observation =>
-    context.env.DB.prepare(
+  const supportsSpeciesComments = await hasSpeciesCommentsColumn(context.env.DB)
+
+  const statements = body.map(observation => {
+    if (supportsSpeciesComments) {
+      return context.env.DB.prepare(
+        `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+      ).bind(
+        observation.id,
+        observation.outingId,
+        userId,
+        observation.speciesName,
+        observation.count,
+        observation.certainty,
+        observation.representativePhotoId ?? null,
+        observation.aiConfidence ?? null,
+        observation.speciesComments ?? null,
+        observation.notes ?? ''
+      )
+    }
+
+    return context.env.DB.prepare(
       `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
     ).bind(
@@ -171,7 +208,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       observation.aiConfidence ?? null,
       observation.notes ?? ''
     )
-  )
+  })
 
   await context.env.DB.batch(statements)
 
@@ -179,6 +216,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     ...observation,
     representativePhotoId: observation.representativePhotoId || undefined,
     aiConfidence: observation.aiConfidence ?? undefined,
+    speciesComments: observation.speciesComments || undefined,
     notes: observation.notes ?? '',
   }))
 
@@ -204,11 +242,20 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   const db = context.env.DB
+  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
 
   if (typeof body.id === 'string') {
     const { id, ...rawPatch } = body
     const patch = rawPatch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
+
+    if (!supportsSpeciesComments) {
+      const speciesIndex = updateFields.findIndex(field => field === 'speciesComments = ?')
+      if (speciesIndex >= 0) {
+        updateFields.splice(speciesIndex, 1)
+        bindings.splice(speciesIndex, 1)
+      }
+    }
 
     if (updateFields.length === 0) {
       return new Response('No valid fields to update', { status: 400 })
@@ -240,6 +287,14 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const ids = body.ids as string[]
     const patch = body.patch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
+
+    if (!supportsSpeciesComments) {
+      const speciesIndex = updateFields.findIndex(field => field === 'speciesComments = ?')
+      if (speciesIndex >= 0) {
+        updateFields.splice(speciesIndex, 1)
+        bindings.splice(speciesIndex, 1)
+      }
+    }
 
     if (ids.length === 0) {
       return new Response('No ids provided', { status: 400 })
