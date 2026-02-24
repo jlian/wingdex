@@ -1,3 +1,30 @@
+# [1.8.0](https://github.com/jlian/wingdex/compare/v1.7.2...v1.8.0) (2026-02-24)
+
+
+### Bug Fixes
+
+* align API create responses with persisted columns ([72451b2](https://github.com/jlian/wingdex/commit/72451b25bbb08cf78d912249046c85a5a7bf4aa1))
+* align export with official eBird record format ([dc8c9c3](https://github.com/jlian/wingdex/commit/dc8c9c35e6b4c44881cb4f5c768cd97616a8df65))
+* gate PATCH outing columns behind PRAGMA capability checks ([4fc9994](https://github.com/jlian/wingdex/commit/4fc99945fd634e1c69d389d0c89040da048ff068))
+* handle photo write race and avoid observation id collisions ([5d911a7](https://github.com/jlian/wingdex/commit/5d911a75ece9867d199e4e35e91f7a31b062daf8))
+* preserve region fields on partial migrations and improve upload toasts ([b0a583a](https://github.com/jlian/wingdex/commit/b0a583acc4198795ea6f205aaef5eaca06977aed))
+* repair malformed import line in outings/[id].ts ([9d116b6](https://github.com/jlian/wingdex/commit/9d116b6fde34dd801435a5c033ac7d02deaf2624))
+* restore stacked save and lifer toasts in upload flow ([e7713aa](https://github.com/jlian/wingdex/commit/e7713aa811f54265ce5df12347cc4020abdb18c6))
+* show lifer confetti per outing and avoid stacked upload toasts ([892a9c9](https://github.com/jlian/wingdex/commit/892a9c906ddf1cdd9de09d428e5dcccfa2a75743))
+* stabilize local e2e server and import confirm path ([d985027](https://github.com/jlian/wingdex/commit/d9850272e41627bf694e13762694dc7b2820b4f9))
+
+
+### Features
+
+* expand eBird outing schema and geocode metadata reuse ([947c140](https://github.com/jlian/wingdex/commit/947c140d55640b16ce4e665d5fb12debf195a36e))
+* make sightings export roundtrip with eBird import ([4ab3d30](https://github.com/jlian/wingdex/commit/4ab3d30a047d1396563ac3c0daf2ef9c63f01af2))
+* store outing region metadata and export checklist duration ([25eff52](https://github.com/jlian/wingdex/commit/25eff52f6d53b3d283eaa399e815e2d81ec21769))
+
+
+### Performance Improvements
+
+* cache PRAGMA table_info lookups per isolate ([1330750](https://github.com/jlian/wingdex/commit/1330750c4d7e072315262cc2d6268e46408439e6))
+
 ## [1.7.2](https://github.com/jlian/wingdex/compare/v1.7.1...v1.7.2) (2026-02-24)
 
 
