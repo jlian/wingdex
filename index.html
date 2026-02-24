@@ -54,7 +54,12 @@
 </head>
 
 <body>
-    <div id="app"></div>
+    <div id="app">
+        <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--color-background,#e5ddd0)">
+            <div style="height:2rem;width:2rem;border-radius:9999px;border:2px solid rgba(120,113,108,.3);border-top-color:currentColor;animation:s 1s linear infinite"></div>
+        </div>
+        <style>@media(prefers-color-scheme:dark){#app>div{background:var(--color-background,#262e29)}}@keyframes s{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>
 

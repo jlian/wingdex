@@ -180,7 +180,8 @@ function App() {
             setAnonBootstrapFailed(true)
             return
           }
-          void refetchSession()
+          // better-auth's useSession auto-detects the new session cookie;
+          // no explicit refetchSession() needed (avoids duplicate get-session).
         }).catch(() => {
           setAnonBootstrapFailed(true)
           anonBootstrapStarted.current = false
@@ -205,7 +206,8 @@ function App() {
           setAnonBootstrapFailed(true)
           return
         }
-        void refetchSession()
+        // better-auth's useSession auto-detects the new session cookie;
+        // no explicit refetchSession() needed (avoids duplicate get-session).
       }).catch(() => {
         setAnonBootstrapFailed(true)
       })
@@ -215,7 +217,6 @@ function App() {
   }, [
     session,
     isSessionPending,
-    refetchSession,
     anonBootstrapFailed,
   ])
 
@@ -259,8 +260,11 @@ function App() {
 
 function BootShell() {
   return (
-    <div className="min-h-dvh bg-background">
-      <p className="sr-only" aria-live="polite">Verifying your session.</p>
+    <div className="min-h-dvh bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+        <p className="sr-only" aria-live="polite">Verifying your session.</p>
+      </div>
     </div>
   )
 }
@@ -444,7 +448,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         </header>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className={`w-full max-w-3xl mx-auto pb-8 flex-1 transition-opacity duration-200 ease-out ${initialRevealVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <main className={`w-full max-w-3xl mx-auto pb-8 flex-1 transition-opacity duration-100 ease-out ${initialRevealVisible ? 'opacity-100' : 'opacity-0'}`}>
           {tab === 'home' && (
             <TabsContent value="home" className="mt-0 animate-fade-in">
               <HomePage
