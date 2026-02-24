@@ -126,10 +126,9 @@ describe('eBird CSV utilities', () => {
     const csv = exportOutingToEBirdCSV(outing, observations, false)
     const cells = csv.split(',')
 
-    expect(cells).toHaveLength(19)
+    expect(cells).toHaveLength(18)
     expect(csv).toContain('"Mallard"')
-    expect(csv).toContain('"Anas"')
-    expect(csv).toContain('"platyrhynchos"')
+    expect(csv).toContain('"Anas platyrhynchos"')
     expect(csv).toContain('"3"')
     expect(csv).toContain('"Lake North WA"')
     expect(csv).toContain('"Incidental"')
@@ -163,7 +162,7 @@ describe('eBird CSV utilities', () => {
     const [header] = csv.split('\n')
 
     expect(header).toBe(
-      'Common Name,Genus,Species,Number,Species Comments,Location Name,Latitude,Longitude,Date,Start Time,State/Province,Country Code,Protocol,Number of Observers,Duration,All observations reported?,Effort Distance Miles,Effort area acres,Submission Comments'
+      'Common Name,Scientific Name,Number,Species Comments,Location Name,Latitude,Longitude,Date,Start Time,State/Province,Country Code,Protocol,Number of Observers,Duration,All observations reported?,Effort Distance Miles,Effort area acres,Submission Comments'
     )
   })
 
@@ -632,7 +631,7 @@ describe('eBird CSV utilities', () => {
       expect(csv).not.toContain('"Hawk"')
     })
 
-    it('formats date as MM/DD/YYYY for eBird Record format', () => {
+    it('formats date as YYYY-MM-DD for roundtrip-safe export', () => {
       const outing: Outing = {
         id: 'o1',
         userId: 'u1',
@@ -654,8 +653,8 @@ describe('eBird CSV utilities', () => {
       ]
 
       const csv = exportOutingToEBirdCSV(outing, observations)
-      // Date should be in MM/DD/YYYY format
-      expect(csv).toMatch(/"0?\d\/\d{2}\/2025"/)
+      // Date should be in YYYY-MM-DD format
+      expect(csv).toMatch(/"2025-09-28"/)
     })
 
     it('includes lat/lon with 6 decimal places', () => {
@@ -686,7 +685,7 @@ describe('eBird CSV utilities', () => {
       expect(csv).toContain('"-122.835170"')
     })
 
-    it('produces exactly 19 columns per row matching eBird Record spec', () => {
+    it('produces exactly 18 columns per row matching export format', () => {
       const outing: Outing = {
         id: 'o1',
         userId: 'u1',
@@ -724,7 +723,7 @@ describe('eBird CSV utilities', () => {
       for (const line of lines) {
         // Count commas that are between quoted fields (not inside quotes)
         const fields = parseCSVLineForTest(line)
-        expect(fields).toHaveLength(19)
+        expect(fields).toHaveLength(18)
       }
     })
 
@@ -755,10 +754,10 @@ describe('eBird CSV utilities', () => {
 
       const csv = exportOutingToEBirdCSV(outing, observations, false)
       const fields = parseCSVLineForTest(csv)
-      // Date (col 8) should be 12/18/2024 (local), not 12/19 (UTC)
-      expect(fields[8]).toBe('12/18/2024')
+      // Date (col 8) should be 2024-12-18 (local), not 2024-12-19 (UTC)
+      expect(fields[7]).toBe('2024-12-18')
       // Time (col 9) should be 17:16 (local HST), not 19:16 (was Pacific)
-      expect(fields[9]).toBe('17:16')
+      expect(fields[8]).toBe('17:16')
     })
   })
 
@@ -961,6 +960,17 @@ describe('eBird CSV utilities', () => {
   /* ---------- import → export roundtrip ---------- */
 
   describe('import → export roundtrip', () => {
+    it('parses MM/DD/YYYY dates as fallback', () => {
+      const csv = [
+        '"Common Name","Scientific Name","Date","Start Time","Location Name","Number","Latitude","Longitude"',
+        '"Mallard","Anas platyrhynchos","09/28/2025","08:15","Discovery Park","2","47.6606","-122.4147"',
+      ].join('\n')
+
+      const previews = parseEBirdCSV(csv)
+      expect(previews).toHaveLength(1)
+      expect(previews[0].date).toContain('2025-09-28T08:15:00')
+    })
+
     it('preserves Hawaii observation date/time through import → group → export', () => {
       const csv = ebirdCSV([
         'S276515153,Chukar,Alectoris chukar,1765,X,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
@@ -978,9 +988,9 @@ describe('eBird CSV utilities', () => {
       // Export
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[8]).toBe('12/18/2024')
+      expect(fields[7]).toBe('2024-12-18')
       // Time should be 17:16 (5:16 PM HST, the actual local time)
-      expect(fields[9]).toBe('17:16')
+      expect(fields[8]).toBe('17:16')
     })
 
     it('preserves Taipei observation date/time through import → group → export', () => {
@@ -994,8 +1004,8 @@ describe('eBird CSV utilities', () => {
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[8]).toBe('12/28/2025')
-      expect(fields[9]).toBe('07:06')
+      expect(fields[7]).toBe('2025-12-28')
+      expect(fields[8]).toBe('07:06')
     })
 
     it('preserves Seattle summer observation through roundtrip', () => {
@@ -1009,8 +1019,26 @@ describe('eBird CSV utilities', () => {
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[8]).toBe('06/01/2025')
-      expect(fields[9]).toBe('11:07')
+      expect(fields[7]).toBe('2025-06-01')
+      expect(fields[8]).toBe('11:07')
+    })
+
+    it('re-imports exported outing CSV without species/date loss', () => {
+      const sourceCsv = ebirdCSV([
+        'S276515153,Chukar,Alectoris chukar,1765,2,US-HI,Maui,L53474467,Maui,20.682568,-156.442741,2024-12-18,07:16 PM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(sourceCsv, 'America/Los_Angeles')
+      const { outings, observations } = groupPreviewsIntoOutings(previews, 'u1')
+
+      const exportWithHeader = exportOutingToEBirdCSV(outings[0], observations, true)
+      const reparsed = parseEBirdCSV(exportWithHeader)
+
+      expect(reparsed).toHaveLength(1)
+      expect(reparsed[0].speciesName).toBe('Chukar (Alectoris chukar)')
+      expect(reparsed[0].date).toContain('2024-12-18T17:16:00')
+      expect(reparsed[0].location).toBe('Maui')
+      expect(reparsed[0].count).toBe(2)
     })
   })
   /* ---------- Merlin travel scenario ---------- */
@@ -1054,8 +1082,8 @@ describe('eBird CSV utilities', () => {
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       // Export should use the recovered Taipei local time
-      expect(fields[8]).toBe('01/15/2025')
-      expect(fields[9]).toBe('17:00')
+      expect(fields[7]).toBe('2025-01-15')
+      expect(fields[8]).toBe('17:00')
     })
 
     it('Merlin scenario: Kolkata photo from Seattle phone', () => {

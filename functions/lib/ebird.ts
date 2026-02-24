@@ -79,8 +79,7 @@ type DexEntryForExport = {
 
 const EBIRD_RECORD_HEADERS = [
   'Common Name',
-  'Genus',
-  'Species',
+  'Scientific Name',
   'Number',
   'Species Comments',
   'Location Name',
@@ -113,19 +112,6 @@ function getDisplayName(speciesName: string): string {
 
 function getScientificName(speciesName: string): string | undefined {
   return speciesName.match(/\(([^)]+)\)/)?.[1]
-}
-
-function splitScientificName(scientificName: string): { genus: string; species: string } {
-  const cleaned = sanitizeForEBird(scientificName)
-  if (!cleaned) return { genus: '', species: '' }
-
-  const parts = cleaned.split(/\s+/)
-  if (parts.length < 2) return { genus: parts[0] || '', species: '' }
-
-  return {
-    genus: parts[0],
-    species: parts.slice(1).join(' '),
-  }
 }
 
 function formatISODate(isoString: string): string {
@@ -199,15 +185,21 @@ function normalizeDate(
   profileTimezone?: string
 ): string | null {
   try {
-    const parts = dateStr.trim().match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    const trimmedDate = dateStr.trim()
+    const isoParts = trimmedDate.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    const usParts = trimmedDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
     let year: number
     let month: number
     let day: number
 
-    if (parts) {
-      year = Number.parseInt(parts[1], 10)
-      month = Number.parseInt(parts[2], 10) - 1
-      day = Number.parseInt(parts[3], 10)
+    if (isoParts) {
+      year = Number.parseInt(isoParts[1], 10)
+      month = Number.parseInt(isoParts[2], 10) - 1
+      day = Number.parseInt(isoParts[3], 10)
+    } else if (usParts) {
+      year = Number.parseInt(usParts[3], 10)
+      month = Number.parseInt(usParts[1], 10) - 1
+      day = Number.parseInt(usParts[2], 10)
     } else {
       const fallback = new Date(dateStr)
       if (Number.isNaN(fallback.getTime())) return null
@@ -422,10 +414,10 @@ export function exportOutingToEBirdCSV(
   const localMatch = outing.startTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
 
   const date = localMatch
-    ? `${localMatch[2]}/${localMatch[3]}/${localMatch[1]}`
+    ? `${localMatch[1]}-${localMatch[2]}-${localMatch[3]}`
     : (() => {
         const parsed = new Date(outing.startTime)
-        return `${String(parsed.getMonth() + 1).padStart(2, '0')}/${String(parsed.getDate()).padStart(2, '0')}/${parsed.getFullYear()}`
+        return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`
       })()
 
   const time = localMatch
@@ -439,13 +431,11 @@ export function exportOutingToEBirdCSV(
     .filter(observation => observation.certainty === 'confirmed')
     .map(observation => {
       const commonName = sanitizeForEBird(getDisplayName(observation.speciesName))
-      const scientificName = getScientificName(observation.speciesName) || ''
-      const { genus, species } = splitScientificName(scientificName)
+      const scientificName = sanitizeForEBird(getScientificName(observation.speciesName) || '')
 
       return [
         commonName,
-        genus,
-        species,
+        scientificName,
         observation.count > 0 ? String(observation.count) : 'X',
         sanitizeForEBird(observation.notes || ''),
         sanitizeForEBird(outing.locationName),

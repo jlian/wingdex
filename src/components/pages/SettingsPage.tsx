@@ -222,7 +222,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
 
   const handleExportDex = async () => {
     try {
-      const response = await fetchWithLocalAuthRetry('/api/export/dex', { credentials: 'include' })
+      const response = await fetchWithLocalAuthRetry('/api/export/sightings', { credentials: 'include' })
       if (!response.ok) {
         throw new Error(`Export failed (${response.status})`)
       }
@@ -231,13 +231,13 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `wingdex-export-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `wingdex-sightings-${new Date().toISOString().split('T')[0]}.csv`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success('WingDex exported')
+      toast.success('Sightings CSV exported')
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
-      toast.error(`Failed to export WingDex: ${detail}`)
+      toast.error(`Failed to export sightings CSV: ${detail}`)
     }
   }
 
@@ -500,7 +500,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Import & Export</h3>
           <p className="text-sm text-muted-foreground">
-            Import your eBird life list or export your WingDex data
+            Import your eBird life list or export your sightings as CSV
           </p>
         </div>
 
@@ -574,7 +574,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             disabled={data.dex.length === 0}
           >
             <Download size={20} className="mr-2" />
-            Export WingDex
+            Export Sightings CSV
           </Button>
 
           <input
