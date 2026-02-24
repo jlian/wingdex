@@ -46,7 +46,10 @@
         "taxonomy:ebird": "node scripts/fetch-ebird-codes.mjs",
         "taxonomy:hydrate-wiki": "node scripts/hydrate-wiki-titles.mjs",
         "taxonomy:validate-wiki": "node scripts/validate-wikipedia.mjs",
-        "bench:vision": "node scripts/benchmark-vision-models.mjs"
+        "bench:vision": "node scripts/benchmark-vision-models.mjs",
+        "fixtures:matrix": "node scripts/run-fixture-matrix.mjs",
+        "fixtures:baseline:promote": "node scripts/promote-matrix-baseline.mjs",
+        "fixtures:baseline:promote:strong": "BASELINE_MODEL=strong node scripts/promote-matrix-baseline.mjs"
     },
     "dependencies": {
         "@better-auth/core": "^1.4.18",
