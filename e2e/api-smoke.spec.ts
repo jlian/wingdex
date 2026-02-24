@@ -157,4 +157,72 @@ test.describe('API smoke (request context)', () => {
 
     await api.dispose()
   })
+
+  test('re-import preview marks rows as duplicate conflicts', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(header => header.name.toLowerCase() === 'set-cookie')
+        .map(header => header.value),
+    )
+    expect(authCookie).toBeTruthy()
+
+    const csvBuffer = readFileSync(path.resolve('e2e/fixtures/ebird-import.csv'))
+
+    const firstPreview = await api.post('/api/import/ebird-csv', {
+      headers: { cookie: authCookie },
+      multipart: {
+        file: {
+          name: 'ebird-import.csv',
+          mimeType: 'text/csv',
+          buffer: csvBuffer,
+        },
+      },
+    })
+    expect(firstPreview.status()).toBe(200)
+    const firstPreviewJson = await firstPreview.json()
+
+    const firstPreviewIds = firstPreviewJson.previews
+      .map((entry: { previewId?: string }) => entry.previewId)
+      .filter((id: string | undefined): id is string => !!id)
+    expect(firstPreviewIds.length).toBeGreaterThan(0)
+
+    const firstConfirm = await api.post('/api/import/ebird-csv/confirm', {
+      headers: { cookie: authCookie },
+      data: { previewIds: firstPreviewIds },
+    })
+    expect(firstConfirm.status()).toBe(200)
+
+    const secondPreview = await api.post('/api/import/ebird-csv', {
+      headers: { cookie: authCookie },
+      multipart: {
+        file: {
+          name: 'ebird-import.csv',
+          mimeType: 'text/csv',
+          buffer: csvBuffer,
+        },
+      },
+    })
+
+    expect(secondPreview.status()).toBe(200)
+    const secondPreviewJson = await secondPreview.json()
+    expect(Array.isArray(secondPreviewJson.previews)).toBe(true)
+    expect(secondPreviewJson.previews.length).toBeGreaterThan(0)
+
+    const conflictTypes = new Set(
+      secondPreviewJson.previews
+        .map((entry: { conflict?: string }) => entry.conflict)
+        .filter((conflict: string | undefined): conflict is string => !!conflict)
+    )
+
+    expect(conflictTypes.size).toBe(1)
+    expect(conflictTypes.has('duplicate')).toBe(true)
+
+    await api.dispose()
+  })
 })

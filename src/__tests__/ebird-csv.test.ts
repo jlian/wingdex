@@ -281,6 +281,18 @@ describe('eBird CSV utilities', () => {
       expect(p.count).toBe(1)
     })
 
+    it('handles "+" and "*" count tokens as 1', () => {
+      const csv = ebirdCSV([
+        'S1,Mallard,Anas platyrhynchos,545,+,US-WA,King,L1,Home,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+        'S2,Northern Pintail,Anas acuta,508,*,US-WA,King,L1,Home,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
+      ])
+
+      const previews = parseEBirdCSV(csv)
+      expect(previews).toHaveLength(2)
+      expect(previews[0].count).toBe(1)
+      expect(previews[1].count).toBe(1)
+    })
+
     it('handles numeric count correctly', () => {
       const csv = ebirdCSV([
         'S1,Mallard,Anas platyrhynchos,545,5,US-WA,King,L1,Home,47.6,-122.4,2025-06-01,11:07 AM,eBird - Casual Observation,,0,,,1,,,,',
@@ -726,6 +738,48 @@ describe('eBird CSV utilities', () => {
         const fields = parseCSVLineForTest(line)
         expect(fields).toHaveLength(19)
       }
+    })
+
+    it('keeps key eBird Record fields in canonical column positions', () => {
+      const outing: Outing = {
+        id: 'o1',
+        userId: 'u1',
+        startTime: '2025-09-28T08:15:00-07:00',
+        endTime: '2025-09-28T09:15:00-07:00',
+        locationName: 'Discovery Park',
+        lat: 47.6606,
+        lon: -122.4147,
+        notes: 'Checklist note',
+        createdAt: '2025-09-28T08:15:00-07:00',
+      }
+      const observations: Observation[] = [
+        {
+          id: 'obs_1',
+          outingId: 'o1',
+          speciesName: 'Northern Cardinal (Cardinalis cardinalis)',
+          count: 2,
+          certainty: 'confirmed',
+          notes: 'Observation note',
+        },
+      ]
+
+      const csv = exportOutingToEBirdCSV(outing, observations, false)
+      const fields = parseCSVLineForTest(csv)
+
+      expect(fields[0]).toBe('Northern Cardinal')
+      expect(fields[1]).toBe('Cardinalis')
+      expect(fields[2]).toBe('cardinalis')
+      expect(fields[3]).toBe('2')
+      expect(fields[4]).toBe('Observation note')
+      expect(fields[5]).toBe('Discovery Park')
+      expect(fields[6]).toBe('47.660600')
+      expect(fields[7]).toBe('-122.414700')
+      expect(fields[8]).toBe('09/28/2025')
+      expect(fields[9]).toBe('08:15')
+      expect(fields[12]).toBe('Incidental')
+      expect(fields[13]).toBe('1')
+      expect(fields[15]).toBe('N')
+      expect(fields[18]).toBe('Checklist note')
     })
 
     it('preserves local time from offset-aware ISO startTime (not browser TZ)', () => {
