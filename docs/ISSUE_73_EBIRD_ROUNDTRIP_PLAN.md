@@ -14,12 +14,12 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 ## Implementation plan
 
 ### 1) Fix per-outing export format to be roundtrip-safe
-- [x] In `functions/lib/ebird.ts`, replace `Genus` + `Species` columns with one `Scientific Name` column in `exportOutingToEBirdCSV()`.
-- [x] Emit full scientific binomial into `Scientific Name` so `parseEBirdCSV()` can reconstruct `Common Name (Scientific Name)` consistently.
+- [x] In `functions/lib/ebird.ts`, keep official eBird Record Format columns (`Genus` + `Species`) in `exportOutingToEBirdCSV()`.
+- [x] Ensure `parseEBirdCSV()` reconstructs full scientific names from `Genus` + `Species` for roundtrip imports.
 
 ### 2) Fix date format compatibility in both directions
-- [x] In `functions/lib/ebird.ts`, change export date format in `exportOutingToEBirdCSV()` from `MM/DD/YYYY` to `YYYY-MM-DD`.
-- [x] In `functions/lib/ebird.ts`, add explicit `MM/DD/YYYY` parsing fallback in `normalizeDate()` to preserve compatibility with real-world CSV variants.
+- [x] In `functions/lib/ebird.ts`, keep export date format in `exportOutingToEBirdCSV()` as `MM/DD/YYYY` per eBird format requirements.
+- [x] In `functions/lib/ebird.ts`, keep explicit `MM/DD/YYYY` parsing support in `normalizeDate()` for import compatibility.
 
 ### 3) Replace settings export with bulk sightings export
 - [x] Add `functions/api/export/sightings.ts` to export all confirmed observations for the current user as one CSV.
@@ -41,7 +41,7 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Commit in logical chunks (plan/docs, library+API, UI, tests).
 
 ## Decisions
-- [x] Format choice: eBird Record Format (compact), with `Scientific Name` replacing `Genus` + `Species` for parser compatibility.
+- [x] Format choice: strict eBird Record Format (19 columns), including separate `Genus` and `Species` columns.
 - [x] Scope choice: replace Settings aggregate export with importable sightings export.
 - [x] Consistency choice: align per-outing export format with bulk export format.
 
@@ -56,4 +56,5 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Added this plan doc.
 - [x] Updated this doc to match the detailed implementation plan from chat.
 - [x] Implemented core export/import compatibility changes (library + API + UI + tests).
+- [x] Audited against official eBird import documentation/template and corrected format drift.
 - [x] Final verification and commit pass completed.

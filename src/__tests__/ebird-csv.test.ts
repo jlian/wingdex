@@ -126,9 +126,10 @@ describe('eBird CSV utilities', () => {
     const csv = exportOutingToEBirdCSV(outing, observations, false)
     const cells = csv.split(',')
 
-    expect(cells).toHaveLength(18)
+    expect(cells).toHaveLength(19)
     expect(csv).toContain('"Mallard"')
-    expect(csv).toContain('"Anas platyrhynchos"')
+    expect(csv).toContain('"Anas"')
+    expect(csv).toContain('"platyrhynchos"')
     expect(csv).toContain('"3"')
     expect(csv).toContain('"Lake North WA"')
     expect(csv).toContain('"Incidental"')
@@ -162,7 +163,7 @@ describe('eBird CSV utilities', () => {
     const [header] = csv.split('\n')
 
     expect(header).toBe(
-      'Common Name,Scientific Name,Number,Species Comments,Location Name,Latitude,Longitude,Date,Start Time,State/Province,Country Code,Protocol,Number of Observers,Duration,All observations reported?,Effort Distance Miles,Effort area acres,Submission Comments'
+      'Common Name,Genus,Species,Number,Species Comments,Location Name,Latitude,Longitude,Date,Start Time,State/Province,Country Code,Protocol,Number of Observers,Duration,All observations reported?,Effort Distance Miles,Effort area acres,Submission Comments'
     )
   })
 
@@ -631,7 +632,7 @@ describe('eBird CSV utilities', () => {
       expect(csv).not.toContain('"Hawk"')
     })
 
-    it('formats date as YYYY-MM-DD for roundtrip-safe export', () => {
+    it('formats date as MM/DD/YYYY for eBird Record format', () => {
       const outing: Outing = {
         id: 'o1',
         userId: 'u1',
@@ -653,8 +654,8 @@ describe('eBird CSV utilities', () => {
       ]
 
       const csv = exportOutingToEBirdCSV(outing, observations)
-      // Date should be in YYYY-MM-DD format
-      expect(csv).toMatch(/"2025-09-28"/)
+      // Date should be in MM/DD/YYYY format
+      expect(csv).toMatch(/"0?\d\/\d{2}\/2025"/)
     })
 
     it('includes lat/lon with 6 decimal places', () => {
@@ -685,7 +686,7 @@ describe('eBird CSV utilities', () => {
       expect(csv).toContain('"-122.835170"')
     })
 
-    it('produces exactly 18 columns per row matching export format', () => {
+    it('produces exactly 19 columns per row matching eBird Record format', () => {
       const outing: Outing = {
         id: 'o1',
         userId: 'u1',
@@ -723,7 +724,7 @@ describe('eBird CSV utilities', () => {
       for (const line of lines) {
         // Count commas that are between quoted fields (not inside quotes)
         const fields = parseCSVLineForTest(line)
-        expect(fields).toHaveLength(18)
+        expect(fields).toHaveLength(19)
       }
     })
 
@@ -754,10 +755,10 @@ describe('eBird CSV utilities', () => {
 
       const csv = exportOutingToEBirdCSV(outing, observations, false)
       const fields = parseCSVLineForTest(csv)
-      // Date (col 8) should be 2024-12-18 (local), not 2024-12-19 (UTC)
-      expect(fields[7]).toBe('2024-12-18')
+      // Date (col 8) should be 12/18/2024 (local), not 12/19/2024 (UTC)
+      expect(fields[8]).toBe('12/18/2024')
       // Time (col 9) should be 17:16 (local HST), not 19:16 (was Pacific)
-      expect(fields[8]).toBe('17:16')
+      expect(fields[9]).toBe('17:16')
     })
   })
 
@@ -988,9 +989,9 @@ describe('eBird CSV utilities', () => {
       // Export
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[7]).toBe('2024-12-18')
+      expect(fields[8]).toBe('12/18/2024')
       // Time should be 17:16 (5:16 PM HST, the actual local time)
-      expect(fields[8]).toBe('17:16')
+      expect(fields[9]).toBe('17:16')
     })
 
     it('preserves Taipei observation date/time through import → group → export', () => {
@@ -1004,8 +1005,8 @@ describe('eBird CSV utilities', () => {
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[7]).toBe('2025-12-28')
-      expect(fields[8]).toBe('07:06')
+      expect(fields[8]).toBe('12/28/2025')
+      expect(fields[9]).toBe('07:06')
     })
 
     it('preserves Seattle summer observation through roundtrip', () => {
@@ -1019,8 +1020,8 @@ describe('eBird CSV utilities', () => {
 
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
-      expect(fields[7]).toBe('2025-06-01')
-      expect(fields[8]).toBe('11:07')
+      expect(fields[8]).toBe('06/01/2025')
+      expect(fields[9]).toBe('11:07')
     })
 
     it('re-imports exported outing CSV without species/date loss', () => {
@@ -1082,8 +1083,8 @@ describe('eBird CSV utilities', () => {
       const exportCsv = exportOutingToEBirdCSV(outings[0], observations, false)
       const fields = parseCSVLineForTest(exportCsv)
       // Export should use the recovered Taipei local time
-      expect(fields[7]).toBe('2025-01-15')
-      expect(fields[8]).toBe('17:00')
+      expect(fields[8]).toBe('01/15/2025')
+      expect(fields[9]).toBe('17:00')
     })
 
     it('Merlin scenario: Kolkata photo from Seattle phone', () => {
