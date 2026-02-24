@@ -6,6 +6,8 @@ type CreateOutingBody = {
   defaultLocationName?: string
   lat?: number
   lon?: number
+  stateProvince?: string
+  countryCode?: string
   notes?: string
   createdAt: string
 }
@@ -21,6 +23,22 @@ function isValidCreateOutingBody(body: unknown): body is CreateOutingBody {
     typeof data.locationName === 'string' &&
     typeof data.createdAt === 'string'
   )
+}
+
+function normalizeCountryCode(countryCode?: string, stateProvince?: string): string | null {
+  const direct = countryCode?.trim().toUpperCase()
+  if (direct && direct.length === 2) return direct
+
+  const stateValue = stateProvince?.trim().toUpperCase()
+  if (!stateValue) return null
+  const derived = stateValue.split('-')[0]
+  return derived.length === 2 ? derived : null
+}
+
+async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  const names = new Set(info.results.map(column => column.name))
+  return names.has('stateProvince') && names.has('countryCode')
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -41,24 +59,49 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   const notes = body.notes ?? ''
+  const stateProvince = body.stateProvince?.trim() || null
+  const countryCode = normalizeCountryCode(body.countryCode, stateProvince || undefined)
+  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
 
-  await context.env.DB.prepare(
-    `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
-  )
-    .bind(
-      body.id,
-      userId,
-      body.startTime,
-      body.endTime,
-      body.locationName,
-      body.defaultLocationName ?? null,
-      body.lat ?? null,
-      body.lon ?? null,
-      notes,
-      body.createdAt
+  if (supportsRegionColumns) {
+    await context.env.DB.prepare(
+      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
     )
-    .run()
+      .bind(
+        body.id,
+        userId,
+        body.startTime,
+        body.endTime,
+        body.locationName,
+        body.defaultLocationName ?? null,
+        body.lat ?? null,
+        body.lon ?? null,
+        stateProvince,
+        countryCode,
+        notes,
+        body.createdAt
+      )
+      .run()
+  } else {
+    await context.env.DB.prepare(
+      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+    )
+      .bind(
+        body.id,
+        userId,
+        body.startTime,
+        body.endTime,
+        body.locationName,
+        body.defaultLocationName ?? null,
+        body.lat ?? null,
+        body.lon ?? null,
+        notes,
+        body.createdAt
+      )
+      .run()
+  }
 
   return Response.json({
     id: body.id,
@@ -69,6 +112,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     defaultLocationName: body.defaultLocationName,
     lat: body.lat,
     lon: body.lon,
+    stateProvince: stateProvince ?? undefined,
+    countryCode: countryCode ?? undefined,
     notes,
     createdAt: body.createdAt,
   })

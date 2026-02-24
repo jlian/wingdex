@@ -7,6 +7,8 @@ type UpdateOutingBody = {
   defaultLocationName?: string
   lat?: number
   lon?: number
+  stateProvince?: string
+  countryCode?: string
   notes?: string
 }
 
@@ -64,6 +66,14 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     updateFields.push('lon = ?')
     bindings.push(updates.lon ?? null)
   }
+  if ('stateProvince' in updates) {
+    updateFields.push('stateProvince = ?')
+    bindings.push(updates.stateProvince ?? null)
+  }
+  if ('countryCode' in updates) {
+    updateFields.push('countryCode = ?')
+    bindings.push(updates.countryCode ? updates.countryCode.trim().toUpperCase() : null)
+  }
   if (typeof updates.notes === 'string') {
     updateFields.push('notes = ?')
     bindings.push(updates.notes)
@@ -95,6 +105,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       defaultLocationName?: string | null
       lat?: number | null
       lon?: number | null
+      stateProvince?: string | null
+      countryCode?: string | null
       notes: string
       createdAt: string
     }>()
@@ -109,6 +121,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     defaultLocationName: outing.defaultLocationName || undefined,
     lat: outing.lat ?? undefined,
     lon: outing.lon ?? undefined,
+    stateProvince: outing.stateProvince ?? undefined,
+    countryCode: outing.countryCode ?? undefined,
   })
 }
 

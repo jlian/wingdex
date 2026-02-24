@@ -18,6 +18,8 @@ export interface Outing {
   defaultLocationName?: string
   lat?: number
   lon?: number
+  stateProvince?: string
+  countryCode?: string
   notes: string
   createdAt: string
 }
