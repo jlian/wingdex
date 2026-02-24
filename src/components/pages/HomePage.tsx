@@ -21,13 +21,25 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
   const [highlightOutingId, setHighlightOutingId] = useState<string | null>(null)
 
   useEffect(() => {
-    const highlighted = window.sessionStorage.getItem('home:highlightOutingId')
-    if (!highlighted) return
+    let timeoutId: number | null = null
 
-    window.sessionStorage.removeItem('home:highlightOutingId')
-    setHighlightOutingId(highlighted)
-    const timeoutId = window.setTimeout(() => setHighlightOutingId(null), 2500)
-    return () => window.clearTimeout(timeoutId)
+    const applyOutingHighlight = () => {
+      const highlighted = window.sessionStorage.getItem('home:highlightOutingId')
+      if (!highlighted) return
+
+      window.sessionStorage.removeItem('home:highlightOutingId')
+      setHighlightOutingId(highlighted)
+      if (timeoutId) window.clearTimeout(timeoutId)
+      timeoutId = window.setTimeout(() => setHighlightOutingId(null), 2500)
+    }
+
+    applyOutingHighlight()
+    window.addEventListener('home:highlightOuting', applyOutingHighlight)
+
+    return () => {
+      window.removeEventListener('home:highlightOuting', applyOutingHighlight)
+      if (timeoutId) window.clearTimeout(timeoutId)
+    }
   }, [outings.length])
 
   const recentOutings = outings
