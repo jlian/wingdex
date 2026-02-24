@@ -172,16 +172,15 @@ test.describe('CSV import + photo upload integration', () => {
 
     await saveObservationsResponse
 
-    // Should show completion
-    await expect(page.getByText(/All done|species saved/i)).toBeVisible({ timeout: 10_000 })
-
-    // Wait for dialog to auto-close
+    // Toast confirms save, then dialog auto-closes
+    await expect(page.getByText(/Saved \d+ species/i)).toBeVisible({ timeout: 10_000 })
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
     // Navigate to Outings and verify the new outing is visible immediately (no refresh)
     await page.getByRole('tab', { name: 'Outings' }).first().click()
     await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
-    await expect(page.getByText('Haleakala National Park, Maui')).toBeVisible({ timeout: 10_000 })
+    const outingsPanel = page.getByRole('tabpanel', { name: 'Outings' })
+    await expect(outingsPanel.getByText('Haleakala National Park, Maui')).toBeVisible({ timeout: 10_000 })
 
     // Navigate to WingDex to verify the species was saved
     await page.getByRole('tab', { name: 'WingDex' }).first().click()
@@ -311,10 +310,10 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 15_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
-    // Dialog auto-closes after all species saved
+    // Dialog auto-closes after all clusters are saved
     await expect(dialog).not.toBeVisible({ timeout: 15_000 })
 
     // Completion toast should appear after both clusters are processed
-    await expect(page.getByText(/All done!/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/Saved \d+ species/i)).toBeVisible({ timeout: 10_000 })
   })
 })
