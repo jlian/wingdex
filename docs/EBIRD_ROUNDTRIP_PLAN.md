@@ -40,6 +40,17 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Run broader verification relevant to changed behavior.
 - [x] Commit in logical chunks (plan/docs, library+API, UI, tests).
 
+### 7) Add schema-first support for eBird checklist-level outing fields
+- [x] Expand outing schema migration to include `protocol`, `numberObservers`, `allObsReported`, `effortDistanceMiles`, `effortAreaAcres`.
+- [x] Thread new fields through outing create/patch/read APIs and import confirm endpoint.
+- [x] Thread new fields through per-outing and bulk sightings export endpoints.
+- [x] Parse checklist effort fields from import CSV (including km/ha fallback conversion) and persist for roundtrip export.
+
+### 8) Infer region metadata without adding ingestion API calls
+- [x] Reuse existing Nominatim responses in photo outing review flow to infer `stateProvince` and `countryCode`.
+- [x] Persist inferred region metadata onto created/updated outings.
+- [x] Keep graceful fallback behavior when region inference is unavailable.
+
 ## Decisions
 - [x] Format choice: strict eBird Record Format (19 columns), including separate `Genus` and `Species` columns.
 - [x] Scope choice: replace Settings aggregate export with importable sightings export.
@@ -50,6 +61,7 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [ ] Re-import of unchanged exported sightings is conflict-detected as duplicates.
 - [x] Date/time values remain stable across import-export-import for timezone-sensitive rows.
 - [x] Existing import of fixture-style eBird CSV remains functional.
+- [x] New checklist effort metadata roundtrips in unit tests.
 
 ## Execution log
 - [x] Created branch `feat/ebird-roundtrip-export` from `main`.
@@ -58,3 +70,5 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Implemented core export/import compatibility changes (library + API + UI + tests).
 - [x] Audited against official eBird import documentation/template and corrected format drift.
 - [x] Final verification and commit pass completed.
+- [x] Renamed migration file to `migrations/0005_outing_ebird_fields.sql` to match expanded scope.
+- [x] Implemented schema-first eBird checklist field support and no-extra-call geocode metadata reuse.
