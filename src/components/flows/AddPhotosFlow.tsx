@@ -352,11 +352,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         .slice(0, 3)
         .join(', ')
       const uniqueCount = new Set(confirmed.map(r => r.species)).size
-      toast.success(`Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`, { duration: 6000 })
+      const savedMessage = `Saved ${uniqueCount} species to ${outingName}${speciesPreview ? `: ${speciesPreview}` : ''}.`
+      const combinedMessage = hasNewSpecies ? `${savedMessage} ${liferMessage}` : savedMessage
+      toast.success(combinedMessage, { duration: 6000 })
     }
 
     if (hasNewSpecies) {
-      toast(liferMessage, { duration: 6000 })
+      setShowConfetti(false)
+      window.setTimeout(() => setShowConfetti(true), 0)
+      window.setTimeout(() => setShowConfetti(false), 1400)
     }
 
     if (currentClusterIndex < clusters.length - 1) {
@@ -369,7 +373,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     }
 
     if (hasNewSpecies) {
-      setShowConfetti(true)
       // Delay close so confetti canvas stays mounted
       window.sessionStorage.setItem('home:highlightOutingId', currentOutingId)
       window.dispatchEvent(new Event('home:highlightOuting'))
