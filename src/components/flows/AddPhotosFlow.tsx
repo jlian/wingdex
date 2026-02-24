@@ -681,12 +681,17 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           {step === 'photo-processing' && (
             <div className="space-y-4 py-8">
               {fullCurrentPhoto && (
-                <div className="flex justify-center">
-                  <img
-                    src={fullCurrentPhoto.croppedDataUrl || fullCurrentPhoto.thumbnail}
-                    alt="Current photo"
-                    className="w-32 h-32 object-cover rounded-lg border-2 border-border"
-                  />
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-full max-w-48 aspect-square rounded-lg border-2 border-border overflow-hidden bg-muted/20">
+                    <img
+                      src={fullCurrentPhoto.croppedDataUrl || fullCurrentPhoto.thumbnail}
+                      alt="Current photo"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {fullCurrentPhoto.croppedDataUrl ? 'Your photo (cropped)' : 'Your photo'}
+                  </p>
                 </div>
               )}
               <Progress value={photoProgress} className="w-full" />
@@ -894,9 +899,9 @@ function PerPhotoConfirm({
               />
             )}
           </div>
-          {photo.croppedDataUrl && (
-            <p className="text-xs text-muted-foreground">Your photo (cropped)</p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {photo.croppedDataUrl ? 'Your photo (cropped)' : 'Your photo'}
+          </p>
         </div>
         
         {/* Wikipedia reference image */}
