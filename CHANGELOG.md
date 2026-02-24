@@ -1,3 +1,16 @@
+# [1.9.0](https://github.com/jlian/wingdex/compare/v1.8.0...v1.9.0) (2026-02-24)
+
+
+### Bug Fixes
+
+* **ios:** reduce WingDex swipe-back thumbnail flashing ([063a16c](https://github.com/jlian/wingdex/commit/063a16cdf373074eeaf36fc2608db1c63d235057))
+* normalize hover conflicts with press-feel utilities ([b363139](https://github.com/jlian/wingdex/commit/b3631391c3212f4daa87aa20cd7acaf3bd9714da))
+
+
+### Features
+
+* add iOS-style press-feel CSS utilities and touch-press handler ([1eacb0d](https://github.com/jlian/wingdex/commit/1eacb0d262c541f6853212b83ac373b49c305f8b))
+
 # [1.8.0](https://github.com/jlian/wingdex/compare/v1.7.2...v1.8.0) (2026-02-24)
 
 
