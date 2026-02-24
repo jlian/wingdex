@@ -12,6 +12,7 @@ migrations_dir = "migrations"
 
 [ai]
 binding = "AI"
+remote = true
 
 [vars]
 
@@ -30,3 +31,4 @@ migrations_dir = "migrations"
 
 [env.preview.ai]
 binding = "AI"
+remote = true
