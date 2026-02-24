@@ -6,6 +6,8 @@ interface VisionResult {
   wikiTitle?: string
 }
 
+export type BirdIdModelTier = 'fast' | 'strong'
+
 export interface BirdIdResult {
   candidates: VisionResult[]
   cropBox?: { x: number; y: number; width: number; height: number }
@@ -38,52 +40,50 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-function dataUrlToBlob(dataUrl: string): Blob {
-  const parts = dataUrl.split(',')
-  if (parts.length !== 2) {
-    throw new Error('Invalid image data URL')
-  }
-
-  const mimeMatch = parts[0].match(/data:(.*?);base64/)
-  const mime = mimeMatch?.[1] || 'image/jpeg'
-  const binary = atob(parts[1])
-  const bytes = new Uint8Array(binary.length)
-
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-
-  return new Blob([bytes], { type: mime })
-}
-
 export async function identifyBirdInPhoto(
   imageDataUrl: string,
   location?: { lat: number; lon: number },
   month?: number,
   locationName?: string,
+  model: BirdIdModelTier = 'fast',
 ): Promise<BirdIdResult> {
   const image = await loadImage(imageDataUrl)
   const compressed = compressImage(image, 640, 0.7)
 
-  const formData = new FormData()
-  formData.append('image', dataUrlToBlob(compressed.dataUrl), 'bird.jpg')
-  formData.append('imageWidth', String(compressed.width))
-  formData.append('imageHeight', String(compressed.height))
+  const requestPayload: {
+    imageDataUrl: string
+    imageWidth: number
+    imageHeight: number
+    lat?: number
+    lon?: number
+    month?: number
+    locationName?: string
+    model: BirdIdModelTier
+  } = {
+    imageDataUrl: compressed.dataUrl,
+    imageWidth: compressed.width,
+    imageHeight: compressed.height,
+    model,
+  }
+
   if (location) {
-    formData.append('lat', String(location.lat))
-    formData.append('lon', String(location.lon))
+    requestPayload.lat = location.lat
+    requestPayload.lon = location.lon
   }
   if (month !== undefined) {
-    formData.append('month', String(month))
+    requestPayload.month = month
   }
   if (locationName) {
-    formData.append('locationName', locationName)
+    requestPayload.locationName = locationName
   }
 
   const response = await fetchWithLocalAuthRetry('/api/identify-bird', {
     method: 'POST',
     credentials: 'include',
-    body: formData,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestPayload),
   })
 
   if (!response.ok) {
