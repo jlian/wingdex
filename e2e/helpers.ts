@@ -1,6 +1,60 @@
 import { expect, type Page } from '@playwright/test'
 import path from 'path'
 
+type SessionState = {
+  hasUser: boolean
+  isAnonymous: boolean
+}
+
+async function getSessionState(page: Page): Promise<SessionState> {
+  return await page.evaluate(async () => {
+    try {
+      const res = await fetch('/api/auth/get-session', { credentials: 'include' })
+      const body = await res.json().catch(() => null)
+      const user = body && typeof body === 'object' ? (body as { user?: unknown }).user : undefined
+      if (!user || typeof user !== 'object') {
+        return { hasUser: false, isAnonymous: true }
+      }
+
+      const rawAnonymous = (user as { isAnonymous?: unknown }).isAnonymous
+      return {
+        hasUser: true,
+        isAnonymous: Boolean(rawAnonymous),
+      }
+    } catch {
+      return { hasUser: false, isAnonymous: true }
+    }
+  })
+}
+
+async function registerVirtualPasskey(page: Page) {
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('WebAuthn.enable')
+  const added = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  }) as { authenticatorId: string }
+
+  try {
+    await page.getByRole('button', { name: 'Log in' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
+
+    await page.getByRole('button', { name: 'Sign up' }).click()
+    await page.getByRole('button', { name: 'Sign up with a Passkey' }).click()
+
+    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 15_000 })
+  } finally {
+    await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId: added.authenticatorId })
+    await cdp.send('WebAuthn.disable')
+  }
+}
+
 /**
  * Navigate to the app and wait for it to load.
  * Optionally promotes the anonymous session so auth-gated features
@@ -33,23 +87,21 @@ export async function loadApp(page: Page, { promote = true } = {}) {
  * so this is a silent no-op.
  */
 export async function promoteAnonymousUser(page: Page) {
-  const promoted = await page.evaluate(async () => {
-    try {
-      const res = await fetch('/api/auth/finalize-passkey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'e2e-test-user' }),
-      })
-      return res.ok
-    } catch {
-      return false
-    }
-  })
+  const sessionBefore = await getSessionState(page)
+  if (sessionBefore.hasUser && !sessionBefore.isAnonymous) {
+    return
+  }
 
-  if (promoted) {
+  await registerVirtualPasskey(page)
+
+  const sessionAfter = await getSessionState(page)
+  if (sessionAfter.hasUser && !sessionAfter.isAnonymous) {
     await page.reload()
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 })
+    return
   }
+
+  throw new Error('E2E passkey promotion failed: session is still anonymous after signup flow')
 }
 
 /**

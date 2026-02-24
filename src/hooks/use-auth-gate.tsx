@@ -149,12 +149,21 @@ function AuthGateModal({
       return
     }
 
+    const passkeyId = (
+      typeof (passkeyResult.data as { id?: unknown } | undefined)?.id === 'string'
+        ? (passkeyResult.data as { id: string }).id.trim()
+        : ''
+    )
+
     // Finalize -- flip anonymous -> real user
     const finalizeRes = await fetch('/api/auth/finalize-passkey', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: birdName }),
+      body: JSON.stringify({
+        name: birdName,
+        ...(passkeyId ? { passkeyId } : {}),
+      }),
     })
     if (!finalizeRes.ok) {
       setIsLoading(false)

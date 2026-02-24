@@ -8,25 +8,39 @@ description: Use GitHub CLI for PR and issue workflows in Codespaces, including 
 Use `gh` for PR/issue workflows and `gh api` for operations not covered by built-in commands.
 
 ## 1) Write clean markdown bodies
-Prefer inline multiline bodies (no temp files, no escaped `\n`) with heredoc:
+Pipe the body into `--body-file -` to avoid both temp files and heredoc stdin corruption
+(on macOS with multiple concurrent terminals, heredoc stdin can get cross-contaminated):
 
 ```bash
-gh pr edit --body "$(cat <<'EOF'
-## Summary
+printf '%s' '## Summary
 Line 1
 
-Line 2
+Line 2' | gh pr edit --body-file -
+```
+
+For bodies containing single quotes, use a heredoc into the pipe:
+
+```bash
+cat <<'EOF' | gh pr edit --body-file -
+## Summary
+It's a `code` example
 EOF
-)"
 ```
 
 Important:
-- Keep the heredoc delimiter quoted (`<<'EOF'`) so backticks in markdown are treated as plain text.
+- Always prefer `| gh ... --body-file -` over `--body "$(cat <<'EOF' ... )"` heredoc substitution.
+- The pipe isolates stdin from the terminal PTY, preventing cross-contamination from concurrent agents.
+- Keep heredoc delimiters quoted (`<<'EOF'`) so backticks are treated as plain text.
 - Do not put markdown with backticks directly inside a double-quoted `--body "..."` string.
-- `--body-file` is still fine for very long bodies, but inline heredoc is the default.
 
 Avoid:
 ```bash
+# Heredoc substitution -- stdin comes from terminal PTY, vulnerable to corruption
+gh pr edit --body "$(cat <<'EOF'
+...
+EOF
+)"
+# Escaped newlines -- unreadable
 gh pr comment --body "Line 1\n\nLine 2"
 ```
 
@@ -40,23 +54,21 @@ gh pr view --comments
 Create/update PRs:
 
 ```bash
-gh pr create --title "..." --base main --head <branch> --body "$(cat <<'EOF'
-## Summary
-- item
-EOF
-)"
-gh pr edit --body "$(cat <<'EOF'
+printf '%s' '## Summary
+- item' | gh pr create --title "..." --base main --head <branch> --body-file -
+
+cat <<'EOF' | gh pr edit --body-file -
 ## Updated summary
 - item
 EOF
-)"
+
 gh pr edit --body ""
-gh pr comment --body "$(cat <<'EOF'
+
+cat <<'EOF' | gh pr comment --body-file -
 Short update
 
 - test 1 passed
 EOF
-)"
 ```
 
 If PR title check fails:

@@ -34,16 +34,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 25
-
-      - name: Cache node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          cache: npm
 
       - name: Install dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Pre-release typecheck
@@ -88,3 +81,76 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=wingdex ${{ github.ref != 'refs/heads/main' && format('--branch={0}', github.ref_name) || '' }}
+
+      - name: Purge production edge cache
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -z "${CLOUDFLARE_ZONE_ID:-}" ]; then
+            echo "Missing CLOUDFLARE_ZONE_ID GitHub secret"
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
+      - name: Verify deployed version
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          STRICT_VERIFY=false
+
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            DOMAINS="wingdex.app wingdex.pages.dev"
+            STRICT_VERIFY=true
+          else
+            DOMAINS="${{ github.ref_name }}.wingdex.pages.dev"
+          fi
+
+          MAX_ATTEMPTS=5
+          for DOMAIN in $DOMAINS; do
+            echo "Checking ${DOMAIN} for version ${VERSION}"
+            VERIFIED=false
+            for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+              if ! HTML=$(curl --fail --silent --show-error "https://${DOMAIN}/" 2>&1); then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: fetch failed, retrying in 10s..."
+                sleep 10
+                continue
+              fi
+
+              ASSET=$(printf '%s' "$HTML" | grep -oE 'assets/[^"?]+\.js' | head -n1) || true
+              if [ -z "$ASSET" ]; then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no JS asset found, retrying in 10s..."
+                sleep 10
+                continue
+              fi
+
+              if ! JS=$(curl --fail --silent --show-error "https://${DOMAIN}/${ASSET}" 2>&1); then
+                echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: JS fetch failed, retrying in 10s..."
+                sleep 10
+                continue
+              fi
+
+              if printf '%s' "$JS" | grep -F "$VERSION" >/dev/null; then
+                echo "  Verified ${DOMAIN} serves version ${VERSION}"
+                VERIFIED=true
+                break
+              fi
+
+              echo "  Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: version mismatch, retrying in 10s..."
+              sleep 10
+            done
+
+            if [ "$VERIFIED" != "true" ]; then
+              if [ "$STRICT_VERIFY" = "true" ]; then
+                echo "Failed to verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts"
+                exit 1
+              fi
+              echo "Warning: could not verify ${DOMAIN} after ${MAX_ATTEMPTS} attempts; continuing for non-main branch"
+            fi
+          done

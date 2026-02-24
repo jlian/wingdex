@@ -25,12 +25,16 @@ async function toImageDataUrl(image: FormDataEntryValue | null): Promise<string>
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   try {
-    const userId = (context.data as { user?: { id?: string } }).user?.id
-    if (!userId) {
+    const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
+    if (!user?.id) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    await enforceAiDailyLimit(context.env.DB, userId, 'identify-bird', context.env.AI_DAILY_LIMIT_IDENTIFY)
+    if (user.isAnonymous) {
+      return new Response('Account required', { status: 403 })
+    }
+
+    await enforceAiDailyLimit(context.env.DB, user.id, 'identify-bird', context.env.AI_DAILY_LIMIT_IDENTIFY)
 
     const formData = await context.request.formData()
     const imageDataUrl = await toImageDataUrl(formData.get('image'))

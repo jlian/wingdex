@@ -92,7 +92,7 @@ describe('useAuthGate', () => {
   })
 
   it('opens in sign-up mode and creates account with passkey', async () => {
-    mockAddPasskey.mockResolvedValue({ error: null })
+    mockAddPasskey.mockResolvedValue({ data: { id: 'pk-test-1' }, error: null })
 
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ providers: [] }) })
@@ -112,6 +112,14 @@ describe('useAuthGate', () => {
     })
 
     expect(mockAddPasskey).toHaveBeenCalledTimes(1)
+    const finalizeCall = fetchMock.mock.calls.find(([url]) => url === '/api/auth/finalize-passkey')
+    expect(finalizeCall).toBeTruthy()
+    const finalizeInit = finalizeCall?.[1] as RequestInit
+    expect(typeof finalizeInit.body).toBe('string')
+    expect(JSON.parse(String(finalizeInit.body))).toMatchObject({
+      name: 'test-bird',
+      passkeyId: 'pk-test-1',
+    })
   })
 
   it('switches to log-in mode and uses passkey sign-in', async () => {

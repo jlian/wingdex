@@ -11,7 +11,6 @@ const apiPort = process.env.API_PORT || '8788'
 export default defineConfig({
   define: {
     APP_VERSION: JSON.stringify(packageJson.version),
-    TURNSTILE_SITE_KEY: JSON.stringify(process.env.TURNSTILE_SITE_KEY || ''),
   },
   plugins: [
     react(),
