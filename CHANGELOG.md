@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/jlian/wingdex/compare/v1.6.3...v1.6.4) (2026-02-24)
+
+
+### Performance Improvements
+
+* cold-start optimization, Turnstile removal, CI deploy verification ([#189](https://github.com/jlian/wingdex/issues/189)) ([1c8c53e](https://github.com/jlian/wingdex/commit/1c8c53e739491c411a0e2297251e2c9cd35b2ff3))
+
 ## [1.6.3](https://github.com/jlian/wingdex/compare/v1.6.2...v1.6.3) (2026-02-23)
 
 
