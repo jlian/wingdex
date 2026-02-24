@@ -38,7 +38,7 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 ### 6) Verify end-to-end and commit incrementally
 - [x] Run targeted unit tests for eBird CSV parsing/export.
 - [x] Run broader verification relevant to changed behavior.
-- [ ] Commit in logical chunks (plan/docs, library+API, UI, tests).
+- [x] Commit in logical chunks (plan/docs, library+API, UI, tests).
 
 ## Decisions
 - [x] Format choice: eBird Record Format (compact), with `Scientific Name` replacing `Genus` + `Species` for parser compatibility.
@@ -56,4 +56,4 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Added this plan doc.
 - [x] Updated this doc to match the detailed implementation plan from chat.
 - [x] Implemented core export/import compatibility changes (library + API + UI + tests).
-- [ ] Final verification and commit pass in progress.
+- [x] Final verification and commit pass completed.
