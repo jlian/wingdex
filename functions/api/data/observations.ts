@@ -211,7 +211,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     ...observation,
     representativePhotoId: observation.representativePhotoId || undefined,
     aiConfidence: observation.aiConfidence ?? undefined,
-    speciesComments: observation.speciesComments || undefined,
+    speciesComments: supportsSpeciesComments ? (observation.speciesComments || undefined) : undefined,
     notes: observation.notes ?? '',
   }))
 
