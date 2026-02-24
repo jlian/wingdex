@@ -23,7 +23,7 @@
       ],
       "isBackground": true,
       "presentation": {
-        "reveal": "never",
+        "reveal": "always",
         "focus": false,
         "panel": "dedicated",
         "showReuseMessage": false,
