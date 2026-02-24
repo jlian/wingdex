@@ -1,3 +1,5 @@
+import { getOutingColumnNames } from '../../lib/schema'
+
 type CreateOutingBody = {
   id: string
   startTime: string
@@ -38,11 +40,6 @@ function normalizeCountryCode(countryCode?: string, stateProvince?: string): str
   if (!stateValue) return null
   const derived = stateValue.split('-')[0]
   return derived.length === 2 ? derived : null
-}
-
-async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
-  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
-  return new Set(info.results.map(column => column.name))
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {

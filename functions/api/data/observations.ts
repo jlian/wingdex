@@ -1,4 +1,5 @@
 import { computeDex } from '../../lib/dex-query'
+import { hasObservationColumn } from '../../lib/schema'
 
 type ObservationCertainty = 'confirmed' | 'possible' | 'pending' | 'rejected'
 
@@ -89,16 +90,10 @@ function getPatchBindings(patch: ObservationPatch): {
   return { updateFields, bindings }
 }
 
-async function hasSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
-  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return names.has('speciesComments')
-}
-
 async function listObservationsByIds(db: D1Database, userId: string, ids: string[]) {
   if (ids.length === 0) return []
 
-  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
+  const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
   const speciesCommentsSelect = supportsSpeciesComments ? 'speciesComments' : 'NULL as speciesComments'
 
   const placeholders = ids.map(() => '?').join(', ')
@@ -173,7 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return new Response('Invalid outing reference', { status: 400 })
   }
 
-  const supportsSpeciesComments = await hasSpeciesCommentsColumn(context.env.DB)
+  const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
 
   const statements = body.map(observation => {
     if (supportsSpeciesComments) {
@@ -242,7 +237,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   const db = context.env.DB
-  const supportsSpeciesComments = await hasSpeciesCommentsColumn(db)
+  const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
 
   if (typeof body.id === 'string') {
     const { id, ...rawPatch } = body

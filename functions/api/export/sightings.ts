@@ -1,4 +1,5 @@
 import { exportOutingToEBirdCSV } from '../../lib/ebird'
+import { getOutingColumnNames, hasObservationColumn } from '../../lib/schema'
 
 type ExportRow = {
   outingId: string
@@ -21,17 +22,6 @@ type ExportRow = {
   observationNotes?: string | null
 }
 
-async function getOutingColumnNames(db: D1Database): Promise<Set<string>> {
-  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
-  return new Set(info.results.map(column => column.name))
-}
-
-async function hasObservationSpeciesCommentsColumn(db: D1Database): Promise<boolean> {
-  const info = await db.prepare("PRAGMA table_info('observation')").all<{ name: string }>()
-  const names = new Set(info.results.map(column => column.name))
-  return names.has('speciesComments')
-}
-
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
@@ -39,7 +29,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const columnNames = await getOutingColumnNames(context.env.DB)
-  const supportsSpeciesCommentsColumn = await hasObservationSpeciesCommentsColumn(context.env.DB)
+  const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
   const observationNotesSelect = supportsSpeciesCommentsColumn
     ? 'COALESCE(ob.speciesComments, ob.notes)'
     : 'ob.notes'
