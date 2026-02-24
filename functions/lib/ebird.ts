@@ -1,9 +1,12 @@
 type OutingForExport = {
   id: string
   startTime: string
+  endTime?: string
   locationName: string
   lat?: number | null
   lon?: number | null
+  stateProvince?: string | null
+  countryCode?: string | null
   notes?: string | null
 }
 
@@ -41,6 +44,8 @@ export type OutingForImport = {
   defaultLocationName?: string
   lat?: number
   lon?: number
+  stateProvince?: string
+  countryCode?: string
   notes: string
   createdAt: string
 }
@@ -189,6 +194,27 @@ function parseTimeString(timeStr: string): { hours: number; minutes: number } | 
   }
 
   return null
+}
+
+function parseCountryCodeFromStateProvince(stateProvince?: string): string | undefined {
+  if (!stateProvince) return undefined
+  const value = stateProvince.trim().toUpperCase()
+  if (!value) return undefined
+  const code = value.split('-')[0]
+  if (code.length === 2) return code
+  return undefined
+}
+
+function computeDurationMinutes(startTime: string, endTime?: string): string {
+  if (!endTime) return ''
+
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return ''
+
+  const diffMinutes = Math.round((end.getTime() - start.getTime()) / 60_000)
+  if (!Number.isFinite(diffMinutes) || diffMinutes <= 0) return ''
+  return String(diffMinutes)
 }
 
 function normalizeDate(
@@ -394,6 +420,8 @@ export function groupPreviewsIntoOutings(
       defaultLocationName: first.location,
       lat: first.lat,
       lon: first.lon,
+      stateProvince: first.stateProvince,
+      countryCode: parseCountryCodeFromStateProvince(first.stateProvince),
       notes: outingNotes,
       createdAt: new Date().toISOString(),
     })
@@ -447,6 +475,10 @@ export function exportOutingToEBirdCSV(
         return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`
       })()
 
+  const duration = computeDurationMinutes(outing.startTime, outing.endTime)
+  const stateProvince = outing.stateProvince?.trim() || ''
+  const countryCode = (outing.countryCode?.trim().toUpperCase() || parseCountryCodeFromStateProvince(stateProvince) || '')
+
   const rows = observations
     .filter(observation => observation.certainty === 'confirmed')
     .map(observation => {
@@ -465,11 +497,11 @@ export function exportOutingToEBirdCSV(
         outing.lon != null ? outing.lon.toFixed(6) : '',
         date,
         time,
-        '',
-        '',
+        stateProvince,
+        countryCode,
         'Incidental',
         '1',
-        '',
+        duration,
         'N',
         '',
         '',

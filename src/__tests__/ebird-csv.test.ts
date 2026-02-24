@@ -778,6 +778,7 @@ describe('eBird CSV utilities', () => {
       expect(fields[9]).toBe('08:15')
       expect(fields[12]).toBe('Incidental')
       expect(fields[13]).toBe('1')
+      expect(fields[14]).toBe('60')
       expect(fields[15]).toBe('N')
       expect(fields[18]).toBe('Checklist note')
     })

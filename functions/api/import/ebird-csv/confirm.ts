@@ -22,6 +22,12 @@ function decodePreviewId(previewId: string): ImportPreview | null {
   }
 }
 
+async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  const names = new Set(info.results.map(column => column.name))
+  return names.has('stateProvince') && names.has('countryCode')
+}
+
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
@@ -53,29 +59,54 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const priorSpecies = new Set(priorDex.map(row => row.speciesName))
 
   const { outings, observations } = groupPreviewsIntoOutings(selectedPreviews, userId)
+  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
 
   const insertStatements: D1PreparedStatement[] = []
 
   for (const outing of outings) {
-    insertStatements.push(
-      context.env.DB
-        .prepare(
-          `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
-        )
-        .bind(
-          outing.id,
-          userId,
-          outing.startTime,
-          outing.endTime,
-          outing.locationName,
-          outing.defaultLocationName ?? null,
-          outing.lat ?? null,
-          outing.lon ?? null,
-          outing.notes,
-          outing.createdAt
-        )
-    )
+    if (supportsRegionColumns) {
+      insertStatements.push(
+        context.env.DB
+          .prepare(
+            `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+          )
+          .bind(
+            outing.id,
+            userId,
+            outing.startTime,
+            outing.endTime,
+            outing.locationName,
+            outing.defaultLocationName ?? null,
+            outing.lat ?? null,
+            outing.lon ?? null,
+            outing.stateProvince ?? null,
+            outing.countryCode ?? null,
+            outing.notes,
+            outing.createdAt
+          )
+      )
+    } else {
+      insertStatements.push(
+        context.env.DB
+          .prepare(
+            `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+          )
+          .bind(
+            outing.id,
+            userId,
+            outing.startTime,
+            outing.endTime,
+            outing.locationName,
+            outing.defaultLocationName ?? null,
+            outing.lat ?? null,
+            outing.lon ?? null,
+            outing.notes,
+            outing.createdAt
+          )
+      )
+    }
   }
 
   for (const observation of observations) {

@@ -3,14 +3,23 @@ import { exportOutingToEBirdCSV } from '../../lib/ebird'
 type ExportRow = {
   outingId: string
   startTime: string
+  endTime: string
   locationName: string
   lat?: number | null
   lon?: number | null
+  stateProvince?: string | null
+  countryCode?: string | null
   outingNotes?: string | null
   speciesName: string
   count: number
   certainty: 'confirmed' | 'possible' | 'pending' | 'rejected'
   observationNotes?: string | null
+}
+
+async function hasOutingRegionColumns(db: D1Database): Promise<boolean> {
+  const info = await db.prepare("PRAGMA table_info('outing')").all<{ name: string }>()
+  const names = new Set(info.results.map(column => column.name))
+  return names.has('stateProvince') && names.has('countryCode')
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
@@ -19,14 +28,17 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const rowsResult = await context.env.DB
-    .prepare(
-      `SELECT
+  const supportsRegionColumns = await hasOutingRegionColumns(context.env.DB)
+  const rowsQuery = supportsRegionColumns
+    ? `SELECT
          o.id as outingId,
          o.startTime,
+         o.endTime,
          o.locationName,
          o.lat,
          o.lon,
+         o.stateProvince,
+         o.countryCode,
          o.notes as outingNotes,
          ob.speciesName,
          ob.count,
@@ -36,7 +48,27 @@ export const onRequestGet: PagesFunction<Env> = async context => {
        INNER JOIN outing o ON o.id = ob.outingId
        WHERE ob.userId = ?
        ORDER BY o.startTime ASC, o.id ASC, ob.id ASC`
-    )
+    : `SELECT
+         o.id as outingId,
+         o.startTime,
+         o.endTime,
+         o.locationName,
+         o.lat,
+         o.lon,
+         NULL as stateProvince,
+         NULL as countryCode,
+         o.notes as outingNotes,
+         ob.speciesName,
+         ob.count,
+         ob.certainty,
+         ob.notes as observationNotes
+       FROM observation ob
+       INNER JOIN outing o ON o.id = ob.outingId
+       WHERE ob.userId = ?
+       ORDER BY o.startTime ASC, o.id ASC, ob.id ASC`
+
+  const rowsResult = await context.env.DB
+    .prepare(rowsQuery)
     .bind(userId)
     .all<ExportRow>()
 
@@ -46,6 +78,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       {
         id: 'empty',
         startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
         locationName: '',
       },
       [],
@@ -77,9 +110,12 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       {
         id: first.outingId,
         startTime: first.startTime,
+        endTime: first.endTime,
         locationName: first.locationName,
         lat: first.lat,
         lon: first.lon,
+        stateProvince: first.stateProvince,
+        countryCode: first.countryCode,
         notes: first.outingNotes,
       },
       outingRows.map(row => ({
