@@ -4,7 +4,8 @@ import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 
 
-const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
+export const VISION_MODEL = 'gpt-4.1-mini'
+export const VISION_MODEL_STRONG = 'gpt-5-mini'
 
 type Candidate = {
   species: string
@@ -25,6 +26,7 @@ type IdentifyBirdInput = {
   location?: { lat: number; lon: number }
   month?: number
   locationName?: string
+  modelTier?: 'fast' | 'strong'
 }
 
 export { HttpError } from './http-error'
@@ -198,7 +200,9 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     return parsed
   }
 
-  const model = env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
+  const model = input.modelTier === 'strong'
+    ? (env.OPENAI_MODEL_STRONG || VISION_MODEL_STRONG)
+    : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
 
   const candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
@@ -206,7 +210,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       species: String(candidate?.species || ''),
       confidence: Number(candidate?.confidence),
     }))
-    .filter(candidate => candidate.species && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.3)
+    .filter(candidate => candidate.species && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.2)
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5)
     .map(candidate => {
