@@ -18,27 +18,28 @@ No behavioral change; pure dead-code removal and render optimizations.
   No `forceMount` prop found anywhere in the codebase. \
   _Closed._
 
-- [ ] **#114 -- Remove unused dependencies and scaffold files** \
+- [x] **#114 -- Remove unused dependencies and scaffold files** \
   Delete 7 unused dependencies from `package.json`:
-  - [ ] `cmdk`
-  - [ ] `embla-carousel-react`
-  - [ ] `input-otp`
-  - [ ] `react-day-picker`
-  - [ ] `react-hook-form`
-  - [ ] `react-resizable-panels`
-  - [ ] `recharts`
+  - [x] `cmdk`
+  - [x] `embla-carousel-react`
+  - [x] `input-otp`
+  - [x] `react-day-picker`
+  - [x] `react-hook-form`
+  - [x] `react-resizable-panels`
+  - [x] `recharts`
 
   Delete 7 corresponding scaffold UI files:
-  - [ ] `src/components/ui/carousel.tsx`
-  - [ ] `src/components/ui/form.tsx`
-  - [ ] `src/components/ui/command.tsx`
-  - [ ] `src/components/ui/calendar.tsx`
-  - [ ] `src/components/ui/resizable.tsx`
-  - [ ] `src/components/ui/chart.tsx`
-  - [ ] `src/components/ui/input-otp.tsx`
+  - [x] `src/components/ui/carousel.tsx`
+  - [x] `src/components/ui/form.tsx`
+  - [x] `src/components/ui/command.tsx`
+  - [x] `src/components/ui/calendar.tsx`
+  - [x] `src/components/ui/resizable.tsx`
+  - [x] `src/components/ui/chart.tsx`
+  - [x] `src/components/ui/input-otp.tsx`
 
   Run `npm install` to sync lockfile. \
-  Verify: `npm run build` succeeds and bundle size decreases.
+  Verify: `npm run build` succeeds and bundle size decreases. \
+  _Done in `6796a16`._
 
 - [ ] **#112 -- Add `loading="lazy"` to bird thumbnail images** \
   Add `loading="lazy"` to the `<img>` element in `src/components/ui/wiki-bird-thumbnail.tsx`. \
