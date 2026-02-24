@@ -237,17 +237,28 @@ test.describe('CSV import + photo upload integration', () => {
   })
 
   test('species convergence: CSV import + photo upload for same species increases count', async ({ page }) => {
-    // First: import CSV that includes Chukar
+    // Seed CSV data (includes Chukar) via direct API calls
     await loadApp(page)
-    await goToSettings(page)
 
-    // Set timezone and import CSV (default is already Pacific, no need to change)
-    const confirmDone = page.waitForResponse(
-      r => r.url().includes('/api/import/ebird-csv/confirm') && r.status() === 200
-    )
-    const csvInput = page.locator('input[type="file"][accept*=".csv"]')
-    await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
-    await confirmDone
+    const csvBuffer = readFileSync(path.resolve('e2e/fixtures/ebird-import.csv'))
+    const preview = await page.request.post('/api/import/ebird-csv', {
+      multipart: {
+        file: { name: 'ebird-import.csv', mimeType: 'text/csv', buffer: csvBuffer },
+      },
+    })
+    expect(preview.ok()).toBe(true)
+    const { previews } = await preview.json()
+    const previewIds = previews
+      .map((e: { previewId?: string }) => e.previewId)
+      .filter(Boolean)
+    const confirm = await page.request.post('/api/import/ebird-csv/confirm', {
+      data: { previewIds },
+    })
+    expect(confirm.ok()).toBe(true)
+
+    // Reload so the UI picks up the seeded data
+    await page.reload()
+    await expect(page.locator('header')).toBeVisible({ timeout: 5_000 })
 
     // Verify Chukar is in the dex from CSV
     await page.getByRole('tab', { name: 'WingDex' }).first().click()

@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { readFileSync } from 'fs'
 import path from 'path'
 
 type SessionState = {
@@ -122,22 +123,28 @@ export async function promoteAnonymousUser(page: Page) {
 export async function seedViaCSVImport(page: Page) {
   await loadApp(page)
 
-  // Open Settings
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 })
+  // Seed via direct API calls instead of navigating the Settings UI.
+  // This is significantly faster since it skips all the UI round-trips.
+  const csvBuffer = readFileSync(path.resolve('e2e/fixtures/ebird-import.csv'))
 
-  // Set the hidden CSV file input directly (bypasses the timezone dialog;
-  // default timezone is America/Los_Angeles which matches the fixture)
-  const confirmDone = page.waitForResponse(
-    r => r.url().includes('/api/import/ebird-csv/confirm') && r.status() === 200
-  )
-  const csvInput = page.locator('input[type="file"][accept*=".csv"]')
-  await csvInput.setInputFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
+  const preview = await page.request.post('/api/import/ebird-csv', {
+    multipart: {
+      file: { name: 'ebird-import.csv', mimeType: 'text/csv', buffer: csvBuffer },
+    },
+  })
+  expect(preview.ok(), `CSV preview failed: ${preview.status()}`).toBe(true)
 
-  // Wait for the confirm API response instead of a transient toast
-  await confirmDone
+  const { previews } = await preview.json()
+  const previewIds = previews
+    .map((e: { previewId?: string }) => e.previewId)
+    .filter(Boolean)
 
-  // Navigate back to Home
-  await page.getByRole('button', { name: 'Home' }).click()
+  const confirm = await page.request.post('/api/import/ebird-csv/confirm', {
+    data: { previewIds },
+  })
+  expect(confirm.ok(), `CSV confirm failed: ${confirm.status()}`).toBe(true)
+
+  // Reload so the UI picks up the seeded data
+  await page.reload()
   await expect(page.locator('header')).toBeVisible({ timeout: 5_000 })
 }
