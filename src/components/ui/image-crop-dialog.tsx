@@ -40,7 +40,7 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
     const img = imageRef.current
     if (!img || !img.naturalWidth) return
     if (initialCropBox) {
-      const pad = 0.1
+      const pad = 0.35
       const rawX = (initialCropBox.x / 100) * img.naturalWidth
       const rawY = (initialCropBox.y / 100) * img.naturalHeight
       const rawW = (initialCropBox.width / 100) * img.naturalWidth
@@ -48,13 +48,14 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
       const padX = rawW * pad
       const padY = rawH * pad
       const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
+      const clampedSize = Math.min(cropSize, img.naturalWidth, img.naturalHeight)
       const centerX = rawX + rawW / 2
       const centerY = rawY + rawH / 2
       setCrop({
-        x: Math.max(0, Math.min(centerX - cropSize / 2, img.naturalWidth - cropSize)),
-        y: Math.max(0, Math.min(centerY - cropSize / 2, img.naturalHeight - cropSize)),
-        width: Math.min(cropSize, img.naturalWidth),
-        height: Math.min(cropSize, img.naturalHeight),
+        x: Math.max(0, Math.min(centerX - clampedSize / 2, img.naturalWidth - clampedSize)),
+        y: Math.max(0, Math.min(centerY - clampedSize / 2, img.naturalHeight - clampedSize)),
+        width: clampedSize,
+        height: clampedSize,
       })
     } else {
       const minDim = Math.min(img.naturalWidth, img.naturalHeight)
@@ -175,15 +176,15 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
 
   const handleResize = (delta: number) => {
     if (!imageRef.current) return
-    const newWidth = Math.max(50, Math.min(crop.width + delta, imageRef.current.naturalWidth))
-    const newHeight = Math.max(50, Math.min(crop.height + delta, imageRef.current.naturalHeight))
+    const maxSize = Math.min(imageRef.current.naturalWidth, imageRef.current.naturalHeight)
+    const newSize = Math.max(50, Math.min(crop.width + delta, maxSize))
     const centerX = crop.x + crop.width / 2
     const centerY = crop.y + crop.height / 2
     setCrop({
-      x: Math.max(0, Math.min(centerX - newWidth / 2, imageRef.current.naturalWidth - newWidth)),
-      y: Math.max(0, Math.min(centerY - newHeight / 2, imageRef.current.naturalHeight - newHeight)),
-      width: newWidth,
-      height: newHeight
+      x: Math.max(0, Math.min(centerX - newSize / 2, imageRef.current.naturalWidth - newSize)),
+      y: Math.max(0, Math.min(centerY - newSize / 2, imageRef.current.naturalHeight - newSize)),
+      width: newSize,
+      height: newSize
     })
   }
 
@@ -256,7 +257,7 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
                 handleResize(delta)
               }}
               min={50}
-              max={imageRef.current?.naturalWidth || 1000}
+              max={Math.min(imageRef.current?.naturalWidth || 1000, imageRef.current?.naturalHeight || 1000)}
               step={10}
               className="flex-1"
             />

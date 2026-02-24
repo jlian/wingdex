@@ -9,8 +9,8 @@ interface PhotoCluster {
   centerLon?: number
 }
 
-const TIME_THRESHOLD_MS = 5 * 60 * 60 * 1000
-const MAX_DISTANCE_KM = 6
+const TIME_THRESHOLD_MS = 2 * 60 * 60 * 1000
+const MAX_DISTANCE_KM = 3
 
 /**
  * When a photo's timestamp is very close to an existing outing (within 30 min),
@@ -120,8 +120,8 @@ function createClusterFromPhotos(photos: Photo[]): PhotoCluster {
  * Returns the outing ID if there's a time+location overlap, otherwise undefined.
  * 
  * Match criteria:
- * - Cluster time overlaps the outing window ±5 hours
- * - If both have GPS, distance is within 6km
+ * - Cluster time overlaps the outing window ±2 hours
+ * - If both have GPS, distance is within 3km
  */
 export function findMatchingOuting(
   cluster: PhotoCluster,
@@ -133,7 +133,7 @@ export function findMatchingOuting(
     const clusterStart = cluster.startTime.getTime()
     const clusterEnd = cluster.endTime.getTime()
 
-    // Check time overlap: cluster within ±5 hours of outing window
+    // Check time overlap: cluster within ±2 hours of outing window
     const timeOverlap =
       clusterStart <= outingEnd + TIME_THRESHOLD_MS &&
       clusterEnd >= outingStart - TIME_THRESHOLD_MS
@@ -153,7 +153,7 @@ export function findMatchingOuting(
       )
 
       // Tight time match (≤30 min): allow up to 50 km (Merlin device-location case)
-      // Loose time match (≤5 hr): allow up to 6 km (normal clustering)
+      // Loose time match (≤2 hr): allow up to 3 km (normal clustering)
       const clusterMid = (clusterStart + clusterEnd) / 2
       const outingMid = (outingStart + outingEnd) / 2
       const timeDelta = Math.abs(clusterMid - outingMid)

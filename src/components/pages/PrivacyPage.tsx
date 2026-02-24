@@ -46,7 +46,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">4. Photo handling</h3>
-          <p>Photos submitted for AI-assisted bird identification are transmitted to server-side AI endpoints for processing. These images are used solely for generating identification results and are <strong>not</strong> retained after the request is fulfilled, except transiently during active request handling. We do not use your photos to train AI models.</p>
+          <p>Photos submitted for AI-assisted bird identification are transmitted to server-side AI endpoints for processing. These images are used solely for generating identification results and are <strong>not</strong> retained after the request is fulfilled, except transiently during active request handling. We do not use your photos to train AI models. To prevent accidental duplicate imports, we store a file fingerprint hash and related metadata, but not the image contents.</p>
         </section>
 
         <section className="space-y-1">
