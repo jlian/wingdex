@@ -21,7 +21,7 @@ import { clusterPhotosIntoOutings } from '@/lib/clustering'
 import { identifyBirdInPhoto } from '@/lib/ai-inference'
 import type { BirdIdResult } from '@/lib/ai-inference'
 import OutingReview from '@/components/flows/OutingReview'
-import { getDisplayName, getScientificName } from '@/lib/utils'
+import { getDisplayName, getScientificName, cn } from '@/lib/utils'
 import { toLocalISOWithOffset } from '@/lib/timezone'
 import ImageCropDialog from '@/components/ui/image-crop-dialog'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -765,8 +765,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                   <p className="text-2xl font-semibold text-foreground">{uploadSummary.totalCount}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Total sightings</p>
                 </div>
-                <div className={`rounded-lg border px-3 py-3 text-center ${uploadSummary.newSpecies > 0 ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/20'}`}>
-                  <p className={`text-2xl font-semibold ${uploadSummary.newSpecies > 0 ? 'text-primary' : 'text-foreground'}`}>
+                <div className={cn('rounded-lg border px-3 py-3 text-center', uploadSummary.newSpecies > 0 ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/20')}>
+                  <p className={cn('text-2xl font-semibold', uploadSummary.newSpecies > 0 ? 'text-primary' : 'text-foreground')}>
                     {uploadSummary.newSpecies}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">New to WingDex</p>
