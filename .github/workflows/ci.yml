@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci --workspaces=false
+        run: npm ci
 
       - name: Cache Playwright browsers
         id: playwright-cache
