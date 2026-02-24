@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Crop, Check, X } from '@phosphor-icons/react'
-import { computeRenderedImageRect, computePointerPosition } from '@/lib/crop-math'
+import {
+  computeRenderedImageRect,
+  computePointerPosition,
+  computePaddedSquareCropFromPercent,
+} from '@/lib/crop-math'
 
 interface ImageCropDialogProps {
   imageUrl: string
@@ -40,23 +44,7 @@ export default function ImageCropDialog({ imageUrl, onCrop, onCancel, open, init
     const img = imageRef.current
     if (!img || !img.naturalWidth) return
     if (initialCropBox) {
-      const pad = 0.35
-      const rawX = (initialCropBox.x / 100) * img.naturalWidth
-      const rawY = (initialCropBox.y / 100) * img.naturalHeight
-      const rawW = (initialCropBox.width / 100) * img.naturalWidth
-      const rawH = (initialCropBox.height / 100) * img.naturalHeight
-      const padX = rawW * pad
-      const padY = rawH * pad
-      const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
-      const clampedSize = Math.min(cropSize, img.naturalWidth, img.naturalHeight)
-      const centerX = rawX + rawW / 2
-      const centerY = rawY + rawH / 2
-      setCrop({
-        x: Math.max(0, Math.min(centerX - clampedSize / 2, img.naturalWidth - clampedSize)),
-        y: Math.max(0, Math.min(centerY - clampedSize / 2, img.naturalHeight - clampedSize)),
-        width: clampedSize,
-        height: clampedSize,
-      })
+      setCrop(computePaddedSquareCropFromPercent(initialCropBox, img.naturalWidth, img.naturalHeight))
     } else {
       const minDim = Math.min(img.naturalWidth, img.naturalHeight)
       const cropSize = minDim * 0.6

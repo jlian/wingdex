@@ -29,6 +29,36 @@ export interface CropBox {
 }
 
 /**
+ * Convert a percentage crop box into a padded square pixel crop clamped to image bounds.
+ * This keeps AI preview and manual crop initialization aligned.
+ */
+export function computePaddedSquareCropFromPercent(
+  percentCrop: CropBox,
+  naturalWidth: number,
+  naturalHeight: number,
+  padRatio = 0.35
+): CropBox {
+  const rawX = (percentCrop.x / 100) * naturalWidth
+  const rawY = (percentCrop.y / 100) * naturalHeight
+  const rawW = (percentCrop.width / 100) * naturalWidth
+  const rawH = (percentCrop.height / 100) * naturalHeight
+
+  const padX = rawW * padRatio
+  const padY = rawH * padRatio
+  const cropSize = Math.max(rawW + padX * 2, rawH + padY * 2)
+  const clampedSize = Math.min(cropSize, naturalWidth, naturalHeight)
+  const centerX = rawX + rawW / 2
+  const centerY = rawY + rawH / 2
+
+  return {
+    x: Math.max(0, Math.min(centerX - clampedSize / 2, naturalWidth - clampedSize)),
+    y: Math.max(0, Math.min(centerY - clampedSize / 2, naturalHeight - clampedSize)),
+    width: clampedSize,
+    height: clampedSize,
+  }
+}
+
+/**
  * Compute where an image renders inside a container using object-contain logic.
  * Returns the offset (letterbox bars), rendered dimensions, and scale factor.
  */
