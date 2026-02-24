@@ -36,7 +36,7 @@ export function computePaddedSquareCropFromPercent(
   percentCrop: CropBox,
   naturalWidth: number,
   naturalHeight: number,
-  padRatio = 0.35
+  padRatio = 0.65
 ): CropBox {
   const rawX = (percentCrop.x / 100) * naturalWidth
   const rawY = (percentCrop.y / 100) * naturalHeight

@@ -1,5 +1,5 @@
-import { Bird } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
+import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 
 interface BirdRowProps {
@@ -16,16 +16,13 @@ export function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProp
   const scientificName = getScientificName(speciesName)
   const wikiImage = useBirdImage(speciesName)
 
-  const image = wikiImage ? (
-    <img
-      src={wikiImage}
+  const image = (
+    <WikiBirdThumbnail
+      speciesName={speciesName}
+      imageUrl={wikiImage}
       alt={displayName}
-      className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg object-cover object-[center_10%] bg-muted flex-shrink-0"
+      className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 flex-shrink-0"
     />
-  ) : (
-    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-      <Bird size={20} className="text-muted-foreground/40" />
-    </div>
   )
 
   return (

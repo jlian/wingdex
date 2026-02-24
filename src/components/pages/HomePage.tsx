@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import {
   MapPin, Camera, Bird, ArrowRight
 } from '@phosphor-icons/react'
-import { useBirdImage } from '@/hooks/use-bird-image'
+import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { getDisplayName } from '@/lib/utils'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
@@ -211,26 +211,13 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
 
 function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date: string; onClick: () => void }) {
   const displayName = getDisplayName(speciesName)
-  const wikiImage = useBirdImage(speciesName)
 
   return (
     <button
       className="overflow-hidden rounded-lg bg-card border border-border hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98] text-left"
       onClick={onClick}
     >
-      <div className="aspect-square bg-muted overflow-hidden">
-        {wikiImage ? (
-          <img
-            src={wikiImage}
-            alt={displayName}
-            className="w-full h-full object-cover object-[center_10%]"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Bird size={24} className="text-muted-foreground/40" />
-          </div>
-        )}
-      </div>
+      <WikiBirdThumbnail speciesName={speciesName} alt={displayName} className="rounded-b-none" />
       <div className="px-2 py-1.5">
         <p className="font-serif text-xs font-semibold text-foreground truncate">
           {displayName}
