@@ -12,7 +12,7 @@ interface StatCardProps {
 export function StatCard({ value, label, accent = 'text-foreground', onClick }: StatCardProps) {
   return (
     <Card
-      className={`p-3 sm:p-4 space-y-0.5 text-center${onClick ? ' cursor-pointer hover:shadow-md active:scale-[0.98] transition-all' : ''}`}
+      className={`p-3 sm:p-4 space-y-0.5 text-center${onClick ? ' cursor-pointer press-feel' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

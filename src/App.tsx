@@ -427,7 +427,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
               {/* Logo, navigates to Home */}
               <button
                 onClick={() => navigate('home')}
-                className="flex items-center gap-2 cursor-pointer hover:opacity-80 active:scale-[0.97] transition-all"
+                className="flex items-center gap-2 cursor-pointer press-feel-light"
                 aria-label="Home"
               >
                 <Bird size={28} weight="duotone" className="text-primary" />
@@ -444,8 +444,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium cursor-pointer
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
-                      data-[state=inactive]:text-muted-foreground hover:text-foreground hover:bg-muted/50
-                      active:scale-[0.97] transition-all"
+                      data-[state=inactive]:text-muted-foreground hover:text-foreground hover:bg-[var(--pressed-highlight-hover)]
+                      press-feel-light"
                   >
                     <item.icon size={18} />
                     {item.label}
@@ -458,17 +458,17 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 {user.isAnonymous ? (
                   <button
                     onClick={openSignIn}
-                    className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-semibold text-primary cursor-pointer hover:bg-primary/10 active:scale-[0.97] transition-all"
+                    className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-semibold text-primary cursor-pointer press-feel"
                   >
                     Log in
                   </button>
                 ) : (
                   <button
                     onClick={() => navigate('settings')}
-                    className="cursor-pointer active:scale-[0.97] transition-all"
+                    className="cursor-pointer rounded-full hover:bg-accent p-0.5 -m-0.5 press-feel-light"
                     aria-label="Settings"
                   >
-                    <Avatar className={`h-8 w-8 ${avatarColorClass || 'bg-muted'} hover:opacity-80 transition-opacity`}>
+                    <Avatar className={`h-8 w-8 ${avatarColorClass || 'bg-muted'}`}>
                       <AvatarImage
                         src={user.image}
                         alt={user.name}
