@@ -60,14 +60,15 @@ No behavioral change; pure dead-code removal and render optimizations.
 
 ## Phase 2 -- Moderate complexity, clear implementation
 
-- [ ] **#108 -- Build `observationsByOuting` Map index** \
+- [x] **#108 -- Build `observationsByOuting` Map index** \
   In `src/hooks/use-wingdex-data.ts`:
-  - [ ] Build `Map<outingId, Observation[]>` via `useMemo` keyed on `payload.observations`
-  - [ ] Build `Map<outingId, Photo[]>` via `useMemo` keyed on `payload.photos`
-  - [ ] Build `Map<speciesName, DexEntry>` via `useMemo` keyed on `payload.dex`
-  - [ ] Replace the linear `.filter()` in `getOutingObservations`, `getOutingPhotos`, and `.find()` in `getDexEntry` with O(1) Map lookups
+  - [x] Build `Map<outingId, Observation[]>` via `useMemo` keyed on `payload.observations`
+  - [x] Build `Map<outingId, Photo[]>` via `useMemo` keyed on `payload.photos`
+  - [x] Build `Map<speciesName, DexEntry>` via `useMemo` keyed on `payload.dex`
+  - [x] Replace the linear `.filter()` in `getOutingObservations`, `getOutingPhotos`, and `.find()` in `getDexEntry` with O(1) Map lookups
 
-  Verify: `npm run test` -- especially outing detail view tests.
+  Verify: `npm run test` -- especially outing detail view tests. \
+  _Done in `a64ef17`._
 
 - [ ] **#110 -- Stabilize inline arrow handlers with `useCallback`** \
   In `src/App.tsx`, wrap remaining inline arrow props with `useCallback`:

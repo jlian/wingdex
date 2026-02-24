@@ -326,6 +326,30 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
     void import('@/lib/ai-inference')
   }, [])
 
+  const handleAddPhotos = useCallback(() => {
+    requireAuth(() => setShowAddPhotos(true))
+  }, [requireAuth])
+
+  const handleSelectOuting = useCallback((id: string) => {
+    navigate('outings', id)
+  }, [navigate])
+
+  const handleSelectOutingOptional = useCallback((id: string | null) => {
+    navigate('outings', id ?? undefined)
+  }, [navigate])
+
+  const handleSelectSpecies = useCallback((name: string) => {
+    navigate('wingdex', name)
+  }, [navigate])
+
+  const handleSelectSpeciesOptional = useCallback((name: string | null) => {
+    navigate('wingdex', name ?? undefined)
+  }, [navigate])
+
+  const handleNavigate = useCallback((tab: string) => {
+    navigate(tab)
+  }, [navigate])
+
   const toggleWingDexSort = useCallback((field: WingDexSortField) => {
     if (wingDexSortField === field) {
       setWingDexSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
@@ -465,11 +489,11 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
             <TabsContent value="home" className="mt-0">
               <HomePage
                 data={data}
-                onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
+                onAddPhotos={handleAddPhotos}
                 onAddPhotosIntent={prefetchAddPhotosFlow}
-                onSelectOuting={(id) => navigate('outings', id)}
-                onSelectSpecies={(name) => navigate('wingdex', name)}
-                onNavigate={(tab) => navigate(tab)}
+                onSelectOuting={handleSelectOuting}
+                onSelectSpecies={handleSelectSpecies}
+                onNavigate={handleNavigate}
               />
             </TabsContent>
           )}
@@ -480,8 +504,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 <OutingsPage
                   data={data}
                   selectedOutingId={subId ?? null}
-                  onSelectOuting={(id) => navigate('outings', id ?? undefined)}
-                  onSelectSpecies={(name) => navigate('wingdex', name)}
+                  onSelectOuting={handleSelectOutingOptional}
+                  onSelectSpecies={handleSelectSpecies}
                   searchQuery={outingsSearchQuery}
                   onSearchQueryChange={setOutingsSearchQuery}
                   sortField={outingsSortField}
@@ -498,9 +522,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 <WingDexPage
                   data={data}
                   selectedSpecies={subId ?? null}
-                  onSelectSpecies={(name) => navigate('wingdex', name ?? undefined)}
-                  onSelectOuting={(id) => navigate('outings', id)}
-                  onAddPhotos={() => requireAuth(() => setShowAddPhotos(true))}
+                  onSelectSpecies={handleSelectSpeciesOptional}
+                  onSelectOuting={handleSelectOuting}
+                  onAddPhotos={handleAddPhotos}
                   onAddPhotosIntent={prefetchAddPhotosFlow}
                   searchQuery={wingDexSearchQuery}
                   onSearchQueryChange={setWingDexSearchQuery}
