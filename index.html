@@ -56,9 +56,9 @@
 <body>
     <div id="app">
         <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--color-background,#e5ddd0)">
-            <div style="height:2rem;width:2rem;border-radius:9999px;border:2px solid rgba(120,113,108,.3);border-top-color:currentColor;animation:s 1s linear infinite"></div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 256 256" fill="#2d5a27" style="animation:p 2s ease-in-out infinite"><path d="M232,80,208,96v24a96,96,0,0,1-96,96H24a8,8,0,0,1-6.25-13L104,99.52V76.89c0-28.77,23-52.75,51.74-52.89a52,52,0,0,1,50.59,38.89Z" opacity=".2"/><path d="M176,68a12,12,0,1,1-12-12A12,12,0,0,1,176,68Zm64,12a8,8,0,0,1-3.56,6.66L216,100.28V120A104.11,104.11,0,0,1,112,224H24a16,16,0,0,1-12.49-26l.1-.12L96,96.63V76.89C96,43.47,122.79,16.16,155.71,16H156a60,60,0,0,1,57.21,41.86l23.23,15.48A8,8,0,0,1,240,80Zm-22.42,0L201.9,69.54a8,8,0,0,1-3.31-4.64A44,44,0,0,0,156,32h-.22C131.64,32.12,112,52.25,112,76.89V99.52a8,8,0,0,1-1.85,5.13L24,208h26.9l70.94-85.12a8,8,0,1,1,12.29,10.24L71.75,208H112a88.1,88.1,0,0,0,88-88V96a8,8,0,0,1,3.56-6.66Z"/></svg>
         </div>
-        <style>@media(prefers-color-scheme:dark){#app>div{background:var(--color-background,#262e29)}}@keyframes s{to{transform:rotate(360deg)}}</style>
+        <style>@media(prefers-color-scheme:dark){#app>div{background:var(--color-background,#262e29)}#app svg{fill:#7fba72}}@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}</style>
     </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>

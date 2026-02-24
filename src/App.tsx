@@ -180,15 +180,26 @@ function App() {
             setAnonBootstrapFailed(true)
             return
           }
-          // better-auth's useSession auto-detects the new session cookie;
-          // no explicit refetchSession() needed (avoids duplicate get-session).
+          // Set user directly from sign-in response so AppContent mounts
+          // immediately and fires /api/data/all in parallel with the
+          // auto-refetch get-session instead of waiting for it.
+          const u = result.data?.user
+          if (u) {
+            setUser({
+              id: u.id,
+              name: u.name || u.email || 'user',
+              image: u.image || '',
+              email: u.email || '',
+              isAnonymous: Boolean((u as { isAnonymous?: boolean }).isAnonymous),
+            })
+          }
         }).catch(() => {
           setAnonBootstrapFailed(true)
           anonBootstrapStarted.current = false
         })
       }
 
-      setUser(null)
+      if (!anonBootstrapStarted.current) setUser(null)
       return
     }
 
@@ -206,14 +217,25 @@ function App() {
           setAnonBootstrapFailed(true)
           return
         }
-        // better-auth's useSession auto-detects the new session cookie;
-        // no explicit refetchSession() needed (avoids duplicate get-session).
+        // Set user directly from sign-in response so AppContent mounts
+        // immediately and fires /api/data/all in parallel with the
+        // auto-refetch get-session instead of waiting for it.
+        const u = result.data?.user
+        if (u) {
+          setUser({
+            id: u.id,
+            name: u.name || u.email || 'user',
+            image: u.image || '',
+            email: u.email || '',
+            isAnonymous: Boolean((u as { isAnonymous?: boolean }).isAnonymous),
+          })
+        }
       }).catch(() => {
         setAnonBootstrapFailed(true)
       })
     }
 
-    setUser(null)
+    if (!anonBootstrapStarted.current) setUser(null)
   }, [
     session,
     isSessionPending,
@@ -261,10 +283,8 @@ function App() {
 function BootShell() {
   return (
     <div className="min-h-dvh bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
-        <p className="sr-only" aria-live="polite">Verifying your session.</p>
-      </div>
+      <Bird size={40} weight="duotone" className="text-primary animate-pulse" />
+      <p className="sr-only" aria-live="polite">Verifying your session.</p>
     </div>
   )
 }
