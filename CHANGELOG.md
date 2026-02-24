@@ -1,3 +1,11 @@
+## [1.7.1](https://github.com/jlian/wingdex/compare/v1.7.0...v1.7.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* correct photo caption when AI crop is active ([77632c3](https://github.com/jlian/wingdex/commit/77632c300f2d9e462cc1b4d6e4993fe41a766b9f))
+* reject non-photograph images in bird ID prompt ([74c438d](https://github.com/jlian/wingdex/commit/74c438d0c249c540d05be435b039437dcda45b5a)), closes [#188](https://github.com/jlian/wingdex/issues/188)
+
 # [1.7.0](https://github.com/jlian/wingdex/compare/v1.6.4...v1.7.0) (2026-02-24)
 
 
