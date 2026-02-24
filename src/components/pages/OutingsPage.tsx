@@ -205,7 +205,7 @@ export default function OutingsPage({
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           Your Outings
@@ -467,7 +467,7 @@ function OutingDetail({
   }, [outing.id, outing.notes, outing.locationName])
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-6 space-y-5 max-w-3xl mx-auto">
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mb-2">

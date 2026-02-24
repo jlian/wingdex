@@ -231,7 +231,7 @@ export default function WingDexPage({
   ]
 
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto animate-fade-in">
+    <div className="px-4 sm:px-6 py-6 space-y-4 max-w-3xl mx-auto">
       <div className="space-y-1">
         <h2 className="font-serif text-2xl font-semibold text-foreground">
           WingDex
@@ -382,7 +382,7 @@ function SpeciesDetail({
   }, [entry.speciesName])
 
   return (
-    <div className="max-w-3xl mx-auto pb-8 animate-fade-in">
+    <div className="max-w-3xl mx-auto pb-8">
       {/* Back button */}
       <div className="px-4 sm:px-6 pt-4 pb-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
@@ -439,7 +439,7 @@ function SpeciesDetail({
 
         {/* About -- fade in when loaded */}
         {summary?.extract && (
-          <div className="space-y-1 animate-fade-in">
+          <div className="space-y-1">
             <p className="text-sm text-muted-foreground leading-relaxed">
               {summary.extract}
             </p>
