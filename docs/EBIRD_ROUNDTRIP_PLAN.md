@@ -57,8 +57,8 @@ Make WingDex export files round-trip through the existing eBird CSV import flow 
 - [x] Consistency choice: align per-outing export format with bulk export format.
 
 ## Verification checklist
-- [ ] Importing exported sightings CSV succeeds via `/api/import/ebird-csv`.
-- [ ] Re-import of unchanged exported sightings is conflict-detected as duplicates.
+- [x] Importing exported sightings CSV succeeds via `/api/import/ebird-csv`.
+- [x] Re-import of unchanged exported sightings is conflict-detected as duplicates.
 - [x] Date/time values remain stable across import-export-import for timezone-sensitive rows.
 - [x] Existing import of fixture-style eBird CSV remains functional.
 - [x] New checklist effort metadata roundtrips in unit tests.

@@ -1,4 +1,4 @@
-import { computeDex } from '../../../lib/dex-query'
+import { computeDex } from '../../../lib/dex-query'\nimport { getOutingColumnNames } from '../../../lib/schema'
 
 type UpdateOutingBody = {
   startTime?: string
@@ -46,6 +46,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   const updates = body as UpdateOutingBody
   const updateFields: string[] = []
   const bindings: Array<string | number | null> = []
+  const columnNames = await getOutingColumnNames(context.env.DB)
 
   if (typeof updates.startTime === 'string') {
     updateFields.push('startTime = ?')
@@ -71,19 +72,19 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     updateFields.push('lon = ?')
     bindings.push(updates.lon ?? null)
   }
-  if ('stateProvince' in updates) {
+  if ('stateProvince' in updates && columnNames.has('stateProvince')) {
     updateFields.push('stateProvince = ?')
     bindings.push(updates.stateProvince ?? null)
   }
-  if ('countryCode' in updates) {
+  if ('countryCode' in updates && columnNames.has('countryCode')) {
     updateFields.push('countryCode = ?')
     bindings.push(updates.countryCode ? updates.countryCode.trim().toUpperCase() : null)
   }
-  if ('protocol' in updates) {
+  if ('protocol' in updates && columnNames.has('protocol')) {
     updateFields.push('protocol = ?')
     bindings.push(updates.protocol?.trim() || null)
   }
-  if ('numberObservers' in updates) {
+  if ('numberObservers' in updates && columnNames.has('numberObservers')) {
     updateFields.push('numberObservers = ?')
     bindings.push(
       typeof updates.numberObservers === 'number' && Number.isFinite(updates.numberObservers)
@@ -91,11 +92,11 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
         : null
     )
   }
-  if ('allObsReported' in updates) {
+  if ('allObsReported' in updates && columnNames.has('allObsReported')) {
     updateFields.push('allObsReported = ?')
     bindings.push(typeof updates.allObsReported === 'boolean' ? (updates.allObsReported ? 1 : 0) : null)
   }
-  if ('effortDistanceMiles' in updates) {
+  if ('effortDistanceMiles' in updates && columnNames.has('effortDistanceMiles')) {
     updateFields.push('effortDistanceMiles = ?')
     bindings.push(
       typeof updates.effortDistanceMiles === 'number' && Number.isFinite(updates.effortDistanceMiles)
@@ -103,7 +104,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
         : null
     )
   }
-  if ('effortAreaAcres' in updates) {
+  if ('effortAreaAcres' in updates && columnNames.has('effortAreaAcres')) {
     updateFields.push('effortAreaAcres = ?')
     bindings.push(
       typeof updates.effortAreaAcres === 'number' && Number.isFinite(updates.effortAreaAcres)
