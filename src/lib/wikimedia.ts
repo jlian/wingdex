@@ -27,12 +27,22 @@ type FetchResult =
   | { kind: 'miss' }
   | { kind: 'error' }
 
+type WikiLookupOptions = {
+  wikiTitle?: string
+}
+
 /** Shared cache for the raw REST API response -- populated once, used by both image and summary lookups. */
 const restCache = new Map<string, RestSummary | null>()
 const restInFlight = new Map<string, Promise<RestSummary | undefined>>()
 
 /** Cache for wiki-title API lookups. */
-const wikiTitleCache = new Map<string, { wikiTitle: string | null; common: string | null; scientific: string | null }>()
+const wikiTitleCache = new Map<string, {
+  wikiTitle: string | null
+  common: string | null
+  scientific: string | null
+  thumbnailUrl?: string | null
+  originalImageUrl?: string | null
+}>()
 
 // -- localStorage persistence for restCache ---------------------------
 const STORAGE_KEY = 'wiki-rest-cache'
@@ -105,14 +115,16 @@ function getCommonName(speciesName: string): string {
   return getDisplayName(speciesName)
 }
 
-function getLookupTitles(speciesName: string): string[] {
+function getLookupTitles(speciesName: string, preferredTitle?: string): string[] {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
   const cached = wikiTitleCache.get(cacheKey)
 
-  const candidates = cached
-    ? [cached.wikiTitle, cached.common, cached.scientific, common]
-    : [common]
+  const candidates = [preferredTitle]
+  if (cached) {
+    candidates.push(cached.wikiTitle ?? undefined, cached.common ?? undefined, cached.scientific ?? undefined)
+  }
+  candidates.push(common)
 
   const unique: string[] = []
   const seen = new Set<string>()
@@ -153,11 +165,13 @@ async function ensureWikiTitleCached(speciesName: string): Promise<void> {
  * Both getWikimediaImage and getWikimediaSummary go through this so the
  * Wikipedia API is only called once per species.
  */
-async function resolveRestSummary(speciesName: string): Promise<RestSummary | undefined> {
+async function resolveRestSummary(speciesName: string, options?: WikiLookupOptions): Promise<RestSummary | undefined> {
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
 
-  await ensureWikiTitleCached(speciesName)
+  if (!options?.wikiTitle) {
+    await ensureWikiTitleCached(speciesName)
+  }
 
   if (restCache.has(cacheKey)) {
     return restCache.get(cacheKey) ?? undefined
@@ -167,7 +181,7 @@ async function resolveRestSummary(speciesName: string): Promise<RestSummary | un
   if (inFlight) return inFlight
 
   const lookupPromise = (async (): Promise<RestSummary | undefined> => {
-    const titles = getLookupTitles(speciesName)
+    const titles = getLookupTitles(speciesName, options?.wikiTitle)
     let sawError = false
     let bestSummary: RestSummary | undefined
 
@@ -226,9 +240,10 @@ export async function getWikimediaImage(
  * Get Wikipedia summary text + image for a bird species.
  */
 export async function getWikimediaSummary(
-  speciesName: string
+  speciesName: string,
+  options?: WikiLookupOptions,
 ): Promise<WikiSummary | undefined> {
-  const data = await resolveRestSummary(speciesName)
+  const data = await resolveRestSummary(speciesName, options)
   if (!data?.extract) return undefined
 
   const common = getCommonName(speciesName)

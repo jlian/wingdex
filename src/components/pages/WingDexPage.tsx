@@ -5,13 +5,12 @@ import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
   Bird, ArrowUp, ArrowDown, Camera
 } from '@phosphor-icons/react'
-import { useBirdImage, useBirdSummary } from '@/hooks/use-bird-image'
+import { useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { ListRow } from '@/components/ui/list-row'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
-import { getWikimediaImage } from '@/lib/wikimedia'
 import { formatStoredDate } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
@@ -21,14 +20,6 @@ export type SortDir = 'asc' | 'desc'
 
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
-// Mirrors the thumbnail component behavior: apply iOS-only mitigations where
-// interactive swipe-back can otherwise expose decode-time flashes.
-const SHOULD_PREWARM_IOS_THUMBNAILS = (() => {
-  if (typeof navigator === 'undefined') return false
-  const userAgent = navigator.userAgent
-  return /iPad|iPhone|iPod/.test(userAgent)
-    || (userAgent.includes('Mac') && navigator.maxTouchPoints > 1)
-})()
 
 function getEbirdUrl(commonName: string): string {
   const words = commonName.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
@@ -102,7 +93,6 @@ export default function WingDexPage({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const visibleCountRef = useRef(visibleCount)
-  const warmedSpeciesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     visibleCountRef.current = visibleCount
@@ -158,46 +148,6 @@ export default function WingDexPage({
     [filteredList, visibleCount]
   )
   const hasMore = visibleCount < filteredList.length
-
-  useEffect(() => {
-    // On iOS list view, prewarm a few visible thumbnails so decode work is less
-    // likely to occur during interactive back-swipe compositing.
-    if (!SHOULD_PREWARM_IOS_THUMBNAILS || selectedSpecies) return
-
-    const speciesToWarm = visibleList
-      .map((entry) => entry.speciesName)
-      .filter((speciesName) => !warmedSpeciesRef.current.has(speciesName))
-      .slice(0, 8)
-
-    if (speciesToWarm.length === 0) return
-
-    let cancelled = false
-
-    void (async () => {
-      for (const speciesName of speciesToWarm) {
-        if (cancelled) return
-        warmedSpeciesRef.current.add(speciesName)
-
-        const url = await getWikimediaImage(speciesName)
-        if (!url || cancelled) continue
-
-        const img = new Image()
-        img.decoding = 'async'
-        img.src = url
-        if (typeof img.decode === 'function') {
-          try {
-            await img.decode()
-          } catch {
-            // Ignore decode failures and let normal rendering continue
-          }
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedSpecies, visibleList])
 
   useEffect(() => {
     const node = loadMoreRef.current
@@ -331,6 +281,7 @@ export default function WingDexPage({
             <BirdRow
               key={entry.speciesName}
               speciesName={entry.speciesName}
+              imageUrl={entry.thumbnailUrl || entry.originalImageUrl}
               subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${formatStoredDate(entry.firstSeenDate)}`}
               onClick={() => onSelectSpecies(entry.speciesName)}
             />
@@ -371,8 +322,7 @@ function SpeciesDetail({
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
-  const wikiImage = useBirdImage(entry.speciesName)
-  const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName)
+  const { summary } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
 
   useEffect(() => {
@@ -405,10 +355,8 @@ function SpeciesDetail({
     }
   }
 
-  // Both resolve from the same shared Wikipedia API cache, so no API delay.
-  // wikiImage = thumbnail (small, loads fast), summary.imageUrl = full-res.
-  const thumbnailUrl = wikiImage
-  const fullResUrl = summary?.imageUrl
+  const thumbnailUrl = entry.thumbnailUrl || entry.originalImageUrl
+  const fullResUrl = entry.originalImageUrl || summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
   const fullResRevealToken = useRef(0)

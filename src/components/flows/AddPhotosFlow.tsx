@@ -35,7 +35,6 @@ import {
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 import { useBirdImageWithStatus } from '@/hooks/use-bird-image'
-import { getWikimediaImage } from '@/lib/wikimedia'
 import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 
@@ -53,25 +52,6 @@ interface PhotoWithCrop extends Photo {
 
 function wait(ms: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, ms))
-}
-
-async function waitForImageLoad(url: string, timeoutMs = 1500): Promise<void> {
-  await Promise.race([
-    new Promise<void>(resolve => {
-      const img = new Image()
-      img.onload = () => resolve()
-      img.onerror = () => resolve()
-      img.src = url
-    }),
-    wait(timeoutMs),
-  ])
-}
-
-async function prefetchWikiReference(speciesName?: string): Promise<void> {
-  if (!speciesName) return
-  const url = await getWikimediaImage(speciesName)
-  if (!url) return
-  await waitForImageLoad(url)
 }
 
 export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowProps) {
@@ -245,10 +225,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setStep('photo-manual-crop')
       } else {
         setCurrentCandidates(result.candidates)
-        setProcessingMessage(
-          `Photo ${photoIdx + 1}/${clusterPhotos.length}: Loading reference image...`
-        )
-        await prefetchWikiReference(result.candidates[0]?.species)
         setStep('photo-confirm')
       }
     } catch (error) {

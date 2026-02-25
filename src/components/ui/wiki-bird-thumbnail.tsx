@@ -18,6 +18,8 @@ interface WikiBirdThumbnailProps {
   speciesName: string
   /** Optional pre-resolved image URL (skips the hook when provided) */
   imageUrl?: string
+  /** When false, do not fallback to client-side Wikipedia lookup */
+  allowLookup?: boolean
   /** Display name for the alt text */
   alt?: string
   /** Additional class names for the outer container */
@@ -33,11 +35,12 @@ interface WikiBirdThumbnailProps {
 export function WikiBirdThumbnail({
   speciesName,
   imageUrl: imageUrlProp,
+  allowLookup = true,
   alt,
   className,
   loading: externalLoading,
 }: WikiBirdThumbnailProps) {
-  const hookUrl = useBirdImage(imageUrlProp ? undefined : speciesName)
+  const hookUrl = useBirdImage(imageUrlProp || !allowLookup ? undefined : speciesName)
   const url = imageUrlProp || hookUrl
   const [portrait, setPortrait] = useState(false)
 

@@ -5,6 +5,7 @@ type TaxonEntry = {
   scientific: string
   ebirdCode?: string
   wikiTitle?: string
+  originalImageUrl?: string
 }
 
 const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
@@ -12,6 +13,7 @@ const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
   scientific: entry[1],
   ...(entry[2] ? { ebirdCode: entry[2] } : {}),
   ...(entry[3] ? { wikiTitle: entry[3] } : {}),
+  ...(entry[4] ? { originalImageUrl: entry[4] } : {}),
 }))
 
 const lowerIndex = taxonomy.map(taxon => ({
@@ -20,10 +22,12 @@ const lowerIndex = taxonomy.map(taxon => ({
 }))
 
 const byCommonLower = new Map<string, TaxonEntry>()
+const byScientificLower = new Map<string, TaxonEntry>()
 const byCodeLower = new Map<string, TaxonEntry>()
 
 for (const taxon of taxonomy) {
   byCommonLower.set(taxon.common.toLowerCase(), taxon)
+  byScientificLower.set(taxon.scientific.toLowerCase(), taxon)
   if (taxon.ebirdCode) byCodeLower.set(taxon.ebirdCode.toLowerCase(), taxon)
 }
 
@@ -71,8 +75,9 @@ export function findBestMatch(name: string): TaxonEntry | null {
   if (!name) return null
 
   const raw = name.trim()
+  const rawLower = raw.toLowerCase()
 
-  const exactCommon = taxonomy.find(taxon => taxon.common.toLowerCase() === raw.toLowerCase())
+  const exactCommon = byCommonLower.get(rawLower)
   if (exactCommon) return exactCommon
 
   const parenMatch = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
@@ -80,14 +85,14 @@ export function findBestMatch(name: string): TaxonEntry | null {
     const commonPart = parenMatch[1].trim().toLowerCase()
     const scientificPart = parenMatch[2].trim().toLowerCase()
 
-    const byScientific = taxonomy.find(taxon => taxon.scientific.toLowerCase() === scientificPart)
+    const byScientific = byScientificLower.get(scientificPart)
     if (byScientific) return byScientific
 
-    const byCommon = taxonomy.find(taxon => taxon.common.toLowerCase() === commonPart)
+    const byCommon = byCommonLower.get(commonPart)
     if (byCommon) return byCommon
   }
 
-  const exactScientific = taxonomy.find(taxon => taxon.scientific.toLowerCase() === raw.toLowerCase())
+  const exactScientific = byScientificLower.get(rawLower)
   if (exactScientific) return exactScientific
 
   const words = raw.toLowerCase().split(/[\s\-()]+/).filter(Boolean)
@@ -152,6 +157,41 @@ export function getEbirdCode(commonName: string): string {
 
 export function getSpeciesByCode(code: string): TaxonEntry | undefined {
   return byCodeLower.get(code.toLowerCase())
+}
+
+/**
+ * Derive a Wikimedia thumbnail URL from an original image URL.
+ * Original: .../wikipedia/commons/{h}/{hh}/{file}
+ * Thumb:    .../wikipedia/commons/thumb/{h}/{hh}/{file}/{w}px-{file}
+ */
+export function getWikiThumbnailUrl(originalUrl: string | undefined, width = 320): string | undefined {
+  if (!originalUrl) return undefined
+  const marker = '/wikipedia/commons/'
+  const idx = originalUrl.indexOf(marker)
+  if (idx === -1) return originalUrl
+  const afterMarker = originalUrl.substring(idx + marker.length)
+  const filename = afterMarker.split('/').pop()
+  if (!filename) return originalUrl
+  return `${originalUrl.substring(0, idx)}${marker}thumb/${afterMarker}/${width}px-${filename}`
+}
+
+export function getWikiMetadata(name: string): {
+  wikiTitle?: string
+  thumbnailUrl?: string
+  originalImageUrl?: string
+  common?: string
+  scientific?: string
+} {
+  const match = findBestMatch(name)
+  if (!match) return {}
+
+  return {
+    wikiTitle: match.wikiTitle,
+    thumbnailUrl: getWikiThumbnailUrl(match.originalImageUrl),
+    originalImageUrl: match.originalImageUrl,
+    common: match.common,
+    scientific: match.scientific,
+  }
 }
 
 export const speciesCount = taxonomy.length

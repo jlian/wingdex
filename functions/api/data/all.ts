@@ -1,5 +1,6 @@
 import { computeDex } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
+import { getWikiMetadata } from '../../lib/taxonomy'
 
 type OutingRow = {
   id: string
@@ -106,6 +107,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       ...entry,
       addedDate: entry.addedDate || undefined,
       bestPhotoId: entry.bestPhotoId || undefined,
+      ...getWikiMetadata(entry.speciesName),
     })),
   })
 }
