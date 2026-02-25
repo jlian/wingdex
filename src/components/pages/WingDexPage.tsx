@@ -353,7 +353,7 @@ function SpeciesDetail({
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
-  const { summary } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
+  const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
 
   useEffect(() => {
@@ -390,6 +390,8 @@ function SpeciesDetail({
   const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
+  const hasDistinctFullRes = !!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)
+  const shouldBlurBase = !!thumbnailUrl && (hasDistinctFullRes ? !fullResLoaded : summaryLoading)
   const fullResRevealToken = useRef(0)
 
   const revealFullRes = () => {
@@ -428,13 +430,13 @@ function SpeciesDetail({
           {baseImageUrl && (
             <img
               src={baseImageUrl}
-              alt={fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl ? '' : displayName}
-              aria-hidden={!!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl ? 'blur-sm scale-102' : ''}`}
+              alt={hasDistinctFullRes ? '' : displayName}
+              aria-hidden={hasDistinctFullRes}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${shouldBlurBase ? 'blur-sm scale-102' : ''}`}
             />
           )}
           {/* Full-res overlay fades in over the base layer */}
-          {fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl && (
+          {hasDistinctFullRes && (
             <img
               src={fullResUrl}
               alt={displayName}
