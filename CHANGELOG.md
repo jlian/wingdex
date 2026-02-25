@@ -1,3 +1,12 @@
+## [1.11.1](https://github.com/jlian/wingdex/compare/v1.11.0...v1.11.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* **WingDex:** keep blurred base visible when full-res hero image fails ([e86bf3e](https://github.com/jlian/wingdex/commit/e86bf3e8b15c500e0245570059b73bc1e21d9e62))
+* **WingDex:** keep detail hero blur stable while summary resolves ([db8a1d9](https://github.com/jlian/wingdex/commit/db8a1d9b0c33bd1421902b42ac710efec7e947db))
+* **WingDex:** smooth detail hero blur-to-clear transition ([03f30a1](https://github.com/jlian/wingdex/commit/03f30a1d40551473e5deffc62f129359c0c93b46))
+
 # [1.11.0](https://github.com/jlian/wingdex/compare/v1.10.2...v1.11.0) (2026-02-25)
 
 
