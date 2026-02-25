@@ -20,6 +20,8 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const TAXONOMY_PATH = resolve(__dirname, '../src/lib/taxonomy.json')
 const REPORT_PATH = resolve(__dirname, '../wiki-validation-report.txt')
+const WIKIDATA_URL = 'https://query.wikidata.org/sparql'
+const WIKIDATA_MAX_RETRIES = 5
 
 const args = process.argv.slice(2)
 const limitIdx = args.indexOf('--limit')
@@ -60,23 +62,52 @@ async function fetchWikidataBirds() {
   `
 
   console.log('Fetching bird species from Wikidata (single SPARQL query)...')
-  const url = 'https://query.wikidata.org/sparql'
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/sparql-results+json',
-      'User-Agent': 'WingDex/1.0 (taxonomy validation; https://github.com/jlian/wingdex)',
-    },
-    body: `query=${encodeURIComponent(sparql)}`,
-  })
+  let data = null
+  let lastError = null
 
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Wikidata SPARQL error ${res.status}: ${body.substring(0, 300)}`)
+  for (let attempt = 1; attempt <= WIKIDATA_MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(WIKIDATA_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/sparql-results+json',
+          'User-Agent': 'WingDex/1.0 (taxonomy validation; https://github.com/jlian/wingdex)',
+        },
+        body: `query=${encodeURIComponent(sparql)}`,
+      })
+
+      if (res.ok) {
+        data = await res.json()
+        break
+      }
+
+      const body = await res.text()
+      const retryable = res.status >= 500 || res.status === 429
+      lastError = new Error(`Wikidata SPARQL error ${res.status}: ${body.substring(0, 300)}`)
+
+      if (!retryable || attempt === WIKIDATA_MAX_RETRIES) {
+        throw lastError
+      }
+
+      const backoffMs = attempt * 5000
+      console.log(`  attempt ${attempt}/${WIKIDATA_MAX_RETRIES} failed (${res.status}), retrying in ${backoffMs / 1000}s...`)
+      await new Promise(resolve => setTimeout(resolve, backoffMs))
+    } catch (error) {
+      lastError = error
+      if (attempt === WIKIDATA_MAX_RETRIES) {
+        throw lastError
+      }
+      const backoffMs = attempt * 5000
+      console.log(`  attempt ${attempt}/${WIKIDATA_MAX_RETRIES} failed (network), retrying in ${backoffMs / 1000}s...`)
+      await new Promise(resolve => setTimeout(resolve, backoffMs))
+    }
   }
 
-  const data = await res.json()
+  if (!data) {
+    throw lastError || new Error('Wikidata SPARQL failed with unknown error')
+  }
+
   const results = data.results.bindings
 
   // Build two lookups:
@@ -230,7 +261,7 @@ async function main() {
 
   writeFileSync(REPORT_PATH, lines.join('\n') + '\n')
   console.log(`\nReport written to ${REPORT_PATH}`)
-  process.exit(1)
+  process.exit(trueMisses.length === 0 ? 0 : 1)
 }
 
 main().catch(err => {

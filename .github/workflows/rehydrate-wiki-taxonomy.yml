@@ -1,0 +1,44 @@
+name: Rehydrate Wiki Taxonomy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 1 * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rehydrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rehydrate wiki metadata
+        run: npm run taxonomy:hydrate-wiki
+
+      - name: Validate wiki metadata
+        run: npm run taxonomy:validate-wiki
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/rehydrate-wiki-taxonomy
+          title: 'chore: rehydrate wiki taxonomy metadata'
+          commit-message: 'chore: rehydrate wiki taxonomy metadata'
+          body: |
+            Automated monthly wiki taxonomy refresh.
+            - Re-resolves Wikipedia titles via Wikidata SPARQL (bulk)
+            - Refreshes precomputed original image URLs (thumbnail derived at runtime)
+          labels: automation
