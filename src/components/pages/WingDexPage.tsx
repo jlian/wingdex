@@ -449,7 +449,7 @@ function SpeciesDetail({
               alt={displayName}
               onLoad={revealFullRes}
               onError={handleFullResError}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-500 ease-in-out ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-700 ease-in-out ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
           {!baseImageUrl && (
