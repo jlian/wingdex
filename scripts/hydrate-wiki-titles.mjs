@@ -128,8 +128,8 @@ async function fetchWikidataBirds() {
 const WIKI_REST_MAX_RETRIES = 4
 
 /** Adaptive throttle: increases when 429s are encountered, eases on success. */
-let politeDelayMs = 250
-const POLITE_DELAY_MIN = 250
+let politeDelayMs = 400
+const POLITE_DELAY_MIN = 400
 const POLITE_DELAY_MAX = 5000
 
 function bumpThrottle() {
