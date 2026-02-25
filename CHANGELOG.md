@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/jlian/wingdex/compare/v1.10.1...v1.10.2) (2026-02-25)
+
+
+### Bug Fixes
+
+* rename workflow input to images_only (hyphens break dot notation) ([ae01acf](https://github.com/jlian/wingdex/commit/ae01acf16c40dd89977d4d0f6f567e098ff26076))
+
 ## [1.10.1](https://github.com/jlian/wingdex/compare/v1.10.0...v1.10.1) (2026-02-25)
 
 
