@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ListRow } from '@/components/ui/list-row'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -231,24 +232,34 @@ export default function OutingsPage({
           />
         </div>
         <div className="flex items-center gap-1">
-          {outingSortOptions.map(opt => {
-            const isActive = effectiveSortField === opt.key
-            const DirIcon = effectiveSortDir === 'asc' ? ArrowUp : ArrowDown
-            return (
-              <Button
+          <ToggleGroup
+            type="single"
+            value={effectiveSortField}
+            variant="outline"
+            size="sm"
+          >
+            {outingSortOptions.map(opt => (
+              <ToggleGroupItem
                 key={opt.key}
-                variant={isActive ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-9 w-9 p-0"
-                onClick={() => handleToggleSort(opt.key)}
+                value={opt.key}
                 aria-label={opt.label}
                 title={opt.label}
+                onClick={() => handleToggleSort(opt.key)}
               >
-                <opt.icon size={16} />
-                {isActive && <DirIcon size={10} className="-ml-0.5" />}
-              </Button>
-            )
-          })}
+                <opt.icon />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={() => handleToggleSort(effectiveSortField)}
+            aria-label={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
+            title={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
+          >
+            {effectiveSortDir === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+          </Button>
         </div>
       </div>
       
