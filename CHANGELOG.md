@@ -1,3 +1,20 @@
+# [1.11.0](https://github.com/jlian/wingdex/compare/v1.10.2...v1.11.0) (2026-02-25)
+
+
+### Bug Fixes
+
+* **Thumbnails:** remove iOS eager-load hack and preserve wiki fields in dex rebuild ([5eff144](https://github.com/jlian/wingdex/commit/5eff1440ac9c93ca181437ebf2e458a963193f67))
+
+
+### Features
+
+* **Vite:** support LAN dev server via env vars ([64d2c9a](https://github.com/jlian/wingdex/commit/64d2c9a2830c2fb2f2c2f0a33ef21a2fe4301c86))
+
+
+### Performance Improvements
+
+* **Thumbnails:** use batched MediaWiki pageimages API for thumbnail URLs ([cf9c341](https://github.com/jlian/wingdex/commit/cf9c3417709461a699039272c331c4bbc205e4b6))
+
 ## [1.10.2](https://github.com/jlian/wingdex/compare/v1.10.1...v1.10.2) (2026-02-25)
 
 
