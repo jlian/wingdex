@@ -390,8 +390,10 @@ function SpeciesDetail({
   const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
+  const [fullResFailed, setFullResFailed] = useState(false)
   const hasDistinctFullRes = !!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)
-  const shouldBlurBase = !!thumbnailUrl && (hasDistinctFullRes || summaryLoading)
+  const canShowOverlay = hasDistinctFullRes && !fullResFailed
+  const shouldBlurBase = !!thumbnailUrl && (canShowOverlay || summaryLoading)
   const fullResRevealToken = useRef(0)
 
   const revealFullRes = () => {
@@ -407,10 +409,15 @@ function SpeciesDetail({
     })
   }
 
+  const handleFullResError = () => {
+    setFullResFailed(true)
+  }
+
   // Reset loaded state when species changes
   useEffect(() => {
     fullResRevealToken.current += 1
     setFullResLoaded(false)
+    setFullResFailed(false)
   }, [entry.speciesName])
 
   return (
@@ -430,19 +437,19 @@ function SpeciesDetail({
           {baseImageUrl && (
             <img
               src={baseImageUrl}
-              alt={hasDistinctFullRes ? '' : displayName}
-              aria-hidden={hasDistinctFullRes}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-all duration-700 ease-out ${shouldBlurBase ? 'blur-sm scale-102' : ''}`}
+              alt={canShowOverlay ? '' : displayName}
+              aria-hidden={canShowOverlay}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-all duration-700 ease-in-out ${shouldBlurBase ? 'blur-sm scale-102' : ''} ${canShowOverlay && fullResLoaded ? 'opacity-0' : 'opacity-100'}`}
             />
           )}
           {/* Full-res overlay fades in over the base layer */}
-          {hasDistinctFullRes && (
+          {canShowOverlay && (
             <img
               src={fullResUrl}
               alt={displayName}
               onLoad={revealFullRes}
-              onError={revealFullRes}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-700 ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onError={handleFullResError}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-500 ease-in-out ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
           {!baseImageUrl && (
