@@ -56,13 +56,14 @@ export function useBirdSummary(
 } {
   const [summary, setSummary] = useState<WikiSummary | undefined>()
   const [loading, setLoading] = useState(false)
+  const wikiTitle = options?.wikiTitle
 
   useEffect(() => {
     if (!speciesName) return
     let cancelled = false
     setLoading(true)
 
-    getWikimediaSummary(speciesName, options).then(s => {
+    getWikimediaSummary(speciesName, { wikiTitle }).then(s => {
       if (!cancelled) {
         setSummary(s)
         setLoading(false)
@@ -70,7 +71,7 @@ export function useBirdSummary(
     })
 
     return () => { cancelled = true }
-  }, [speciesName, options?.wikiTitle])
+  }, [speciesName, wikiTitle])
 
   return { summary, loading }
 }
