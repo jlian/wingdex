@@ -46,11 +46,33 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   const trustedOrigins = new Set<string>([baseURL])
   if (requestOrigin) trustedOrigins.add(requestOrigin)
   if (headerOrigin && isLoopbackOrigin(headerOrigin)) trustedOrigins.add(headerOrigin)
+  // Allow extra trusted origins via env (e.g. LAN dev with custom domain + TLS)
+  if (env.TRUSTED_ORIGINS) {
+    for (const o of env.TRUSTED_ORIGINS.split(',')) {
+      const trimmed = o.trim()
+      if (trimmed) trustedOrigins.add(trimmed)
+    }
+  }
   // Apple Sign-In uses form_post: Apple's server POSTs to our callback with
   // Origin: https://appleid.apple.com, so we must trust it when Apple is configured.
   if (env.APPLE_CLIENT_ID) trustedOrigins.add('https://appleid.apple.com')
 
-  const passkeyOrigin = baseURL
+  const passkeyOrigin = (() => {
+    // When accessing via a trusted LAN origin (e.g. custom domain with TLS),
+    // use it for passkey RP ID so WebAuthn works on that domain.
+    if (headerOrigin && !isLoopbackOrigin(headerOrigin) && trustedOrigins.has(headerOrigin)) {
+      return headerOrigin
+    }
+    // Infer from Referer when Origin header is absent (e.g. GET requests)
+    const referer = options.request?.headers.get('referer')
+    if (referer) {
+      const refererOrigin = new URL(referer).origin
+      if (!isLoopbackOrigin(refererOrigin) && trustedOrigins.has(refererOrigin)) {
+        return refererOrigin
+      }
+    }
+    return baseURL
+  })()
 
   if (isLoopbackOrigin(baseURL)) {
     const globalRef = globalThis as typeof globalThis & Record<string, unknown>
@@ -102,7 +124,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
       anonymous(),
       passkey({
         rpName: 'WingDex',
-        rpID: new URL(baseURL).hostname,
+        rpID: new URL(passkeyOrigin).hostname,
         origin: passkeyOrigin,
       }),
     ],

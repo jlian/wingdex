@@ -17,4 +17,5 @@ interface Env {
   OPENAI_MODEL_STRONG?: string
   AI_DAILY_LIMIT_IDENTIFY?: string
   AI_DAILY_LIMIT_SUGGEST?: string
+  TRUSTED_ORIGINS?: string
 }
