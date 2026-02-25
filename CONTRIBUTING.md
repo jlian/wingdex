@@ -11,7 +11,7 @@ Thanks for your interest in contributing! Here's how to get started.
    npm ci
    ```
 
-   Use Node 25+ (`node --version`).
+   Use Node 24+ (`node --version`).
 
 2. **Start the dev server**
    ```bash
