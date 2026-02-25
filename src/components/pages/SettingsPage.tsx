@@ -463,7 +463,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           }}
         >
           <Key size={20} className="mr-2" />
-          Add a passkey
+          Add a Passkey
         </Button>
       </Card>
       )}
