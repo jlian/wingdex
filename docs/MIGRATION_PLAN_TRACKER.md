@@ -990,7 +990,7 @@ on:
 jobs:
   build-and-test:
     steps:
-      - Checkout, setup Node 25, npm ci
+      - Checkout, setup Node 24, npm ci
       - Lint
       - Typecheck
       - Unit tests
@@ -1012,7 +1012,7 @@ concurrency:
 jobs:
   release:
     steps:
-      - Checkout, setup Node 25, npm ci
+      - Checkout, setup Node 24, npm ci
       - Build
       - Semantic-release (main only)
       - Ensure BETTER_AUTH_SECRET in Pages

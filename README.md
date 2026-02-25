@@ -51,7 +51,7 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 
 ### Prerequisites
 
-Use Node 25+ (`node --version`) and install dependencies with `npm ci`.
+Use Node 24+ (`node --version`) and install dependencies with `npm ci`.
 
 ### Running locally
 

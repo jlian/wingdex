@@ -17,7 +17,7 @@
     ],
     "type": "module",
     "engines": {
-        "node": ">=25.0.0"
+        "node": ">=24.0.0"
     },
     "scripts": {
         "dev": "bash scripts/dev.sh",
