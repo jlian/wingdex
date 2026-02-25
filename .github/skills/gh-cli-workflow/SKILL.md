@@ -9,8 +9,8 @@ description: Use GitHub CLI for PR and issue workflows, including PR creation, i
 
 1. **Markdown bodies**: Use the `create_file` tool to write to `/tmp/<name>.md`, then pass with `--body-file`. Never use heredocs, pipes, or `--body` with multi-line content - they mangle markdown in concurrent terminal sessions.
 2. **ASCII only**: No em-dashes or en-dashes in bodies/comments - they corrupt in `gh` output. Use hyphens, commas, colons, semicolons.
-3. **PR titles**: Use Conventional Commit prefixes with optional scope, for example:
-`feat(Outings):`, `fix(Homepage):`, `docs(README):`, `chore(Hydration):`, `perf(Outings):`, `refactor(BirdDetails):`, `test(CSV):`, `ci(PR):`, `build:`, `revert:`.
+3. **PR titles and commit messages**: Use Conventional Commit format with a **required** scope, for example:
+`feat(Outings):`, `fix(Homepage):`, `docs(README):`, `chore(Hydration):`, `perf(Outings):`, `refactor(BirdDetails):`, `test(CSV):`, `ci(PR):`, `build(Deps):`, `revert(Outings):`.
 
 ## PRs and issues
 

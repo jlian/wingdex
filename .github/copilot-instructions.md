@@ -21,6 +21,12 @@ Guidelines to reduce common LLM coding mistakes. Bias toward caution over speed;
 - Transform tasks into verifiable goals with concrete success criteria.
 - For multi-step tasks, state a brief plan with verification checks.
 
+## Commit Messages
+- Use Conventional Commit format with a **required** scope: `type(scope): description`.
+- Valid types: `feat`, `fix`, `docs`, `chore`, `perf`, `refactor`, `test`, `ci`, `build`, `revert`.
+- Scope should be a short PascalCase or lowercase label for the area changed, for example: `feat(Outings):`, `fix(Auth):`, `docs(README):`, `test(CSV):`.
+- Never omit the scope.
+
 ## Text Encoding
 - Use commas, colons, semicolons, or hyphens (`-`) instead of em-dashes or en-dashes. They look unnatural and cause encoding corruption in CLI tools (e.g., `gh` heredocs) and terminal output.
 - Stick to ASCII punctuation in commit messages, PR descriptions, issue comments, and code comments.
