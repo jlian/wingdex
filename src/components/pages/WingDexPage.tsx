@@ -353,7 +353,7 @@ function SpeciesDetail({
 }) {
   const displayName = getDisplayName(entry.speciesName)
   const scientificName = getScientificName(entry.speciesName)
-  const { summary, loading: summaryLoading } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
+  const { summary } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
 
   useEffect(() => {
@@ -390,10 +390,8 @@ function SpeciesDetail({
   const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
-  const [fullResFailed, setFullResFailed] = useState(false)
   const hasDistinctFullRes = !!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)
-  const canShowOverlay = hasDistinctFullRes && !fullResFailed
-  const shouldBlurBase = !!thumbnailUrl && (canShowOverlay || summaryLoading)
+  const canShowOverlay = hasDistinctFullRes
   const fullResRevealToken = useRef(0)
 
   const revealFullRes = () => {
@@ -409,15 +407,10 @@ function SpeciesDetail({
     })
   }
 
-  const handleFullResError = () => {
-    setFullResFailed(true)
-  }
-
   // Reset loaded state when species changes
   useEffect(() => {
     fullResRevealToken.current += 1
     setFullResLoaded(false)
-    setFullResFailed(false)
   }, [entry.speciesName])
 
   return (
@@ -439,7 +432,7 @@ function SpeciesDetail({
               src={baseImageUrl}
               alt={canShowOverlay ? '' : displayName}
               aria-hidden={canShowOverlay}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-all duration-700 ease-in-out ${shouldBlurBase ? 'blur-sm scale-102' : ''} ${canShowOverlay && fullResLoaded ? 'opacity-0' : 'opacity-100'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${thumbnailUrl ? 'blur-md scale-105' : ''}`}
             />
           )}
           {/* Full-res overlay fades in over the base layer */}
@@ -448,8 +441,7 @@ function SpeciesDetail({
               src={fullResUrl}
               alt={displayName}
               onLoad={revealFullRes}
-              onError={handleFullResError}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-700 ease-in-out ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-opacity duration-600 ease-in-out ${fullResLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
           {!baseImageUrl && (
