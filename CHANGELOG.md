@@ -1,3 +1,15 @@
+## [1.9.5](https://github.com/jlian/wingdex/compare/v1.9.4...v1.9.5) (2026-02-25)
+
+
+### Bug Fixes
+
+* address review - allow lookup fallback in BirdRow, avoid payload bloat in dex API ([a4413a9](https://github.com/jlian/wingdex/commit/a4413a984451975725d541024f17eab21249aff8))
+
+
+### Performance Improvements
+
+* inline wiki metadata and remove list-view lookup fanout ([d6c851c](https://github.com/jlian/wingdex/commit/d6c851c6b6bf47a6e6d078208ab4bcb9757f76e4))
+
 ## [1.9.4](https://github.com/jlian/wingdex/compare/v1.9.3...v1.9.4) (2026-02-25)
 
 
