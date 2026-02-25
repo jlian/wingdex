@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/jlian/wingdex/compare/v1.10.0...v1.10.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* raise base throttle to 400ms to avoid 429 oscillation ([1094204](https://github.com/jlian/wingdex/commit/10942040a0ecdf9edd2d2554e4b4622e890b78d0))
+
 # [1.10.0](https://github.com/jlian/wingdex/compare/v1.9.5...v1.10.0) (2026-02-25)
 
 
