@@ -217,7 +217,9 @@ test.describe('CSV import + photo upload integration', () => {
 
     await saveObservationsResponse
 
-    // Dialog auto-closes after save
+    // Dialog shows upload summary - dismiss it
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
 
     // Navigate to Outings and verify the new outing is visible immediately (no refresh)
@@ -289,7 +291,9 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(dialog.getByText(/Chukar/)).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
-    // Dialog auto-closes after species save
+    // Dialog shows upload summary - dismiss it
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 })
 
     // Go to WingDex, Chukar should still be there (converged, not duplicated)
@@ -364,7 +368,9 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(dialog.getByText(/Chukar|Jay/)).toBeVisible({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Confirm' }).first().click()
 
-    // Dialog auto-closes after all clusters are saved
+    // Dialog shows upload summary - dismiss it
+    await expect(dialog).toBeVisible({ timeout: 10_000 })
+    await dialog.getByRole('button', { name: 'Done' }).click()
     await expect(dialog).not.toBeVisible({ timeout: 10_000 })
   })
 })

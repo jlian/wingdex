@@ -357,7 +357,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
     }
 
     setWingDexSortField(field)
-    setWingDexSortDir(field === 'name' ? 'asc' : 'desc')
+    setWingDexSortDir(field === 'name' || field === 'family' ? 'asc' : 'desc')
   }, [wingDexSortField])
 
   const toggleOutingsSort = useCallback((field: OutingSortField) => {

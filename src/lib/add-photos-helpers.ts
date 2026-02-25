@@ -10,6 +10,7 @@ export type FlowStep =
   | 'photo-processing'
   | 'photo-confirm'
   | 'complete'
+  | 'summary'
 
 export interface PhotoResult {
   photoId: string
@@ -25,7 +26,7 @@ export interface PhotoResult {
  * Whether the wizard is in a state where closing would lose progress.
  */
 export function needsCloseConfirmation(step: FlowStep): boolean {
-  return step !== 'upload' && step !== 'complete'
+  return step !== 'upload' && step !== 'complete' && step !== 'summary'
 }
 
 /**

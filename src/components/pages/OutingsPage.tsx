@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ListRow } from '@/components/ui/list-row'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -21,7 +23,7 @@ import {
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
   Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Hash, TextAa
 } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
@@ -52,10 +54,10 @@ export type SortDir = 'asc' | 'desc'
 const INITIAL_VISIBLE_ITEMS = 40
 const LOAD_MORE_STEP = 40
 
-const outingSortOptions: { key: OutingSortField; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'species', label: 'Species' },
-  { key: 'name', label: 'A-Z' },
+const outingSortOptions: { key: OutingSortField; icon: React.ElementType; label: string }[] = [
+  { key: 'date', icon: CalendarBlank, label: 'Sort by date' },
+  { key: 'species', icon: Bird, label: 'Sort by species count' },
+  { key: 'name', icon: TextAa, label: 'Sort A-Z' },
 ]
 
 export default function OutingsPage({
@@ -230,22 +232,33 @@ export default function OutingsPage({
           />
         </div>
         <div className="flex items-center gap-1">
-          {outingSortOptions.map(opt => {
-            const isActive = effectiveSortField === opt.key
-            const DirIcon = effectiveSortDir === 'asc' ? ArrowUp : ArrowDown
-            return (
-              <Button
+          <ToggleGroup
+            type="single"
+            value={effectiveSortField}
+            variant="outline"
+          >
+            {outingSortOptions.map(opt => (
+              <ToggleGroupItem
                 key={opt.key}
-                variant={isActive ? 'secondary' : 'ghost'}
-                size="sm"
-                className="text-xs h-9 px-2.5"
+                value={opt.key}
+                aria-label={opt.label}
+                title={opt.label}
+                className="press-feel-light"
                 onClick={() => handleToggleSort(opt.key)}
               >
-                {opt.label}
-                {isActive && <DirIcon size={12} className="ml-0.5" />}
-              </Button>
-            )
-          })}
+                <opt.icon />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleToggleSort(effectiveSortField)}
+            aria-label={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
+            title={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
+          >
+            {effectiveSortDir === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+          </Button>
         </div>
       </div>
       
