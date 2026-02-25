@@ -1,3 +1,10 @@
+## [1.9.4](https://github.com/jlian/wingdex/compare/v1.9.3...v1.9.4) (2026-02-25)
+
+
+### Bug Fixes
+
+* remove service worker to fix dev HMR and stale cache issues ([f1510b6](https://github.com/jlian/wingdex/commit/f1510b694b2808bba98687c048ba8ce4651dbb67))
+
 ## [1.9.3](https://github.com/jlian/wingdex/compare/v1.9.2...v1.9.3) (2026-02-25)
 
 
