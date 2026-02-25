@@ -420,8 +420,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
       <Toaster position="bottom-center" />
 
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="flex-1 flex flex-col">
-        {/* ── Top header, sticky at top, content scrolls beneath ── */}
-        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+        {/* ── Top header, fixed at top so iOS Safari doesn't invalidate
+              the compositor layer during programmatic scrollTo jumps ── */}
+        <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl">
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
               {/* Logo, navigates to Home */}
@@ -482,6 +483,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
             </div>
           </div>
         </header>
+
+        {/* Spacer for fixed header */}
+        <div className="h-14 sm:h-16 shrink-0" />
 
         {/* ── Main content ────────────────────────────────── */}
         <main className="w-full max-w-3xl mx-auto pb-8 flex-1">
