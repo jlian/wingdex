@@ -388,8 +388,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   }
 
   // ─── File selection handler ──────────────────────────────
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0) return
 
     // Reset accumulated stats for this new upload session
@@ -470,6 +469,15 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     setPhotos(newPhotos)
     setStep('review')
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await handleSelectedFiles(Array.from(e.target.files || []))
+  }
+
+  const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    await handleSelectedFiles(Array.from(e.dataTransfer.files || []))
   }
 
   const handleDuplicateChoice = (reimport: boolean) => {
@@ -625,6 +633,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={handleFileDrop}
                 className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/40 transition-colors py-10 flex flex-col items-center gap-3 cursor-pointer"
               >
                 <CloudArrowUp size={48} className="text-primary" weight="duotone" />

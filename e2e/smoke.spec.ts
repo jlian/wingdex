@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { loadApp } from './helpers';
 
 test.describe('App smoke tests', () => {
@@ -152,6 +153,34 @@ test.describe('App smoke tests', () => {
     await expect(
       page.getByRole('button', { name: /continue to species/i })
     ).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('upload flow accepts drag-and-drop on Select Photos', async ({ page }) => {
+    await loadApp(page);
+
+    await page.getByRole('button', { name: 'Upload & Identify' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+
+    const imagePath = path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg');
+    const imageBytesBase64 = readFileSync(imagePath).toString('base64');
+    const dataTransfer = await page.evaluateHandle(({ bytesBase64, fileName }) => {
+      const binary = atob(bytesBase64);
+      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+      const file = new File([bytes], fileName, { type: 'image/jpeg' });
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      return transfer;
+    }, {
+      bytesBase64: imageBytesBase64,
+      fileName: path.basename(imagePath),
+    });
+
+    await page.getByRole('button', { name: 'Select Photos' }).dispatchEvent('drop', { dataTransfer });
+
+    await expect(
+      page.getByText('Reading Photos...').or(page.getByText('Review Outing'))
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Review Outing')).toBeVisible({ timeout: 10_000 });
   });
 
   test('upload flow handles multiple photos', async ({ page }) => {
