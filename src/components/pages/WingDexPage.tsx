@@ -96,7 +96,6 @@ export default function WingDexPage({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const visibleCountRef = useRef(visibleCount)
-  const warmedSpeciesRef = useRef<Set<string>>(new Set())
   const [familyOrderLookup, setFamilyOrderLookup] = useState<((name: string) => number) | null>(null)
 
   useEffect(() => {
@@ -281,7 +280,6 @@ export default function WingDexPage({
             type="single"
             value={effectiveSortField}
             variant="outline"
-            size="sm"
           >
             {sortOptions.map(opt => (
               <ToggleGroupItem
@@ -289,6 +287,7 @@ export default function WingDexPage({
                 value={opt.key}
                 aria-label={opt.label}
                 title={opt.label}
+                className="press-feel-light"
                 onClick={() => handleToggleSort(opt.key)}
               >
                 <opt.icon />
@@ -298,7 +297,6 @@ export default function WingDexPage({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
             onClick={() => handleToggleSort(effectiveSortField)}
             aria-label={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
             title={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}

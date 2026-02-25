@@ -236,7 +236,6 @@ export default function OutingsPage({
             type="single"
             value={effectiveSortField}
             variant="outline"
-            size="sm"
           >
             {outingSortOptions.map(opt => (
               <ToggleGroupItem
@@ -244,6 +243,7 @@ export default function OutingsPage({
                 value={opt.key}
                 aria-label={opt.label}
                 title={opt.label}
+                className="press-feel-light"
                 onClick={() => handleToggleSort(opt.key)}
               >
                 <opt.icon />
@@ -253,7 +253,6 @@ export default function OutingsPage({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
             onClick={() => handleToggleSort(effectiveSortField)}
             aria-label={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
             title={effectiveSortDir === 'asc' ? 'Sort descending' : 'Sort ascending'}
