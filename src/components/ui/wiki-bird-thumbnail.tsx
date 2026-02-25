@@ -3,16 +3,6 @@ import { Bird } from '@phosphor-icons/react'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { cn } from '@/lib/utils'
 
-// iOS Safari can repaint/flicker thumbnail layers during interactive back-swipe
-// when images decode late; keep eager loading on iOS, lazy elsewhere.
-const SHOULD_LAZY_LOAD_THUMBNAILS = (() => {
-  if (typeof navigator === 'undefined') return true
-  const userAgent = navigator.userAgent
-  const isIOS = /iPad|iPhone|iPod/.test(userAgent)
-    || (userAgent.includes('Mac') && navigator.maxTouchPoints > 1)
-  return !isIOS
-})()
-
 interface WikiBirdThumbnailProps {
   /** Species name to fetch the Wikipedia thumbnail for */
   speciesName: string
@@ -55,7 +45,7 @@ export function WikiBirdThumbnail({
         <img
           src={url}
           alt={alt ?? speciesName}
-          loading={SHOULD_LAZY_LOAD_THUMBNAILS ? 'lazy' : 'eager'}
+          loading="lazy"
           onLoad={(e) => {
             const img = e.currentTarget
             setPortrait(img.naturalHeight > img.naturalWidth)

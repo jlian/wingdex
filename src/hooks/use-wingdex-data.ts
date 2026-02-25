@@ -67,6 +67,8 @@ function rebuildDexFromState(
       totalCount,
       bestPhotoId: latestWithPhoto?.representativePhotoId || existing?.bestPhotoId,
       notes: existing?.notes || '',
+      wikiTitle: existing?.wikiTitle,
+      thumbnailUrl: existing?.thumbnailUrl,
     })
   }
 
