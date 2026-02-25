@@ -588,9 +588,9 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
         <div className="flex items-center gap-2">
           <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="press-feel-light">
             WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}
-            {typeof __GIT_HASH__ !== 'undefined' && __GIT_HASH__ && (
+            {import.meta.env.DEV && typeof __GIT_HASH__ !== 'undefined' && __GIT_HASH__ && (
               <span className="font-mono text-[10px]">
-                {import.meta.env.DEV ? ` (${__GIT_BRANCH__}@${__GIT_HASH__})` : `-${__GIT_HASH__}`}
+                {` (${__GIT_BRANCH__}@${__GIT_HASH__})`}
               </span>
             )}
           </a>
