@@ -175,6 +175,25 @@ h1, h2, .font-serif {
   }
 }
 
+/* Tab: shows "active + pressed" look on press (green text, green bg, dimmed).
+   On touch the inactive tab jumps straight to a dimmed-active appearance,
+   then on release the opacity lifts and the tab settles into its normal
+   active state. Matches the desktop :active behavior on iOS. */
+@utility press-feel-tab {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  &[data-pressed] {
+    color: var(--primary) !important;
+    background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+    opacity: 0.7;
+  }
+  @media (hover: hover) {
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
 /* Subtle: opaque bg highlight instead of opacity dim.
    Good for full-width list rows where the highlight should cover borders. */
 @utility press-feel-subtle {

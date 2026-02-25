@@ -19,7 +19,7 @@
 
 const PRESS_DELAY_MS = 70
 const LINGER_MS = 100
-const SELECTOR = '.press-feel, .press-feel-subtle, .press-feel-light'
+const SELECTOR = '.press-feel, .press-feel-subtle, .press-feel-light, .press-feel-tab'
 
 let activeEl: Element | null = null
 let timerId: ReturnType<typeof setTimeout> | null = null

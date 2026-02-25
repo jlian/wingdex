@@ -445,7 +445,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                     className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-sm font-medium cursor-pointer
                       data-[state=active]:bg-primary/10 data-[state=active]:text-primary
                       data-[state=inactive]:text-muted-foreground hover:bg-[var(--pressed-highlight-hover)]
-                      press-feel-light"
+                      press-feel-tab"
                   >
                     <item.icon size={18} />
                     {item.label}
