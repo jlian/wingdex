@@ -2,10 +2,14 @@
 /**
  * Hydrate taxonomy.json with pre-resolved Wikipedia article titles and image URLs.
  *
- * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name -> article title + image).
+ * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name -> article title).
  * Step 2: For misses, try the Wikipedia REST API with the same strategy chain as wikimedia.ts.
- * Step 3: Write taxonomy.json with
+ * Step 3: Fetch images for all resolved titles via the Wikipedia REST API (originalimage.source).
+ * Step 4: Write taxonomy.json with
  *   [common, scientific, ebirdCode, wikiTitle | null, originalImageUrl | null].
+ *
+ * Images come exclusively from the Wikipedia REST /page/summary/ endpoint so they match
+ * what users see on Wikipedia article pages.
  *
  * Thumbnail URLs are derived at runtime from the original URL (insert /thumb/ + append /{w}px-{file}).
  *
@@ -14,7 +18,6 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs'
-import { createHash } from 'crypto'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -36,38 +39,13 @@ const WIKI_OVERRIDES = {
 }
 
 /**
- * Convert a Wikimedia Commons filename to its upload.wikimedia.org URL.
- * The path uses the first 1 and 2 hex chars of the MD5 hash of the normalized filename.
- */
-function commonsUrlFromFilename(rawFilename) {
-  const filename = rawFilename.replace(/ /g, '_')
-  const normalized = filename.charAt(0).toUpperCase() + filename.slice(1)
-  const md5 = createHash('md5').update(normalized).digest('hex')
-  const encoded = encodeURIComponent(normalized).replace(/%2C/g, ',').replace(/%3B/g, ';')
-  return `https://upload.wikimedia.org/wikipedia/commons/${md5[0]}/${md5.substring(0, 2)}/${encoded}`
-}
-
-/**
- * Extract the filename from a Wikidata image URL (Special:FilePath/...).
- */
-function extractFilenameFromWikidata(imageUrl) {
-  try {
-    const url = new URL(imageUrl)
-    const lastSegment = url.pathname.split('/').pop()
-    return lastSegment ? decodeURIComponent(lastSegment) : null
-  } catch {
-    return null
-  }
-}
-
-/**
  * Fetch all bird species from Wikidata that have an English Wikipedia article.
- * Also fetches P18 (image) for bulk image URL resolution.
  * Returns Maps by scientific name and by article title (both lowercased).
+ * Images are NOT sourced from Wikidata; they come from the Wikipedia REST API instead.
  */
 async function fetchWikidataBirds() {
   const sparql = `
-    SELECT ?sciName ?articleTitle ?image WHERE {
+    SELECT ?sciName ?articleTitle WHERE {
       ?taxon wdt:P31 wd:Q16521 ;
              wdt:P105 wd:Q7432 ;
              wdt:P171+ wd:Q5113 ;
@@ -75,11 +53,10 @@ async function fetchWikidataBirds() {
       ?article schema:about ?taxon ;
                schema:isPartOf <https://en.wikipedia.org/> ;
                schema:name ?articleTitle .
-      OPTIONAL { ?taxon wdt:P18 ?image . }
     }
   `
 
-  console.log('Fetching bird species from Wikidata (SPARQL with images)...')
+  console.log('Fetching bird species from Wikidata (SPARQL for titles)...')
 
   let data = null
   let lastError = null
@@ -135,26 +112,60 @@ async function fetchWikidataBirds() {
   for (const row of results) {
     const sci = row.sciName.value.toLowerCase()
     const title = row.articleTitle.value
-    let imageUrl = null
-    if (row.image) {
-      const filename = extractFilenameFromWikidata(row.image.value)
-      if (filename) imageUrl = commonsUrlFromFilename(filename)
-    }
-    // Prefer entries with images over those without
-    const existing = bySci.get(sci)
-    if (!existing || (!existing.imageUrl && imageUrl)) {
-      bySci.set(sci, { title, imageUrl })
+    if (!bySci.has(sci)) {
+      bySci.set(sci, { title, imageUrl: null })
     }
     const titleLower = title.toLowerCase()
-    const existingTitle = byTitle.get(titleLower)
-    if (!existingTitle || (!existingTitle.imageUrl && imageUrl)) {
-      byTitle.set(titleLower, { title, imageUrl })
+    if (!byTitle.has(titleLower)) {
+      byTitle.set(titleLower, { title, imageUrl: null })
     }
   }
 
-  const withImages = [...bySci.values()].filter(v => v.imageUrl).length
-  console.log(`  Got ${bySci.size} bird species with Wikipedia pages (${withImages} with images)\n`)
+  console.log(`  Got ${bySci.size} bird species with Wikipedia pages\n`)
   return { bySci, byTitle }
+}
+
+const WIKI_REST_MAX_RETRIES = 4
+
+/** Adaptive throttle: increases when 429s are encountered, eases on success. */
+let politeDelayMs = 250
+const POLITE_DELAY_MIN = 250
+const POLITE_DELAY_MAX = 5000
+
+function bumpThrottle() {
+  const prev = politeDelayMs
+  politeDelayMs = Math.min(Math.round(politeDelayMs * 1.5), POLITE_DELAY_MAX)
+  if (politeDelayMs !== prev) {
+    console.log(`    Throttle raised to ${politeDelayMs}ms per request`)
+  }
+}
+
+function easeThrottle() {
+  if (politeDelayMs > POLITE_DELAY_MIN) {
+    politeDelayMs = Math.max(Math.round(politeDelayMs * 0.75), POLITE_DELAY_MIN)
+  }
+}
+
+/** Fetch a Wikipedia REST endpoint with exponential backoff on 429/5xx. */
+async function fetchWithRetry(url, retries = WIKI_REST_MAX_RETRIES) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const res = await fetch(url, {
+      headers: { 'Api-User-Agent': 'WingDex/1.0 (taxonomy hydration)' },
+    })
+    if (res.ok) {
+      easeThrottle()
+      return res
+    }
+    if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+      if (res.status === 429) bumpThrottle()
+      const backoffMs = Math.min(1000 * 2 ** attempt, 30_000)
+      console.log(`    [${res.status}] ${url.split('/').pop()} - retry ${attempt}/${retries} in ${backoffMs / 1000}s`)
+      await new Promise(r => setTimeout(r, backoffMs))
+      continue
+    }
+    return res // non-retryable error or final attempt
+  }
+  return null // should not reach here
 }
 
 /**
@@ -181,10 +192,8 @@ async function tryWikipediaApi(common, scientific) {
     const encoded = encodeURIComponent(candidate.replace(/ /g, '_'))
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`
     try {
-      const res = await fetch(url, {
-        headers: { 'Api-User-Agent': 'WingDex/1.0 (taxonomy hydration)' },
-      })
-      if (res.ok) {
+      const res = await fetchWithRetry(url)
+      if (res?.ok) {
         const data = await res.json()
         if (data.extract) {
           return {
@@ -194,25 +203,27 @@ async function tryWikipediaApi(common, scientific) {
         }
       }
     } catch { /* skip */ }
-    // Rate-limit politeness
-    await new Promise(r => setTimeout(r, 200))
+    // Adaptive rate-limit politeness
+    await new Promise(r => setTimeout(r, politeDelayMs))
   }
   return null
 }
 
+/**
+ * Fetch image URL for a resolved title. Returns { imageUrl, transient } so callers
+ * can distinguish "no image exists" from "request failed, don't cache".
+ */
 async function fetchImageForTitle(title) {
   const encoded = encodeURIComponent(title.replace(/ /g, '_'))
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`
   try {
-    const res = await fetch(url, {
-      headers: { 'Api-User-Agent': 'WingDex/1.0 (taxonomy hydration)' },
-    })
-    if (!res.ok) return null
+    const res = await fetchWithRetry(url)
+    if (!res?.ok) return { imageUrl: null, transient: true }
     const data = await res.json()
-    if (!data.extract) return null
-    return data.originalimage?.source || null
+    if (!data.extract) return { imageUrl: null, transient: false }
+    return { imageUrl: data.originalimage?.source || null, transient: false }
   } catch {
-    return null
+    return { imageUrl: null, transient: true }
   }
 }
 
@@ -224,8 +235,10 @@ async function main() {
   let byTitle = new Map()
   let wikidataAvailable = false
 
+  // --images-only: skip Wikidata + title fallback, re-fetch all images from Wikipedia
   if (IMAGES_ONLY) {
-    console.log('Running in images-only mode: skipping Wikidata title matching and backfilling missing images by existing titles.\n')
+    const withTitle = taxonomy.filter(e => e[3]).length
+    console.log(`Images-only mode: preserving existing titles (${withTitle}), re-fetching all image URLs.\n`)
   } else {
     try {
       const maps = await fetchWikidataBirds()
@@ -241,161 +254,203 @@ async function main() {
 
   const updated = []
   const misses = []
+  let remaining = []
+  let apiHits = 0
 
-  // Helper to push a resolved entry (5-element tuple)
-  function pushResolved(common, scientific, ebirdCode, match) {
-    updated.push([common, scientific, ebirdCode, match.title, match.imageUrl || null])
-  }
-
-  // Pass 1: bulk match via Wikidata
-  for (const entry of taxonomy) {
-    const common = entry[0]
-    const scientific = entry[1]
-    const ebirdCode = entry[2] || null
-    const sciLower = scientific.toLowerCase()
-    const commonLower = common.toLowerCase()
-    const existingTitle = entry[3] || null
-    const existingImage = entry[4] || null
-
-    if (!wikidataAvailable) {
-      updated.push([common, scientific, ebirdCode, existingTitle, existingImage])
-      if (!existingTitle) {
-        misses.push({ common, scientific, ebirdCode, index: updated.length - 1 })
-      }
-      continue
+  if (IMAGES_ONLY) {
+    // Preserve titles, clear images so they all get re-fetched
+    for (const entry of taxonomy) {
+      updated.push([entry[0], entry[1], entry[2] || null, entry[3] || null, null])
+    }
+  } else {
+    // Helper to push a resolved entry (5-element tuple)
+    function pushResolved(common, scientific, ebirdCode, match) {
+      updated.push([common, scientific, ebirdCode, match.title, match.imageUrl || null])
     }
 
-    // Check manual overrides first
-    const override = WIKI_OVERRIDES[common]
-    if (override && byTitle.has(override.toLowerCase())) {
-      pushResolved(common, scientific, ebirdCode, byTitle.get(override.toLowerCase()))
-      continue
-    }
+    // Pass 1: bulk match via Wikidata
+    for (const entry of taxonomy) {
+      const common = entry[0]
+      const scientific = entry[1]
+      const ebirdCode = entry[2] || null
+      const sciLower = scientific.toLowerCase()
+      const commonLower = common.toLowerCase()
+      const existingTitle = entry[3] || null
+      const existingImage = entry[4] || null
 
-    // By scientific name (best match)
-    if (bySci.has(sciLower)) {
-      pushResolved(common, scientific, ebirdCode, bySci.get(sciLower))
-      continue
-    }
-
-    // By article title matching common name
-    if (byTitle.has(commonLower)) {
-      pushResolved(common, scientific, ebirdCode, byTitle.get(commonLower))
-      continue
-    }
-
-    // By article title matching common name + " (bird)" (disambiguation)
-    if (byTitle.has(commonLower + ' (bird)')) {
-      pushResolved(common, scientific, ebirdCode, byTitle.get(commonLower + ' (bird)'))
-      continue
-    }
-
-    // Grey/Gray variant
-    const greyVariant = commonLower.includes('gray')
-      ? commonLower.replace(/gray/g, 'grey')
-      : commonLower.includes('grey')
-        ? commonLower.replace(/grey/g, 'gray')
-        : null
-    if (greyVariant && byTitle.has(greyVariant)) {
-      pushResolved(common, scientific, ebirdCode, byTitle.get(greyVariant))
-      continue
-    }
-
-    // Grey/Gray variant + "(bird)" disambiguation
-    if (greyVariant && byTitle.has(greyVariant + ' (bird)')) {
-      pushResolved(common, scientific, ebirdCode, byTitle.get(greyVariant + ' (bird)'))
-      continue
-    }
-
-    // Dehyphenated
-    if (common.includes('-')) {
-      const dehyph = commonLower.replace(/-/g, ' ')
-      if (byTitle.has(dehyph)) {
-        pushResolved(common, scientific, ebirdCode, byTitle.get(dehyph))
+      if (!wikidataAvailable) {
+        updated.push([common, scientific, ebirdCode, existingTitle, existingImage])
+        if (!existingTitle) {
+          misses.push({ common, scientific, ebirdCode, index: updated.length - 1 })
+        }
         continue
       }
-    }
 
-    // Not found in Wikidata, queue for API fallback
-    misses.push({ common, scientific, ebirdCode, index: updated.length })
-    updated.push([common, scientific, ebirdCode, null, null]) // placeholder
-  }
-
-  if (wikidataAvailable) {
-    console.log(`Wikidata matched: ${taxonomy.length - misses.length}/${taxonomy.length}`)
-    console.log(`Remaining misses: ${misses.length}, checking Wikipedia API...\n`)
-  } else {
-    console.log(`Using existing taxonomy titles; ${misses.length} entries still missing titles, checking Wikipedia API...\n`)
-  }
-
-  // Pass 2: API fallback for misses (with retry for rate-limited requests)
-  let remaining = [...misses]
-  let apiHits = 0
-  const MAX_RETRIES = 3
-
-  for (let attempt = 1; attempt <= MAX_RETRIES && remaining.length > 0; attempt++) {
-    if (attempt > 1) {
-      const waitSec = attempt * 5
-      console.log(`\n  Retry ${attempt}/${MAX_RETRIES}: ${remaining.length} remaining, waiting ${waitSec}s...`)
-      await new Promise(r => setTimeout(r, waitSec * 1000))
-    }
-
-    const stillMissing = []
-    for (let i = 0; i < remaining.length; i++) {
-      const { common, scientific, ebirdCode, index } = remaining[i]
-      const result = await tryWikipediaApi(common, scientific)
-      if (result) {
-        updated[index] = [common, scientific, ebirdCode, result.title, result.originalImageUrl]
-        apiHits++
-      } else {
-        stillMissing.push(remaining[i])
+      // Check manual overrides first
+      const override = WIKI_OVERRIDES[common]
+      if (override && byTitle.has(override.toLowerCase())) {
+        pushResolved(common, scientific, ebirdCode, byTitle.get(override.toLowerCase()))
+        continue
       }
-      if ((i + 1) % 50 === 0) {
-        console.log(`  ... checked ${i + 1}/${remaining.length} (${apiHits} total API hits)`)
+
+      // By scientific name (best match)
+      if (bySci.has(sciLower)) {
+        pushResolved(common, scientific, ebirdCode, bySci.get(sciLower))
+        continue
       }
+
+      // By article title matching common name
+      if (byTitle.has(commonLower)) {
+        pushResolved(common, scientific, ebirdCode, byTitle.get(commonLower))
+        continue
+      }
+
+      // By article title matching common name + " (bird)" (disambiguation)
+      if (byTitle.has(commonLower + ' (bird)')) {
+        pushResolved(common, scientific, ebirdCode, byTitle.get(commonLower + ' (bird)'))
+        continue
+      }
+
+      // Grey/Gray variant
+      const greyVariant = commonLower.includes('gray')
+        ? commonLower.replace(/gray/g, 'grey')
+        : commonLower.includes('grey')
+          ? commonLower.replace(/grey/g, 'gray')
+          : null
+      if (greyVariant && byTitle.has(greyVariant)) {
+        pushResolved(common, scientific, ebirdCode, byTitle.get(greyVariant))
+        continue
+      }
+
+      // Grey/Gray variant + "(bird)" disambiguation
+      if (greyVariant && byTitle.has(greyVariant + ' (bird)')) {
+        pushResolved(common, scientific, ebirdCode, byTitle.get(greyVariant + ' (bird)'))
+        continue
+      }
+
+      // Dehyphenated
+      if (common.includes('-')) {
+        const dehyph = commonLower.replace(/-/g, ' ')
+        if (byTitle.has(dehyph)) {
+          pushResolved(common, scientific, ebirdCode, byTitle.get(dehyph))
+          continue
+        }
+      }
+
+      // Not found in Wikidata, queue for API fallback
+      misses.push({ common, scientific, ebirdCode, index: updated.length })
+      updated.push([common, scientific, ebirdCode, null, null]) // placeholder
     }
-    remaining = stillMissing
-    console.log(`  Pass ${attempt}: ${remaining.length} still missing after API check`)
+
+    if (wikidataAvailable) {
+      console.log(`Wikidata matched: ${taxonomy.length - misses.length}/${taxonomy.length}`)
+      console.log(`Remaining misses: ${misses.length}, checking Wikipedia API...\n`)
+    } else {
+      console.log(`Using existing taxonomy titles; ${misses.length} entries still missing titles, checking Wikipedia API...\n`)
+    }
+
+    // Pass 2: API fallback for misses (with retry sweeps)
+    remaining = [...misses]
+    const MAX_TITLE_RETRIES = 5
+
+    for (let attempt = 1; attempt <= MAX_TITLE_RETRIES && remaining.length > 0; attempt++) {
+      if (attempt > 1) {
+        const waitSec = attempt * 10
+        console.log(`\n  Title sweep ${attempt}/${MAX_TITLE_RETRIES}: ${remaining.length} remaining, waiting ${waitSec}s...`)
+        await new Promise(r => setTimeout(r, waitSec * 1000))
+      }
+
+      const stillMissing = []
+      for (let i = 0; i < remaining.length; i++) {
+        const { common, scientific, ebirdCode, index } = remaining[i]
+        const result = await tryWikipediaApi(common, scientific)
+        if (result) {
+          updated[index] = [common, scientific, ebirdCode, result.title, result.originalImageUrl]
+          apiHits++
+        } else {
+          stillMissing.push(remaining[i])
+        }
+        if ((i + 1) % 50 === 0) {
+          console.log(`  ... checked ${i + 1}/${remaining.length} (${apiHits} total API hits)`)
+        }
+      }
+      remaining = stillMissing
+      console.log(`  Title sweep ${attempt}: ${remaining.length} still missing`)
+    }
   }
 
   console.log('\nBackfilling images for resolved titles missing image URLs...')
-  const missingImageIndexes = updated
-    .map((entry, index) => ({ entry, index }))
-    .filter(item => !!item.entry[3] && !item.entry[4])
-
-  const titleImageCache = new Map()
+  const titleImageCache = new Map() // title -> imageUrl (only definitive results)
   let backfilledImages = 0
+  let transientMisses = 0
+  const MAX_IMAGE_SWEEPS = 5
 
-  for (let i = 0; i < missingImageIndexes.length; i++) {
-    const { index, entry } = missingImageIndexes[i]
-    const title = entry[3]
-    if (!title) continue
+  for (let sweep = 1; sweep <= MAX_IMAGE_SWEEPS; sweep++) {
+    const needsImage = updated
+      .map((entry, index) => ({ entry, index }))
+      .filter(item => !!item.entry[3] && !item.entry[4] && !titleImageCache.has(item.entry[3]))
 
-    let imageUrl
-    if (titleImageCache.has(title)) {
-      imageUrl = titleImageCache.get(title)
+    if (needsImage.length === 0) break
+
+    if (sweep > 1) {
+      const waitSec = sweep * 15
+      console.log(`\n  Image sweep ${sweep}/${MAX_IMAGE_SWEEPS}: ${needsImage.length} remaining, waiting ${waitSec}s...`)
+      await new Promise(r => setTimeout(r, waitSec * 1000))
     } else {
-      imageUrl = await fetchImageForTitle(title)
-      titleImageCache.set(title, imageUrl)
-      await new Promise(r => setTimeout(r, 120))
+      console.log(`  ${needsImage.length} entries need image backfill`)
     }
 
-    if (imageUrl) {
-      updated[index] = [entry[0], entry[1], entry[2], title, imageUrl]
-      backfilledImages++
-    }
+    let sweepTransient = 0
+    for (let i = 0; i < needsImage.length; i++) {
+      const { index, entry } = needsImage[i]
+      const title = entry[3]
+      if (!title) continue
 
-    if ((i + 1) % 200 === 0) {
-      console.log(`  ... checked ${i + 1}/${missingImageIndexes.length} (${backfilledImages} image backfills)`)
+      // Use cached definitive result if available
+      if (titleImageCache.has(title)) {
+        const cached = titleImageCache.get(title)
+        if (cached) {
+          updated[index] = [entry[0], entry[1], entry[2], title, cached]
+          backfilledImages++
+        }
+        continue
+      }
+
+      const result = await fetchImageForTitle(title)
+      if (!result.transient) {
+        titleImageCache.set(title, result.imageUrl)
+        if (result.imageUrl) {
+          updated[index] = [entry[0], entry[1], entry[2], title, result.imageUrl]
+          backfilledImages++
+        }
+      } else {
+        sweepTransient++
+      }
+      await new Promise(r => setTimeout(r, politeDelayMs))
+
+      if ((i + 1) % 200 === 0) {
+        console.log(`  ... checked ${i + 1}/${needsImage.length} (${backfilledImages} backfills, ${sweepTransient} transient failures)`)
+      }
     }
+    transientMisses = sweepTransient
+    console.log(`  Image sweep ${sweep}: ${backfilledImages} backfilled, ${sweepTransient} transient failures`)
+
+    if (sweepTransient === 0) break
   }
 
   const totalHits = taxonomy.length - misses.length + apiHits
   const withImages = updated.filter(e => e[4]).length
+  const noImageDefinitive = updated.filter(e => e[3] && !e[4] && titleImageCache.has(e[3])).length
   console.log(`\n--- Results ---`)
   console.log(`${totalHits}/${taxonomy.length} species hydrated (${((totalHits / taxonomy.length) * 100).toFixed(1)}%)`)
   console.log(`${withImages}/${taxonomy.length} species have image URLs (${((withImages / taxonomy.length) * 100).toFixed(1)}%)`)
   console.log(`${backfilledImages} image URLs backfilled from Wikipedia page summaries`)
+  if (noImageDefinitive > 0) {
+    console.log(`${noImageDefinitive} species have a Wikipedia page but no image on that page`)
+  }
+  if (transientMisses > 0) {
+    console.log(`${transientMisses} image fetches still failing after all sweeps (transient errors)`)
+  }
   if (remaining.length > 0) {
     console.log(`${remaining.length} species have no Wikipedia match (will use null):`)
     for (const { common, scientific } of remaining) {

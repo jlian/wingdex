@@ -2,6 +2,11 @@ name: Rehydrate Wiki Taxonomy
 
 on:
   workflow_dispatch:
+    inputs:
+      images-only:
+        description: 'Skip title resolution, re-fetch all image URLs only'
+        type: boolean
+        default: false
   schedule:
     - cron: '0 8 1 * *'
 
@@ -12,6 +17,7 @@ permissions:
 jobs:
   rehydrate:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Rehydrate wiki metadata
-        run: npm run taxonomy:hydrate-wiki
+        run: npm run taxonomy:hydrate-wiki -- ${{ inputs.images-only == 'true' && '--images-only' || '' }}
 
       - name: Validate wiki metadata
         run: npm run taxonomy:validate-wiki
