@@ -8,8 +8,13 @@ import { ErrorFallback } from './ErrorFallback.tsx'
 import "./main.css"
 import "./lib/touch-press" // iOS-style delayed press highlight for touch
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('/sw.js').catch(() => {})
+} else if ('serviceWorker' in navigator) {
+  // Unregister any lingering dev SW to prevent HMR/WebSocket interference
+  navigator.serviceWorker.getRegistrations().then(regs =>
+    regs.forEach(r => r.unregister())
+  )
 }
 
 createRoot(document.getElementById('app')!).render(
