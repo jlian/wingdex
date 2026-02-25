@@ -1,11 +1,15 @@
 import rawTaxonomy from '../../src/lib/taxonomy.json'
 
+/** Shared prefix stripped from thumbnail paths in taxonomy.json to save ~490 KB. */
+const COMMONS_PREFIX = 'https://upload.wikimedia.org/wikipedia/commons/'
+
 type TaxonEntry = {
   common: string
   scientific: string
   ebirdCode?: string
   wikiTitle?: string
-  originalImageUrl?: string
+  /** Path relative to COMMONS_PREFIX (e.g. "thumb/a/ab/Foo.jpg/330px-Foo.jpg"). */
+  thumbnailPath?: string
 }
 
 const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
@@ -13,7 +17,7 @@ const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
   scientific: entry[1],
   ...(entry[2] ? { ebirdCode: entry[2] } : {}),
   ...(entry[3] ? { wikiTitle: entry[3] } : {}),
-  ...(entry[4] ? { originalImageUrl: entry[4] } : {}),
+  ...(entry[4] ? { thumbnailPath: entry[4] } : {}),
 }))
 
 const lowerIndex = taxonomy.map(taxon => ({
@@ -159,26 +163,9 @@ export function getSpeciesByCode(code: string): TaxonEntry | undefined {
   return byCodeLower.get(code.toLowerCase())
 }
 
-/**
- * Derive a Wikimedia thumbnail URL from an original image URL.
- * Original: .../wikipedia/commons/{h}/{hh}/{file}
- * Thumb:    .../wikipedia/commons/thumb/{h}/{hh}/{file}/{w}px-{file}
- */
-export function getWikiThumbnailUrl(originalUrl: string | undefined, width = 320): string | undefined {
-  if (!originalUrl) return undefined
-  const marker = '/wikipedia/commons/'
-  const idx = originalUrl.indexOf(marker)
-  if (idx === -1) return originalUrl
-  const afterMarker = originalUrl.substring(idx + marker.length)
-  const filename = afterMarker.split('/').pop()
-  if (!filename) return originalUrl
-  return `${originalUrl.substring(0, idx)}${marker}thumb/${afterMarker}/${width}px-${filename}`
-}
-
 export function getWikiMetadata(name: string): {
   wikiTitle?: string
   thumbnailUrl?: string
-  originalImageUrl?: string
   common?: string
   scientific?: string
 } {
@@ -187,8 +174,9 @@ export function getWikiMetadata(name: string): {
 
   return {
     wikiTitle: match.wikiTitle,
-    thumbnailUrl: getWikiThumbnailUrl(match.originalImageUrl),
-    originalImageUrl: match.originalImageUrl,
+    thumbnailUrl: match.thumbnailPath
+      ? `${COMMONS_PREFIX}${match.thumbnailPath}`
+      : undefined,
     common: match.common,
     scientific: match.scientific,
   }

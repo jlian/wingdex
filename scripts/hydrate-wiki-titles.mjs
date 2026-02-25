@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 /**
- * Hydrate taxonomy.json with pre-resolved Wikipedia article titles and image URLs.
+ * Hydrate taxonomy.json with pre-resolved Wikipedia article titles and thumbnail URLs.
  *
  * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name -> article title).
  * Step 2: For misses, try the Wikipedia REST API with the same strategy chain as wikimedia.ts.
- * Step 3: Fetch images for all resolved titles via the Wikipedia REST API (originalimage.source).
+ * Step 3: Fetch thumbnail URLs via the MediaWiki Action API (prop=pageimages, batched 50 at a time).
  * Step 4: Write taxonomy.json with
- *   [common, scientific, ebirdCode, wikiTitle | null, originalImageUrl | null].
+ *   [common, scientific, ebirdCode, wikiTitle | null, thumbnailPath | null].
  *
- * Images come exclusively from the Wikipedia REST /page/summary/ endpoint so they match
- * what users see on Wikipedia article pages.
- *
- * Thumbnail URLs are derived at runtime from the original URL (insert /thumb/ + append /{w}px-{file}).
+ * Thumbnail URLs come from the MediaWiki pageimages API at pithumbsize=330 (a standard
+ * Wikimedia $wgThumbnailSteps size). The shared prefix
+ * "https://upload.wikimedia.org/wikipedia/commons/" is stripped to save ~490KB.
  *
  * Run after any taxonomy update:
  *   node scripts/hydrate-wiki-titles.mjs
@@ -196,10 +195,7 @@ async function tryWikipediaApi(common, scientific) {
       if (res?.ok) {
         const data = await res.json()
         if (data.extract) {
-          return {
-            title: data.title,
-            originalImageUrl: data.originalimage?.source || null,
-          }
+          return { title: data.title }
         }
       }
     } catch { /* skip */ }
@@ -210,8 +206,8 @@ async function tryWikipediaApi(common, scientific) {
 }
 
 /**
- * Fetch image URL for a resolved title. Returns { imageUrl, transient } so callers
- * can distinguish "no image exists" from "request failed, don't cache".
+ * Fetch image URL for a resolved title (used during title resolution as a side effect).
+ * Returns { imageUrl, transient } so callers can distinguish "no image" from "request failed".
  */
 async function fetchImageForTitle(title) {
   const encoded = encodeURIComponent(title.replace(/ /g, '_'))
@@ -225,6 +221,125 @@ async function fetchImageForTitle(title) {
   } catch {
     return { imageUrl: null, transient: true }
   }
+}
+
+const COMMONS_PREFIX = 'https://upload.wikimedia.org/wikipedia/commons/'
+const THUMB_SIZE = 330
+
+/**
+ * Batch-fetch thumbnail URLs via the MediaWiki Action API (prop=pageimages).
+ * Accepts up to 50 titles per request, returns CDN-cached thumbnail URLs
+ * at a standard $wgThumbnailSteps size (330px).
+ *
+ * Returns a Map<title, thumbnailUrl | null>.
+ */
+async function batchFetchThumbnails(titles) {
+  const result = new Map()
+  const chunks = []
+  for (let i = 0; i < titles.length; i += 50) {
+    chunks.push(titles.slice(i, i + 50))
+  }
+
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const chunk = chunks[ci]
+    const params = new URLSearchParams({
+      action: 'query',
+      prop: 'pageimages',
+      titles: chunk.map(t => t.replace(/ /g, '_')).join('|'),
+      piprop: 'thumbnail',
+      pithumbsize: String(THUMB_SIZE),
+      format: 'json',
+      formatversion: '2',
+    })
+    const url = `https://en.wikipedia.org/w/api.php?${params}`
+
+    try {
+      const res = await fetchWithRetry(url)
+      if (!res?.ok) {
+        // Mark all titles in this chunk as transient failures (don't cache)
+        for (const t of chunk) result.set(t, undefined)
+        continue
+      }
+      const data = await res.json()
+      const pages = data.query?.pages || []
+
+      // Build a lookup by normalized/redirected title
+      const normalizeMap = new Map()
+      for (const n of data.query?.normalized || []) {
+        normalizeMap.set(n.to, n.from)
+      }
+      const redirectMap = new Map()
+      for (const r of data.query?.redirects || []) {
+        redirectMap.set(r.to, r.from)
+      }
+
+      // Track which input titles we've matched
+      const matched = new Set()
+
+      for (const page of pages) {
+        const thumbUrl = page.thumbnail?.source || null
+
+        // Find the input title that led to this page
+        let inputTitle = page.title
+        // Check redirects
+        const redirectedFrom = redirectMap.get(page.title)
+        if (redirectedFrom) {
+          const normalizedFrom = normalizeMap.get(redirectedFrom)
+          inputTitle = normalizedFrom || redirectedFrom
+        } else {
+          const normalizedFrom = normalizeMap.get(page.title)
+          if (normalizedFrom) inputTitle = normalizedFrom
+        }
+
+        // Match back to original titles (case-insensitive with underscores)
+        const inputKey = inputTitle.replace(/_/g, ' ')
+        for (const t of chunk) {
+          if (!matched.has(t) && t.toLowerCase() === inputKey.toLowerCase()) {
+            result.set(t, thumbUrl)
+            matched.add(t)
+            break
+          }
+        }
+
+        // Also try matching by page.title directly
+        if (matched.size < chunk.length) {
+          const pageKey = page.title.replace(/_/g, ' ')
+          for (const t of chunk) {
+            if (!matched.has(t) && t.toLowerCase() === pageKey.toLowerCase()) {
+              result.set(t, thumbUrl)
+              matched.add(t)
+              break
+            }
+          }
+        }
+      }
+
+      // Mark unmatched titles as null (no image)
+      for (const t of chunk) {
+        if (!result.has(t)) result.set(t, null)
+      }
+    } catch {
+      for (const t of chunk) result.set(t, undefined)
+    }
+
+    await new Promise(r => setTimeout(r, politeDelayMs))
+
+    if ((ci + 1) % 10 === 0 || ci === chunks.length - 1) {
+      console.log(`  ... batch ${ci + 1}/${chunks.length} (${result.size} titles processed)`)
+    }
+  }
+
+  return result
+}
+
+/**
+ * Strip the shared Wikimedia Commons prefix from a URL to save space in taxonomy.json.
+ * Returns the path after "https://upload.wikimedia.org/wikipedia/commons/" or null.
+ */
+function trimCommonsPrefix(url) {
+  if (!url) return null
+  if (url.startsWith(COMMONS_PREFIX)) return url.substring(COMMONS_PREFIX.length)
+  return url // Keep full URL for non-Commons images (shouldn't happen)
 }
 
 async function main() {
@@ -263,9 +378,10 @@ async function main() {
       updated.push([entry[0], entry[1], entry[2] || null, entry[3] || null, null])
     }
   } else {
-    // Helper to push a resolved entry (5-element tuple)
+    // Helper to push a resolved entry (5-element tuple).
+    // Element [4] (thumbnail) is null here; filled by the batch pageimages pass below.
     function pushResolved(common, scientific, ebirdCode, match) {
-      updated.push([common, scientific, ebirdCode, match.title, match.imageUrl || null])
+      updated.push([common, scientific, ebirdCode, match.title, null])
     }
 
     // Pass 1: bulk match via Wikidata
@@ -365,7 +481,7 @@ async function main() {
         const { common, scientific, ebirdCode, index } = remaining[i]
         const result = await tryWikipediaApi(common, scientific)
         if (result) {
-          updated[index] = [common, scientific, ebirdCode, result.title, result.originalImageUrl]
+          updated[index] = [common, scientific, ebirdCode, result.title, null]
           apiHits++
         } else {
           stillMissing.push(remaining[i])
@@ -379,77 +495,66 @@ async function main() {
     }
   }
 
-  console.log('\nBackfilling images for resolved titles missing image URLs...')
-  const titleImageCache = new Map() // title -> imageUrl (only definitive results)
-  let backfilledImages = 0
+  // --- Batch thumbnail fetch via MediaWiki pageimages API ---
+  console.log('\nFetching thumbnail URLs via MediaWiki pageimages API (batched, 50/request)...')
+  const titlesToFetch = [...new Set(updated.filter(e => e[3]).map(e => e[3]))]
+  console.log(`  ${titlesToFetch.length} unique titles to fetch thumbnails for`)
+
+  let thumbnailsFound = 0
   let transientMisses = 0
-  const MAX_IMAGE_SWEEPS = 5
+  const MAX_THUMB_SWEEPS = 3
 
-  for (let sweep = 1; sweep <= MAX_IMAGE_SWEEPS; sweep++) {
-    const needsImage = updated
-      .map((entry, index) => ({ entry, index }))
-      .filter(item => !!item.entry[3] && !item.entry[4] && !titleImageCache.has(item.entry[3]))
+  // Build title -> thumbnail URL map with retry sweeps
+  const titleThumbMap = new Map()
 
-    if (needsImage.length === 0) break
+  for (let sweep = 1; sweep <= MAX_THUMB_SWEEPS; sweep++) {
+    const needsFetch = titlesToFetch.filter(t => !titleThumbMap.has(t))
+    if (needsFetch.length === 0) break
 
     if (sweep > 1) {
       const waitSec = sweep * 15
-      console.log(`\n  Image sweep ${sweep}/${MAX_IMAGE_SWEEPS}: ${needsImage.length} remaining, waiting ${waitSec}s...`)
+      console.log(`\n  Thumbnail sweep ${sweep}/${MAX_THUMB_SWEEPS}: ${needsFetch.length} remaining, waiting ${waitSec}s...`)
       await new Promise(r => setTimeout(r, waitSec * 1000))
-    } else {
-      console.log(`  ${needsImage.length} entries need image backfill`)
     }
 
+    const batchResult = await batchFetchThumbnails(needsFetch)
     let sweepTransient = 0
-    for (let i = 0; i < needsImage.length; i++) {
-      const { index, entry } = needsImage[i]
-      const title = entry[3]
-      if (!title) continue
 
-      // Use cached definitive result if available
-      if (titleImageCache.has(title)) {
-        const cached = titleImageCache.get(title)
-        if (cached) {
-          updated[index] = [entry[0], entry[1], entry[2], title, cached]
-          backfilledImages++
-        }
-        continue
-      }
-
-      const result = await fetchImageForTitle(title)
-      if (!result.transient) {
-        titleImageCache.set(title, result.imageUrl)
-        if (result.imageUrl) {
-          updated[index] = [entry[0], entry[1], entry[2], title, result.imageUrl]
-          backfilledImages++
-        }
-      } else {
+    for (const [title, thumbUrl] of batchResult) {
+      if (thumbUrl === undefined) {
+        // Transient failure, retry next sweep
         sweepTransient++
-      }
-      await new Promise(r => setTimeout(r, politeDelayMs))
-
-      if ((i + 1) % 200 === 0) {
-        console.log(`  ... checked ${i + 1}/${needsImage.length} (${backfilledImages} backfills, ${sweepTransient} transient failures)`)
+      } else {
+        titleThumbMap.set(title, thumbUrl)
+        if (thumbUrl) thumbnailsFound++
       }
     }
     transientMisses = sweepTransient
-    console.log(`  Image sweep ${sweep}: ${backfilledImages} backfilled, ${sweepTransient} transient failures`)
-
+    console.log(`  Thumbnail sweep ${sweep}: ${thumbnailsFound} found, ${sweepTransient} transient failures`)
     if (sweepTransient === 0) break
+  }
+
+  // Apply thumbnail URLs to entries (trimming the shared prefix)
+  for (let i = 0; i < updated.length; i++) {
+    const title = updated[i][3]
+    if (title && titleThumbMap.has(title)) {
+      updated[i][4] = trimCommonsPrefix(titleThumbMap.get(title))
+    } else if (title && !titleThumbMap.has(title)) {
+      updated[i][4] = null // transient failure, leave null
+    }
   }
 
   const totalHits = taxonomy.length - misses.length + apiHits
   const withImages = updated.filter(e => e[4]).length
-  const noImageDefinitive = updated.filter(e => e[3] && !e[4] && titleImageCache.has(e[3])).length
+  const noImageDefinitive = updated.filter(e => e[3] && !e[4] && titleThumbMap.has(e[3])).length
   console.log(`\n--- Results ---`)
   console.log(`${totalHits}/${taxonomy.length} species hydrated (${((totalHits / taxonomy.length) * 100).toFixed(1)}%)`)
-  console.log(`${withImages}/${taxonomy.length} species have image URLs (${((withImages / taxonomy.length) * 100).toFixed(1)}%)`)
-  console.log(`${backfilledImages} image URLs backfilled from Wikipedia page summaries`)
+  console.log(`${withImages}/${taxonomy.length} species have thumbnail URLs (${((withImages / taxonomy.length) * 100).toFixed(1)}%)`)
   if (noImageDefinitive > 0) {
     console.log(`${noImageDefinitive} species have a Wikipedia page but no image on that page`)
   }
   if (transientMisses > 0) {
-    console.log(`${transientMisses} image fetches still failing after all sweeps (transient errors)`)
+    console.log(`${transientMisses} thumbnail fetches still failing after all sweeps (transient errors)`)
   }
   if (remaining.length > 0) {
     console.log(`${remaining.length} species have no Wikipedia match (will use null):`)
@@ -461,7 +566,7 @@ async function main() {
   // Write back, compact JSON (one line per entry for reasonable diffs)
   const json = '[\n' + updated.map(e => JSON.stringify(e)).join(',\n') + '\n]\n'
   writeFileSync(TAXONOMY_PATH, json)
-  console.log(`\nWrote updated taxonomy.json (5-element tuples)`)
+  console.log(`\nWrote updated taxonomy.json (5-element tuples, prefix-trimmed thumbnail paths)`)
 }
 
 main().catch(err => {

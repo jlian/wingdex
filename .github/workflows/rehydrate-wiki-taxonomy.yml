@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       images_only:
-        description: 'Skip title resolution, re-fetch all image URLs only'
+        description: 'Skip title resolution, re-fetch all thumbnail URLs only'
         type: boolean
         default: false
   schedule:
@@ -46,5 +46,5 @@ jobs:
           body: |
             Automated monthly wiki taxonomy refresh.
             - Re-resolves Wikipedia titles via Wikidata SPARQL (bulk)
-            - Refreshes precomputed original image URLs (thumbnail derived at runtime)
+            - Refreshes precomputed thumbnail URLs via MediaWiki pageimages API (batched, 50/request)
           labels: automation

@@ -55,6 +55,5 @@ export interface DexEntry {
   notes: string
   wikiTitle?: string
   thumbnailUrl?: string
-  originalImageUrl?: string
 }
 

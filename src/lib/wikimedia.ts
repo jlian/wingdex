@@ -41,7 +41,6 @@ const wikiTitleCache = new Map<string, {
   common: string | null
   scientific: string | null
   thumbnailUrl?: string | null
-  originalImageUrl?: string | null
 }>()
 
 // -- localStorage persistence for restCache ---------------------------

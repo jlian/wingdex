@@ -4,7 +4,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   const name = new URL(context.request.url).searchParams.get('name')
 
   if (!name?.trim()) {
-    return Response.json({ wikiTitle: null, common: null, scientific: null, thumbnailUrl: null, originalImageUrl: null })
+    return Response.json({ wikiTitle: null, common: null, scientific: null, thumbnailUrl: null })
   }
 
   const metadata = getWikiMetadata(name)
@@ -14,6 +14,5 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     common: metadata.common || null,
     scientific: metadata.scientific || null,
     thumbnailUrl: metadata.thumbnailUrl || null,
-    originalImageUrl: metadata.originalImageUrl || null,
   })
 }

@@ -104,14 +104,13 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     photos,
     observations,
     dex: dex.map(entry => {
-      const { wikiTitle, thumbnailUrl, originalImageUrl } = getWikiMetadata(entry.speciesName)
+      const { wikiTitle, thumbnailUrl } = getWikiMetadata(entry.speciesName)
       return {
         ...entry,
         addedDate: entry.addedDate || undefined,
         bestPhotoId: entry.bestPhotoId || undefined,
         wikiTitle,
         thumbnailUrl,
-        originalImageUrl,
       }
     }),
   })

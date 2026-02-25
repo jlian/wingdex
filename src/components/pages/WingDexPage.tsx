@@ -312,7 +312,7 @@ export default function WingDexPage({
             <BirdRow
               key={entry.speciesName}
               speciesName={entry.speciesName}
-              imageUrl={entry.thumbnailUrl || entry.originalImageUrl}
+              imageUrl={entry.thumbnailUrl}
               subtitle={`${entry.totalOutings} ${entry.totalOutings === 1 ? 'outing' : 'outings'} · ${entry.totalCount} seen · ${formatStoredDate(entry.firstSeenDate)}`}
               onClick={() => onSelectSpecies(entry.speciesName)}
             />
@@ -386,8 +386,8 @@ function SpeciesDetail({
     }
   }
 
-  const thumbnailUrl = entry.thumbnailUrl || entry.originalImageUrl
-  const fullResUrl = entry.originalImageUrl || summary?.imageUrl
+  const thumbnailUrl = entry.thumbnailUrl
+  const fullResUrl = summary?.imageUrl
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
   const fullResRevealToken = useRef(0)
