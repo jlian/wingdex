@@ -1,3 +1,11 @@
+## [1.11.2](https://github.com/jlian/wingdex/compare/v1.11.1...v1.11.2) (2026-02-25)
+
+
+### Bug Fixes
+
+* **Navigation:** use fixed header to prevent iOS Safari flash on scroll-to-top ([ca999c5](https://github.com/jlian/wingdex/commit/ca999c588dd2c2f6a76b4d7b6a4decfa9e9870d9))
+* **Tabs:** match iOS touch-press to desktop pressed state ([a9a986e](https://github.com/jlian/wingdex/commit/a9a986e305493e62e35dae4f21516b33a593f068))
+
 ## [1.11.1](https://github.com/jlian/wingdex/compare/v1.11.0...v1.11.1) (2026-02-25)
 
 
