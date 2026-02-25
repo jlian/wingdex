@@ -24,7 +24,7 @@ export const BirdRow = memo(function BirdRow({ speciesName, imageUrl, subtitle, 
           <WikiBirdThumbnail
             speciesName={speciesName}
             imageUrl={imageUrl}
-            allowLookup={false}
+            allowLookup={!imageUrl}
             alt={displayName}
             className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20"
           />
