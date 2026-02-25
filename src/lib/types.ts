@@ -53,5 +53,8 @@ export interface DexEntry {
   totalCount: number
   bestPhotoId?: string
   notes: string
+  wikiTitle?: string
+  thumbnailUrl?: string
+  originalImageUrl?: string
 }
 

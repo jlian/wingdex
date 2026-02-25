@@ -1,11 +1,11 @@
 import { memo } from 'react'
-import { useBirdImage } from '@/hooks/use-bird-image'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { ListRow } from '@/components/ui/list-row'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 
 interface BirdRowProps {
   speciesName: string
+  imageUrl?: string
   /** Optional subtitle text below the name (e.g. "3 outings · 5 seen · Jan 1") */
   subtitle?: string
   onClick: () => void
@@ -13,10 +13,9 @@ interface BirdRowProps {
   actions?: React.ReactNode
 }
 
-export const BirdRow = memo(function BirdRow({ speciesName, subtitle, onClick, actions }: BirdRowProps) {
+export const BirdRow = memo(function BirdRow({ speciesName, imageUrl, subtitle, onClick, actions }: BirdRowProps) {
   const displayName = getDisplayName(speciesName)
   const scientificName = getScientificName(speciesName)
-  const wikiImage = useBirdImage(speciesName)
 
   return (
     <ListRow
@@ -24,7 +23,8 @@ export const BirdRow = memo(function BirdRow({ speciesName, subtitle, onClick, a
         <div className="py-1.5">
           <WikiBirdThumbnail
             speciesName={speciesName}
-            imageUrl={wikiImage}
+            imageUrl={imageUrl}
+            allowLookup={false}
             alt={displayName}
             className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20"
           />

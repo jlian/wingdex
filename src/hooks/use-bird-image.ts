@@ -47,7 +47,10 @@ export function useBirdImageWithStatus(speciesName: string | undefined): {
 /**
  * Hook to fetch Wikipedia summary (extract text + image + link) for a species.
  */
-export function useBirdSummary(speciesName: string | undefined): {
+export function useBirdSummary(
+  speciesName: string | undefined,
+  options?: { wikiTitle?: string }
+): {
   summary: WikiSummary | undefined
   loading: boolean
 } {
@@ -59,7 +62,7 @@ export function useBirdSummary(speciesName: string | undefined): {
     let cancelled = false
     setLoading(true)
 
-    getWikimediaSummary(speciesName).then(s => {
+    getWikimediaSummary(speciesName, options).then(s => {
       if (!cancelled) {
         setSummary(s)
         setLoading(false)
@@ -67,7 +70,7 @@ export function useBirdSummary(speciesName: string | undefined): {
     })
 
     return () => { cancelled = true }
-  }, [speciesName])
+  }, [speciesName, options?.wikiTitle])
 
   return { summary, loading }
 }

@@ -1,19 +1,19 @@
-import { findBestMatch, getWikiTitle } from '../../lib/taxonomy'
+import { getWikiMetadata } from '../../lib/taxonomy'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const name = new URL(context.request.url).searchParams.get('name')
 
   if (!name?.trim()) {
-    return Response.json({ wikiTitle: null, common: null, scientific: null })
+    return Response.json({ wikiTitle: null, common: null, scientific: null, thumbnailUrl: null, originalImageUrl: null })
   }
 
-  const match = findBestMatch(name)
-  const resolvedCommon = match?.common || name
-  const wikiTitle = getWikiTitle(resolvedCommon)
+  const metadata = getWikiMetadata(name)
 
   return Response.json({
-    wikiTitle: wikiTitle || null,
-    common: match?.common || null,
-    scientific: match?.scientific || null,
+    wikiTitle: metadata.wikiTitle || null,
+    common: metadata.common || null,
+    scientific: metadata.scientific || null,
+    thumbnailUrl: metadata.thumbnailUrl || null,
+    originalImageUrl: metadata.originalImageUrl || null,
   })
 }
