@@ -1,3 +1,10 @@
+## [1.9.3](https://github.com/jlian/wingdex/compare/v1.9.2...v1.9.3) (2026-02-25)
+
+
+### Bug Fixes
+
+* **dev:** skip service worker in dev to prevent HMR WebSocket errors ([1c1af79](https://github.com/jlian/wingdex/commit/1c1af797f151ed92b43f3b4f22c04ee7ee16f907))
+
 ## [1.9.2](https://github.com/jlian/wingdex/compare/v1.9.1...v1.9.2) (2026-02-24)
 
 
