@@ -2,10 +2,14 @@
 /**
  * Hydrate taxonomy.json with pre-resolved Wikipedia article titles and image URLs.
  *
- * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name -> article title + image).
+ * Step 1: Bulk-match via a single Wikidata SPARQL query (scientific name -> article title).
  * Step 2: For misses, try the Wikipedia REST API with the same strategy chain as wikimedia.ts.
- * Step 3: Write taxonomy.json with
+ * Step 3: Fetch images for all resolved titles via the Wikipedia REST API (originalimage.source).
+ * Step 4: Write taxonomy.json with
  *   [common, scientific, ebirdCode, wikiTitle | null, originalImageUrl | null].
+ *
+ * Images come exclusively from the Wikipedia REST /page/summary/ endpoint so they match
+ * what users see on Wikipedia article pages.
  *
  * Thumbnail URLs are derived at runtime from the original URL (insert /thumb/ + append /{w}px-{file}).
  *
@@ -14,7 +18,6 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs'
-import { createHash } from 'crypto'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -36,38 +39,13 @@ const WIKI_OVERRIDES = {
 }
 
 /**
- * Convert a Wikimedia Commons filename to its upload.wikimedia.org URL.
- * The path uses the first 1 and 2 hex chars of the MD5 hash of the normalized filename.
- */
-function commonsUrlFromFilename(rawFilename) {
-  const filename = rawFilename.replace(/ /g, '_')
-  const normalized = filename.charAt(0).toUpperCase() + filename.slice(1)
-  const md5 = createHash('md5').update(normalized).digest('hex')
-  const encoded = encodeURIComponent(normalized).replace(/%2C/g, ',').replace(/%3B/g, ';')
-  return `https://upload.wikimedia.org/wikipedia/commons/${md5[0]}/${md5.substring(0, 2)}/${encoded}`
-}
-
-/**
- * Extract the filename from a Wikidata image URL (Special:FilePath/...).
- */
-function extractFilenameFromWikidata(imageUrl) {
-  try {
-    const url = new URL(imageUrl)
-    const lastSegment = url.pathname.split('/').pop()
-    return lastSegment ? decodeURIComponent(lastSegment) : null
-  } catch {
-    return null
-  }
-}
-
-/**
  * Fetch all bird species from Wikidata that have an English Wikipedia article.
- * Also fetches P18 (image) for bulk image URL resolution.
  * Returns Maps by scientific name and by article title (both lowercased).
+ * Images are NOT sourced from Wikidata; they come from the Wikipedia REST API instead.
  */
 async function fetchWikidataBirds() {
   const sparql = `
-    SELECT ?sciName ?articleTitle ?image WHERE {
+    SELECT ?sciName ?articleTitle WHERE {
       ?taxon wdt:P31 wd:Q16521 ;
              wdt:P105 wd:Q7432 ;
              wdt:P171+ wd:Q5113 ;
@@ -75,11 +53,10 @@ async function fetchWikidataBirds() {
       ?article schema:about ?taxon ;
                schema:isPartOf <https://en.wikipedia.org/> ;
                schema:name ?articleTitle .
-      OPTIONAL { ?taxon wdt:P18 ?image . }
     }
   `
 
-  console.log('Fetching bird species from Wikidata (SPARQL with images)...')
+  console.log('Fetching bird species from Wikidata (SPARQL for titles)...')
 
   let data = null
   let lastError = null
@@ -135,25 +112,16 @@ async function fetchWikidataBirds() {
   for (const row of results) {
     const sci = row.sciName.value.toLowerCase()
     const title = row.articleTitle.value
-    let imageUrl = null
-    if (row.image) {
-      const filename = extractFilenameFromWikidata(row.image.value)
-      if (filename) imageUrl = commonsUrlFromFilename(filename)
-    }
-    // Prefer entries with images over those without
-    const existing = bySci.get(sci)
-    if (!existing || (!existing.imageUrl && imageUrl)) {
-      bySci.set(sci, { title, imageUrl })
+    if (!bySci.has(sci)) {
+      bySci.set(sci, { title, imageUrl: null })
     }
     const titleLower = title.toLowerCase()
-    const existingTitle = byTitle.get(titleLower)
-    if (!existingTitle || (!existingTitle.imageUrl && imageUrl)) {
-      byTitle.set(titleLower, { title, imageUrl })
+    if (!byTitle.has(titleLower)) {
+      byTitle.set(titleLower, { title, imageUrl: null })
     }
   }
 
-  const withImages = [...bySci.values()].filter(v => v.imageUrl).length
-  console.log(`  Got ${bySci.size} bird species with Wikipedia pages (${withImages} with images)\n`)
+  console.log(`  Got ${bySci.size} bird species with Wikipedia pages\n`)
   return { bySci, byTitle }
 }
 
