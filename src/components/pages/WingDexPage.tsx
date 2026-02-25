@@ -391,7 +391,7 @@ function SpeciesDetail({
   const baseImageUrl = thumbnailUrl || fullResUrl
   const [fullResLoaded, setFullResLoaded] = useState(false)
   const hasDistinctFullRes = !!(fullResUrl && thumbnailUrl && fullResUrl !== thumbnailUrl)
-  const shouldBlurBase = !!thumbnailUrl && (hasDistinctFullRes ? !fullResLoaded : summaryLoading)
+  const shouldBlurBase = !!thumbnailUrl && (hasDistinctFullRes || summaryLoading)
   const fullResRevealToken = useRef(0)
 
   const revealFullRes = () => {
@@ -432,7 +432,7 @@ function SpeciesDetail({
               src={baseImageUrl}
               alt={hasDistinctFullRes ? '' : displayName}
               aria-hidden={hasDistinctFullRes}
-              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] ${shouldBlurBase ? 'blur-sm scale-102' : ''}`}
+              className={`absolute inset-0 w-full h-full object-cover object-[center_10%] transition-all duration-700 ease-out ${shouldBlurBase ? 'blur-sm scale-102' : ''}`}
             />
           )}
           {/* Full-res overlay fades in over the base layer */}
