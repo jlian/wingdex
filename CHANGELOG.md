@@ -1,3 +1,10 @@
+## [1.11.3](https://github.com/jlian/wingdex/compare/v1.11.2...v1.11.3) (2026-02-25)
+
+
+### Bug Fixes
+
+* **WingDex:** simplify hero to always-blurred base with overlay fade-in ([cdc30af](https://github.com/jlian/wingdex/commit/cdc30afdf46256347c591073edf0251395153eb8))
+
 ## [1.11.2](https://github.com/jlian/wingdex/compare/v1.11.1...v1.11.2) (2026-02-25)
 
 
