@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/jlian/wingdex/compare/v1.9.5...v1.10.0) (2026-02-25)
+
+
+### Features
+
+* **UX:** icon sort buttons, family sort, upload summary, Capital Case, icon flash fix ([#202](https://github.com/jlian/wingdex/issues/202)) ([f318d7a](https://github.com/jlian/wingdex/commit/f318d7a434c3a8ca29eb438bf1cf36b927cf995a)), closes [#199](https://github.com/jlian/wingdex/issues/199) [#193](https://github.com/jlian/wingdex/issues/193) [#192](https://github.com/jlian/wingdex/issues/192) [#69](https://github.com/jlian/wingdex/issues/69) [#194](https://github.com/jlian/wingdex/issues/194) [#199](https://github.com/jlian/wingdex/issues/199) [#69](https://github.com/jlian/wingdex/issues/69) [#194](https://github.com/jlian/wingdex/issues/194) [#193](https://github.com/jlian/wingdex/issues/193) [#192](https://github.com/jlian/wingdex/issues/192) [#199](https://github.com/jlian/wingdex/issues/199) [#195](https://github.com/jlian/wingdex/issues/195) [#194](https://github.com/jlian/wingdex/issues/194) [#193](https://github.com/jlian/wingdex/issues/193) [#192](https://github.com/jlian/wingdex/issues/192) [#69](https://github.com/jlian/wingdex/issues/69)
+
 ## [1.9.5](https://github.com/jlian/wingdex/compare/v1.9.4...v1.9.5) (2026-02-25)
 
 
