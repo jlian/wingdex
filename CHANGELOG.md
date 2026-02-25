@@ -1,3 +1,10 @@
+## [1.11.4](https://github.com/jlian/wingdex/compare/v1.11.3...v1.11.4) (2026-02-25)
+
+
+### Bug Fixes
+
+* **Thumbnails:** restore iOS eager-load to prevent swipe-back flicker ([765d8f4](https://github.com/jlian/wingdex/commit/765d8f419acfea1845ff9b72e43557f70f910bcf))
+
 ## [1.11.3](https://github.com/jlian/wingdex/compare/v1.11.2...v1.11.3) (2026-02-25)
 
 
