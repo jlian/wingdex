@@ -1,11 +1,12 @@
 import { defineConfig } from '@playwright/test';
 
 const isCI = !!process.env.CI;
+const isARM = process.arch === 'arm64';
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  timeout: isCI ? 15_000 : 10_000,
+  timeout: isCI ? 15_000 : isARM ? 30_000 : 10_000,
   retries: isCI ? 1 : 0,
   workers: isCI ? 2 : 4,
   reporter: isCI ? 'line' : 'list',

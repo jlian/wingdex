@@ -126,12 +126,12 @@ describe('timezone utilities', () => {
     it('displays the local time from an offset-aware ISO string', () => {
       const result = formatStoredTime('2024-12-18T19:16:00-10:00')
       // Should show 7:16 PM or 19:16, not 5:16 AM (UTC interpretation)
-      expect(result).toMatch(/07:16|7:16/)
+      expect(result).toMatch(/07:16|7:16|19:16/)
     })
 
     it('displays the local time for Taipei timezone', () => {
       const result = formatStoredTime('2025-12-27T15:06:00+08:00')
-      expect(result).toMatch(/03:06|3:06/)
+      expect(result).toMatch(/03:06|3:06|15:06/)
     })
 
     it('handles offset-aware timestamp without seconds', () => {
@@ -143,7 +143,7 @@ describe('timezone utilities', () => {
       const time = formatStoredTime('2024-01-15T17:16-10:00')
       expect(date).toContain('2024')
       expect(date).toContain('15')
-      expect(time).toMatch(/05:16|5:16/)
+      expect(time).toMatch(/05:16|5:16|17:16/)
     })
   })
 
@@ -228,7 +228,7 @@ describe('timezone utilities', () => {
 
     it('formatStoredTime preserves local time for +05:45 offset', () => {
       const result = formatStoredTime('2025-06-15T14:30:00+05:45')
-      expect(result).toMatch(/02:30|2:30/)
+      expect(result).toMatch(/02:30|2:30|14:30/)
     })
   })
 
@@ -454,7 +454,7 @@ describe('timezone utilities', () => {
   describe('formatStoredTimeWithTZ', () => {
     it('appends HST for Hawaii time', () => {
       const result = formatStoredTimeWithTZ('2024-12-18T17:16:00-10:00')
-      expect(result).toMatch(/05:16|5:16/)
+      expect(result).toMatch(/05:16|5:16|17:16/)
       expect(result).toContain('HST')
     })
 
