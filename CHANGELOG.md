@@ -1,3 +1,10 @@
+## [1.11.5](https://github.com/jlian/wingdex/compare/v1.11.4...v1.11.5) (2026-02-27)
+
+
+### Bug Fixes
+
+* **Tests:** accept 24h locale format and extend ARM e2e timeout ([20db032](https://github.com/jlian/wingdex/commit/20db0329c30553603ea0169b6c59c254ab1d152f))
+
 ## [1.11.4](https://github.com/jlian/wingdex/compare/v1.11.3...v1.11.4) (2026-02-25)
 
 
