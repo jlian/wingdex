@@ -35,11 +35,22 @@ struct SignInView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                SignInWithAppleButton(.signIn) { _ in
-                    // ASAuthorizationAppleIDRequest configuration (scopes handled by server)
-                } onCompletion: { _ in
-                    // Native Apple Sign-In deferred - using web OAuth for now
-                    signIn { try await auth.signInWithApple() }
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    switch result {
+                    case .success(let authorization):
+                        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                            errorMessage = "Unexpected credential type"
+                            return
+                        }
+                        signIn { try await auth.signInWithApple(credential: credential) }
+                    case .failure(let error):
+                        // Don't show error if user cancelled
+                        if (error as? ASAuthorizationError)?.code != .canceled {
+                            errorMessage = error.localizedDescription
+                        }
+                    }
                 }
                 .signInWithAppleButtonStyle(.whiteOutline)
                 .frame(height: 44)

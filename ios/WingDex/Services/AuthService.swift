@@ -39,10 +39,40 @@ final class AuthService: @unchecked Sendable {
         try await signInWithProvider("github")
     }
 
-    /// Sign in with Apple via ASWebAuthenticationSession (web OAuth flow).
-    @MainActor
-    func signInWithApple() async throws {
-        try await signInWithProvider("apple")
+    /// Sign in with Apple using the native ASAuthorizationAppleIDProvider.
+    /// Shows the system Face ID / Touch ID sheet - no web view needed.
+    func signInWithApple(credential: ASAuthorizationAppleIDCredential) async throws {
+        guard let identityTokenData = credential.identityToken,
+              let identityToken = String(data: identityTokenData, encoding: .utf8)
+        else {
+            throw AuthError.oauthFailed("Missing Apple identity token")
+        }
+
+        // POST to Better Auth's sign-in/social endpoint with the Apple ID token.
+        // Better Auth verifies the token with Apple, creates/links the account,
+        // creates a session, and returns { token, user, redirect: false }.
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/sign-in/social")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "provider": "apple",
+            "idToken": ["token": identityToken],
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw AuthError.oauthFailed("Apple sign-in failed (\(statusCode)): \(body)")
+        }
+
+        try processTokenResponse(data: data)
     }
 
     /// Generic OAuth flow via ASWebAuthenticationSession.
@@ -144,6 +174,29 @@ final class AuthService: @unchecked Sendable {
         userName = params["user_name"]
         userEmail = params["user_email"]
         userImage = params["user_image"]
+        isAuthenticated = true
+
+        persistSession()
+    }
+
+    /// Parse Better Auth's JSON response from sign-in/social with idToken.
+    /// Response shape: { token: string, user: { id, name, email, image, ... } }
+    private func processTokenResponse(data: Data) throws {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["token"] as? String
+        else {
+            throw AuthError.oauthFailed("Invalid token response")
+        }
+
+        let user = json["user"] as? [String: Any]
+
+        sessionToken = token
+        // Better Auth sessions default to 7 days; use that as expiry
+        sessionExpiry = Date.now.addingTimeInterval(7 * 24 * 60 * 60)
+        userId = user?["id"] as? String
+        userName = user?["name"] as? String
+        userEmail = user?["email"] as? String
+        userImage = user?["image"] as? String
         isAuthenticated = true
 
         persistSession()
