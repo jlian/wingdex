@@ -118,12 +118,11 @@ Short-lived bearer tokens were chosen because:
 
 ### Server-Side Changes Required (Phase 1)
 
-These backend endpoints need to be added to support bearer token auth:
+> **Simplified**: Instead of custom JWTs, we reuse Better Auth's session tokens
+> as bearer tokens. This avoids new DB tables, JWT signing, and refresh logic.
 
-- `POST /api/auth/token` - exchange an OAuth callback code, Apple ID token, or passkey assertion for an access/refresh token pair
-- `POST /api/auth/token/refresh` - exchange a valid refresh token for a new access/refresh token pair (rotation)
-- `POST /api/auth/token/revoke` - invalidate a refresh token (used on sign-out)
-- Middleware update: accept `Authorization: Bearer <token>` header in addition to session cookies (web continues using cookies, iOS uses bearer)
+- Middleware update: inject `Authorization: Bearer <session_token>` as a session cookie so `getSession` validates it (done)
+- `GET /api/auth/mobile/callback` - bridge endpoint reads session cookie after OAuth, redirects to `wingdex://` custom scheme with token in URL (done)
 
 ---
 
@@ -209,23 +208,31 @@ Set up the Xcode project, OpenAPI spec, and CI. No functional code yet.
 
 Implement bearer token auth so the app can make API calls.
 
+> **Approach simplification**: Instead of custom JWT + refresh token infrastructure,
+> we reuse Better Auth's existing session tokens as bearer tokens. The middleware
+> injects the bearer token as a cookie so `getSession` validates it normally.
+> A mobile callback bridge endpoint extracts the session token after OAuth and
+> redirects to the app's custom URL scheme.
+
 ### Server-side (backend changes)
-- [ ] **`POST /api/auth/token`** - exchange OAuth code, Apple ID token, or passkey assertion for access + refresh token pair
-- [ ] **`POST /api/auth/token/refresh`** - rotate access token using refresh token
-- [ ] **`POST /api/auth/token/revoke`** - invalidate refresh token on sign-out
-- [ ] **Middleware update** - accept `Authorization: Bearer <token>` header alongside existing cookie auth
-- [ ] **Refresh token storage** - DB table or Better Auth plugin for server-side refresh token state
+- [x] **Middleware update** - accept `Authorization: Bearer <token>` header alongside existing cookie auth (injects as session cookie for Better Auth)
+- [x] **`GET /api/auth/mobile/callback`** - bridge endpoint: reads session cookie after OAuth, redirects to `wingdex://auth/callback?token=...` with session token + user info
+- [ ] ~~`POST /api/auth/token`~~ - not needed; reusing Better Auth session tokens
+- [ ] ~~`POST /api/auth/token/refresh`~~ - not needed; sessions have server-managed expiry
+- [ ] ~~`POST /api/auth/token/revoke`~~ - not needed; sessions expire naturally; sign-out clears Keychain
+- [ ] ~~Refresh token storage~~ - not needed; using Better Auth's session table
 
 ### iOS client
-- [ ] **AuthService - ASWebAuthenticationSession** - OAuth flow for GitHub, exchange callback for token pair via `/api/auth/token`
-- [ ] **AuthService - Native Apple Sign-In** - `ASAuthorizationAppleIDProvider`, exchange Apple ID token for token pair
-- [ ] **AuthService - Token management** - access token in-memory, refresh token in Keychain, auto-attach `Authorization` header
-- [ ] **AuthService - Auto-refresh** - intercept 401, silently refresh via `/api/auth/token/refresh`, retry original request
-- [ ] **AuthService - Passkey support** - `ASAuthorizationPlatformPublicKeyCredentialProvider`, exchange assertion for token pair
-- [ ] **AuthService - Sign out** - call `/api/auth/token/revoke`, clear Keychain, reset app state
-- [ ] **SettingsView - Auth UI** - Sign in/out buttons, linked providers display, passkey management
+- [x] **AuthService - ASWebAuthenticationSession** - OAuth flow for GitHub and Apple via web OAuth + mobile callback bridge
+- [x] **AuthService - Token management** - session token in Keychain via KeychainAccess, auto-restore on launch
+- [x] **AuthService - Sign out** - clear Keychain + reset app state
+- [x] **SignInView** - sign-in screen with GitHub + Apple buttons
+- [x] **SettingsView - Auth UI** - user info display, confirmation dialogs for sign-out and data deletion
+- [ ] **AuthService - Native Apple Sign-In** - `ASAuthorizationAppleIDProvider` (deferred; using web OAuth for now)
+- [ ] **AuthService - Passkey support** - `ASAuthorizationPlatformPublicKeyCredentialProvider` (deferred)
+- [ ] **AuthService - 401 handling** - intercept 401, prompt re-auth (deferred)
 
-**Verification**: Can sign in via GitHub and Apple, tokens persist across app launches, 401 triggers silent refresh then re-auth.
+**Verification**: Can sign in via GitHub and Apple, tokens persist across app launches, sign-out clears state.
 
 ---
 

@@ -107,117 +107,26 @@ paths:
               schema:
                 type: string
 
-  /api/auth/token:
-    post:
-      operationId: exchangeToken
-      summary: Exchange an auth credential for a token pair
+  /api/auth/mobile/callback:
+    get:
+      operationId: mobileAuthCallback
+      summary: Mobile OAuth callback bridge
       description: |
-        Exchanges an OAuth authorization code, Apple ID token, or passkey assertion
-        for a short-lived access token (JWT, ~15 min) and a long-lived refresh token
-        (opaque, ~90 days). Planned endpoint for iOS bearer token auth.
+        After a social OAuth flow (GitHub / Apple), Better Auth creates a session,
+        sets a session cookie, and redirects the user to this callback URL. This
+        endpoint reads the session cookie, extracts the token and user info, and
+        redirects to the app's custom URL scheme (wingdex://auth/callback?token=...).
+        ASWebAuthenticationSession captures the redirect.
       tags: [Auth]
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [grant_type]
-              properties:
-                grant_type:
-                  type: string
-                  enum: [authorization_code, apple, passkey]
-                code:
-                  type: string
-                  description: OAuth authorization code (for grant_type=authorization_code)
-                id_token:
-                  type: string
-                  description: Apple ID token (for grant_type=apple)
-                assertion:
-                  type: string
-                  description: Passkey assertion (for grant_type=passkey)
-                redirect_uri:
-                  type: string
-                  description: OAuth redirect URI used in the authorization request
       responses:
-        "200":
-          description: Token pair issued
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TokenPair"
-        "400":
-          description: Invalid grant
-          content:
-            text/plain:
+        "302":
+          description: Redirect to wingdex://auth/callback with token and user info in query params
+          headers:
+            Location:
               schema:
                 type: string
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  /api/auth/token/refresh:
-    post:
-      operationId: refreshToken
-      summary: Refresh an access token
-      description: |
-        Exchanges a valid refresh token for a new access/refresh token pair.
-        The old refresh token is invalidated (rotation). Planned endpoint for iOS.
-      tags: [Auth]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refresh_token]
-              properties:
-                refresh_token:
-                  type: string
-      responses:
-        "200":
-          description: New token pair
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TokenPair"
-        "401":
-          description: Invalid or expired refresh token
-          content:
-            text/plain:
-              schema:
-                type: string
-
-  /api/auth/token/revoke:
-    post:
-      operationId: revokeToken
-      summary: Revoke a refresh token
-      description: Invalidates the refresh token (used on sign-out). Planned endpoint for iOS.
-      tags: [Auth]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refresh_token]
-              properties:
-                refresh_token:
-                  type: string
-      responses:
-        "200":
-          description: Token revoked
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [revoked]
-                properties:
-                  revoked:
-                    type: boolean
-                    const: true
+                example: "wingdex://auth/callback?token=abc123&expires_at=2026-03-08T00:00:00Z&user_id=xyz"
 
   # ---------------------------------------------------------------------------
   # Bird Identification
@@ -849,8 +758,10 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: Short-lived access token (~15 min). Obtain via /api/auth/token.
+      description: |
+        Better Auth session token sent as a bearer token (used by the iOS app).
+        The middleware injects it as a session cookie for validation.
+        Obtain via the OAuth flow through /api/auth/mobile/callback.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -874,26 +785,6 @@ components:
             example: Not found
 
   schemas:
-    # -------------------------------------------------------------------------
-    # Auth
-    # -------------------------------------------------------------------------
-    TokenPair:
-      type: object
-      required: [access_token, refresh_token, token_type, expires_in]
-      properties:
-        access_token:
-          type: string
-          description: Short-lived JWT access token
-        refresh_token:
-          type: string
-          description: Long-lived opaque refresh token
-        token_type:
-          type: string
-          const: bearer
-        expires_in:
-          type: integer
-          description: Access token lifetime in seconds (e.g. 900 for 15 min)
-
     # -------------------------------------------------------------------------
     # Core Models
     # -------------------------------------------------------------------------
