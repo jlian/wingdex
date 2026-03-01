@@ -25,6 +25,7 @@
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
 		8789AC9CBFD81D2B38495B2A /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = B8A97988C95C91C186AFD127 /* OpenAPIURLSession */; };
 		94FF36C55254CADF7AE8552A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD5E236329A5C8ED0AEC280 /* SettingsViewModel.swift */; };
+		9E3F0C28882FAFAA45934BCF /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FABF05EDCB9B13D4839648 /* SignInView.swift */; };
 		A50BC3771AA5086CA25A13B7 /* WingDexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5043AC2718CF99118DD12C /* WingDexView.swift */; };
 		A9EDE9CF0DC34857E14122C7 /* WingDexViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51B5CFEA7865E6E1A1F1287 /* WingDexViewModel.swift */; };
 		A9F53E5EAD8952F1C8720B77 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = ADE7F85F2A587DBB70E7CF19 /* KeychainAccess */; };
@@ -38,6 +39,7 @@
 
 /* Begin PBXFileReference section */
 		01F34071627BDA774005F033 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		01FABF05EDCB9B13D4839648 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		34B8621A8E42D9A18A2125F8 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		494CD419AD323D541E04D2AB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 				E6F5DCDBE61DDC1D237FD032 /* OutingDetailView.swift */,
 				BB01BEA15BC45041F637C903 /* OutingsView.swift */,
 				01F34071627BDA774005F033 /* SettingsView.swift */,
+				01FABF05EDCB9B13D4839648 /* SignInView.swift */,
 				D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */,
 				6B5043AC2718CF99118DD12C /* WingDexView.swift */,
 				5353261569A9D1CF874CAF69 /* AddPhotosFlow */,
@@ -280,6 +283,7 @@
 				1C59F45B5FEBEF6C412CB307 /* ReviewView.swift in Sources */,
 				4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */,
 				94FF36C55254CADF7AE8552A /* SettingsViewModel.swift in Sources */,
+				9E3F0C28882FAFAA45934BCF /* SignInView.swift in Sources */,
 				BE1BC5ECDCCA3BB2EAA10E79 /* SpeciesDetailView.swift in Sources */,
 				62CEC4EA93999F921A2BE78B /* TaxonomyEntry.swift in Sources */,
 				0FED48A726585A89C3989A51 /* WingDexApp.swift in Sources */,

@@ -21,9 +21,7 @@ struct ContentView: View {
             if auth.isAuthenticated {
                 MainTabView()
             } else {
-                // TODO: Sign-in view
-                Text("Sign In")
-                    .font(.largeTitle)
+                SignInView()
             }
         }
     }
