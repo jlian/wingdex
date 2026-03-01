@@ -228,7 +228,7 @@ Implement bearer token auth so the app can make API calls.
 - [x] **AuthService - Sign out** - clear Keychain + reset app state
 - [x] **SignInView** - sign-in screen with GitHub + Apple buttons
 - [x] **SettingsView - Auth UI** - user info display, confirmation dialogs for sign-out and data deletion
-- [ ] **AuthService - Native Apple Sign-In** - `ASAuthorizationAppleIDProvider` (deferred; using web OAuth for now)
+- [x] **AuthService - Native Apple Sign-In** - `ASAuthorizationAppleIDProvider` + POST idToken to Better Auth's sign-in/social endpoint
 - [ ] **AuthService - Passkey support** - `ASAuthorizationPlatformPublicKeyCredentialProvider` (deferred)
 - [ ] **AuthService - 401 handling** - intercept 401, prompt re-auth (deferred)
 
