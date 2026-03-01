@@ -21,11 +21,11 @@ A native SwiftUI iOS app that shares the Cloudflare REST API with the web SPA. T
 ## Prerequisites
 
 - [x] Cloudflare migration (#74) - server-side bird ID, taxonomy search, eBird import
-- [ ] `openapi.yaml` at repo root describing all API endpoints + schemas
+- [x] `openapi.yaml` at repo root describing all API endpoints + schemas
 - [x] Apple Developer account ($99/yr)
 - [x] Sign in with Apple configured (backend already handles Apple OAuth)
 - [x] Register App ID (`app.wingdex`) in Apple Developer portal
-- [ ] Xcode project in `ios/` directory
+- [x] Xcode project in `ios/` directory
 
 ### Apple Developer Portal Checklist
 
@@ -173,17 +173,17 @@ Using Apple's `swift-openapi-generator` Xcode build plugin:
 
 Set up the Xcode project, OpenAPI spec, and CI. No functional code yet.
 
-- [ ] **Write `openapi.yaml`** - full spec covering all 20+ API endpoints with exact request/response schemas matching the TypeScript types
-- [ ] **Create Xcode project** - `ios/WingDex/` with SwiftUI App lifecycle, iOS 17 deployment target
-- [ ] **Configure SPM dependencies** - `swift-openapi-generator`, `swift-openapi-urlsession`, `KeychainAccess`
-- [ ] **Configure OpenAPI build plugin** - point at `openapi.yaml`, generated output in `Generated/`
-- [ ] **Create `TabView` shell** - 4 tabs (Home, Outings, WingDex, Settings) with placeholder views
-- [ ] **Stub all views** - every view file from the architecture, with `Text("TODO")` content + `#Preview` macros
-- [ ] **Stub ViewModels** - `@Observable` classes with published properties and method stubs
-- [ ] **Stub services** - `AuthService`, `PhotoService`, `CropService` with method signatures + `// TODO`
-- [ ] **Bundle `taxonomy.json`** - copy from `src/lib/taxonomy.json` into app resources
-- [ ] **Add `.gitignore`** - `Generated/`, `*.xcuserdata`, `DerivedData/`, `build/`, `.swiftpm/`
-- [ ] **Add GitHub Actions CI** (`ios.yml`) - build on `macos-latest`, validate OpenAPI spec, trigger on `ios/**` or `openapi.yaml` changes
+- [x] **Write `openapi.yaml`** - full spec covering all 20+ API endpoints with exact request/response schemas matching the TypeScript types
+- [x] **Create Xcode project** - `ios/WingDex/` with SwiftUI App lifecycle, iOS 17 deployment target
+- [x] **Configure SPM dependencies** - `swift-openapi-runtime`, `swift-openapi-urlsession`, `KeychainAccess`
+- [ ] **Configure OpenAPI build plugin** - point at `openapi.yaml`, generated output in `Generated/` (deferred - requires separate swift-openapi-generator CLI or plugin setup)
+- [x] **Create `TabView` shell** - 4 tabs (Home, Outings, WingDex, Settings) with placeholder views
+- [x] **Stub all views** - every view file from the architecture, with stub content + `#Preview` macros
+- [x] **Stub ViewModels** - `@Observable` classes with published properties and method stubs
+- [x] **Stub services** - `AuthService`, `PhotoService`, `CropService` with method signatures + `// TODO`
+- [x] **Bundle `taxonomy.json`** - copy from `src/lib/taxonomy.json` into app resources
+- [x] **Add `.gitignore`** - `Generated/`, `*.xcuserdata`, `DerivedData/`, `build/`, `.swiftpm/`
+- [x] **Add GitHub Actions CI** (`ios.yml`) - build on `macos-15`, validate OpenAPI spec, trigger on `ios/**` or `openapi.yaml` changes
 
 **Verification**: `xcodebuild build` succeeds, CI green, all views render in Previews.
 
