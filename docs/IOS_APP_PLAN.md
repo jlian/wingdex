@@ -12,9 +12,25 @@
 
 A native SwiftUI iOS app that shares the Cloudflare REST API with the web SPA. The server owns all business logic (bird ID, taxonomy search, eBird import, dex computation), so the iOS app is a thin UI client with zero business-logic duplication.
 
-**Target**: iOS 17+ / Xcode 16+ / Swift 6 / SwiftUI lifecycle
+**Target**: iOS 26+ / Xcode 26+ / Swift 6 / SwiftUI lifecycle
 
 **Estimated effort**: 4-6 weeks for initial build after scaffolding is done.
+
+---
+
+## Design Principles
+
+The app should feel fully iOS-native, not a web wrapper. Key guidelines:
+
+- **Apple HIG first** - follow the [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) for layout, navigation, typography, and interaction patterns
+- **Liquid Glass** - use the iOS 26 liquid glass material system: standard SwiftUI components (TabView, NavigationStack, toolbars, sheets) adopt glass automatically when built with the iOS 26 SDK
+- **Bottom tab bar** - four-tab TabView using the SwiftUI `Tab` API; no custom tab bar implementations
+- **System typography** - use SF Pro / SF Rounded via SwiftUI's `.font()` modifiers; no custom fonts unless branding requires it
+- **SF Symbols** - prefer Apple's symbol library over custom icons; use symbol effects (bounce, pulse) where appropriate
+- **Native controls** - use system pickers, sheets, confirmations, and alerts rather than custom implementations
+- **Dark mode** - full support via SwiftUI's automatic color scheme handling and semantic colors
+- **Dynamic Type** - all text should scale with the user's preferred text size
+- **Accessibility** - VoiceOver labels on all interactive elements; large content viewer support for key metrics
 
 ---
 
@@ -117,7 +133,7 @@ These backend endpoints need to be added to support bearer token auth:
 ios/
   WingDex.xcodeproj/
   WingDex/
-    App/                    <- SwiftUI App entry, TabView
+    App/                    <- SwiftUI App entry, TabView (liquid glass)
     Views/
       HomeView.swift
       OutingsView.swift

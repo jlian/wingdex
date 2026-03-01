@@ -31,59 +31,32 @@ struct ContentView: View {
 
 /// Four-tab main interface.
 struct MainTabView: View {
-    @State private var selectedTab = Tab.home
+    @State private var selectedTab = AppTab.home
     @State private var showingAddPhotos = false
 
-    enum Tab: Hashable {
+    enum AppTab: Hashable {
         case home, outings, wingdex, settings
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab.home.tabItem(
-                HomeView(showingAddPhotos: $showingAddPhotos),
-                label: "Home",
-                systemImage: "house",
-                tag: .home
-            )
-            Tab.outings.tabItem(
-                OutingsView(),
-                label: "Outings",
-                systemImage: "binoculars",
-                tag: .outings
-            )
-            Tab.wingdex.tabItem(
-                WingDexView(),
-                label: "WingDex",
-                systemImage: "list.bird",
-                tag: .wingdex
-            )
-            Tab.settings.tabItem(
-                SettingsView(),
-                label: "Settings",
-                systemImage: "gear",
-                tag: .settings
-            )
+            Tab("Home", systemImage: "house", value: AppTab.home) {
+                HomeView(showingAddPhotos: $showingAddPhotos)
+            }
+            Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
+                OutingsView()
+            }
+            Tab("WingDex", systemImage: "list.bird", value: AppTab.wingdex) {
+                WingDexView()
+            }
+            Tab("Settings", systemImage: "gear", value: AppTab.settings) {
+                SettingsView()
+            }
         }
         .sheet(isPresented: $showingAddPhotos) {
             // TODO: AddPhotosFlow
             Text("Add Photos Flow")
         }
-    }
-}
-
-private extension MainTabView.Tab {
-    func tabItem<Content: View>(
-        _ content: Content,
-        label: String,
-        systemImage: String,
-        tag: MainTabView.Tab
-    ) -> some View {
-        content
-            .tabItem {
-                Label(label, systemImage: systemImage)
-            }
-            .tag(tag)
     }
 }
 
