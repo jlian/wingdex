@@ -90,8 +90,21 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   const auth = createAuth(context.env, { request: context.request })
+
+  // Support bearer tokens from mobile clients: inject the token as a session
+  // cookie so Better Auth's getSession can validate it normally.
+  let sessionHeaders = context.request.headers
+  const authHeader = context.request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    sessionHeaders = new Headers(context.request.headers)
+    const existing = sessionHeaders.get('cookie') || ''
+    const injected = `better-auth.session_token=${token}`
+    sessionHeaders.set('cookie', existing ? `${existing}; ${injected}` : injected)
+  }
+
   const session = await auth.api.getSession({
-    headers: context.request.headers,
+    headers: sessionHeaders,
   })
 
   if (!session) {

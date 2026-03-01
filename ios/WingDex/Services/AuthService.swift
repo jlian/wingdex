@@ -1,98 +1,204 @@
 import AuthenticationServices
 import Foundation
+import KeychainAccess
 import Observation
 
 /// Manages authentication state, token storage, and OAuth flows.
 ///
-/// Uses short-lived bearer tokens (JWT, ~15 min) with refresh token rotation.
-/// Tokens are obtained via ASWebAuthenticationSession (GitHub OAuth) or
-/// native ASAuthorizationAppleIDProvider (Apple Sign-In).
+/// Uses Better Auth's session tokens as bearer tokens. The server-side middleware
+/// injects the bearer token as a session cookie so Better Auth validates it normally.
+/// Tokens are obtained via ASWebAuthenticationSession (GitHub / Apple OAuth).
+/// The server's mobile callback bridge redirects to wingdex:// with the session token.
 @Observable
-final class AuthService {
+final class AuthService: @unchecked Sendable {
     var isAuthenticated = false
+    var userId: String?
     var userName: String?
     var userEmail: String?
+    var userImage: String?
 
-    /// In-memory access token (short-lived, not persisted).
-    private var accessToken: String?
-    private var accessTokenExpiry: Date?
+    private var sessionToken: String?
+    private var sessionExpiry: Date?
+    private let keychain = Keychain(service: Config.bundleID)
 
-    // MARK: - Public API
+    private static let tokenKey = "session_token"
+    private static let expiryKey = "session_expires_at"
+    private static let userIdKey = "user_id"
+    private static let userNameKey = "user_name"
+    private static let userEmailKey = "user_email"
+
+    init() {
+        restoreSession()
+    }
+
+    // MARK: - OAuth Flows
 
     /// Sign in with GitHub via ASWebAuthenticationSession.
+    @MainActor
     func signInWithGitHub() async throws {
-        // TODO: Build Better Auth GitHub OAuth URL
-        // TODO: Open ASWebAuthenticationSession
-        // TODO: Exchange callback code for token pair via POST /api/auth/token
-        // TODO: Store refresh token in Keychain, access token in memory
+        try await signInWithProvider("github")
     }
 
-    /// Sign in with Apple using native ASAuthorizationAppleIDProvider.
-    func signInWithApple(authorization: ASAuthorization) async throws {
-        // TODO: Extract Apple ID token from ASAuthorizationAppleIDCredential
-        // TODO: POST to /api/auth/token with grant_type=apple
-        // TODO: Store refresh token in Keychain, access token in memory
+    /// Sign in with Apple via ASWebAuthenticationSession (web OAuth flow).
+    @MainActor
+    func signInWithApple() async throws {
+        try await signInWithProvider("apple")
     }
 
-    /// Sign in with passkey.
-    func signInWithPasskey(assertion: ASAuthorizationPlatformPublicKeyCredentialAssertion) async throws {
-        // TODO: Send assertion to Better Auth passkey endpoint
-        // TODO: Exchange for token pair
-    }
-
-    /// Sign out - revoke refresh token and clear all state.
-    func signOut() async {
-        // TODO: POST /api/auth/token/revoke with refresh token
-        // TODO: Clear Keychain
-        accessToken = nil
-        accessTokenExpiry = nil
-        isAuthenticated = false
-        userName = nil
-        userEmail = nil
-    }
-
-    /// Get a valid access token, refreshing if expired.
-    /// Attach this to API requests as `Authorization: Bearer <token>`.
-    func validAccessToken() async throws -> String {
-        // Return existing token if still valid
-        if let token = accessToken, let expiry = accessTokenExpiry, expiry > Date.now {
-            return token
+    /// Generic OAuth flow via ASWebAuthenticationSession.
+    /// Opens Better Auth's sign-in URL with callbackURL pointed at our mobile bridge.
+    @MainActor
+    private func signInWithProvider(_ provider: String) async throws {
+        var components = URLComponents(url: Config.apiBaseURL.appendingPathComponent("api/auth/signin/\(provider)"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "callbackURL", value: "/api/auth/mobile/callback"),
+        ]
+        guard let signInURL = components.url else {
+            throw AuthError.oauthFailed("Invalid sign-in URL")
         }
 
-        // TODO: Refresh via POST /api/auth/token/refresh
-        // TODO: If refresh fails, set isAuthenticated = false and throw
-        throw AuthError.notAuthenticated
+        let callbackURL = try await performWebAuth(url: signInURL)
+        try processAuthCallback(url: callbackURL)
     }
 
-    // MARK: - Keychain
-
-    private func storeRefreshToken(_ token: String) {
-        // TODO: Store in Keychain using KeychainAccess
+    /// Sign out - clear all state. Session invalidation happens server-side via expiry.
+    func signOut() {
+        sessionToken = nil
+        sessionExpiry = nil
+        isAuthenticated = false
+        userId = nil
+        userName = nil
+        userEmail = nil
+        userImage = nil
+        clearKeychain()
     }
 
-    private func loadRefreshToken() -> String? {
-        // TODO: Load from Keychain
-        nil
+    /// Get a valid session token for API requests.
+    /// Attach as `Authorization: Bearer <token>`.
+    func validToken() throws -> String {
+        guard let token = sessionToken,
+              let expiry = sessionExpiry,
+              expiry > Date.now
+        else {
+            signOut()
+            throw AuthError.notAuthenticated
+        }
+        return token
     }
 
-    private func clearRefreshToken() {
-        // TODO: Clear from Keychain
+    // MARK: - ASWebAuthenticationSession
+
+    @MainActor
+    private func performWebAuth(url: URL) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callback: .customScheme(Config.oauthCallbackScheme)
+            ) { url, error in
+                if let error {
+                    continuation.resume(throwing: AuthError.oauthFailed(error.localizedDescription))
+                } else if let url {
+                    continuation.resume(returning: url)
+                } else {
+                    continuation.resume(throwing: AuthError.oauthFailed("No callback URL"))
+                }
+            }
+            // Use non-ephemeral so OAuth cookies persist across the redirect chain
+            session.prefersEphemeralWebBrowserSession = false
+            session.start()
+        }
+    }
+
+    // MARK: - Callback Processing
+
+    /// Parse the wingdex://auth/callback?token=...&user_id=... redirect URL.
+    private func processAuthCallback(url: URL) throws {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw AuthError.oauthFailed("Invalid callback URL")
+        }
+
+        let params = Dictionary(
+            uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+                item.value.map { (item.name, $0) }
+            }
+        )
+
+        if let error = params["error"] {
+            throw AuthError.oauthFailed(error)
+        }
+
+        guard let token = params["token"],
+              let expiresAt = params["expires_at"]
+        else {
+            throw AuthError.oauthFailed("Missing token in callback")
+        }
+
+        let formatter = ISO8601DateFormatter()
+        guard let expiry = formatter.date(from: expiresAt) else {
+            throw AuthError.oauthFailed("Invalid expiry date")
+        }
+
+        sessionToken = token
+        sessionExpiry = expiry
+        userId = params["user_id"]
+        userName = params["user_name"]
+        userEmail = params["user_email"]
+        userImage = params["user_image"]
+        isAuthenticated = true
+
+        persistSession()
+    }
+
+    // MARK: - Keychain Persistence
+
+    private func persistSession() {
+        keychain[Self.tokenKey] = sessionToken
+        keychain[Self.expiryKey] = sessionExpiry?.ISO8601Format()
+        keychain[Self.userIdKey] = userId
+        keychain[Self.userNameKey] = userName
+        keychain[Self.userEmailKey] = userEmail
+    }
+
+    private func restoreSession() {
+        guard let token = keychain[Self.tokenKey],
+              let expiryString = keychain[Self.expiryKey]
+        else { return }
+
+        let formatter = ISO8601DateFormatter()
+        guard let expiry = formatter.date(from: expiryString),
+              expiry > Date.now
+        else {
+            clearKeychain()
+            return
+        }
+
+        sessionToken = token
+        sessionExpiry = expiry
+        userId = keychain[Self.userIdKey]
+        userName = keychain[Self.userNameKey]
+        userEmail = keychain[Self.userEmailKey]
+        isAuthenticated = true
+    }
+
+    private func clearKeychain() {
+        keychain[Self.tokenKey] = nil
+        keychain[Self.expiryKey] = nil
+        keychain[Self.userIdKey] = nil
+        keychain[Self.userNameKey] = nil
+        keychain[Self.userEmailKey] = nil
     }
 }
 
 enum AuthError: LocalizedError {
     case notAuthenticated
-    case tokenRefreshFailed
     case oauthFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
             "Not authenticated"
-        case .tokenRefreshFailed:
-            "Failed to refresh authentication"
         case .oauthFailed(let message):
-            "OAuth failed: \(message)"
+            "Sign-in failed: \(message)"
         }
     }
 }

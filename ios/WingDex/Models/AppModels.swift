@@ -94,17 +94,3 @@ struct ObservationsCreatedResponse: Codable {
     let observations: [BirdObservation]
     let dexUpdates: [DexEntry]
 }
-
-struct TokenPair: Codable {
-    let accessToken: String
-    let refreshToken: String
-    let tokenType: String
-    let expiresIn: Int
-
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case refreshToken = "refresh_token"
-        case tokenType = "token_type"
-        case expiresIn = "expires_in"
-    }
-}
