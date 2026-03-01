@@ -1,0 +1,1451 @@
+openapi: 3.1.0
+info:
+  title: WingDex API
+  version: 1.0.0
+  description: |
+    REST API for WingDex, a bird species life-list tracker.
+    Hosted on Cloudflare Pages Functions with D1 (SQLite) storage.
+
+    Authentication: The web SPA uses cookie-based sessions via Better Auth.
+    The iOS app uses short-lived bearer tokens (JWT) with refresh token rotation.
+    Both auth mechanisms are accepted by the middleware.
+
+servers:
+  - url: https://wingdex.pages.dev
+    description: Production
+  - url: http://localhost:5000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Auth
+  # ---------------------------------------------------------------------------
+  /api/auth/providers:
+    get:
+      operationId: getAuthProviders
+      summary: List configured OAuth providers
+      description: Returns the social login providers enabled on the server. Cached for 5 minutes.
+      security: []
+      tags: [Auth]
+      responses:
+        "200":
+          description: Provider list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: string
+                    example: ["github", "apple"]
+
+  /api/auth/linked-providers:
+    get:
+      operationId: getLinkedProviders
+      summary: Get providers linked to the current user
+      tags: [Auth]
+      responses:
+        "200":
+          description: Linked provider list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: string
+                    example: ["github"]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/finalize-passkey:
+    post:
+      operationId: finalizePasskey
+      summary: Finalize passkey registration
+      description: Promotes an anonymous user to a full account after passkey registration.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Display name for the user
+                passkeyId:
+                  type: string
+                  description: ID of the passkey to associate
+      responses:
+        "200":
+          description: Passkey finalized
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Passkey not owned by caller
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/auth/token:
+    post:
+      operationId: exchangeToken
+      summary: Exchange an auth credential for a token pair
+      description: |
+        Exchanges an OAuth authorization code, Apple ID token, or passkey assertion
+        for a short-lived access token (JWT, ~15 min) and a long-lived refresh token
+        (opaque, ~90 days). Planned endpoint for iOS bearer token auth.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [grant_type]
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, apple, passkey]
+                code:
+                  type: string
+                  description: OAuth authorization code (for grant_type=authorization_code)
+                id_token:
+                  type: string
+                  description: Apple ID token (for grant_type=apple)
+                assertion:
+                  type: string
+                  description: Passkey assertion (for grant_type=passkey)
+                redirect_uri:
+                  type: string
+                  description: OAuth redirect URI used in the authorization request
+      responses:
+        "200":
+          description: Token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "400":
+          description: Invalid grant
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/token/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh an access token
+      description: |
+        Exchanges a valid refresh token for a new access/refresh token pair.
+        The old refresh token is invalidated (rotation). Planned endpoint for iOS.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          description: Invalid or expired refresh token
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/auth/token/revoke:
+    post:
+      operationId: revokeToken
+      summary: Revoke a refresh token
+      description: Invalidates the refresh token (used on sign-out). Planned endpoint for iOS.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Token revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revoked]
+                properties:
+                  revoked:
+                    type: boolean
+                    const: true
+
+  # ---------------------------------------------------------------------------
+  # Bird Identification
+  # ---------------------------------------------------------------------------
+  /api/identify-bird:
+    post:
+      operationId: identifyBird
+      summary: AI bird identification from a photo
+      description: |
+        Accepts a photo (as a data URL or file upload) with optional GPS and month
+        context. Returns ranked species candidates with confidence scores and an
+        optional crop bounding box. Rate-limited to 150 requests/day per user.
+      tags: [BirdID]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentifyBirdRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Photo file or data URL string
+                lat:
+                  type: number
+                lon:
+                  type: number
+                month:
+                  type: integer
+                  minimum: 0
+                  maximum: 11
+                imageWidth:
+                  type: integer
+                imageHeight:
+                  type: integer
+                locationName:
+                  type: string
+                model:
+                  type: string
+                  enum: [fast, strong]
+      responses:
+        "200":
+          description: Identification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentifyBirdResult"
+        "400":
+          description: Invalid input
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Account required (anonymous users blocked)
+          content:
+            text/plain:
+              schema:
+                type: string
+        "429":
+          description: Daily rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the limit resets
+          content:
+            text/plain:
+              schema:
+                type: string
+        "502":
+          description: AI returned unparseable response
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Missing server configuration
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  # ---------------------------------------------------------------------------
+  # Data - Bulk fetch
+  # ---------------------------------------------------------------------------
+  /api/data/all:
+    get:
+      operationId: getAllData
+      summary: Fetch all user data
+      description: |
+        Returns all outings, photos (metadata only - blobs are not persisted),
+        observations, and the computed WingDex for the authenticated user.
+      tags: [Data]
+      responses:
+        "200":
+          description: All user data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllDataResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Data - Dex
+  # ---------------------------------------------------------------------------
+  /api/data/dex:
+    get:
+      operationId: getDex
+      summary: Get computed WingDex
+      description: Returns the species life list computed from confirmed observations.
+      tags: [Data]
+      responses:
+        "200":
+          description: Dex entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DexEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      operationId: updateDexMeta
+      summary: Update dex metadata
+      description: |
+        Upsert user-specific metadata (addedDate, bestPhotoId, notes) for one or
+        more species. Accepts a single patch object or an array.
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/DexMetaPatch"
+                - type: array
+                  items:
+                    $ref: "#/components/schemas/DexMetaPatch"
+      responses:
+        "200":
+          description: Updated dex
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dexUpdates]
+                properties:
+                  dexUpdates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DexEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Data - Outings
+  # ---------------------------------------------------------------------------
+  /api/data/outings:
+    post:
+      operationId: createOuting
+      summary: Create an outing
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOutingRequest"
+      responses:
+        "200":
+          description: Created outing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outing"
+        "400":
+          description: Invalid payload
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/data/outings/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      operationId: updateOuting
+      summary: Update an outing
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOutingRequest"
+      responses:
+        "200":
+          description: Updated outing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outing"
+        "400":
+          description: Invalid payload or no valid fields
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteOuting
+      summary: Delete an outing
+      description: Deletes the outing and all its observations and photos. Returns updated dex.
+      tags: [Data]
+      responses:
+        "200":
+          description: Deleted; returns updated dex
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dexUpdates]
+                properties:
+                  dexUpdates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DexEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------------------
+  # Data - Observations
+  # ---------------------------------------------------------------------------
+  /api/data/observations:
+    post:
+      operationId: createObservations
+      summary: Create observations
+      description: Creates one or more observations. Returns the created observations and updated dex.
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/CreateObservationRequest"
+      responses:
+        "200":
+          description: Created observations with dex updates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [observations, dexUpdates]
+                properties:
+                  observations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Observation"
+                  dexUpdates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DexEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      operationId: updateObservations
+      summary: Update observations
+      description: |
+        Updates a single observation (by id) or a batch (by ids + patch).
+        Returns the updated observation(s) and the recomputed dex.
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/UpdateSingleObservationRequest"
+                - $ref: "#/components/schemas/UpdateBulkObservationRequest"
+      responses:
+        "200":
+          description: Updated observation(s) with dex updates
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [observation, dexUpdates]
+                    properties:
+                      observation:
+                        $ref: "#/components/schemas/Observation"
+                      dexUpdates:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DexEntry"
+                  - type: object
+                    required: [observations, dexUpdates]
+                    properties:
+                      observations:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Observation"
+                      dexUpdates:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DexEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Data - Photos
+  # ---------------------------------------------------------------------------
+  /api/data/photos:
+    post:
+      operationId: createPhotos
+      summary: Create photo records
+      description: |
+        Creates photo metadata records. Photo blobs (dataUrl, thumbnail) are NOT
+        persisted server-side; they are stored as empty strings. The server tracks
+        EXIF metadata, GPS, and file hashes.
+      tags: [Data]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/CreatePhotoRequest"
+      responses:
+        "200":
+          description: Created photo records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Photo"
+        "400":
+          description: Invalid payload or invalid outing reference
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Data - Clear
+  # ---------------------------------------------------------------------------
+  /api/data/clear:
+    delete:
+      operationId: clearAllData
+      summary: Delete all user data
+      description: Deletes all outings and dex_meta for the authenticated user. Cascades to observations and photos.
+      tags: [Data]
+      responses:
+        "200":
+          description: All data cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cleared]
+                properties:
+                  cleared:
+                    type: boolean
+                    const: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Species
+  # ---------------------------------------------------------------------------
+  /api/species/search:
+    get:
+      operationId: searchSpecies
+      summary: Fuzzy species name search
+      description: Searches the embedded eBird taxonomy by common or scientific name.
+      tags: [Species]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 8
+          description: Maximum results to return
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpeciesSearchResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/species/ebird-code:
+    get:
+      operationId: getEbirdCode
+      summary: Lookup eBird species code
+      tags: [Species]
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Common species name
+      responses:
+        "200":
+          description: eBird code result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ebirdCode]
+                properties:
+                  ebirdCode:
+                    type: [string, "null"]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/species/wiki-title:
+    get:
+      operationId: getWikiTitle
+      summary: Lookup Wikipedia title and thumbnail
+      description: Returns the Wikipedia article title, scientific name, and thumbnail URL for a species.
+      tags: [Species]
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Common species name
+      responses:
+        "200":
+          description: Wiki title result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiTitleResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Export
+  # ---------------------------------------------------------------------------
+  /api/export/sightings:
+    get:
+      operationId: exportSightings
+      summary: Export all sightings as eBird CSV
+      tags: [Export]
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: 'attachment; filename="wingdex-sightings-2026-03-01.csv"'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/export/dex:
+    get:
+      operationId: exportDex
+      summary: Export WingDex as CSV
+      tags: [Export]
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: 'attachment; filename="wingdex-dex.csv"'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/export/outing/{id}:
+    get:
+      operationId: exportOuting
+      summary: Export a single outing as eBird CSV
+      tags: [Export]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------------------
+  # Import
+  # ---------------------------------------------------------------------------
+  /api/import/ebird-csv:
+    post:
+      operationId: importEbirdCsv
+      summary: Upload eBird CSV for preview
+      description: |
+        Parses an eBird CSV export file and returns previews with conflict detection
+        against existing data. Call /api/import/ebird-csv/confirm to finalize.
+      tags: [Import]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: eBird CSV export file (max 10 MB)
+                profileTimezone:
+                  type: string
+                  description: IANA timezone for date parsing
+      responses:
+        "200":
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreviewResponse"
+        "400":
+          description: Invalid CSV
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/import/ebird-csv/confirm:
+    post:
+      operationId: confirmEbirdImport
+      summary: Confirm eBird CSV import
+      description: Finalizes the import by creating outings and observations from selected preview items.
+      tags: [Import]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [previewIds]
+              properties:
+                previewIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Base64-encoded preview IDs from the preview response
+      responses:
+        "200":
+          description: Import confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportConfirmResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived access token (~15 min). Obtain via /api/auth/token.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: Session cookie set by Better Auth (used by the web SPA).
+
+  responses:
+    Unauthorized:
+      description: No valid session or token
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Unauthorized
+    NotFound:
+      description: Resource not found
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Not found
+
+  schemas:
+    # -------------------------------------------------------------------------
+    # Auth
+    # -------------------------------------------------------------------------
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+          description: Short-lived JWT access token
+        refresh_token:
+          type: string
+          description: Long-lived opaque refresh token
+        token_type:
+          type: string
+          const: bearer
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds (e.g. 900 for 15 min)
+
+    # -------------------------------------------------------------------------
+    # Core Models
+    # -------------------------------------------------------------------------
+    Outing:
+      type: object
+      required: [id, userId, startTime, endTime, locationName, notes, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        defaultLocationName:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        stateProvince:
+          type: string
+        countryCode:
+          type: string
+          maxLength: 2
+        protocol:
+          type: string
+        numberObservers:
+          type: integer
+        allObsReported:
+          type: boolean
+        effortDistanceMiles:
+          type: number
+        effortAreaAcres:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Photo:
+      type: object
+      required: [id, outingId, dataUrl, thumbnail, fileHash, fileName]
+      properties:
+        id:
+          type: string
+        outingId:
+          type: string
+        dataUrl:
+          type: string
+          description: Always empty string from server (blobs not persisted)
+        thumbnail:
+          type: string
+          description: Always empty string from server
+        exifTime:
+          type: string
+          format: date-time
+        gps:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+        fileHash:
+          type: string
+        fileName:
+          type: string
+
+    ObservationStatus:
+      type: string
+      enum: [confirmed, possible, pending, rejected]
+
+    Observation:
+      type: object
+      required: [id, outingId, speciesName, count, certainty, notes]
+      properties:
+        id:
+          type: string
+        outingId:
+          type: string
+        speciesName:
+          type: string
+        count:
+          type: integer
+        certainty:
+          $ref: "#/components/schemas/ObservationStatus"
+        representativePhotoId:
+          type: string
+        aiConfidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        speciesComments:
+          type: string
+        notes:
+          type: string
+
+    DexEntry:
+      type: object
+      required: [speciesName, firstSeenDate, lastSeenDate, totalOutings, totalCount, notes]
+      properties:
+        speciesName:
+          type: string
+        firstSeenDate:
+          type: string
+        lastSeenDate:
+          type: string
+        addedDate:
+          type: string
+        totalOutings:
+          type: integer
+        totalCount:
+          type: integer
+        bestPhotoId:
+          type: string
+        notes:
+          type: string
+        wikiTitle:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+
+    # -------------------------------------------------------------------------
+    # Bird ID
+    # -------------------------------------------------------------------------
+    IdentifyBirdRequest:
+      type: object
+      required: [imageDataUrl]
+      properties:
+        imageDataUrl:
+          type: string
+          description: "data:image/... base64-encoded image"
+        lat:
+          type: number
+        lon:
+          type: number
+        month:
+          type: integer
+          minimum: 0
+          maximum: 11
+        imageWidth:
+          type: integer
+        imageHeight:
+          type: integer
+        locationName:
+          type: string
+        model:
+          type: string
+          enum: [fast, strong]
+
+    IdentifyBirdResult:
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candidate"
+        cropBox:
+          $ref: "#/components/schemas/CropBox"
+        multipleBirds:
+          type: boolean
+
+    Candidate:
+      type: object
+      required: [species, confidence]
+      properties:
+        species:
+          type: string
+          description: '"Common Name (Scientific name)" format'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        wikiTitle:
+          type: string
+
+    CropBox:
+      type: object
+      description: Bounding box as percentages of image dimensions (0-100)
+      required: [x, y, width, height]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+
+    # -------------------------------------------------------------------------
+    # Request Bodies
+    # -------------------------------------------------------------------------
+    CreateOutingRequest:
+      type: object
+      required: [id, startTime, endTime, locationName, createdAt]
+      properties:
+        id:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        defaultLocationName:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        stateProvince:
+          type: string
+        countryCode:
+          type: string
+        protocol:
+          type: string
+        numberObservers:
+          type: integer
+        allObsReported:
+          type: boolean
+        effortDistanceMiles:
+          type: number
+        effortAreaAcres:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateOutingRequest:
+      type: object
+      properties:
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        defaultLocationName:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        stateProvince:
+          type: string
+        countryCode:
+          type: string
+        protocol:
+          type: string
+        numberObservers:
+          type: integer
+        allObsReported:
+          type: boolean
+        effortDistanceMiles:
+          type: number
+        effortAreaAcres:
+          type: number
+        notes:
+          type: string
+
+    CreateObservationRequest:
+      type: object
+      required: [id, outingId, speciesName, count, certainty]
+      properties:
+        id:
+          type: string
+        outingId:
+          type: string
+        speciesName:
+          type: string
+        count:
+          type: integer
+        certainty:
+          $ref: "#/components/schemas/ObservationStatus"
+        representativePhotoId:
+          type: string
+        aiConfidence:
+          type: number
+        speciesComments:
+          type: string
+        notes:
+          type: string
+
+    UpdateSingleObservationRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        outingId:
+          type: string
+        speciesName:
+          type: string
+        count:
+          type: integer
+        certainty:
+          $ref: "#/components/schemas/ObservationStatus"
+        representativePhotoId:
+          type: [string, "null"]
+        aiConfidence:
+          type: [number, "null"]
+        speciesComments:
+          type: string
+        notes:
+          type: string
+
+    UpdateBulkObservationRequest:
+      type: object
+      required: [ids, patch]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+        patch:
+          type: object
+          properties:
+            outingId:
+              type: string
+            speciesName:
+              type: string
+            count:
+              type: integer
+            certainty:
+              $ref: "#/components/schemas/ObservationStatus"
+            representativePhotoId:
+              type: [string, "null"]
+            aiConfidence:
+              type: [number, "null"]
+            speciesComments:
+              type: string
+            notes:
+              type: string
+
+    CreatePhotoRequest:
+      type: object
+      required: [id, outingId, fileHash, fileName]
+      properties:
+        id:
+          type: string
+        outingId:
+          type: string
+        dataUrl:
+          type: string
+        thumbnail:
+          type: string
+        exifTime:
+          type: string
+          format: date-time
+        gps:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+        fileHash:
+          type: string
+        fileName:
+          type: string
+
+    DexMetaPatch:
+      type: object
+      required: [speciesName]
+      properties:
+        speciesName:
+          type: string
+        addedDate:
+          type: [string, "null"]
+        bestPhotoId:
+          type: [string, "null"]
+        notes:
+          type: string
+
+    # -------------------------------------------------------------------------
+    # Bulk Data Response
+    # -------------------------------------------------------------------------
+    AllDataResponse:
+      type: object
+      required: [outings, photos, observations, dex]
+      properties:
+        outings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Outing"
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Photo"
+        observations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Observation"
+        dex:
+          type: array
+          items:
+            $ref: "#/components/schemas/DexEntry"
+
+    # -------------------------------------------------------------------------
+    # Species
+    # -------------------------------------------------------------------------
+    SpeciesSearchResult:
+      type: object
+      required: [common, scientific]
+      properties:
+        common:
+          type: string
+        scientific:
+          type: string
+        ebirdCode:
+          type: string
+        wikiTitle:
+          type: string
+        thumbnailPath:
+          type: string
+          description: Relative path (not full URL)
+
+    WikiTitleResult:
+      type: object
+      properties:
+        wikiTitle:
+          type: [string, "null"]
+        common:
+          type: [string, "null"]
+        scientific:
+          type: [string, "null"]
+        thumbnailUrl:
+          type: [string, "null"]
+          format: uri
+
+    # -------------------------------------------------------------------------
+    # Import
+    # -------------------------------------------------------------------------
+    ImportPreview:
+      type: object
+      required: [previewId, speciesName, date, location, count]
+      properties:
+        previewId:
+          type: string
+          description: Base64-encoded preview identifier
+        speciesName:
+          type: string
+        date:
+          type: string
+        location:
+          type: string
+        count:
+          type: integer
+        lat:
+          type: number
+        lon:
+          type: number
+        time:
+          type: string
+        submissionId:
+          type: string
+        stateProvince:
+          type: string
+        protocol:
+          type: string
+        numberObservers:
+          type: integer
+        allObsReported:
+          type: boolean
+        effortDistanceMiles:
+          type: number
+        effortAreaAcres:
+          type: number
+        observationNotes:
+          type: string
+        checklistNotes:
+          type: string
+        conflict:
+          type: string
+          enum: [duplicate, update_dates, new]
+        existingEntry:
+          type: object
+          description: Existing dex entry when conflict is detected
+          properties:
+            speciesName:
+              type: string
+            firstSeenDate:
+              type: string
+            lastSeenDate:
+              type: string
+
+    ImportPreviewResponse:
+      type: object
+      required: [previews, summary]
+      properties:
+        previews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportPreview"
+        summary:
+          type: object
+          required: [total, new, duplicates, updates]
+          properties:
+            total:
+              type: integer
+            new:
+              type: integer
+            duplicates:
+              type: integer
+            updates:
+              type: integer
+
+    ImportConfirmResponse:
+      type: object
+      required: [imported, dexUpdates]
+      properties:
+        imported:
+          type: object
+          required: [outings, observations, newSpecies]
+          properties:
+            outings:
+              type: integer
+            observations:
+              type: integer
+            newSpecies:
+              type: integer
+        dexUpdates:
+          type: array
+          items:
+            $ref: "#/components/schemas/DexEntry"
+
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: BirdID
+    description: AI-powered bird identification
+  - name: Data
+    description: User data CRUD (outings, observations, photos, dex)
+  - name: Species
+    description: Taxonomy search and lookups
+  - name: Export
+    description: Data export (CSV)
+  - name: Import
+    description: eBird CSV import
