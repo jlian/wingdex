@@ -2,13 +2,19 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AuthService.self) private var auth
+    @State private var showingDeleteConfirmation = false
+    @State private var showingSignOutConfirmation = false
 
     var body: some View {
         NavigationStack {
             Form {
-                // TODO: Account section (avatar, name, linked providers)
                 Section("Account") {
-                    Text("Signed in")
+                    if let name = auth.userName, !name.isEmpty {
+                        LabeledContent("Name", value: name)
+                    }
+                    if let email = auth.userEmail, !email.isEmpty {
+                        LabeledContent("Email", value: email)
+                    }
                 }
 
                 // TODO: Saved locations
@@ -37,17 +43,28 @@ struct SettingsView: View {
                     }
                 }
 
-                // TODO: Danger zone
                 Section {
                     Button("Delete All Data", role: .destructive) {
-                        // TODO: Confirmation dialog + clear API call
+                        showingDeleteConfirmation = true
                     }
                     Button("Sign Out", role: .destructive) {
-                        // TODO: Revoke token + clear state
+                        showingSignOutConfirmation = true
                     }
                 }
             }
             .navigationTitle("Settings")
+            .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete Everything", role: .destructive) {
+                    // TODO: Call DELETE /api/data/clear then refresh
+                }
+            } message: {
+                Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
+            }
+            .confirmationDialog("Sign Out?", isPresented: $showingSignOutConfirmation, titleVisibility: .visible) {
+                Button("Sign Out", role: .destructive) {
+                    auth.signOut()
+                }
+            }
         }
     }
 }

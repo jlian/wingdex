@@ -18,9 +18,6 @@ enum Config {
     /// OAuth callback URL scheme (for ASWebAuthenticationSession).
     static let oauthCallbackScheme = "wingdex"
 
-    /// Access token lifetime in seconds (~15 min).
-    static let accessTokenLifetime: TimeInterval = 900
-
     /// Maximum daily AI identification requests.
     static let aiDailyRateLimit = 150
 }
