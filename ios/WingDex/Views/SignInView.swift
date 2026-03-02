@@ -22,7 +22,7 @@ struct SignInView: View {
                         .foregroundStyle(Color.accentColor)
                         .padding(.bottom, 24)
 
-                    // Auth card - web: 24px padding, 18px radius, border, shadow
+                    // Auth controls - vertically stacked with consistent 36pt button height
                     VStack(spacing: 16) {
                         // Header - web: serif 18px semibold + 14px muted terms
                         VStack(spacing: 8) {
@@ -143,15 +143,7 @@ struct SignInView: View {
                         .tint(Color.mutedText)
                         #endif
                     }
-                    .padding(24)
-                    .background(Color.pageBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(Color.warmBorder, lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 24)
                     .disabled(isSigningIn)
 
                     if isSigningIn {
