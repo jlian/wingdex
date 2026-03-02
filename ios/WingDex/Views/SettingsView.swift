@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(DataStore.self) private var store
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
 
@@ -55,7 +56,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete Everything", role: .destructive) {
-                    // TODO: Call DELETE /api/data/clear then refresh
+                    Task {
+                        try? await store.clearAll()
+                    }
                 }
             } message: {
                 Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
@@ -70,6 +73,8 @@ struct SettingsView: View {
 }
 
 #Preview {
+    let auth = AuthService()
     SettingsView()
-        .environment(AuthService())
+        .environment(auth)
+        .environment(DataStore(service: DataService(auth: auth)))
 }
