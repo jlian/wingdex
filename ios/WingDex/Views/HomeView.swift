@@ -16,7 +16,7 @@ struct HomeView: View {
                     dataView
                 }
             }
-            .navigationTitle("WingDex")
+            .navigationTitle("Home")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -37,20 +37,53 @@ struct HomeView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("Got bird pics?", systemImage: "bird.fill")
-                .font(.system(.title, design: .serif))
-        } description: {
-            Text("Upload your photos, ID the birds, and build your WingDex.")
-        } actions: {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Bird icon in circular tinted background - matches web layout
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                Image("BirdLogo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            VStack(spacing: 12) {
+                Text("Got bird pics?")
+                    .font(.system(size: 30, weight: .semibold, design: .serif))
+                    .foregroundStyle(Color.foregroundText)
+
+                Text("Upload your photos, ID the birds, and build your WingDex.")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Button {
                 showingAddPhotos = true
             } label: {
-                Label("Upload & Identify", systemImage: "camera.fill")
+                Label {
+                    Text("Upload & Identify")
+                        .font(.system(size: 16, weight: .medium))
+                } icon: {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 16))
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
             .tint(Color.accentColor)
+            .padding(.horizontal, 32)
+
+            Spacer()
         }
+        .padding(.horizontal, 24)
     }
 
     // MARK: - Data View
