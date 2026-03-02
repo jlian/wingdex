@@ -53,11 +53,16 @@ struct WingDexView: View {
         NavigationStack {
             Group {
                 if store.dex.isEmpty {
-                    ContentUnavailableView(
-                        "No Species Yet",
-                        systemImage: "bird.fill",
-                        description: Text("Species will appear here as you identify birds.")
-                    )
+                    ContentUnavailableView {
+                        Label {
+                            Text("No Species Yet")
+                        } icon: {
+                            Image("BirdLogo")
+                                .renderingMode(.template)
+                        }
+                    } description: {
+                        Text("Species will appear here as you identify birds.")
+                    }
                 } else {
                     speciesList
                 }
