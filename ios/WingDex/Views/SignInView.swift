@@ -78,6 +78,22 @@ struct SignInView: View {
                 }
                 .signInWithAppleButtonStyle(.whiteOutline)
                 .frame(height: 48)
+
+                #if DEBUG
+                // Anonymous sign-in for local dev (no OAuth credentials needed)
+                Divider()
+                    .padding(.vertical, 4)
+
+                Button {
+                    signIn { try await auth.signInAnonymously() }
+                } label: {
+                    Label("Try Without Account", systemImage: "person.crop.circle.badge.questionmark")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+                #endif
             }
             .padding(.horizontal, 32)
             .disabled(isSigningIn)
