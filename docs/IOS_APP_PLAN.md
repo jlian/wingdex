@@ -1,6 +1,6 @@
 # Native iOS App (SwiftUI) - Plan & Tracker
 
-> Source: [Issue #131](https://github.com/jlian/wingdex/issues/131) - Last updated: 2026-03-01
+> Source: [Issue #131](https://github.com/jlian/wingdex/issues/131) - Last updated: 2026-07-22
 >
 > **Legend**: ✅ Done - ⏳ In Progress - _(unchecked)_ Not started
 >
@@ -31,6 +31,9 @@ The app should feel fully iOS-native, not a web wrapper. Key guidelines:
 - **Dark mode** - full support via SwiftUI's automatic color scheme handling and semantic colors
 - **Dynamic Type** - all text should scale with the user's preferred text size
 - **Accessibility** - VoiceOver labels on all interactive elements; large content viewer support for key metrics
+- **Match web vibe, not pixels** - same warm palette (beige page bg, green accent, muted borders) and overall feel as the web app, but using native controls and idioms rather than pixel-perfect clones
+- **Shared color palette** - Xcode color assets derived from the web app's computed RGB values; if the web palette changes, update `Assets.xcassets` color sets to match (see _Asset Sharing Strategy_ below)
+- **No custom button chrome** - use `.buttonStyle(.bordered)` / `.borderedProminent` and system tints instead of hand-drawn outlines or custom shapes
 
 ---
 
@@ -184,7 +187,23 @@ Using Apple's `swift-openapi-generator` Xcode build plugin:
 
 ---
 
-## Phase 0 - Project Scaffold
+## Asset Sharing Strategy
+
+The web and iOS apps share the same REST API but have separate UI layers. True layout sharing across React and SwiftUI is not practical (different paradigms), but several things _can_ stay in sync:
+
+| Concern | Sharing approach |
+|---|---|
+| **Data models** | OpenAPI spec (`openapi.yaml`) is the single source of truth. `swift-openapi-generator` auto-generates Swift types; web uses hand-written TS types validated against the same spec. When the API changes, both clients see the change at build time. |
+| **Color palette** | The web defines colors in OKLCH via CSS custom properties. Xcode color assets (`Assets.xcassets`) use the exact computed sRGB equivalents. A future build script could auto-generate `.colorset` JSON from the CSS variables to eliminate manual sync. |
+| **Feature flags / sort options** | Currently duplicated. A shared JSON config (e.g., `shared/sort-options.json`) read by both the Vite build and an Xcode build phase could eliminate drift. |
+| **Icons** | Web uses Phosphor icons; iOS uses SF Symbols. No practical sharing, but a mapping table could document equivalences. |
+| **Layout / view logic** | Not shareable. React components and SwiftUI views are fundamentally different. The OpenAPI-driven data layer means _what_ data to display is defined once, but _how_ to display it is per-platform. |
+
+> **Bottom line**: Data shapes and color tokens are the most practical things to share. Full layout sync is not feasible - when the web adds a sort button, the iOS app needs a corresponding SwiftUI change. The OpenAPI spec ensures the _data_ side stays in sync automatically.
+
+---
+
+## Phase 0 - Project Scaffold ✅
 
 Set up the Xcode project, OpenAPI spec, and CI. No functional code yet.
 
@@ -204,7 +223,7 @@ Set up the Xcode project, OpenAPI spec, and CI. No functional code yet.
 
 ---
 
-## Phase 1 - Auth
+## Phase 1 - Auth ✅
 
 Implement bearer token auth so the app can make API calls.
 
@@ -239,7 +258,7 @@ Implement bearer token auth so the app can make API calls.
 
 ---
 
-## Phase 2 - Core Data Views
+## Phase 2 - Core Data Views ✅
 
 Read-only views displaying data from the API.
 
@@ -251,6 +270,19 @@ Read-only views displaying data from the API.
 - [x] **Data layer** - `DataService` + `DataStore` backed by `/api/data/all`, environment injection
 
 **Verification**: All data views display real data from the API, navigation works, pull-to-refresh updates.
+
+---
+
+## Phase 2.5 - Styling & Full-Screen Layout ✅
+
+Match the web app's warm palette and ensure edge-to-edge rendering on iOS 26.
+
+- [x] **Color assets** - PageBackground, CardBackground, AccentColor derived from web's exact computed RGB values
+- [x] **Theme extension** - `Color.pageBg`, `.cardBg`, `.mutedText`, `.foregroundText`, `.warmBorder` matching web palette
+- [x] **Edge-to-edge layout** - `UILaunchScreen: {}` in Info.plist enables full-screen rendering behind Dynamic Island and home indicator
+- [x] **Warm backgrounds** - all views use `Color.pageBg.ignoresSafeArea()` with `.scrollContentBackground(.hidden)`
+- [x] **Sign-in screen** - native buttons (`.bordered` / `.borderedProminent` / `SignInWithAppleButton`) with consistent 36pt height, no card chrome
+- [x] **Typography** - system serif for headings, system default for body, matching web's visual hierarchy
 
 ---
 
