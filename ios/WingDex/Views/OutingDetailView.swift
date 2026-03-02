@@ -23,6 +23,8 @@ struct OutingDetailView: View {
         }
         .navigationTitle(outing?.locationName ?? "Outing")
         .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBg.ignoresSafeArea())
         .confirmationDialog("Delete this outing?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Delete Outing", role: .destructive) {
                 Task {

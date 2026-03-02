@@ -1,133 +1,154 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Full-screen sign-in view shown when the user is not authenticated.
+/// Full-screen sign-in view matching the web app's auth gate.
 ///
-/// Matches the web app's auth gate styling: forest green branding,
-/// social providers first, passkey button in primary green.
+/// Warm beige background, centered bird icon, cream card with
+/// social providers + passkey button in the web's exact order.
 struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @State private var isSigningIn = false
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 24)
 
-            // App branding
-            VStack(spacing: 12) {
-                Image(systemName: "bird.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(Color.accentColor)
-                    .symbolEffect(.breathe, options: .repeating)
+                    // Bird icon in a subtle circle (matching web's hero bird)
+                    Image(systemName: "bird.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 80, height: 80)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .padding(.bottom, 16)
 
-                Text("WingDex")
-                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    // Auth card
+                    VStack(spacing: 12) {
+                        // Header
+                        VStack(spacing: 8) {
+                            Text("Sign up")
+                                .font(.system(size: 20, weight: .semibold))
 
-                Text("Track your bird sightings")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            // Sign-in buttons - matching web order: passkey (primary), social (outline)
-            VStack(spacing: 12) {
-                // Passkey - primary CTA (green filled)
-                Button {
-                    signIn { try await auth.signInWithPasskey() }
-                } label: {
-                    Label("Sign in with Passkey", systemImage: "person.badge.key.fill")
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
-
-                // GitHub - outlined
-                Button {
-                    signIn { try await auth.signInWithGitHub() }
-                } label: {
-                    Label {
-                        Text("Sign in with GitHub")
-                            .font(.body.weight(.medium))
-                    } icon: {
-                        Image(systemName: "chevron.left.forwardslash.chevron.right")
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                }
-                .buttonStyle(.bordered)
-                .tint(.primary)
-
-                // Apple - native button
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.fullName, .email]
-                } onCompletion: { result in
-                    switch result {
-                    case .success(let authorization):
-                        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                            errorMessage = "Unexpected credential type"
-                            return
+                            (Text("By continuing you accept our ")
+                                .foregroundStyle(Color.mutedText)
+                            + Text("Terms of Use")
+                                .foregroundStyle(Color.accentColor)
+                            + Text(" and ")
+                                .foregroundStyle(Color.mutedText)
+                            + Text("Privacy Policy")
+                                .foregroundStyle(Color.accentColor)
+                            + Text(".")
+                                .foregroundStyle(Color.mutedText))
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
-                        signIn { try await auth.signInWithApple(credential: credential) }
-                    case .failure(let error):
-                        if (error as? ASAuthorizationError)?.code != .canceled {
-                            errorMessage = error.localizedDescription
+
+                        // Social buttons
+                        VStack(spacing: 8) {
+                            // GitHub - outlined
+                            Button {
+                                signIn { try await auth.signInWithGitHub() }
+                            } label: {
+                                Label {
+                                    Text("Continue with GitHub")
+                                        .font(.subheadline.weight(.medium))
+                                } icon: {
+                                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                        .font(.body)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.primary)
+
+                            // Apple - native outlined button
+                            SignInWithAppleButton(.continue) { request in
+                                request.requestedScopes = [.fullName, .email]
+                            } onCompletion: { result in
+                                switch result {
+                                case .success(let authorization):
+                                    guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                                        errorMessage = "Unexpected credential type"
+                                        return
+                                    }
+                                    signIn { try await auth.signInWithApple(credential: credential) }
+                                case .failure(let error):
+                                    if (error as? ASAuthorizationError)?.code != .canceled {
+                                        errorMessage = error.localizedDescription
+                                    }
+                                }
+                            }
+                            .signInWithAppleButtonStyle(.whiteOutline)
+                            .frame(height: 40)
                         }
+
+                        // OR divider
+                        HStack {
+                            VStack { Divider() }
+                            Text("OR")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Color.mutedText)
+                            VStack { Divider() }
+                        }
+
+                        // Passkey - primary filled green
+                        Button {
+                            signIn { try await auth.signInWithPasskey() }
+                        } label: {
+                            Label("Sign up with a Passkey", systemImage: "person.badge.key.fill")
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.accentColor)
+
+                        // Error message
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        #if DEBUG
+                        // Anonymous sign-in for local dev
+                        Button {
+                            signIn { try await auth.signInAnonymously() }
+                        } label: {
+                            Label("Try Without Account", systemImage: "person.crop.circle.badge.questionmark")
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Color.mutedText)
+                        #endif
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 20)
+                    .background(Color.cardBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.warmBorder, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 16)
+                    .disabled(isSigningIn)
+
+                    if isSigningIn {
+                        ProgressView()
+                            .padding(.top, 16)
+                    }
+
+                    Spacer(minLength: 24)
                 }
-                .signInWithAppleButtonStyle(.whiteOutline)
-                .frame(height: 48)
-
-                #if DEBUG
-                // Anonymous sign-in for local dev (no OAuth credentials needed)
-                Divider()
-                    .padding(.vertical, 4)
-
-                Button {
-                    signIn { try await auth.signInAnonymously() }
-                } label: {
-                    Label("Try Without Account", systemImage: "person.crop.circle.badge.questionmark")
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-                #endif
+                .frame(minHeight: geometry.size.height)
             }
-            .padding(.horizontal, 32)
-            .disabled(isSigningIn)
-
-            if isSigningIn {
-                ProgressView()
-                    .padding(.top, 16)
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .padding(.top, 12)
-            }
-
-            // Footer
-            VStack(spacing: 4) {
-                Text("By signing in you agree to the")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 4) {
-                    Link("Terms of Use", destination: URL(string: "https://wingdex.pages.dev/terms.html")!)
-                    Text("and")
-                    Link("Privacy Policy", destination: URL(string: "https://wingdex.pages.dev/privacy.html")!)
-                }
-                .font(.caption2)
-                .foregroundStyle(Color.accentColor)
-            }
-            .padding(.top, 24)
-            .padding(.bottom, 40)
         }
+        .background(Color.pageBg.ignoresSafeArea())
     }
 
     private func signIn(action: @escaping () async throws -> Void) {

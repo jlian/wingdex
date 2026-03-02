@@ -18,6 +18,8 @@ struct SpeciesDetailView: View {
         }
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBg.ignoresSafeArea())
     }
 
     // MARK: - Hero

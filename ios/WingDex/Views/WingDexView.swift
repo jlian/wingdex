@@ -92,6 +92,8 @@ struct WingDexView: View {
             .refreshable {
                 await store.loadAll()
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.pageBg.ignoresSafeArea())
         }
     }
 
