@@ -286,6 +286,18 @@ Match the web app's warm palette and ensure edge-to-edge rendering on iOS 26.
 
 ---
 
+## Phase 2.6 - Auth UX, Tab Icon, and Session Fixes ✅
+
+Polish sign-in flow, fix tab bar rendering, and harden session management.
+
+- [x] **Auth mode toggle** - "Already have a WingDex? Log in" / "New to WingDex? Sign up" toggle matching web's auth gate
+- [x] **Tab bar icon** - separate `BirdTab` image set (25pt SVG) for proper liquid glass tab bar rendering; `BirdLogo` (256pt) stays for sign-in/empty states
+- [x] **Origin header** - added to anonymous and Apple social sign-in POST requests for Better Auth CSRF validation
+- [x] **Cookie management** - clear stale API cookies before anonymous sign-in and on sign-out to prevent "cannot sign in again anonymously" errors
+- [x] **Auto-sign-in guard** - skip `--auto-sign-in` when session is already restored from Keychain
+
+---
+
 ## Phase 3 - Add Photos Flow
 
 The complex multi-step wizard: select photos, extract EXIF, cluster into outings, AI identify, review, confirm, save.
