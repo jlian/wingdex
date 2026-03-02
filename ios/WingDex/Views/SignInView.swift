@@ -16,9 +16,12 @@ struct SignInView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
 
-                    // Bird icon - web uses 28px Phosphor bird in primary green
-                    Image(systemName: "bird.fill")
-                        .font(.system(size: 28))
+                    // Bird icon - shared Phosphor bird duotone logo
+                    Image("BirdLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 28, height: 28)
                         .foregroundStyle(Color.accentColor)
                         .padding(.bottom, 24)
 

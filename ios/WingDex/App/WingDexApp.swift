@@ -37,6 +37,13 @@ struct ContentView: View {
                     }
             } else {
                 SignInView()
+                    #if DEBUG
+                    .task {
+                        if ProcessInfo.processInfo.arguments.contains("--auto-sign-in") {
+                            try? await auth.signInAnonymously()
+                        }
+                    }
+                    #endif
             }
         }
     }
@@ -56,11 +63,18 @@ struct MainTabView: View {
             Tab("Home", systemImage: "house", value: AppTab.home) {
                 HomeView(showingAddPhotos: $showingAddPhotos)
             }
+            Tab(value: AppTab.wingdex) {
+                WingDexView()
+            } label: {
+                Label {
+                    Text("WingDex")
+                } icon: {
+                    Image("BirdLogo")
+                        .renderingMode(.template)
+                }
+            }
             Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
                 OutingsView()
-            }
-            Tab("WingDex", systemImage: "list.bird", value: AppTab.wingdex) {
-                WingDexView()
             }
             Tab("Settings", systemImage: "gear", value: AppTab.settings) {
                 SettingsView()
