@@ -103,6 +103,65 @@ final class AuthService: @unchecked Sendable {
         clearKeychain()
     }
 
+    // MARK: - Passkey Flows
+
+    /// Sign in with a passkey. Presents the system passkey sheet.
+    func signInWithPasskey() async throws {
+        let service = PasskeyService()
+        let result = try await service.authenticate()
+
+        sessionToken = result.token
+        sessionExpiry = result.expiresAt ?? Date.now.addingTimeInterval(7 * 24 * 60 * 60)
+        userId = result.userId
+
+        // Fetch full user info (name, email, image) using the new session
+        try? await fetchUserInfo(token: result.token)
+
+        isAuthenticated = true
+        persistSession()
+    }
+
+    /// Register a new passkey for the current user.
+    func registerPasskey(name: String) async throws {
+        let token = try validToken()
+        let service = PasskeyService()
+        try await service.register(name: name, token: token)
+    }
+
+    /// List the current user's passkeys.
+    func listPasskeys() async throws -> [PasskeyService.PasskeyInfo] {
+        let token = try validToken()
+        let service = PasskeyService()
+        return try await service.listPasskeys(token: token)
+    }
+
+    /// Delete a passkey by ID.
+    func deletePasskey(id: String) async throws {
+        let token = try validToken()
+        let service = PasskeyService()
+        try await service.deletePasskey(id: id, token: token)
+    }
+
+    /// Fetch user info from Better Auth's get-session endpoint.
+    private func fetchUserInfo(token: String) async throws {
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
+        var request = URLRequest(url: url)
+        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let user = json["user"] as? [String: Any]
+        else { return }
+
+        userId = user["id"] as? String
+        userName = user["name"] as? String
+        userEmail = user["email"] as? String
+        userImage = user["image"] as? String
+    }
+
     /// Get a valid session token for API requests.
     /// Attach as `Authorization: Bearer <token>`.
     func validToken() throws -> String {

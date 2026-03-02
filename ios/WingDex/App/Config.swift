@@ -18,6 +18,9 @@ enum Config {
     /// OAuth callback URL scheme (for ASWebAuthenticationSession).
     static let oauthCallbackScheme = "wingdex"
 
+    /// WebAuthn Relying Party ID (must match server's rpID and associated domain).
+    static let rpID: String = apiBaseURL.host ?? "localhost"
+
     /// Maximum daily AI identification requests.
     static let aiDailyRateLimit = 150
 }
