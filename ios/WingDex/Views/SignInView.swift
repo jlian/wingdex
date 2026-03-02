@@ -9,6 +9,11 @@ struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @State private var isSigningIn = false
     @State private var errorMessage: String?
+    @State private var mode: AuthMode = .signup
+
+    enum AuthMode {
+        case signup, login
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -29,7 +34,7 @@ struct SignInView: View {
                     VStack(spacing: 16) {
                         // Header - web: serif 18px semibold + 14px muted terms
                         VStack(spacing: 8) {
-                            Text("Sign up")
+                            Text(mode == .signup ? "Sign up" : "Log in")
                                 .font(.system(size: 18, weight: .semibold, design: .serif))
                                 .foregroundStyle(Color.foregroundText)
 
@@ -102,7 +107,7 @@ struct SignInView: View {
                             signIn { try await auth.signInWithPasskey() }
                         } label: {
                             Label {
-                                Text("Sign up with a Passkey")
+                                Text(mode == .signup ? "Sign up with a Passkey" : "Log in with a Passkey")
                                     .font(.system(size: 14, weight: .medium))
                             } icon: {
                                 Image(systemName: "key.fill")
@@ -120,6 +125,29 @@ struct SignInView: View {
                                 .foregroundStyle(.red)
                                 .multilineTextAlignment(.center)
                         }
+
+                        // Mode toggle - matches web's "Already have a WingDex? Log in"
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                errorMessage = nil
+                                mode = mode == .signup ? .login : .signup
+                            }
+                        } label: {
+                            if mode == .signup {
+                                (Text("Already have a WingDex? ")
+                                    .foregroundStyle(Color.mutedText)
+                                + Text("Log in")
+                                    .foregroundStyle(Color.accentColor))
+                                .font(.system(size: 14))
+                            } else {
+                                (Text("New to WingDex? ")
+                                    .foregroundStyle(Color.mutedText)
+                                + Text("Sign up")
+                                    .foregroundStyle(Color.accentColor))
+                                .font(.system(size: 14))
+                            }
+                        }
+                        .buttonStyle(.plain)
 
                         #if DEBUG
                         Button {

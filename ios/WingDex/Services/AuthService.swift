@@ -80,6 +80,7 @@ final class AuthService: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
 
         let body: [String: Any] = [
             "provider": "apple",
@@ -104,10 +105,14 @@ final class AuthService: @unchecked Sendable {
     /// Creates a temporary session - useful for local dev and demo-first UX.
     func signInAnonymously() async throws {
         log.info("Starting anonymous sign-in")
+        // Clear any stale session cookies so Better Auth doesn't reject
+        // with "Anonymous users cannot sign in again anonymously".
+        clearAPICookies()
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/sign-in/anonymous")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         request.httpBody = Data("{}".utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -159,6 +164,7 @@ final class AuthService: @unchecked Sendable {
         userEmail = nil
         userImage = nil
         clearKeychain()
+        clearAPICookies()
     }
 
     // MARK: - Passkey Flows
@@ -357,6 +363,14 @@ final class AuthService: @unchecked Sendable {
         keychain[Self.userIdKey] = nil
         keychain[Self.userNameKey] = nil
         keychain[Self.userEmailKey] = nil
+    }
+
+    /// Remove cookies for the API domain so URLSession doesn't send stale session cookies.
+    private func clearAPICookies() {
+        guard let cookies = HTTPCookieStorage.shared.cookies(for: Config.apiBaseURL) else { return }
+        for cookie in cookies {
+            HTTPCookieStorage.shared.deleteCookie(cookie)
+        }
     }
 }
 

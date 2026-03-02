@@ -39,7 +39,8 @@ struct ContentView: View {
                 SignInView()
                     #if DEBUG
                     .task {
-                        if ProcessInfo.processInfo.arguments.contains("--auto-sign-in") {
+                        if ProcessInfo.processInfo.arguments.contains("--auto-sign-in"),
+                           !auth.isAuthenticated {
                             try? await auth.signInAnonymously()
                         }
                     }
@@ -63,15 +64,8 @@ struct MainTabView: View {
             Tab("Home", systemImage: "house", value: AppTab.home) {
                 HomeView(showingAddPhotos: $showingAddPhotos)
             }
-            Tab(value: AppTab.wingdex) {
+            Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
                 WingDexView()
-            } label: {
-                Label {
-                    Text("WingDex")
-                } icon: {
-                    Image("BirdLogo")
-                        .renderingMode(.template)
-                }
             }
             Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
                 OutingsView()
