@@ -3,11 +3,19 @@ import SwiftUI
 @main
 struct WingDexApp: App {
     @State private var authService = AuthService()
+    @State private var dataStore: DataStore
+
+    init() {
+        let auth = AuthService()
+        _authService = State(initialValue: auth)
+        _dataStore = State(initialValue: DataStore(service: DataService(auth: auth)))
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(authService)
+                .environment(dataStore)
         }
     }
 }
@@ -15,11 +23,15 @@ struct WingDexApp: App {
 /// Root view that shows either auth or the main tab interface.
 struct ContentView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(DataStore.self) private var store
 
     var body: some View {
         Group {
             if auth.isAuthenticated {
                 MainTabView()
+                    .task {
+                        await store.loadAll()
+                    }
             } else {
                 SignInView()
             }
@@ -59,6 +71,8 @@ struct MainTabView: View {
 }
 
 #Preview {
+    let auth = AuthService()
     ContentView()
-        .environment(AuthService())
+        .environment(auth)
+        .environment(DataStore(service: DataService(auth: auth)))
 }
