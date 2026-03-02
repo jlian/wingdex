@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+import os
+
+private let log = Logger(subsystem: "app.wingdex", category: "DataStore")
 
 /// Typed update for outing fields. Only non-nil fields are sent.
 struct OutingUpdate: Codable, Sendable {
@@ -41,6 +44,7 @@ final class DataStore {
 
     /// Load all user data from the API. Called on app launch and pull-to-refresh.
     func loadAll() async {
+        log.info("Loading all data...")
         isLoading = true
         error = nil
         do {
@@ -49,8 +53,10 @@ final class DataStore {
             photos = response.photos
             observations = response.observations
             dex = response.dex
+            log.info("Loaded \(self.outings.count) outings, \(self.observations.count) observations, \(self.dex.count) dex entries")
         } catch {
             self.error = error.localizedDescription
+            log.error("Failed to load data: \(error.localizedDescription)")
         }
         isLoading = false
     }

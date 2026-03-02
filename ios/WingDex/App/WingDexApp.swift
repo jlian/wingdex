@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct WingDexApp: App {
-    @State private var authService = AuthService()
+    @State private var authService: AuthService
     @State private var dataStore: DataStore
 
     init() {
