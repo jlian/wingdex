@@ -9,7 +9,6 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    GENERATE_INFOPLIST_FILE: true
 
 targets:
   WingDex:
@@ -39,6 +38,12 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: WingDex/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - wingdex
     dependencies:
       - package: swift-openapi-runtime
         product: OpenAPIRuntime

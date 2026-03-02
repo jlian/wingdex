@@ -52,7 +52,7 @@ struct SpeciesDetailView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(getDisplayName(speciesName))
-                        .font(.title2.bold())
+                        .font(.system(.title2, design: .serif, weight: .bold))
                         .foregroundStyle(.white)
 
                     if let sci = getScientificName(speciesName) {
