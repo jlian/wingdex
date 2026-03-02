@@ -16,6 +16,7 @@ struct WingDexApp: App {
             ContentView()
                 .environment(authService)
                 .environment(dataStore)
+                .tint(Color.accentColor)
         }
     }
 }
@@ -26,7 +27,9 @@ struct ContentView: View {
     @Environment(DataStore.self) private var store
 
     var body: some View {
-        Group {
+        ZStack {
+            Color.pageBg.ignoresSafeArea()
+
             if auth.isAuthenticated {
                 MainTabView()
                     .task {

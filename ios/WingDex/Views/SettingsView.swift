@@ -53,6 +53,8 @@ struct SettingsView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.pageBg.ignoresSafeArea())
             .navigationTitle("Settings")
             .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete Everything", role: .destructive) {
