@@ -217,6 +217,7 @@ Implement bearer token auth so the app can make API calls.
 ### Server-side (backend changes)
 - [x] **Middleware update** - accept `Authorization: Bearer <token>` header alongside existing cookie auth (injects as session cookie for Better Auth)
 - [x] **`GET /api/auth/mobile/callback`** - bridge endpoint: reads session cookie after OAuth, redirects to `wingdex://auth/callback?token=...` with session token + user info
+- [x] **`GET /api/auth/mobile/start`** - GET proxy for ASWebAuthenticationSession: internally POSTs to Better Auth sign-in/social, returns 302 redirect with state cookies
 - [ ] ~~`POST /api/auth/token`~~ - not needed; reusing Better Auth session tokens
 - [ ] ~~`POST /api/auth/token/refresh`~~ - not needed; sessions have server-managed expiry
 - [ ] ~~`POST /api/auth/token/revoke`~~ - not needed; sessions expire naturally; sign-out clears Keychain
@@ -242,12 +243,12 @@ Implement bearer token auth so the app can make API calls.
 
 Read-only views displaying data from the API.
 
-- [ ] **HomeView** - species count, recent outings list, "Add Photos" CTA, pull-to-refresh
-- [ ] **OutingsView** - chronological outing list with sort/filter, `NavigationStack` push transitions
-- [ ] **OutingDetailView** - outing info, MapKit location pin, observation list, swipe-to-delete observations
-- [ ] **WingDexView** - species life list with `.searchable`, sort options, `AsyncImage` for Wikimedia thumbnails
-- [ ] **SpeciesDetailView** - species info, Wikimedia image, observation history, first/last seen dates
-- [ ] **Data layer** - `WingDexDataService` backed by `/api/data/all`, local caching with SwiftData
+- [x] **HomeView** - species count, recent outings list, "Add Photos" CTA, pull-to-refresh
+- [x] **OutingsView** - chronological outing list with sort/filter, `NavigationStack` push transitions
+- [x] **OutingDetailView** - outing info, MapKit location pin, observation list, swipe-to-delete observations
+- [x] **WingDexView** - species life list with `.searchable`, sort options, `AsyncImage` for Wikimedia thumbnails
+- [x] **SpeciesDetailView** - species info, Wikimedia image, observation history, first/last seen dates
+- [x] **Data layer** - `DataService` + `DataStore` backed by `/api/data/all`, environment injection
 
 **Verification**: All data views display real data from the API, navigation works, pull-to-refresh updates.
 
