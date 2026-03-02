@@ -22,13 +22,16 @@ extension Color {
 
     // MARK: - Text
 
-    /// Muted secondary text - oklch(0.55 0.04 240)
-    static let mutedText = Color(red: 0.42, green: 0.46, blue: 0.55)
+    /// Muted secondary text - oklch(0.55 0.04 240) -> rgb(93, 117, 135)
+    static let mutedText = Color(red: 93/255, green: 117/255, blue: 135/255)
+
+    /// Foreground text - oklch(0.25 0.02 155) -> rgb(26, 37, 29)
+    static let foregroundText = Color(red: 26/255, green: 37/255, blue: 29/255)
 
     // MARK: - Borders
 
-    /// Warm cream border - oklch(0.80 0.02 85)
-    static let warmBorder = Color(red: 0.76, green: 0.75, blue: 0.73)
+    /// Warm border - oklch(0.80 0.02 85) -> rgb(196, 189, 176)
+    static let warmBorder = Color(red: 196/255, green: 189/255, blue: 176/255)
 }
 
 // MARK: - View Modifiers

@@ -27,11 +27,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.wingdex
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
-        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         DEVELOPMENT_TEAM: Z8LQS5S492
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: WingDex/WingDex.entitlements
@@ -41,6 +36,12 @@ targets:
     info:
       path: WingDex/Info.plist
       properties:
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - wingdex
