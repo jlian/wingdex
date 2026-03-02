@@ -49,7 +49,7 @@ These are one-time setup steps in the Apple Developer portal:
 
 - [x] **Register App ID** - `app.wingdex` registered (Team Z8LQS5S492)
 - [ ] **Create provisioning profile** - for Development (automatic signing in Xcode handles this, but explicit profiles needed for CI)
-- [ ] **Configure Associated Domains** (later) - for universal links / passkey rpID coordination
+- [x] **Configure Associated Domains** - AASA file at `public/.well-known/apple-app-site-association`, entitlements with `webcredentials:wingdex.pages.dev`
 - [ ] **App Store Connect** (later) - create the app listing when ready for TestFlight
 
 > **Note**: You do NOT need to do anything in the portal right now for scaffolding. The Xcode project will use automatic signing, so just having the paid account is sufficient. Register the App ID when you're ready to run on a physical device or build for TestFlight.
@@ -229,7 +229,9 @@ Implement bearer token auth so the app can make API calls.
 - [x] **SignInView** - sign-in screen with GitHub + Apple buttons
 - [x] **SettingsView - Auth UI** - user info display, confirmation dialogs for sign-out and data deletion
 - [x] **AuthService - Native Apple Sign-In** - `ASAuthorizationAppleIDProvider` + POST idToken to Better Auth's sign-in/social endpoint
-- [ ] **AuthService - Passkey support** - `ASAuthorizationPlatformPublicKeyCredentialProvider` (deferred)
+- [x] **Passkey sign-in** - `ASAuthorizationPlatformPublicKeyCredentialProvider` assertion flow with manual challenge cookie forwarding
+- [x] **Passkey registration** - register new passkeys from Settings via platform credential registration
+- [x] **Passkey management** - list and delete passkeys via `PasskeyManagementView`
 - [ ] **AuthService - 401 handling** - intercept 401, prompt re-auth (deferred)
 
 **Verification**: Can sign in via GitHub and Apple, tokens persist across app launches, sign-out clears state.
