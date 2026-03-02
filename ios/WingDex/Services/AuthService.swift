@@ -45,6 +45,27 @@ final class AuthService: @unchecked Sendable {
 
     /// Sign in with Apple using the native ASAuthorizationAppleIDProvider.
     /// Shows the system Face ID / Touch ID sheet - no web view needed.
+    @MainActor
+    func signInWithAppleNative() async throws {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+
+        let credential = try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>) in
+            let handler = AppleSignInHandler(continuation: continuation)
+            self.appleSignInHandler = handler
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = handler
+            controller.performRequests()
+        }
+
+        self.appleSignInHandler = nil
+        try await signInWithApple(credential: credential)
+    }
+
+    private var appleSignInHandler: AppleSignInHandler?
+
+    /// Sign in with Apple using a pre-obtained credential.
     func signInWithApple(credential: ASAuthorizationAppleIDCredential) async throws {
         guard let identityTokenData = credential.identityToken,
               let identityToken = String(data: identityTokenData, encoding: .utf8)
@@ -350,5 +371,38 @@ enum AuthError: LocalizedError {
         case .oauthFailed(let message):
             "Sign-in failed: \(message)"
         }
+    }
+}
+
+// MARK: - Apple Sign-In Delegate
+
+/// Bridges the delegate-based ASAuthorizationController flow into async/await
+/// via CheckedContinuation. Retained by AuthService until the flow completes.
+private final class AppleSignInHandler: NSObject, ASAuthorizationControllerDelegate, @unchecked Sendable {
+    private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
+
+    init(continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>) {
+        self.continuation = continuation
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+            continuation?.resume(throwing: AuthError.oauthFailed("Unexpected credential type"))
+            continuation = nil
+            return
+        }
+        continuation?.resume(returning: credential)
+        continuation = nil
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithError error: Error
+    ) {
+        continuation?.resume(throwing: error)
+        continuation = nil
     }
 }

@@ -63,29 +63,21 @@ struct SignInView: View {
                             .buttonStyle(.bordered)
                             .tint(Color.foregroundText)
 
-                            // Apple - native Sign In button, outlined
-                            SignInWithAppleButton(.continue) { request in
-                                request.requestedScopes = [.fullName, .email]
-                            } onCompletion: { result in
-                                switch result {
-                                case .success(let authorization):
-                                    guard let credential = authorization.credential
-                                        as? ASAuthorizationAppleIDCredential else {
-                                        errorMessage = "Unexpected credential type"
-                                        return
-                                    }
-                                    signIn {
-                                        try await auth.signInWithApple(credential: credential)
-                                    }
-                                case .failure(let error):
-                                    if (error as? ASAuthorizationError)?.code != .canceled {
-                                        errorMessage = error.localizedDescription
-                                    }
+                            // Apple - styled to match other buttons
+                            Button {
+                                signIn { try await auth.signInWithAppleNative() }
+                            } label: {
+                                Label {
+                                    Text("Continue with Apple")
+                                        .font(.system(size: 14, weight: .medium))
+                                } icon: {
+                                    Image(systemName: "apple.logo")
+                                        .font(.system(size: 14))
                                 }
+                                .frame(maxWidth: .infinity, minHeight: 36)
                             }
-                            .signInWithAppleButtonStyle(.whiteOutline)
-                            .frame(height: 36)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .buttonStyle(.bordered)
+                            .tint(Color.foregroundText)
                         }
 
                         // OR divider - web: 12px uppercase muted text, 1px border line
@@ -110,7 +102,7 @@ struct SignInView: View {
                                 Text("Sign up with a Passkey")
                                     .font(.system(size: 14, weight: .medium))
                             } icon: {
-                                Image(systemName: "person.badge.key.fill")
+                                Image(systemName: "key.fill")
                                     .font(.system(size: 14))
                             }
                             .frame(maxWidth: .infinity, minHeight: 36)
