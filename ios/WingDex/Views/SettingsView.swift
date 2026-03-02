@@ -38,8 +38,8 @@ struct SettingsView: View {
 
                 // TODO: Passkey management
                 Section("Security") {
-                    Button("Manage Passkeys") {
-                        // TODO: Passkey list/register
+                    NavigationLink("Manage Passkeys") {
+                        PasskeyManagementView()
                     }
                 }
 

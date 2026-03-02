@@ -28,12 +28,20 @@ struct SignInView: View {
             // Sign-in buttons
             VStack(spacing: 12) {
                 Button {
+                    signIn { try await auth.signInWithPasskey() }
+                } label: {
+                    Label("Sign in with Passkey", systemImage: "person.badge.key.fill")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
                     signIn { try await auth.signInWithGitHub() }
                 } label: {
                     Label("Sign in with GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
 
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
