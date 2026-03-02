@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let log = Logger(subsystem: "app.wingdex", category: "DataService")
 
 /// Handles all REST API communication with the WingDex backend.
 ///
@@ -70,8 +73,10 @@ final class DataService: Sendable {
         var request = URLRequest(url: url)
         try attachAuth(&request)
 
+        log.debug("GET \(path)")
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response, data: data)
+        log.debug("GET \(path) -> \(data.count) bytes")
         return data
     }
 
@@ -112,6 +117,7 @@ final class DataService: Sendable {
         }
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
+            log.error("HTTP \(http.statusCode): \(body)")
             throw DataServiceError.httpError(http.statusCode, body)
         }
     }

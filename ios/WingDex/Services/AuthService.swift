@@ -2,6 +2,9 @@ import AuthenticationServices
 import Foundation
 import KeychainAccess
 import Observation
+import os
+
+private let log = Logger(subsystem: Config.bundleID, category: "Auth")
 
 /// Manages authentication state, token storage, and OAuth flows.
 ///
@@ -29,6 +32,7 @@ final class AuthService: @unchecked Sendable {
 
     init() {
         restoreSession()
+        log.info("AuthService init - authenticated: \(self.isAuthenticated), userId: \(self.userId ?? "nil")")
     }
 
     // MARK: - OAuth Flows
@@ -75,10 +79,39 @@ final class AuthService: @unchecked Sendable {
         try processTokenResponse(data: data)
     }
 
+    /// Sign in anonymously via Better Auth's anonymous plugin.
+    /// Creates a temporary session - useful for local dev and demo-first UX.
+    func signInAnonymously() async throws {
+        log.info("Starting anonymous sign-in")
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/sign-in/anonymous")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AuthError.oauthFailed("Invalid response")
+        }
+
+        log.info("Anonymous sign-in response: \(httpResponse.statusCode)")
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            log.error("Anonymous sign-in failed: \(httpResponse.statusCode) \(body)")
+            throw AuthError.oauthFailed("Anonymous sign-in failed (\(httpResponse.statusCode))")
+        }
+
+        try processTokenResponse(data: data)
+        log.info("Anonymous sign-in succeeded - userId: \(self.userId ?? "nil")")
+    }
+
     /// Generic OAuth flow via ASWebAuthenticationSession.
     /// Opens Better Auth's sign-in URL with callbackURL pointed at our mobile bridge.
     @MainActor
     private func signInWithProvider(_ provider: String) async throws {
+        log.info("Starting OAuth flow for provider: \(provider)")
         var components = URLComponents(url: Config.apiBaseURL.appendingPathComponent("api/auth/mobile/start"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "provider", value: provider),
@@ -87,12 +120,16 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Invalid sign-in URL")
         }
 
+        log.debug("OAuth URL: \(signInURL)")
         let callbackURL = try await performWebAuth(url: signInURL)
+        log.debug("OAuth callback received: \(callbackURL)")
         try processAuthCallback(url: callbackURL)
+        log.info("OAuth sign-in succeeded for \(provider)")
     }
 
     /// Sign out - clear all state. Session invalidation happens server-side via expiry.
     func signOut() {
+        log.info("Signing out")
         sessionToken = nil
         sessionExpiry = nil
         isAuthenticated = false
@@ -107,6 +144,7 @@ final class AuthService: @unchecked Sendable {
 
     /// Sign in with a passkey. Presents the system passkey sheet.
     func signInWithPasskey() async throws {
+        log.info("Starting passkey sign-in")
         let service = PasskeyService()
         let result = try await service.authenticate()
 
