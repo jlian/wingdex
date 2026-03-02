@@ -79,9 +79,9 @@ final class AuthService: @unchecked Sendable {
     /// Opens Better Auth's sign-in URL with callbackURL pointed at our mobile bridge.
     @MainActor
     private func signInWithProvider(_ provider: String) async throws {
-        var components = URLComponents(url: Config.apiBaseURL.appendingPathComponent("api/auth/signin/\(provider)"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: Config.apiBaseURL.appendingPathComponent("api/auth/mobile/start"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
-            URLQueryItem(name: "callbackURL", value: "/api/auth/mobile/callback"),
+            URLQueryItem(name: "provider", value: provider),
         ]
         guard let signInURL = components.url else {
             throw AuthError.oauthFailed("Invalid sign-in URL")

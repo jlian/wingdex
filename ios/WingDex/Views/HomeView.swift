@@ -37,7 +37,7 @@ struct HomeView: View {
     private var emptyState: some View {
         ContentUnavailableView {
             Label("Got bird pics?", systemImage: "bird.fill")
-                .font(.title)
+                .font(.system(.title, design: .serif))
         } description: {
             Text("Upload your photos, ID the birds, and build your WingDex.")
         } actions: {
@@ -47,6 +47,7 @@ struct HomeView: View {
                 Label("Upload & Identify", systemImage: "camera.fill")
             }
             .buttonStyle(.borderedProminent)
+            .tint(Color.accentColor)
         }
     }
 
@@ -60,7 +61,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(store.dex.count)")
                             .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.accentColor)
                         Text("species observed")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)

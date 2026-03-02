@@ -54,7 +54,7 @@ struct OutingDetailView: View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
                 Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                    .font(.title2.bold())
+                    .font(.system(.title2, design: .serif, weight: .bold))
 
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
