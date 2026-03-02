@@ -3,8 +3,8 @@ import SwiftUI
 
 /// Full-screen sign-in view matching the web app's auth gate.
 ///
-/// Warm beige background, centered bird icon, cream card with
-/// social providers + passkey button in the web's exact order.
+/// Uses native SwiftUI controls styled to match the web's warm palette:
+/// serif heading, 14px body text, 36pt button height, 12pt corner radius.
 struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @State private var isSigningIn = false
@@ -16,21 +16,19 @@ struct SignInView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
 
-                    // Bird icon in a subtle circle (matching web's hero bird)
+                    // Bird icon - web uses 28px Phosphor bird in primary green
                     Image(systemName: "bird.fill")
-                        .font(.system(size: 40))
+                        .font(.system(size: 28))
                         .foregroundStyle(Color.accentColor)
-                        .frame(width: 80, height: 80)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                        .padding(.bottom, 16)
+                        .padding(.bottom, 24)
 
-                    // Auth card
-                    VStack(spacing: 12) {
-                        // Header
+                    // Auth card - web: 24px padding, 18px radius, border, shadow
+                    VStack(spacing: 16) {
+                        // Header - web: serif 18px semibold + 14px muted terms
                         VStack(spacing: 8) {
                             Text("Sign up")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold, design: .serif))
+                                .foregroundStyle(Color.foregroundText)
 
                             (Text("By continuing you accept our ")
                                 .foregroundStyle(Color.mutedText)
@@ -42,40 +40,43 @@ struct SignInView: View {
                                 .foregroundStyle(Color.accentColor)
                             + Text(".")
                                 .foregroundStyle(Color.mutedText))
-                            .font(.subheadline)
+                            .font(.system(size: 14))
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        // Social buttons
-                        VStack(spacing: 8) {
+                        // Social buttons - web: 36px height, 12px radius, 14px medium
+                        VStack(spacing: 12) {
                             // GitHub - outlined
                             Button {
                                 signIn { try await auth.signInWithGitHub() }
                             } label: {
                                 Label {
                                     Text("Continue with GitHub")
-                                        .font(.subheadline.weight(.medium))
+                                        .font(.system(size: 14, weight: .medium))
                                 } icon: {
                                     Image(systemName: "chevron.left.forwardslash.chevron.right")
-                                        .font(.body)
+                                        .font(.system(size: 14))
                                 }
-                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .frame(maxWidth: .infinity, minHeight: 36)
                             }
                             .buttonStyle(.bordered)
-                            .tint(.primary)
+                            .tint(Color.foregroundText)
 
-                            // Apple - native outlined button
+                            // Apple - native Sign In button, outlined
                             SignInWithAppleButton(.continue) { request in
                                 request.requestedScopes = [.fullName, .email]
                             } onCompletion: { result in
                                 switch result {
                                 case .success(let authorization):
-                                    guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                                    guard let credential = authorization.credential
+                                        as? ASAuthorizationAppleIDCredential else {
                                         errorMessage = "Unexpected credential type"
                                         return
                                     }
-                                    signIn { try await auth.signInWithApple(credential: credential) }
+                                    signIn {
+                                        try await auth.signInWithApple(credential: credential)
+                                    }
                                 case .failure(let error):
                                     if (error as? ASAuthorizationError)?.code != .canceled {
                                         errorMessage = error.localizedDescription
@@ -83,58 +84,73 @@ struct SignInView: View {
                                 }
                             }
                             .signInWithAppleButtonStyle(.whiteOutline)
-                            .frame(height: 40)
+                            .frame(height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                        // OR divider
-                        HStack {
-                            VStack { Divider() }
+                        // OR divider - web: 12px uppercase muted text, 1px border line
+                        HStack(spacing: 8) {
+                            Rectangle()
+                                .fill(Color.warmBorder)
+                                .frame(height: 1)
                             Text("OR")
-                                .font(.caption2.weight(.medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.mutedText)
-                            VStack { Divider() }
+                                .textCase(.uppercase)
+                            Rectangle()
+                                .fill(Color.warmBorder)
+                                .frame(height: 1)
                         }
 
-                        // Passkey - primary filled green
+                        // Passkey - web: primary bg, white text, 14px medium
                         Button {
                             signIn { try await auth.signInWithPasskey() }
                         } label: {
-                            Label("Sign up with a Passkey", systemImage: "person.badge.key.fill")
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity, minHeight: 40)
+                            Label {
+                                Text("Sign up with a Passkey")
+                                    .font(.system(size: 14, weight: .medium))
+                            } icon: {
+                                Image(systemName: "person.badge.key.fill")
+                                    .font(.system(size: 14))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.accentColor)
 
-                        // Error message
+                        // Error
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.caption)
+                                .font(.system(size: 12))
                                 .foregroundStyle(.red)
                                 .multilineTextAlignment(.center)
                         }
 
                         #if DEBUG
-                        // Anonymous sign-in for local dev
                         Button {
                             signIn { try await auth.signInAnonymously() }
                         } label: {
-                            Label("Try Without Account", systemImage: "person.crop.circle.badge.questionmark")
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity, minHeight: 40)
+                            Label {
+                                Text("Try Without Account")
+                                    .font(.system(size: 14, weight: .medium))
+                            } icon: {
+                                Image(systemName: "person.crop.circle.badge.questionmark")
+                                    .font(.system(size: 14))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.bordered)
                         .tint(Color.mutedText)
                         #endif
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 20)
-                    .background(Color.cardBg)
+                    .padding(24)
+                    .background(Color.pageBg)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
                     .overlay(
                         RoundedRectangle(cornerRadius: 18)
                             .stroke(Color.warmBorder, lineWidth: 1)
                     )
+                    .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
                     .padding(.horizontal, 16)
                     .disabled(isSigningIn)
 
