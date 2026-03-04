@@ -41,6 +41,91 @@ final class DataService: Sendable {
         try await patch("api/data/observations", body: data)
     }
 
+    // MARK: - Create Operations
+
+    struct CreateOutingResponse: Codable {
+        let id: String
+        let userId: String
+        let startTime: String
+        let endTime: String
+        let locationName: String
+        let notes: String
+        let createdAt: String
+    }
+
+    func createOuting(_ outing: Outing) async throws -> Outing {
+        let data = try JSONEncoder().encode(outing)
+        let responseData = try await post("api/data/outings", body: data)
+        return try JSONDecoder().decode(Outing.self, from: responseData)
+    }
+
+    struct PhotoPayload: Codable {
+        let id: String
+        let outingId: String
+        let exifTime: String?
+        let gps: PhotoGPS?
+        let fileHash: String
+        let fileName: String
+
+        struct PhotoGPS: Codable {
+            let lat: Double
+            let lon: Double
+        }
+    }
+
+    func createPhotos(_ photos: [PhotoPayload]) async throws {
+        let data = try JSONEncoder().encode(photos)
+        try await post("api/data/photos", body: data)
+    }
+
+    struct ObservationsResponse: Codable {
+        let observations: [BirdObservation]?
+        let dexUpdates: [DexEntry]?
+    }
+
+    func createObservations(_ observations: [BirdObservation]) async throws -> ObservationsResponse {
+        let data = try JSONEncoder().encode(observations)
+        let responseData = try await post("api/data/observations", body: data)
+        return try JSONDecoder().decode(ObservationsResponse.self, from: responseData)
+    }
+
+    // MARK: - AI Identification
+
+    struct IdentifyBirdRequest: Codable {
+        let imageDataUrl: String
+        let imageWidth: Int
+        let imageHeight: Int
+        var lat: Double?
+        var lon: Double?
+        var month: Int?
+        let model: String
+    }
+
+    struct IdentifyBirdResponse: Codable {
+        let candidates: [BirdCandidate]?
+        let cropBox: CropBox?
+        let multipleBirds: Bool?
+
+        struct BirdCandidate: Codable {
+            let species: String
+            let confidence: Double
+            let wikiTitle: String?
+        }
+
+        struct CropBox: Codable {
+            let x: Double
+            let y: Double
+            let width: Double
+            let height: Double
+        }
+    }
+
+    func identifyBird(_ request: IdentifyBirdRequest) async throws -> IdentifyBirdResponse {
+        let data = try JSONEncoder().encode(request)
+        let responseData = try await post("api/identify-bird", body: data)
+        return try JSONDecoder().decode(IdentifyBirdResponse.self, from: responseData)
+    }
+
     // MARK: - Exports
 
     func exportSightingsCSV() async throws -> Data {
@@ -78,6 +163,20 @@ final class DataService: Sendable {
         try validate(response, data: data)
         log.debug("GET \(path) -> \(data.count) bytes")
         return data
+    }
+
+    @discardableResult
+    private func post(_ path: String, body data: Data) async throws -> Data {
+        let url = Config.apiBaseURL.appendingPathComponent(path)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = data
+        try attachAuth(&request)
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        try validate(response, data: responseData)
+        return responseData
     }
 
     @discardableResult

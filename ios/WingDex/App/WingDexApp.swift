@@ -75,8 +75,7 @@ struct MainTabView: View {
             }
         }
         .sheet(isPresented: $showingAddPhotos) {
-            // TODO: AddPhotosFlow
-            Text("Add Photos Flow")
+            AddPhotosFlow()
         }
     }
 }
