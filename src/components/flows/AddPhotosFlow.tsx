@@ -68,6 +68,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [currentOutingId, setCurrentOutingId] = useState('')
   const [showConfetti, setShowConfetti] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounterRef = useRef(0)
 
   const [photoResults, setPhotoResults] = useState<PhotoResult[]>([])
   const [currentCandidates, setCurrentCandidates] = useState<
@@ -477,7 +479,21 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault()
+    dragCounterRef.current = 0
+    setIsDragOver(false)
     await handleSelectedFiles(Array.from(e.dataTransfer.files || []))
+  }
+
+  const handleDragEnter = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    dragCounterRef.current++
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) setIsDragOver(false)
   }
 
   const handleDuplicateChoice = (reimport: boolean) => {
@@ -633,13 +649,22 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={e => e.preventDefault()}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
                 onDrop={handleFileDrop}
-                className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/40 transition-colors py-10 flex flex-col items-center gap-3 cursor-pointer"
+                className={cn(
+                  'w-full rounded-xl border-2 border-dashed py-10 flex flex-col items-center gap-3 cursor-pointer transition-all',
+                  isDragOver
+                    ? 'border-primary bg-primary/10 scale-[1.02]'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/40',
+                )}
               >
-                <CloudArrowUp size={48} className="text-primary" weight="duotone" />
+                <CloudArrowUp size={48} className={cn('text-primary', isDragOver && 'animate-bounce')} weight="duotone" />
                 <div className="space-y-1 text-center">
-                  <p className="text-sm font-medium text-foreground">Select Photos</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {isDragOver ? 'Drop photos here' : 'Select Photos'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Bird photos only. Used for ID and not retained; we store a file hash for duplicate detection.
                   </p>
