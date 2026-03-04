@@ -298,18 +298,18 @@ Polish sign-in flow, fix tab bar rendering, and harden session management.
 
 ---
 
-## Phase 3 - Add Photos Flow
+## Phase 3 - Add Photos Flow ✅
 
 The complex multi-step wizard: select photos, extract EXIF, cluster into outings, AI identify, review, confirm, save.
 
-- [ ] **PhotoSelectionView** - `PhotosPicker` multi-select, load selected images
-- [ ] **PhotoService - EXIF extraction** - `CGImageSource` for date/GPS metadata
-- [ ] **PhotoService - Image compression** - `UIImage` -> JPEG at target quality
-- [ ] **PhotoService - Outing clustering** - Haversine distance + time thresholds (2hr/3km), port of web `clustering.ts`
-- [ ] **ReviewView** - AI identification results per photo, confirm/reject species, edit observations
-- [ ] **CropView** - bird crop interaction with `CropService` math
-- [ ] **ConfirmView** - final review of outings + observations, save to API
-- [ ] **AddPhotosViewModel** - orchestrate the full flow, manage state between steps
+- [x] **PhotoSelectionView** - `PhotosPicker` multi-select, load selected images
+- [x] **PhotoService - EXIF extraction** - `CGImageSource` for date/GPS metadata
+- [x] **PhotoService - Image compression** - `UIImage` -> JPEG at target quality
+- [x] **PhotoService - Outing clustering** - Haversine distance + time thresholds (2hr/3km), port of web `clustering.ts`
+- [x] **ReviewView** - AI identification results per photo, confirm/reject species, edit observations
+- [x] **CropView** - bird crop interaction with `CropService` math
+- [x] **ConfirmView** - final review of outings + observations, save to API
+- [x] **AddPhotosViewModel** - orchestrate the full flow, manage state between steps
 
 **Verification**: Can select photos, see AI identifications, review/edit, confirm and see new outings in the app.
 
