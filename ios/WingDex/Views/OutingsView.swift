@@ -55,11 +55,28 @@ struct OutingsView: View {
         NavigationStack {
             Group {
                 if store.outings.isEmpty {
-                    ContentUnavailableView(
-                        "No Outings Yet",
-                        systemImage: "binoculars.fill",
-                        description: Text("Upload photos to create your first outing.")
-                    )
+                    VStack(spacing: 24) {
+                        Spacer()
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.1))
+                                .frame(width: 80, height: 80)
+                            Image(systemName: "binoculars.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        VStack(spacing: 8) {
+                            Text("No Outings Yet")
+                                .font(.system(size: 22, weight: .semibold, design: .serif))
+                                .foregroundStyle(Color.foregroundText)
+                            Text("Upload photos to create your first outing.")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.mutedText)
+                                .multilineTextAlignment(.center)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24)
                 } else {
                     outingsList
                 }

@@ -53,16 +53,31 @@ struct WingDexView: View {
         NavigationStack {
             Group {
                 if store.dex.isEmpty {
-                    ContentUnavailableView {
-                        Label {
-                            Text("No Species Yet")
-                        } icon: {
+                    VStack(spacing: 24) {
+                        Spacer()
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.1))
+                                .frame(width: 80, height: 80)
                             Image("BirdLogo")
                                 .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 40, height: 40)
+                                .foregroundStyle(Color.accentColor)
                         }
-                    } description: {
-                        Text("Species will appear here as you identify birds.")
+                        VStack(spacing: 8) {
+                            Text("No Species Yet")
+                                .font(.system(size: 22, weight: .semibold, design: .serif))
+                                .foregroundStyle(Color.foregroundText)
+                            Text("Species will appear here as you identify birds.")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.mutedText)
+                                .multilineTextAlignment(.center)
+                        }
+                        Spacer()
                     }
+                    .padding(.horizontal, 24)
                 } else {
                     speciesList
                 }
