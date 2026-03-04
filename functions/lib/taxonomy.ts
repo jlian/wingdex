@@ -131,32 +131,7 @@ export function getEbirdCode(commonName: string): string {
 
   const match = byCommonLower.get(name.toLowerCase())
   if (match?.ebirdCode) return match.ebirdCode
-
-  const words = name.replace(/'/g, '').split(/[\s-]+/).filter(Boolean)
-  const count = words.length
-
-  if (count === 0) return ''
-
-  let code: string
-
-  if (count === 1) {
-    code = words[0].slice(0, 6)
-  } else if (count === 2) {
-    code = words[0].slice(0, 3) + words[1].slice(0, 3)
-  } else if (count === 3) {
-    code = words[0].slice(0, 2) + words[1].slice(0, 1) + words[2].slice(0, 3)
-  } else {
-    const charsFromLast = Math.max(1, 7 - count)
-    const prefixChars = 6 - charsFromLast
-    code =
-      words
-        .slice(0, count - 1)
-        .map(word => word[0])
-        .join('')
-        .slice(0, prefixChars) + words[count - 1].slice(0, charsFromLast)
-  }
-
-  return code.toLowerCase()
+  return ''
 }
 
 export function getSpeciesByCode(code: string): TaxonEntry | undefined {

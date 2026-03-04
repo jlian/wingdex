@@ -29,16 +29,11 @@ describe('server taxonomy', () => {
       expect(getEbirdCode('american robin')).toBe('amerob')
     })
 
-    it('generates a fallback code when the species has no stored code', () => {
-      // Completely fictional species, no stored code, so it generates from name
-      const code = getEbirdCode('Purple Sparkle Dragon')
-      expect(typeof code).toBe('string')
-      expect(code.length).toBeGreaterThan(0)
+    it('returns empty string when the species has no stored code', () => {
+      expect(getEbirdCode('Purple Sparkle Dragon')).toBe('')
     })
 
-    it('generates 4-letter codes from 2-word names', () => {
-      // The algorithm: first 3 chars of word1 + first 3 chars of word2 = 6 chars
-      // For a real species like "Bald Eagle" it should return the stored code
+    it('returns stored code for 2-word names when present', () => {
       expect(getEbirdCode('Bald Eagle')).toBe('baleag')
     })
 

@@ -71,6 +71,18 @@ describe('eBird CSV utilities', () => {
     expect(previews[0].date).toContain('2024-05-01')
   })
 
+  it('parses quoted fields with embedded newlines', () => {
+    const csv = [
+      '"Common Name","Scientific Name","Count","Location","Date"',
+      '"Eurasian Wigeon","Mareca penelope","2","Lake North',
+      'WA","2024-05-01"',
+    ].join('\n')
+
+    const previews = parseEBirdCSV(csv)
+    expect(previews).toHaveLength(1)
+    expect(previews[0].location).toBe('Lake North\nWA')
+  })
+
   it('skips rows with invalid dates instead of coercing to now', () => {
     const csv = [
       '"Common Name","Date","Location"',

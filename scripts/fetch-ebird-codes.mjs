@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import Papa from 'papaparse'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const TAXONOMY_PATH = resolve(__dirname, '../src/lib/taxonomy.json')
@@ -25,45 +26,7 @@ const EBIRD_CSV_URL = 'https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=csv&cat=s
  * Returns array of row arrays.
  */
 function parseCSV(text) {
-  const rows = []
-  const lines = text.split('\n')
-  for (const line of lines) {
-    if (!line.trim()) continue
-    const row = []
-    let i = 0
-    while (i < line.length) {
-      if (line[i] === '"') {
-        // Quoted field
-        let field = ''
-        i++ // skip opening quote
-        while (i < line.length) {
-          if (line[i] === '"' && line[i + 1] === '"') {
-            field += '"'
-            i += 2
-          } else if (line[i] === '"') {
-            i++ // skip closing quote
-            break
-          } else {
-            field += line[i]
-            i++
-          }
-        }
-        row.push(field)
-        if (line[i] === ',') i++ // skip comma
-      } else {
-        const comma = line.indexOf(',', i)
-        if (comma === -1) {
-          row.push(line.substring(i).trim())
-          break
-        } else {
-          row.push(line.substring(i, comma))
-          i = comma + 1
-        }
-      }
-    }
-    rows.push(row)
-  }
-  return rows
+  return Papa.parse(text, { skipEmptyLines: 'greedy' }).data
 }
 
 async function main() {

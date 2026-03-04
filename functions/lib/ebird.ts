@@ -80,6 +80,7 @@ import {
   getOffsetForLocalWallTime,
   getTimezoneFromCoords,
 } from '../../src/lib/timezone'
+import Papa from 'papaparse'
 
 type ObservationForExport = {
   speciesName: string
@@ -159,34 +160,6 @@ function formatISODate(isoString: string): string {
   } catch {
     return isoString
   }
-}
-
-function parseCSVLine(line: string): string[] {
-  const values: string[] = []
-  let current = ''
-  let inQuotes = false
-
-  for (let index = 0; index < line.length; index++) {
-    const char = line[index]
-
-    if (char === '"') {
-      const nextChar = line[index + 1]
-      if (inQuotes && nextChar === '"') {
-        current += '"'
-        index++
-      } else {
-        inQuotes = !inQuotes
-      }
-    } else if (char === ',' && !inQuotes) {
-      values.push(current.trim().replace(/^"|"$/g, ''))
-      current = ''
-    } else {
-      current += char
-    }
-  }
-
-  values.push(current.trim().replace(/^"|"$/g, ''))
-  return values
 }
 
 function parseTimeString(timeStr: string): { hours: number; minutes: number } | null {
@@ -290,14 +263,15 @@ function normalizeDate(
 }
 
 export function parseEBirdCSV(csvContent: string, profileTimezone?: string): ImportPreview[] {
-  const lines = csvContent.split('\n').filter(line => line.trim())
-  if (lines.length === 0) return []
+  const parsed = Papa.parse<string[]>(csvContent, { skipEmptyLines: 'greedy' })
+  const rows = parsed.data
+  if (rows.length === 0) return []
 
-  const headers = parseCSVLine(lines[0]).map(header => header.trim().toLowerCase())
+  const headers = rows[0].map(header => header.trim().toLowerCase())
   const previews: ImportPreview[] = []
 
-  for (let index = 1; index < lines.length; index++) {
-    const values = parseCSVLine(lines[index])
+  for (let index = 1; index < rows.length; index++) {
+    const values = rows[index]
     const row: Record<string, string> = {}
 
     headers.forEach((header, headerIndex) => {
