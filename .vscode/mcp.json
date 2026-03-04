@@ -1,5 +1,10 @@
 {
   "servers": {
+    "image-reader": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-image-reader"]
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -10,15 +15,12 @@
         "chromium"
       ]
     },
-    "playwrightHeadless": {
+    "xcode": {
       "type": "stdio",
-      "command": "npx",
+      "command": "/bin/sh",
       "args": [
-        "-y",
-        "@playwright/mcp@0.0.68",
-        "--headless",
-        "--browser",
-        "chromium"
+        "-c",
+        "open -a Xcode && xcrun mcpbridge"
       ]
     }
   }
