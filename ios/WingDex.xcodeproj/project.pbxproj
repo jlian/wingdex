@@ -32,6 +32,7 @@
 		A7FD52F0548A2FA50CB2C848 /* PasskeyManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */; };
 		A9EDE9CF0DC34857E14122C7 /* WingDexViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51B5CFEA7865E6E1A1F1287 /* WingDexViewModel.swift */; };
 		A9F53E5EAD8952F1C8720B77 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = ADE7F85F2A587DBB70E7CF19 /* KeychainAccess */; };
+		ABA7A9183EF63B93C1241B34 /* AddPhotosFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */; };
 		BE1BC5ECDCCA3BB2EAA10E79 /* SpeciesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */; };
 		BFEEDFE99B8E9AE03FC3304F /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4472F76A8259376EBEA738 /* Theme.swift */; };
 		C4F77EC5DA4A743530651286 /* OutingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB01BEA15BC45041F637C903 /* OutingsView.swift */; };
@@ -47,6 +48,7 @@
 /* Begin PBXFileReference section */
 		01F34071627BDA774005F033 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		01FABF05EDCB9B13D4839648 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosFlow.swift; sourceTree = "<group>"; };
 		1A4472F76A8259376EBEA738 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyManagementView.swift; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 		5353261569A9D1CF874CAF69 /* AddPhotosFlow */ = {
 			isa = PBXGroup;
 			children = (
+				190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */,
 				8C018AA33198FA823AABA8B0 /* ConfirmView.swift */,
 				9E26C4686392C96AAB515199 /* CropView.swift */,
 				C3E027D5423D69EFC1429801 /* PhotoSelectionView.swift */,
@@ -299,6 +302,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABA7A9183EF63B93C1241B34 /* AddPhotosFlow.swift in Sources */,
 				3765CB91633BD6B909098629 /* AddPhotosViewModel.swift in Sources */,
 				0C26BD71C3D1128D41123339 /* AppModels.swift in Sources */,
 				4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */,

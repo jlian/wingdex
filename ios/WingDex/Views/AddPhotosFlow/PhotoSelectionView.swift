@@ -1,46 +1,79 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 struct PhotoSelectionView: View {
-    @State private var selectedItems: [PhotosPickerItem] = []
+    @Bindable var viewModel: AddPhotosViewModel
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Select Photos")
-                .font(.title2.bold())
+        VStack(spacing: 24) {
+            Spacer()
 
-            Text("Choose bird photos to identify")
-                .foregroundStyle(.secondary)
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            VStack(spacing: 8) {
+                Text("Select Photos")
+                    .font(.system(size: 22, weight: .semibold, design: .serif))
+                    .foregroundStyle(Color.foregroundText)
+                Text("Choose bird photos to identify and add to your WingDex.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
+            }
 
             PhotosPicker(
-                selection: $selectedItems,
+                selection: $viewModel.selectedItems,
                 maxSelectionCount: 50,
                 matching: .images
             ) {
-                Label("Select Photos", systemImage: "photo.on.rectangle.angled")
-                    .frame(maxWidth: .infinity)
+                Label {
+                    Text("Choose Photos")
+                        .font(.system(size: 16, weight: .medium))
+                } icon: {
+                    Image(systemName: "photo.on.rectangle.angled")
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .tint(Color.foregroundText)
+            .padding(.horizontal, 32)
 
-            if !selectedItems.isEmpty {
-                Text("\(selectedItems.count) photo(s) selected")
-                    .foregroundStyle(.secondary)
+            if !viewModel.selectedItems.isEmpty {
+                Text("\(viewModel.selectedItems.count) photo\(viewModel.selectedItems.count == 1 ? "" : "s") selected")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.mutedText)
 
-                Button("Continue") {
-                    // TODO: Extract EXIF, cluster, navigate to ReviewView
+                Button {
+                    Task { await viewModel.processSelectedPhotos() }
+                } label: {
+                    Label {
+                        Text("Continue")
+                            .font(.system(size: 16, weight: .medium))
+                    } icon: {
+                        Image(systemName: "arrow.right")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+                .padding(.horizontal, 32)
             }
 
             Spacer()
         }
-        .padding()
-        .navigationTitle("Add Photos")
+        .padding(.horizontal, 24)
+        .background(Color.pageBg.ignoresSafeArea())
     }
 }
 
 #Preview {
     NavigationStack {
-        PhotoSelectionView()
+        PhotoSelectionView(viewModel: AddPhotosViewModel())
     }
 }
