@@ -16,6 +16,11 @@ struct SettingsView: View {
                     if let email = auth.userEmail, !email.isEmpty {
                         LabeledContent("Email", value: email)
                     }
+                    if (auth.userName == nil || auth.userName?.isEmpty == true)
+                        && (auth.userEmail == nil || auth.userEmail?.isEmpty == true) {
+                        Label("Guest Account", systemImage: "person.crop.circle.badge.questionmark")
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 // TODO: Saved locations
@@ -26,14 +31,20 @@ struct SettingsView: View {
 
                 // TODO: Import/Export
                 Section("Data") {
-                    Button("Import eBird CSV") {
+                    Button {
                         // TODO: File picker + import flow
+                    } label: {
+                        Label("Import eBird CSV", systemImage: "square.and.arrow.down")
                     }
-                    Button("Export Sightings") {
+                    Button {
                         // TODO: Export sightings CSV
+                    } label: {
+                        Label("Export Sightings", systemImage: "square.and.arrow.up")
                     }
-                    Button("Export WingDex") {
+                    Button {
                         // TODO: Export dex CSV
+                    } label: {
+                        Label("Export WingDex", systemImage: "square.and.arrow.up")
                     }
                 }
 
