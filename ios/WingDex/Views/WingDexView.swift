@@ -162,7 +162,7 @@ private struct DexRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(getDisplayName(entry.speciesName))
-                    .font(.system(.body, design: .serif, weight: .medium))
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
 
                 if let sci = getScientificName(entry.speciesName) {
@@ -173,13 +173,10 @@ private struct DexRow: View {
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 6) {
-                    Label("\(entry.totalOutings)", systemImage: "binoculars")
-                    Label("\(entry.totalCount)", systemImage: "number")
-                    Text(DateFormatting.relativeDate(entry.firstSeenDate))
-                }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
         }
         .padding(.vertical, 2)

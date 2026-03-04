@@ -198,36 +198,42 @@ private struct SpeciesCard: View {
 }
 
 /// Reusable outing row - used in HomeView and OutingsView.
+/// Styled like iOS Messages/Mail: icon, bold title, secondary metadata, tertiary preview.
 struct OutingRow: View {
     let outing: Outing
     let store: DataStore
 
     var body: some View {
         let confirmed = store.confirmedObservations(outing.id)
-        let speciesNames = Array(Set(confirmed.map(\.speciesName)))
+        let speciesNames = Array(Set(confirmed.map(\.speciesName))).sorted()
 
-        VStack(alignment: .leading, spacing: 4) {
-            Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                .font(.headline)
+        HStack(spacing: 12) {
+            Image(systemName: "mappin.circle.fill")
+                .font(.title2)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 36)
 
-            HStack(spacing: 4) {
-                Text(DateFormatting.relativeDate(outing.startTime))
-                Text("·")
-                Text("\(speciesNames.count) species")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
 
-            if !speciesNames.isEmpty {
-                Text(
-                    speciesNames.prefix(3).map { getDisplayName($0) }.joined(separator: ", ")
-                    + (speciesNames.count > 3 ? " +\(speciesNames.count - 3)" : "")
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !speciesNames.isEmpty {
+                    Text(
+                        speciesNames.prefix(4).map { getDisplayName($0) }.joined(separator: ", ")
+                        + (speciesNames.count > 4 ? " +\(speciesNames.count - 4) more" : "")
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                }
             }
         }
+        .padding(.vertical, 2)
     }
 }
 
