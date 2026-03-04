@@ -187,4 +187,25 @@ final class DataStore {
         observations = []
         dex = []
     }
+
+    /// Load demo data by importing the bundled eBird CSV.
+    func loadDemoData() async throws {
+        guard let csvURL = Bundle.main.url(forResource: "demo-ebird-import", withExtension: "csv"),
+              let csvData = try? Data(contentsOf: csvURL)
+        else {
+            throw DataServiceError.networkError("Demo CSV not found in bundle")
+        }
+
+        // Clear existing data first
+        try await clearAll()
+
+        // Upload CSV for preview
+        let previewIds = try await service.importEBirdCSV(csvData)
+
+        // Confirm all previews
+        try await service.confirmImport(previewIds: previewIds)
+
+        // Reload all data
+        await loadAll()
+    }
 }

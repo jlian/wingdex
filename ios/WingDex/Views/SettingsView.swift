@@ -5,6 +5,8 @@ struct SettingsView: View {
     @Environment(DataStore.self) private var store
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
+    @State private var isLoadingDemo = false
+    @State private var demoError: String?
 
     var body: some View {
         NavigationStack {
@@ -54,6 +56,36 @@ struct SettingsView: View {
                         PasskeyManagementView()
                     }
                 }
+
+                #if DEBUG
+                Section("Development") {
+                    Button {
+                        isLoadingDemo = true
+                        demoError = nil
+                        Task {
+                            do {
+                                try await store.loadDemoData()
+                            } catch {
+                                demoError = error.localizedDescription
+                            }
+                            isLoadingDemo = false
+                        }
+                    } label: {
+                        if isLoadingDemo {
+                            ProgressView()
+                        } else {
+                            Label("Load Demo Data", systemImage: "sparkles")
+                        }
+                    }
+                    .disabled(isLoadingDemo)
+
+                    if let demoError {
+                        Text(demoError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+                #endif
 
                 Section {
                     Button("Delete All Data", role: .destructive) {
