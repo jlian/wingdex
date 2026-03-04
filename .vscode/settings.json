@@ -1,5 +1,5 @@
 {
-  "terminal.integrated.defaultProfile.osx": "bash",
+  // "terminal.integrated.defaultProfile.osx": "bash",
   "terminal.integrated.automationProfile.osx": {
     "path": "/bin/bash"
   },
@@ -13,6 +13,15 @@
     "8788": {
       "label": "WingDex API",
       "onAutoForward": "silent"
+    }
+  },
+  "chat.mcp.serverSampling": {
+    "wingdex/.vscode/mcp.json: xcode": {
+      "allowedModels": [
+        "copilot/gpt-5.3-codex",
+        "copilot/claude-opus-4.6",
+        "copilot/claude-opus-4.6-1m"
+      ]
     }
   }
 }
