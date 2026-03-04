@@ -14,14 +14,5 @@
       "label": "WingDex API",
       "onAutoForward": "silent"
     }
-  },
-  "chat.mcp.serverSampling": {
-    "wingdex/.vscode/mcp.json: xcode": {
-      "allowedModels": [
-        "copilot/gpt-5.3-codex",
-        "copilot/claude-opus-4.6",
-        "copilot/claude-opus-4.6-1m"
-      ]
-    }
   }
 }
