@@ -1,3 +1,10 @@
+## [1.11.6](https://github.com/jlian/wingdex/compare/v1.11.5...v1.11.6) (2026-03-04)
+
+
+### Bug Fixes
+
+* **UploadWizard:** support drag-and-drop file upload with visual feedback ([#210](https://github.com/jlian/wingdex/issues/210)) ([6c41b09](https://github.com/jlian/wingdex/commit/6c41b09c29122fa7389dc486be4553f3765d3a54)), closes [#209](https://github.com/jlian/wingdex/issues/209)
+
 ## [1.11.5](https://github.com/jlian/wingdex/compare/v1.11.4...v1.11.5) (2026-02-27)
 
 
