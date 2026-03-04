@@ -98,7 +98,7 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Apple sign-in failed (\(statusCode)): \(body)")
         }
 
-        try processTokenResponse(data: data)
+        try processTokenResponse(data: data, response: response)
     }
 
     /// Sign in anonymously via Better Auth's anonymous plugin.
@@ -129,7 +129,7 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Anonymous sign-in failed (\(httpResponse.statusCode))")
         }
 
-        try processTokenResponse(data: data)
+        try processTokenResponse(data: data, response: response)
         log.info("Anonymous sign-in succeeded - userId: \(self.userId ?? "nil")")
     }
 
@@ -305,16 +305,42 @@ final class AuthService: @unchecked Sendable {
 
     /// Parse Better Auth's JSON response from sign-in/social with idToken.
     /// Response shape: { token: string, user: { id, name, email, image, ... } }
-    private func processTokenResponse(data: Data) throws {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let token = json["token"] as? String
-        else {
+    private func processTokenResponse(data: Data, response: URLResponse? = nil) throws {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw AuthError.oauthFailed("Invalid token response")
+        }
+
+        // Prefer the full signed session token from Set-Cookie header,
+        // which includes the HMAC signature Better Auth needs for validation.
+        // Fallback to the raw "token" field from the JSON body.
+        var token: String?
+        if let httpResponse = response as? HTTPURLResponse,
+           let cookies = httpResponse.value(forHTTPHeaderField: "Set-Cookie")
+        {
+            // Parse "better-auth.session_token=VALUE; ..." from Set-Cookie
+            for part in cookies.components(separatedBy: ",") {
+                let trimmed = part.trimmingCharacters(in: .whitespaces)
+                if trimmed.contains("session_token=") {
+                    if let range = trimmed.range(of: "session_token=") {
+                        let afterEquals = trimmed[range.upperBound...]
+                        let tokenValue = String(afterEquals.prefix(while: { $0 != ";" }))
+                        if !tokenValue.isEmpty {
+                            token = tokenValue.removingPercentEncoding ?? tokenValue
+                        }
+                    }
+                }
+            }
+        }
+        if token == nil {
+            token = json["token"] as? String
+        }
+        guard let resolvedToken = token else {
+            throw AuthError.oauthFailed("No session token in response")
         }
 
         let user = json["user"] as? [String: Any]
 
-        sessionToken = token
+        self.sessionToken = resolvedToken
         // Better Auth sessions default to 7 days; use that as expiry
         sessionExpiry = Date.now.addingTimeInterval(7 * 24 * 60 * 60)
         userId = user?["id"] as? String

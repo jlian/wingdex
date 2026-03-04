@@ -23,6 +23,7 @@
 		4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F34071627BDA774005F033 /* SettingsView.swift */; };
 		62CEC4EA93999F921A2BE78B /* TaxonomyEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A2738DD58675E9C8F49121 /* TaxonomyEntry.swift */; };
 		6541BF20FA6B0465C6AA8204 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584DE950D0BBC4D9543B7EB4 /* HomeView.swift */; };
+		71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */ = {isa = PBXBuildFile; fileRef = 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */; };
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
 		8789AC9CBFD81D2B38495B2A /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = B8A97988C95C91C186AFD127 /* OpenAPIURLSession */; };
 		94FF36C55254CADF7AE8552A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD5E236329A5C8ED0AEC280 /* SettingsViewModel.swift */; };
@@ -48,6 +49,7 @@
 /* Begin PBXFileReference section */
 		01F34071627BDA774005F033 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		01FABF05EDCB9B13D4839648 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */ = {isa = PBXFileReference; path = "demo-ebird-import.csv"; sourceTree = "<group>"; };
 		190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosFlow.swift; sourceTree = "<group>"; };
 		1A4472F76A8259376EBEA738 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -197,6 +199,7 @@
 		DBBBCF6459FAFC8C168D249D /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */,
 				F930B7A16F2B5C40B971D674 /* taxonomy.json */,
 			);
 			path = Resources;
@@ -291,6 +294,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
+				71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */,
 				223DAEB5BCD5CAC52065CF13 /* taxonomy.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

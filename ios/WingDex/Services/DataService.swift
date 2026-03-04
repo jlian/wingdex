@@ -140,6 +140,45 @@ final class DataService: Sendable {
         try await getRaw("api/export/outing/\(outingId)")
     }
 
+    // MARK: - Import
+
+    struct ImportPreview: Codable {
+        let previewId: String
+    }
+
+    struct ImportPreviewResponse: Codable {
+        let previews: [ImportPreview]
+    }
+
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] {
+        let boundary = UUID().uuidString
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"import.csv\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: text/csv\r\n\r\n".data(using: .utf8)!)
+        body.append(csvData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        let url = Config.apiBaseURL.appendingPathComponent("api/import/ebird-csv")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        try attachAuth(&request)
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        try validate(response, data: responseData)
+
+        let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
+        return preview.previews.map(\.previewId)
+    }
+
+    func confirmImport(previewIds: [String]) async throws {
+        struct ConfirmBody: Codable { let previewIds: [String] }
+        let data = try JSONEncoder().encode(ConfirmBody(previewIds: previewIds))
+        try await post("api/import/ebird-csv/confirm", body: data)
+    }
+
     // MARK: - Data Management
 
     func clearAllData() async throws {
