@@ -162,7 +162,7 @@ private struct DexRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(getDisplayName(entry.speciesName))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 14, weight: .semibold, design: .serif))
                     .lineLimit(1)
 
                 if let sci = getScientificName(entry.speciesName) {

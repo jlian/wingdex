@@ -95,11 +95,12 @@ struct HomeView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(store.dex.count)")
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.accentColor)
+                            .font(.system(size: 48, weight: .semibold, design: .serif))
+                            .foregroundStyle(Color.foregroundText)
                         Text("species observed")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 18, design: .serif))
+                            .italic()
+                            .foregroundStyle(Color.mutedText)
                     }
                     Spacer()
                 }
@@ -156,35 +157,45 @@ private struct SpeciesCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Group {
-                if let url = entry.thumbnailUrl, let imageURL = URL(string: url) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        case .failure:
-                            thumbnailPlaceholder
-                        default:
-                            thumbnailPlaceholder
+            GeometryReader { geo in
+                Group {
+                    if let url = entry.thumbnailUrl, let imageURL = URL(string: url) {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable()
+                                    .scaledToFill()
+                                    .frame(width: geo.size.width, height: geo.size.width)
+                                    .clipped()
+                            case .failure:
+                                thumbnailPlaceholder
+                            default:
+                                thumbnailPlaceholder
+                            }
                         }
+                    } else {
+                        thumbnailPlaceholder
                     }
-                } else {
-                    thumbnailPlaceholder
                 }
+                .frame(width: geo.size.width, height: geo.size.width)
             }
-            .frame(height: 80)
-            .clipped()
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(getDisplayName(entry.speciesName))
-                .font(.caption2.weight(.semibold))
+                .font(.system(size: 11, weight: .semibold, design: .serif))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.horizontal, 6)
-                .padding(.vertical, 4)
+                .padding(.vertical, 5)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(Color.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.warmBorder, lineWidth: 0.5)
+        )
     }
 
     private var thumbnailPlaceholder: some View {
@@ -215,7 +226,7 @@ struct OutingRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 14, weight: .semibold, design: .serif))
                     .lineLimit(1)
 
                 Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
