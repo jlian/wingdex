@@ -63,22 +63,6 @@ extension UICollectionViewListCell {
     }
 }
 
-// MARK: - ScrollView Row Button Style
-
-/// Button style for NavigationLink rows in ScrollView contexts (detail pages).
-/// Matches the List cell highlight from UICollectionViewListCell above.
-struct ScrollRowButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Color.foregroundText.opacity(0.08) : Color.clear)
-            .animation(.easeInOut(duration: 0.08), value: configuration.isPressed)
-    }
-}
-
-extension ButtonStyle where Self == ScrollRowButtonStyle {
-    static var scrollRow: ScrollRowButtonStyle { ScrollRowButtonStyle() }
-}
-
 // MARK: - View Modifiers
 
 extension View {
