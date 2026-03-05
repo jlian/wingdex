@@ -89,9 +89,9 @@ struct HomeView: View {
     // MARK: - Data View
 
     private var dataView: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                // Hero stats
+        List {
+            // Hero stats
+            Section {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(store.dex.count)")
                         .font(.system(size: 48, weight: .semibold, design: .serif))
@@ -101,54 +101,51 @@ struct HomeView: View {
                         .italic()
                         .foregroundStyle(Color.mutedText)
                 }
-                .padding(.horizontal)
+            }
+            .listRowSeparator(.hidden)
 
-                // Recent species - horizontal scroll with gradient cards
-                let recentSpecies = store.recentSpecies()
-                if !recentSpecies.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Recent Species")
-                            .font(.system(size: 18, weight: .semibold, design: .serif))
-                            .padding(.horizontal)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(recentSpecies) { entry in
-                                    NavigationLink(value: entry) {
-                                        SpeciesCard(entry: entry)
-                                    }
-                                    .buttonStyle(.plain)
+            // Recent species - horizontal scroll with gradient cards
+            let recentSpecies = store.recentSpecies()
+            if !recentSpecies.isEmpty {
+                Section {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(recentSpecies) { entry in
+                                NavigationLink(value: entry) {
+                                    SpeciesCard(entry: entry)
                                 }
+                                .buttonStyle(.plain)
                             }
-                            .padding(.horizontal)
+                        }
+                        .padding(.horizontal)
+                    }
+                    .listRowInsets(EdgeInsets())
+                } header: {
+                    Text("Recent Species")
+                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            // Recent outings
+            let recentOutings = store.recentOutings()
+            if !recentOutings.isEmpty {
+                Section {
+                    ForEach(recentOutings) { outing in
+                        NavigationLink(value: outing) {
+                            OutingRow(outing: outing, store: store)
                         }
                     }
-                }
-
-                // Recent outings
-                let recentOutings = store.recentOutings()
-                if !recentOutings.isEmpty {
+                } header: {
                     Text("Recent Outings")
                         .font(.system(size: 18, weight: .semibold, design: .serif))
-                        .padding(.horizontal)
-
-                    VStack(spacing: 0) {
-                        ForEach(Array(recentOutings.enumerated()), id: \.element.id) { index, outing in
-                            NavigationLink(value: outing) {
-                                OutingRow(outing: outing, store: store)
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 10)
-                            }
-                            .buttonStyle(.scrollRow)
-                            if index < recentOutings.count - 1 {
-                                Divider().padding(.leading, 72)
-                            }
-                        }
-                    }
+                        .foregroundStyle(Color.foregroundText)
                 }
             }
-            .padding(.vertical)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }
