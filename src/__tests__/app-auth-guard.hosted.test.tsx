@@ -59,6 +59,7 @@ vi.mock('@phosphor-icons/react', () => ({
   MapPin: () => <span>MapPin</span>,
   GithubLogo: () => <span>GithubLogo</span>,
   AppleLogo: () => <span>AppleLogo</span>,
+  UserCircle: () => <span>UserCircle</span>,
   Key: () => <span>Key</span>,
   PlusCircle: () => <span>PlusCircle</span>,
   UserPlus: () => <span>UserPlus</span>,
@@ -161,7 +162,7 @@ describe('App auth guard (hosted runtime)', () => {
 
     // Anonymous users see the app (demo-first UX)
     expect(await screen.findByText('HomePage')).toBeInTheDocument()
-    // Log-in link should be visible in the header
-    expect(screen.getByText('Log in')).toBeInTheDocument()
+    // Log-in entry point should be visible in the header
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument()
   })
 })

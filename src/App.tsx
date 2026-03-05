@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
-import { MapPin, Bird, GithubLogo } from '@phosphor-icons/react'
+import { MapPin, Bird, GithubLogo, UserCircle } from '@phosphor-icons/react'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 import { authClient } from '@/lib/auth-client'
@@ -252,17 +252,31 @@ function App() {
     const params = new URLSearchParams(window.location.search)
     const provider = params.get('auth_provider')
     const source = params.get('auth_source')
-    if (source !== 'social' || (provider !== 'github' && provider !== 'apple')) return
+    if (source !== 'social' || !['github', 'apple', 'google'].includes(provider ?? '')) return
 
     const finalizeSocialToast = async () => {
       const linkedProviders = await fetchLinkedProviders()
-      const otherProvider = provider === 'github' ? 'apple' : 'github'
-      const hasMerge = linkedProviders.includes(provider) && linkedProviders.includes(otherProvider)
+      const providerLabels: Record<string, string> = {
+        github: 'GitHub',
+        apple: 'Apple',
+        google: 'Google',
+      }
+      const providerKey = provider as 'github' | 'apple' | 'google'
+      const providerLabel = providerLabels[providerKey]
+      const otherProviders = linkedProviders
+        .filter((linkedProvider): linkedProvider is 'github' | 'apple' | 'google' => linkedProvider in providerLabels)
+        .filter(linkedProvider => linkedProvider !== providerKey)
+      const mergedIntoExistingAccount = linkedProviders.includes(providerKey) && otherProviders.length > 0
 
-      const providerLabel = provider === 'github' ? 'GitHub' : 'Apple'
-      const otherLabel = otherProvider === 'github' ? 'GitHub' : 'Apple'
-      if (hasMerge) {
-        toast.success(`Signed in with ${providerLabel}. ${otherLabel} account found and merged.`)
+      if (mergedIntoExistingAccount) {
+        const otherLabels = otherProviders.map(linkedProvider => providerLabels[linkedProvider])
+        const mergedLabel = otherLabels.length === 1
+          ? otherLabels[0]
+          : 'existing'
+        const accountLabel = mergedLabel === 'existing'
+          ? 'Existing account'
+          : `${mergedLabel} account`
+        toast.success(`Signed in with ${providerLabel}. ${accountLabel} found and linked.`)
       } else {
         toast.success(`Signed in with ${providerLabel}.`)
       }
@@ -270,7 +284,7 @@ function App() {
       params.delete('auth_provider')
       params.delete('auth_source')
       const clean = params.toString()
-      const nextUrl = window.location.pathname + (clean ? `?${clean}` : '')
+      const nextUrl = window.location.pathname + (clean ? `?${clean}` : '') + window.location.hash
       window.history.replaceState(null, '', nextUrl)
     }
 
@@ -463,9 +477,11 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 {user.isAnonymous ? (
                   <button
                     onClick={openSignIn}
-                    className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-semibold text-primary cursor-pointer press-feel"
+                    className="inline-flex items-center justify-center rounded-md text-primary cursor-pointer press-feel-light h-8 w-8"
+                    aria-label="Log in"
+                    title="Log in"
                   >
-                    Log in
+                    <UserCircle size={26} weight="duotone" />
                   </button>
                 ) : (
                   <button

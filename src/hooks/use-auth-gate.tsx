@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Key, GithubLogo, AppleLogo } from '@phosphor-icons/react'
+import { Key, GithubLogo, AppleLogo, GoogleChromeLogo } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 import { authClient } from '@/lib/auth-client'
@@ -96,11 +96,11 @@ function AuthGateModal({
   // Keep both social buttons visible in local/dev so modal polish can be done
   // without depending on provider secrets.
   const visibleProviders = Array.from(new Set([
-    ...(providers ?? ['github', 'apple']),
-    ...(isLocalVisualAuth ? ['github', 'apple'] : []),
+    ...(providers ?? ['github', 'apple', 'google']),
+    ...(isLocalVisualAuth ? ['github', 'apple', 'google'] : []),
   ]))
 
-  const buildSocialCallbackURL = (provider: 'github' | 'apple'): string => {
+  const buildSocialCallbackURL = (provider: 'github' | 'apple' | 'google'): string => {
     if (typeof window === 'undefined') return '/'
     const params = new URLSearchParams()
     params.set('auth_provider', provider)
@@ -202,7 +202,7 @@ function AuthGateModal({
     onUpgraded()
   }
 
-  const handleSocialSignIn = (provider: 'github' | 'apple') => {
+  const handleSocialSignIn = (provider: 'github' | 'apple' | 'google') => {
     setErrorMessage(null)
     void authClient.signIn.social({
       provider,
@@ -275,6 +275,17 @@ function AuthGateModal({
                 >
                   <AppleLogo size={18} className="mr-2" />
                   Continue with Apple
+                </Button>
+              )}
+              {visibleProviders.includes('google') && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleSocialSignIn('google')}
+                  disabled={isLoading}
+                >
+                  <GoogleChromeLogo size={18} className="mr-2" />
+                  Continue with Google
                 </Button>
               )}
             </div>
