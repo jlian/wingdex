@@ -236,28 +236,20 @@ The iOS flow is ~60% feature-complete vs the web app. The web wizard is a 9-step
 
 **Target iOS flow**: selectPhotos -> processing -> outingReview -> photoProcessing -> perPhotoConfirm (with crop-retry loop) -> confirm -> done
 
-- [ ] 3-R.1: Outing review step (Nominatim geocoding, place search, existing outing matching)
-- [ ] 3-R.2: Two-tier AI identification (fast -> strong escalation)
-- [ ] 3-R.3: Per-photo confirmation UI (Wikipedia reference, confidence bar, Confirm/Possible/Skip)
-- [ ] 3-R.4: Crop & retry integration (auto-prompt on multi-bird/no-detection, manual crop retry)
-- [ ] 3-R.5: Certainty level support (confirmed/possible/skip instead of all-confirmed)
-- [ ] 3-R.6: GPS context toggle ("Use GPS & date for better ID")
-- [ ] 3-R.7: Duplicate photo detection UI (hash comparison, reimport/skip dialog)
-
 ### 3-R.1: Outing Review Step
 
 Does not exist on iOS. This is a NEW step inserted after photo extraction/clustering and BEFORE AI identification.
 
 After photos are extracted and clustered, the user reviews each cluster as a potential outing:
 
-- **Reverse geocoding**: Call Nominatim API with cluster center coordinates to detect location name (priority: parks/reserves -> natural features -> neighborhoods -> cities)
-- **Location display**: Show detected location name with GPS coordinates, or "Unknown Location" if no GPS
-- **Date/time display**: Show cluster start time extracted from EXIF, formatted with timezone
-- **Manual date/time override**: User can tap date/time to edit via native `DatePicker`
-- **Place search**: Nominatim autocomplete - user can search for any location name, select from suggestions to override coordinates and location name
-- **State/country extraction**: Automatically extract ISO 3166-2 state/province code and country code from geocoding result (stored on the outing for eBird compatibility)
-- **Existing outing matching**: Check if cluster overlaps an existing outing (time +/-2 hours, distance <=3 km; relaxed to 50 km if times nearly match <=30 min). If match found, show "Add to existing outing?" toggle. If adding to existing, expand outing's time range and fill missing fields
-- **Per-cluster navigation**: If multiple clusters, navigate between them (e.g., "Outing 1 of 3" with next/prev)
+- [ ] **Reverse geocoding**: Call Nominatim API with cluster center coordinates to detect location name (priority: parks/reserves -> natural features -> neighborhoods -> cities)
+- [ ] **Location display**: Show detected location name with GPS coordinates, or "Unknown Location" if no GPS
+- [ ] **Date/time display**: Show cluster start time extracted from EXIF, formatted with timezone
+- [ ] **Manual date/time override**: User can tap date/time to edit via native `DatePicker`
+- [ ] **Place search**: Nominatim autocomplete - user can search for any location name, select from suggestions to override coordinates and location name
+- [ ] **State/country extraction**: Automatically extract ISO 3166-2 state/province code and country code from geocoding result (stored on the outing for eBird compatibility)
+- [ ] **Existing outing matching**: Check if cluster overlaps an existing outing (time +/-2 hours, distance <=3 km; relaxed to 50 km if times nearly match <=30 min). If match found, show "Add to existing outing?" toggle. If adding to existing, expand outing's time range and fill missing fields
+- [ ] **Per-cluster navigation**: If multiple clusters, navigate between them (e.g., "Outing 1 of 3" with next/prev)
 
 **New file**: `OutingReviewView.swift` in `AddPhotosFlow/`
 **Updates**: `AddPhotosViewModel.swift` - new step in flow state machine, Nominatim API calls, `findMatchingOuting` logic
@@ -267,10 +259,10 @@ After photos are extracted and clustered, the user reviews each cluster as a pot
 
 iOS currently sends one `model: "fast"` request per photo. The web uses a fast-then-strong escalation strategy.
 
-- **Fast model first**: Send each photo to `POST /api/identify-bird` with `model: "fast"` (~1.2s timeout)
-- **Escalation logic**: If confidence of top candidate < 0.75, OR gap between top-2 candidates < 0.15, re-send the same photo with `model: "strong"` (~4.4s timeout)
-- **User feedback**: Show status messages during processing - "Identifying species..." for fast model, "Re-analyzing with enhanced model..." when escalating to strong
-- **Progress**: Show "Photo X of N" counter with progress bar (exponential animation to ~90% before completion)
+- [ ] **Fast model first**: Send each photo to `POST /api/identify-bird` with `model: "fast"` (~1.2s timeout)
+- [ ] **Escalation logic**: If confidence of top candidate < 0.75, OR gap between top-2 candidates < 0.15, re-send the same photo with `model: "strong"` (~4.4s timeout)
+- [ ] **User feedback**: Show status messages during processing - "Identifying species..." for fast model, "Re-analyzing with enhanced model..." when escalating to strong
+- [ ] **Progress**: Show "Photo X of N" counter with progress bar (exponential animation to ~90% before completion)
 
 **Updates**: `AddPhotosViewModel.swift` - `identifySpecies` method needs escalation logic
 **Reference**: `src/lib/ai-inference.ts` (`identifyBirdInPhoto` function with fast/strong model switching)
@@ -281,15 +273,15 @@ iOS currently batch-confirms all photos. The web does per-photo confirmation wit
 
 Replace the current batch `ReviewView` with a sequential per-photo confirmation flow:
 
-- **Side-by-side comparison**: Display the user's photo next to a Wikipedia reference image of the identified species (fetched via Wikimedia Summary API). This lets users visually verify the AI's suggestion
-- **Color-coded confidence bar**: Horizontal progress bar showing AI confidence percentage. Green (>=80%), yellow (50-79%), red (<50%)
-- **High confidence (>=80%)**: Auto-select the top candidate. Show "Confirm" (primary) and "Possible" (secondary) buttons. User can tap "Confirm" to mark as confirmed, or "Possible" if uncertain
-- **Low confidence (<80%)**: Show all candidates as a tappable list. No auto-selection. User must choose a candidate or skip
-- **"Back" button**: Navigate to the previous photo's decision to revise it (undo previous confirmation and re-show that photo)
-- **"Crop & Retry" button**: Opens `CropView` for manual cropping, then re-submits the cropped image to the AI. Use AI-suggested `cropBox` as the initial crop position when available
-- **"Skip" button**: Reject this photo entirely (certainty = "rejected", excluded from final save)
-- **Alternative candidates**: List of all AI candidates with confidence percentages. Tap any candidate to select it instead of the top suggestion
-- **Count field**: Allow user to adjust observation count (default 1) if multiple individuals of same species visible
+- [ ] **Side-by-side comparison**: Display the user's photo next to a Wikipedia reference image of the identified species (fetched via Wikimedia Summary API). This lets users visually verify the AI's suggestion
+- [ ] **Color-coded confidence bar**: Horizontal progress bar showing AI confidence percentage. Green (>=80%), yellow (50-79%), red (<50%)
+- [ ] **High confidence (>=80%)**: Auto-select the top candidate. Show "Confirm" (primary) and "Possible" (secondary) buttons. User can tap "Confirm" to mark as confirmed, or "Possible" if uncertain
+- [ ] **Low confidence (<80%)**: Show all candidates as a tappable list. No auto-selection. User must choose a candidate or skip
+- [ ] **"Back" button**: Navigate to the previous photo's decision to revise it (undo previous confirmation and re-show that photo)
+- [ ] **"Crop & Retry" button**: Opens `CropView` for manual cropping, then re-submits the cropped image to the AI. Use AI-suggested `cropBox` as the initial crop position when available
+- [ ] **"Skip" button**: Reject this photo entirely (certainty = "rejected", excluded from final save)
+- [ ] **Alternative candidates**: List of all AI candidates with confidence percentages. Tap any candidate to select it instead of the top suggestion
+- [ ] **Count field**: Allow user to adjust observation count (default 1) if multiple individuals of same species visible
 
 **New file**: `PerPhotoConfirmView.swift` in `AddPhotosFlow/`
 **Updates**: `AddPhotosViewModel.swift` - per-photo state machine, back navigation, crop-retry loop
@@ -301,11 +293,11 @@ Replace the current batch `ReviewView` with a sequential per-photo confirmation 
 
 Wire the existing crop UI into the identification retry flow:
 
-- **Auto-prompt on multi-bird**: When AI returns `multipleBirds: true`, automatically open `CropView` and prompt: "Multiple birds detected - crop to one bird"
-- **Auto-prompt on no detection**: When AI returns 0 candidates from the full image, automatically open `CropView` and prompt: "No bird detected - try cropping to the bird"
-- **Manual crop from confirm UI**: "Crop & Retry" button in `PerPhotoConfirmView` opens `CropView` at any time
-- **AI cropBox as initial position**: When the AI response includes a `cropBox` (percentage coordinates), use it as the initial crop rectangle position with padding (0.65x ratio, matching web's `paddedSquareCrop`)
-- **Re-identification after crop**: After user confirms crop, generate a new compressed JPEG from the cropped region and re-submit to `POST /api/identify-bird`. Do NOT re-prompt for crop after a user-initiated crop (prevent infinite loop)
+- [ ] **Auto-prompt on multi-bird**: When AI returns `multipleBirds: true`, automatically open `CropView` and prompt: "Multiple birds detected - crop to one bird"
+- [ ] **Auto-prompt on no detection**: When AI returns 0 candidates from the full image, automatically open `CropView` and prompt: "No bird detected - try cropping to the bird"
+- [ ] **Manual crop from confirm UI**: "Crop & Retry" button in `PerPhotoConfirmView` opens `CropView` at any time
+- [ ] **AI cropBox as initial position**: When the AI response includes a `cropBox` (percentage coordinates), use it as the initial crop rectangle position with padding (0.65x ratio, matching web's `paddedSquareCrop`)
+- [ ] **Re-identification after crop**: After user confirms crop, generate a new compressed JPEG from the cropped region and re-submit to `POST /api/identify-bird`. Do NOT re-prompt for crop after a user-initiated crop (prevent infinite loop)
 
 **Updates**: Wire `CropView.swift` and `CropService.swift` into the `PerPhotoConfirmView` flow
 **Reference**: `src/components/flows/ImageCropDialog.tsx`
@@ -314,10 +306,10 @@ Wire the existing crop UI into the identification retry flow:
 
 iOS currently marks ALL confirmed photos as `certainty: "confirmed"`.
 
-- **"Confirm" button**: Sets observation `certainty` to `"confirmed"` - species is added to WingDex
-- **"Possible" button**: Sets observation `certainty` to `"possible"` - species is recorded but NOT added to WingDex (matches web behavior where only confirmed species appear in the dex)
-- **"Skip" button**: Sets `certainty` to `"rejected"` or excludes the photo entirely from the final save
-- **Auto-selection rule**: Only auto-select the top candidate when confidence >= 0.80 - but the user must still tap "Confirm" or "Possible" to proceed (no silent auto-confirmation)
+- [ ] **"Confirm" button**: Sets observation `certainty` to `"confirmed"` - species is added to WingDex
+- [ ] **"Possible" button**: Sets observation `certainty` to `"possible"` - species is recorded but NOT added to WingDex (matches web behavior where only confirmed species appear in the dex)
+- [ ] **"Skip" button**: Sets `certainty` to `"rejected"` or excludes the photo entirely from the final save
+- [ ] **Auto-selection rule**: Only auto-select the top candidate when confidence >= 0.80 - but the user must still tap "Confirm" or "Possible" to proceed (no silent auto-confirmation)
 
 **Updates**: `AddPhotosViewModel.swift`, `PerPhotoConfirmView.swift`
 
@@ -325,10 +317,10 @@ iOS currently marks ALL confirmed photos as `certainty: "confirmed"`.
 
 The web has a "Use GPS & date for better ID" toggle that controls whether location context is sent to the AI.
 
-- **Toggle location**: Add a toggle to the photo selection step or the outing review step
-- **When enabled**: Send `lat`, `lon`, `month`, and `locationName` fields in the `POST /api/identify-bird` request body alongside the image
-- **When disabled**: Send only the `imageDataUrl`, `imageWidth`, `imageHeight` fields (no location context)
-- **Default**: Enabled (GPS context improves accuracy significantly)
+- [ ] **Toggle location**: Add a toggle to the photo selection step or the outing review step
+- [ ] **When enabled**: Send `lat`, `lon`, `month`, and `locationName` fields in the `POST /api/identify-bird` request body alongside the image
+- [ ] **When disabled**: Send only the `imageDataUrl`, `imageWidth`, `imageHeight` fields (no location context)
+- [ ] **Default**: Enabled (GPS context improves accuracy significantly)
 
 **Updates**: `PhotoSelectionView.swift` or `AddPhotosViewModel.swift`
 
@@ -336,11 +328,11 @@ The web has a "Use GPS & date for better ID" toggle that controls whether locati
 
 SHA-256 file hash computation exists in `PhotoService`, but there is no UI to handle detected duplicates.
 
-- **Hash comparison**: After extracting EXIF and computing file hashes, compare each hash against existing photos in `DataStore.photos`
-- **Duplicate found**: Show a confirmation dialog: "This photo was previously uploaded. Reimport or skip?"
-- **"Reimport"**: Process the photo normally (creates new observation)
-- **"Skip"**: Exclude the photo from the current batch
-- **Batch handling**: If multiple duplicates found, show them together or one-by-one with a "Skip All Duplicates" option
+- [ ] **Hash comparison**: After extracting EXIF and computing file hashes, compare each hash against existing photos in `DataStore.photos`
+- [ ] **Duplicate found**: Show a confirmation dialog: "This photo was previously uploaded. Reimport or skip?"
+- [ ] **"Reimport"**: Process the photo normally (creates new observation)
+- [ ] **"Skip"**: Exclude the photo from the current batch
+- [ ] **Batch handling**: If multiple duplicates found, show them together or one-by-one with a "Skip All Duplicates" option
 
 **Updates**: `AddPhotosViewModel.swift`, `DataStore.swift` (lookup by file hash)
 
@@ -354,25 +346,14 @@ Select 5+ photos from library -> see outing review with reverse-geocoded locatio
 
 Settings is now accessed via the avatar button in the navigation bar (not a tab). Content is presented in a card-style sheet (Apple Music-style). All features below match the web's SettingsPage.
 
-- [ ] 4.1: Navigation architecture change (3 tabs left + "+" right + avatar button -> settings sheet)
-- [ ] 4.2: Display name editing (pencil icon, alert with TextField, profile API save)
-- [ ] 4.3: Random bird nickname generator (port `generateBirdName()`, circular arrows button)
-- [ ] 4.4: Avatar emoji selection (8-emoji grid, restore social avatar, background colors)
-- [ ] 4.5: Appearance toggle (Light/Dark/System via SF Symbols, UserDefaults, window override)
-- [ ] 4.6: eBird CSV import with timezone picker (15 presets, file picker, preview/confirm flow)
-- [ ] 4.7: Export sightings CSV (share sheet, `wingdex-sightings-YYYY-MM-DD.csv`)
-- [ ] 4.8: Data privacy card (static disclosures matching web)
-- [ ] 4.9: Delete account & all data (two-stage confirmation, API deletion, sign out)
-- [ ] 4.10: Remove "Saved Locations" stub (web removed this feature)
-
 ### 4.1: Navigation Architecture Change
 
 Currently Settings is a 4th tab. Needs restructuring.
 
-- **Remove Settings tab**: Delete the 4th tab from `TabView`. Three tabs remain: Home, WingDex, Outings, clustered to the left
-- **Add "+" button**: Add a detached "Upload & Identify" button on the right side of the tab bar (visually separated from the three tabs, like Apple Music). Tapping opens the AddPhotos flow as a `.sheet`
-- **Avatar button in navigation bar**: Add a small circular avatar button (user's emoji or social provider photo, ~28pt) to the top-right of the navigation bar, visible on all tabs. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
-- **Default avatar**: Show `person.circle.fill` SF Symbol when no user avatar is set
+- [ ] **Remove Settings tab**: Delete the 4th tab from `TabView`. Three tabs remain: Home, WingDex, Outings, clustered to the left
+- [ ] **Add "+" button**: Add a detached "Upload & Identify" button on the right side of the tab bar (visually separated from the three tabs, like Apple Music). Tapping opens the AddPhotos flow as a `.sheet`
+- [ ] **Avatar button in navigation bar**: Add a small circular avatar button (user's emoji or social provider photo, ~28pt) to the top-right of the navigation bar, visible on all tabs. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
+- [ ] **Default avatar**: Show `person.circle.fill` SF Symbol when no user avatar is set
 
 **Files**: `WingDexApp.swift` (TabView restructure, toolbar avatar button), `SettingsView.swift` (adapt for sheet presentation)
 
@@ -380,10 +361,10 @@ Currently Settings is a 4th tab. Needs restructuring.
 
 iOS shows the name read-only. The web has an inline pencil edit button.
 
-- **Pencil icon**: Show a pencil (SF Symbol `pencil`) button next to the "Welcome, {name}" text
-- **Edit flow**: Tap pencil -> present an alert with a `TextField` pre-filled with the current name (or use inline editing with Save/Cancel buttons)
-- **Save**: Call the profile update API with the new name. Immediately refresh the UI including the avatar button in the nav bar
-- **Validation**: Trim whitespace, reject empty names
+- [ ] **Pencil icon**: Show a pencil (SF Symbol `pencil`) button next to the "Welcome, {name}" text
+- [ ] **Edit flow**: Tap pencil -> present an alert with a `TextField` pre-filled with the current name (or use inline editing with Save/Cancel buttons)
+- [ ] **Save**: Call the profile update API with the new name. Immediately refresh the UI including the avatar button in the nav bar
+- [ ] **Validation**: Trim whitespace, reject empty names
 
 **Files**: `SettingsView.swift`
 **Reference**: `SettingsPage.tsx` (name editing section with `window.prompt()`)
@@ -392,10 +373,10 @@ iOS shows the name read-only. The web has an inline pencil edit button.
 
 Does not exist on iOS. The web has a circular arrows button that generates a bird-themed display name + emoji avatar.
 
-- **Button**: Circular arrows icon (SF Symbol `arrow.clockwise`) next to the name
-- **Logic**: Port `generateBirdName()` from `src/lib/fun-names.ts` - combines bird adjectives + species names (e.g., "Cheerful Kingfisher") and picks a random emoji avatar from the 8-emoji set
-- **Auto-save**: Immediately saves the generated name + emoji avatar to the profile API
-- **New file**: `FunNames.swift` utility with the bird name/adjective arrays and generation logic
+- [ ] **Button**: Circular arrows icon (SF Symbol `arrow.clockwise`) next to the name
+- [ ] **Logic**: Port `generateBirdName()` from `src/lib/fun-names.ts` - combines bird adjectives + species names (e.g., "Cheerful Kingfisher") and picks a random emoji avatar from the 8-emoji set
+- [ ] **Auto-save**: Immediately saves the generated name + emoji avatar to the profile API
+- [ ] **New file**: `FunNames.swift` utility with the bird name/adjective arrays and generation logic
 
 **Files**: `SettingsView.swift`, new `FunNames.swift`
 **Reference**: `src/lib/fun-names.ts` (`generateBirdName`, `BIRD_ADJECTIVES`, `BIRD_NOUNS`, `BIRD_EMOJIS`)
@@ -404,13 +385,13 @@ Does not exist on iOS. The web has a circular arrows button that generates a bir
 
 Does not exist on iOS. The web has a row of 8 emoji buttons.
 
-- **Emoji grid**: Row of 8 circular buttons: 🐦 🦉 🦜 🐧 🦆 🦩 🦅 🐤
-- **Selected state**: Currently selected emoji gets a highlighted ring (`ring-2 ring-primary ring-offset-2` equivalent)
-- **Tap selected emoji**: Restore the original social provider avatar (or clear to default)
-- **Tap unselected emoji**: Apply that emoji as the avatar + auto-save to profile API
-- **Avatar format**: Store as emoji data-URL to match web format (the web encodes emojis as small canvas-rendered data URLs)
-- **Background color**: Port `getEmojiAvatarColor()` from `src/lib/fun-names.ts` - each emoji gets a consistent background color for the avatar circle
-- **Disabled during save**: All buttons disabled while profile save is in flight
+- [ ] **Emoji grid**: Row of 8 circular buttons: 🐦 🦉 🦜 🐧 🦆 🦩 🦅 🐤
+- [ ] **Selected state**: Currently selected emoji gets a highlighted ring (`ring-2 ring-primary ring-offset-2` equivalent)
+- [ ] **Tap selected emoji**: Restore the original social provider avatar (or clear to default)
+- [ ] **Tap unselected emoji**: Apply that emoji as the avatar + auto-save to profile API
+- [ ] **Avatar format**: Store as emoji data-URL to match web format (the web encodes emojis as small canvas-rendered data URLs)
+- [ ] **Background color**: Port `getEmojiAvatarColor()` from `src/lib/fun-names.ts` - each emoji gets a consistent background color for the avatar circle
+- [ ] **Disabled during save**: All buttons disabled while profile save is in flight
 
 **Files**: `SettingsView.swift`, port avatar utilities from `src/lib/fun-names.ts`
 **Reference**: `SettingsPage.tsx` (avatar section)
@@ -419,12 +400,12 @@ Does not exist on iOS. The web has a row of 8 emoji buttons.
 
 Does not exist on iOS. The web uses `next-themes` with three buttons.
 
-- **Three-button toggle**: Sun icon (Light), Moon icon (Dark), Monitor icon (System) using SF Symbols (`sun.max`, `moon`, `desktopcomputer`)
-- **Selected state**: Selected button uses default/filled variant; unselected buttons use outline variant
-- **Persistence**: Store preference in `UserDefaults` (key: `appearance`)
-- **Apply**: Override all window scenes' `overrideUserInterfaceStyle` via `UIApplication.shared.connectedScenes`
-- **"System" mode**: Sets `overrideUserInterfaceStyle = .unspecified`, following the iOS system preference
-- **Immediate effect**: Changing the toggle applies instantly without requiring app restart
+- [ ] **Three-button toggle**: Sun icon (Light), Moon icon (Dark), Monitor icon (System) using SF Symbols (`sun.max`, `moon`, `desktopcomputer`)
+- [ ] **Selected state**: Selected button uses default/filled variant; unselected buttons use outline variant
+- [ ] **Persistence**: Store preference in `UserDefaults` (key: `appearance`)
+- [ ] **Apply**: Override all window scenes' `overrideUserInterfaceStyle` via `UIApplication.shared.connectedScenes`
+- [ ] **"System" mode**: Sets `overrideUserInterfaceStyle = .unspecified`, following the iOS system preference
+- [ ] **Immediate effect**: Changing the toggle applies instantly without requiring app restart
 
 **Files**: `SettingsView.swift`, `Theme.swift` (appearance management), `WingDexApp.swift` (restore on launch)
 
@@ -432,14 +413,14 @@ Does not exist on iOS. The web uses `next-themes` with three buttons.
 
 Stub exists (button present, marked TODO). Needs full implementation matching the web's import flow.
 
-- **Import button**: Opens a sheet with the timezone selection + file picker flow
-- **Timezone dropdown**: Picker with 15 preset timezones + "None (times already local)" option. Each timezone shows its current DST-aware UTC offset (e.g., "UTC-10:00 - Hawaii", "UTC-05:00 - Eastern"). The timezone list matches the web's `TIMEZONE_PRESETS` array exactly
-- **Help section**: Collapsible "How to export from eBird" with 3-step instructions: (1) Go to ebird.org/downloadMyData and sign in, (2) Click Submit to request download, (3) Receive email with CSV, upload here. Plus a note: "WingDex will create outings grouped by date and location"
-- **File picker**: `.fileImporter` with `.csv` UTType. On file selection, read the CSV data
-- **Preview API**: Call `POST /api/import/ebird-csv` with the CSV content and selected timezone. Server returns preview with conflict detection (new / duplicate / update_dates)
-- **Conflict display**: Show duplicates from existing data. Auto-select non-duplicate previews. Let user toggle individual items
-- **Confirm import**: Call `POST /api/import/ebird-csv/confirm` with selected preview IDs and timezone
-- **Success feedback**: Toast with counts ("Imported eBird data across N outings") + confetti animation if new species were added
+- [ ] **Import button**: Opens a sheet with the timezone selection + file picker flow
+- [ ] **Timezone dropdown**: Picker with 15 preset timezones + "None (times already local)" option. Each timezone shows its current DST-aware UTC offset (e.g., "UTC-10:00 - Hawaii", "UTC-05:00 - Eastern"). The timezone list matches the web's `TIMEZONE_PRESETS` array exactly
+- [ ] **Help section**: Collapsible "How to export from eBird" with 3-step instructions: (1) Go to ebird.org/downloadMyData and sign in, (2) Click Submit to request download, (3) Receive email with CSV, upload here. Plus a note: "WingDex will create outings grouped by date and location"
+- [ ] **File picker**: `.fileImporter` with `.csv` UTType. On file selection, read the CSV data
+- [ ] **Preview API**: Call `POST /api/import/ebird-csv` with the CSV content and selected timezone. Server returns preview with conflict detection (new / duplicate / update_dates)
+- [ ] **Conflict display**: Show duplicates from existing data. Auto-select non-duplicate previews. Let user toggle individual items
+- [ ] **Confirm import**: Call `POST /api/import/ebird-csv/confirm` with selected preview IDs and timezone
+- [ ] **Success feedback**: Toast with counts ("Imported eBird data across N outings") + confetti animation if new species were added
 
 **Files**: `SettingsView.swift`, new `EBirdImportView.swift` sheet, `DataService.swift` (import API calls)
 **Reference**: `SettingsPage.tsx` (import section), `functions/api/import/`
@@ -448,10 +429,10 @@ Stub exists (button present, marked TODO). Needs full implementation matching th
 
 Stub exists (button present, marked TODO). Needs implementation.
 
-- **Export button**: Disabled if `dex.length == 0`. Tap triggers `GET /api/export/sightings`
-- **Save**: Present `UIActivityViewController` (share sheet) with the downloaded CSV data
-- **Filename**: `wingdex-sightings-YYYY-MM-DD.csv`
-- **Feedback**: Toast "Sightings CSV exported" on success
+- [ ] **Export button**: Disabled if `dex.length == 0`. Tap triggers `GET /api/export/sightings`
+- [ ] **Save**: Present `UIActivityViewController` (share sheet) with the downloaded CSV data
+- [ ] **Filename**: `wingdex-sightings-YYYY-MM-DD.csv`
+- [ ] **Feedback**: Toast "Sightings CSV exported" on success
 
 **Files**: `SettingsView.swift`, `DataService.swift` (export API call)
 
@@ -471,10 +452,10 @@ Does not exist on iOS.
 
 iOS only has "Delete All Data" (single confirmation). The web has a separate "Delete Account & All Data" with a two-stage confirmation flow.
 
-- **First confirmation**: Alert titled "Delete your entire account?" with a list of what gets deleted: all outings and observations, entire WingDex species list, passkeys and login credentials, account and profile. Warning: "There is no way to recover your data after this." Secondary button leads to stage 2
-- **Second confirmation**: Alert titled "Are you absolutely sure?" with destructive button "Delete my account forever"
-- **Execution**: Call account deletion API, clear all local state (DataStore, Keychain), sign out, dismiss settings sheet
-- **Feedback**: Toast "Account deleted"
+- [ ] **First confirmation**: Alert titled "Delete your entire account?" with a list of what gets deleted: all outings and observations, entire WingDex species list, passkeys and login credentials, account and profile. Warning: "There is no way to recover your data after this." Secondary button leads to stage 2
+- [ ] **Second confirmation**: Alert titled "Are you absolutely sure?" with destructive button "Delete my account forever"
+- [ ] **Execution**: Call account deletion API, clear all local state (DataStore, Keychain), sign out, dismiss settings sheet
+- [ ] **Feedback**: Toast "Account deleted"
 
 **Files**: `SettingsView.swift`, `DataService.swift`, `AuthService.swift`
 
@@ -496,21 +477,15 @@ Avatar button visible in nav bar on all tabs -> tap opens card-style settings sh
 
 The iOS `OutingDetailView` is read-only except for notes editing and outing deletion. The web supports full editing. Five capabilities are missing.
 
-- [ ] 5.1: Edit location name (pencil icon, autocomplete from past outings, save/cancel)
-- [ ] 5.2: Delete individual species/observation (swipe-to-delete, confirmation, soft delete)
-- [ ] 5.3: Add species manually ("+ Add Species" button, taxonomy autocomplete via API)
-- [ ] 5.4: Export individual outing as eBird CSV (share sheet, disabled if no confirmed species)
-- [ ] 5.5: Tappable coordinates / map link (open in Apple Maps)
-
 ### 5.1: Edit Location Name
 
 iOS shows the location name as a static title. The web has a pencil icon that opens an autocomplete input.
 
-- **Pencil icon**: SF Symbol `pencil` in the header area next to the location name
-- **Edit mode**: Tap pencil -> replace the title with a `TextField` pre-filled with the current name. Show Save and Cancel buttons
-- **Autocomplete**: As the user types, show suggestions filtered from all existing outing location names (client-side filter from `DataStore.outings`)
-- **Save**: Call `PATCH /api/data/outings/{id}` with the new `locationName`. Update local state immediately
-- **Empty name**: Resets to the default geocoded location name (or "Unknown Location")
+- [ ] **Pencil icon**: SF Symbol `pencil` in the header area next to the location name
+- [ ] **Edit mode**: Tap pencil -> replace the title with a `TextField` pre-filled with the current name. Show Save and Cancel buttons
+- [ ] **Autocomplete**: As the user types, show suggestions filtered from all existing outing location names (client-side filter from `DataStore.outings`)
+- [ ] **Save**: Call `PATCH /api/data/outings/{id}` with the new `locationName`. Update local state immediately
+- [ ] **Empty name**: Resets to the default geocoded location name (or "Unknown Location")
 
 **Files**: `OutingDetailView.swift`
 **Reference**: `OutingsPage.tsx` (edit location name section)
@@ -519,10 +494,10 @@ iOS shows the location name as a static title. The web has a pencil icon that op
 
 iOS can only delete entire outings. The web has per-species delete with confirmation.
 
-- **Delete trigger**: Trailing swipe action on each species row (trash icon, destructive style), or a trash icon button visible on each row
-- **Confirmation dialog**: "Remove {species name} from outing?" with Cancel and Remove buttons
-- **Execution**: Call `PATCH /api/data/observations` to mark the observation as `certainty: "rejected"` (soft delete matching web behavior)
-- **UI update**: Remove the species from the visible list immediately
+- [ ] **Delete trigger**: Trailing swipe action on each species row (trash icon, destructive style), or a trash icon button visible on each row
+- [ ] **Confirmation dialog**: "Remove {species name} from outing?" with Cancel and Remove buttons
+- [ ] **Execution**: Call `PATCH /api/data/observations` to mark the observation as `certainty: "rejected"` (soft delete matching web behavior)
+- [ ] **UI update**: Remove the species from the visible list immediately
 
 **Files**: `OutingDetailView.swift`
 **Reference**: `OutingsPage.tsx` (delete observation section)
@@ -531,11 +506,11 @@ iOS can only delete entire outings. The web has per-species delete with confirma
 
 Does not exist on iOS. The web has an "+ Add Species" button with taxonomy autocomplete.
 
-- **"+ Add Species" button**: Toggle button in the species list section header. When active, shows an inline form; when inactive, shows the button label
-- **Species name input**: Text field with autocomplete dropdown powered by server-side taxonomy search (`GET /api/species/search?q=...&limit=8`). Debounce input by 150ms before sending search request
-- **Add action**: Tap "Add" creates a new observation with `count: 1`, `certainty: "confirmed"`, linked to this outing
-- **Feedback**: Toast "{species name} added". Clear input, close form
-- **Keyboard navigation**: Autocomplete results navigable with tap (no hardware keyboard expected on iOS, but support standard list selection)
+- [ ] **"+ Add Species" button**: Toggle button in the species list section header. When active, shows an inline form; when inactive, shows the button label
+- [ ] **Species name input**: Text field with autocomplete dropdown powered by server-side taxonomy search (`GET /api/species/search?q=...&limit=8`). Debounce input by 150ms before sending search request
+- [ ] **Add action**: Tap "Add" creates a new observation with `count: 1`, `certainty: "confirmed"`, linked to this outing
+- [ ] **Feedback**: Toast "{species name} added". Clear input, close form
+- [ ] **Keyboard navigation**: Autocomplete results navigable with tap (no hardware keyboard expected on iOS, but support standard list selection)
 
 **Files**: `OutingDetailView.swift`, `DataService.swift` (species search API call)
 **Reference**: `OutingsPage.tsx` (add species section)
@@ -544,11 +519,11 @@ Does not exist on iOS. The web has an "+ Add Species" button with taxonomy autoc
 
 Does not exist on iOS. The web has an "Export eBird CSV" button per outing.
 
-- **Button**: "Export eBird CSV" with download icon, placed in the action buttons area at the bottom of the detail view
-- **Disabled state**: Greyed out if the outing has no confirmed observations
-- **Execution**: Fetch `GET /api/export/outing/{id}`, receive CSV data
-- **Save**: Present `UIActivityViewController` (share sheet) with the CSV file
-- **Feedback**: Toast "Outing exported in eBird Record CSV format"
+- [ ] **Button**: "Export eBird CSV" with download icon, placed in the action buttons area at the bottom of the detail view
+- [ ] **Disabled state**: Greyed out if the outing has no confirmed observations
+- [ ] **Execution**: Fetch `GET /api/export/outing/{id}`, receive CSV data
+- [ ] **Save**: Present `UIActivityViewController` (share sheet) with the CSV file
+- [ ] **Feedback**: Toast "Outing exported in eBird Record CSV format"
 
 **Files**: `OutingDetailView.swift`, `DataService.swift`
 
@@ -556,9 +531,9 @@ Does not exist on iOS. The web has an "Export eBird CSV" button per outing.
 
 iOS shows an embedded MapKit view but has no external link. The web shows clickable coordinates that open Google Maps.
 
-- **Tappable coordinates**: Below or alongside the embedded map, show coordinates as tappable text: "(lat, lon)" formatted to 4 decimal places
-- **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the coordinates, or offer a choice between Apple Maps and Google Maps
-- **Apple Maps URL**: `maps://?q={lat},{lon}`
+- [ ] **Tappable coordinates**: Below or alongside the embedded map, show coordinates as tappable text: "(lat, lon)" formatted to 4 decimal places
+- [ ] **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the coordinates, or offer a choice between Apple Maps and Google Maps
+- [ ] **Apple Maps URL**: `maps://?q={lat},{lon}`
 
 **Files**: `OutingDetailView.swift`
 
@@ -572,20 +547,14 @@ Tap outing -> edit location name with autocomplete from past outings -> add spec
 
 Five gaps between the iOS and web species/WingDex views.
 
-- [ ] 6.1: eBird code API lookup (replace hardcoded URL with `/api/species/ebird-code`, cache)
-- [ ] 6.2: Certainty badges in sightings list ("confirmed" / "possible" badges)
-- [ ] 6.3: Observation count in sightings (`xN` when count > 1)
-- [ ] 6.4: Species notes display (show `dexEntry.notes` section)
-- [ ] 6.5: WingDex family sort (4th sort option, lazy-load taxonomy order)
-
 ### 6.1: eBird Code API Lookup
 
 iOS currently constructs the eBird URL by hardcoding the common name into the URL path. The web uses an API call with algorithmic fallback.
 
-- **API call**: Fetch `GET /api/species/ebird-code?name={speciesName}` to get the accurate eBird species code
-- **Fallback**: If API call fails, construct the code algorithmically (lowercase, replace spaces with underscores, etc.)
-- **Cache**: Cache the result per species in memory to avoid repeated API calls
-- **URL**: Use the code to build the correct eBird URL: `https://ebird.org/species/{ebirdCode}`
+- [ ] **API call**: Fetch `GET /api/species/ebird-code?name={speciesName}` to get the accurate eBird species code
+- [ ] **Fallback**: If API call fails, construct the code algorithmically (lowercase, replace spaces with underscores, etc.)
+- [ ] **Cache**: Cache the result per species in memory to avoid repeated API calls
+- [ ] **URL**: Use the code to build the correct eBird URL: `https://ebird.org/species/{ebirdCode}`
 
 **Files**: `SpeciesDetailView.swift`, `DataService.swift` (new API call)
 **Reference**: `WingDexPage.tsx` (`fetchEBirdCode` function)
@@ -594,8 +563,8 @@ iOS currently constructs the eBird URL by hardcoding the common name into the UR
 
 iOS shows sightings without any certainty indicator. The web shows "confirmed" or "possible" badges.
 
-- **Badge**: Show a subtle text badge ("confirmed" or "possible") next to each sighting in the sightings list
-- **Styling**: "Possible" badge uses a muted/warning color to distinguish from confirmed sightings
+- [ ] **Badge**: Show a subtle text badge ("confirmed" or "possible") next to each sighting in the sightings list
+- [ ] **Styling**: "Possible" badge uses a muted/warning color to distinguish from confirmed sightings
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -603,7 +572,7 @@ iOS shows sightings without any certainty indicator. The web shows "confirmed" o
 
 iOS doesn't show the count per sighting. The web shows `xN` when count > 1.
 
-- **Count display**: Show `x{count}` next to the species name in each sighting row when the observation count is greater than 1
+- [ ] **Count display**: Show `x{count}` next to the species name in each sighting row when the observation count is greater than 1
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -611,8 +580,8 @@ iOS doesn't show the count per sighting. The web shows `xN` when count > 1.
 
 iOS doesn't display notes for species. The web shows a "Notes" section at the bottom of the species detail view.
 
-- **Notes section**: If `dexEntry.notes` is non-empty, show a "Notes" section heading with the notes text below in italic
-- **Read-only**: Notes are displayed but not editable from the species detail view (they can be edited on the web)
+- [ ] **Notes section**: If `dexEntry.notes` is non-empty, show a "Notes" section heading with the notes text below in italic
+- [ ] **Read-only**: Notes are displayed but not editable from the species detail view (they can be edited on the web)
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -620,9 +589,9 @@ iOS doesn't display notes for species. The web shows a "Notes" section at the bo
 
 iOS has 3 sort options (date, count, name). The web has a 4th: Family (taxonomic).
 
-- **New sort option**: Add "Family" sort (leaf icon, SF Symbol `leaf`) to the sort menu in `WingDexView`
-- **Taxonomy order data**: Lazy-load taxonomy order data (taxonomic sort order from the bundled `taxonomy.json` or a derived lookup table). Port logic from `src/lib/taxonomy-order.ts`
-- **Sort behavior**: Group and sort species by their taxonomic family. Default direction: ascending (A-Z by family then by taxonomic order within family)
+- [ ] **New sort option**: Add "Family" sort (leaf icon, SF Symbol `leaf`) to the sort menu in `WingDexView`
+- [ ] **Taxonomy order data**: Lazy-load taxonomy order data (taxonomic sort order from the bundled `taxonomy.json` or a derived lookup table). Port logic from `src/lib/taxonomy-order.ts`
+- [ ] **Sort behavior**: Group and sort species by their taxonomic family. Default direction: ascending (A-Z by family then by taxonomic order within family)
 
 **Files**: `WingDexView.swift`
 **Reference**: `WingDexPage.tsx` (family sort), `src/lib/taxonomy-order.ts`
@@ -637,23 +606,19 @@ Species detail eBird link opens correct species page (API-verified code) -> sigh
 
 The web shows confetti + lifer toasts when new species are added. iOS has none of this.
 
-- [ ] 7.1: Confetti animation (trigger on new species, SwiftUI particle effect, Reduce Motion support)
-- [ ] 7.2: Lifer toast ("Species added to your WingDex" banner, auto-dismiss, haptic)
-- [ ] 7.3: Haptic feedback (success on saves, impact on milestones, selection on sort changes)
-
 ### 7.1: Confetti Animation
 
-- **Trigger**: Fire confetti animation when `newSpeciesCount > 0` after AddPhotos save, or after eBird import adds new species
-- **Implementation**: Native SwiftUI particle effect or lightweight confetti modifier. Duration ~1.4s matching web
-- **Reduce Motion**: If `UIAccessibility.isReduceMotionEnabled`, skip confetti and show a subtle fade-in banner instead
+- [ ] **Trigger**: Fire confetti animation when `newSpeciesCount > 0` after AddPhotos save, or after eBird import adds new species
+- [ ] **Implementation**: Native SwiftUI particle effect or lightweight confetti modifier. Duration ~1.4s matching web
+- [ ] **Reduce Motion**: If `UIAccessibility.isReduceMotionEnabled`, skip confetti and show a subtle fade-in banner instead
 
 **Files**: New `ConfettiModifier.swift` or similar, applied in `AddPhotosFlow` (done screen) and `SettingsView` (after eBird import)
 
 ### 7.2: Lifer Toast
 
-- **Message**: "Species added to your WingDex" banner when a species is first recorded (new to the user's life list)
-- **Implementation**: SwiftUI toast/banner overlay (environment-based) that auto-dismisses after ~3 seconds
-- **Haptic**: Pair with `.sensoryFeedback(.success)` haptic
+- [ ] **Message**: "Species added to your WingDex" banner when a species is first recorded (new to the user's life list)
+- [ ] **Implementation**: SwiftUI toast/banner overlay (environment-based) that auto-dismisses after ~3 seconds
+- [ ] **Haptic**: Pair with `.sensoryFeedback(.success)` haptic
 
 **Files**: Toast/notification overlay system (environment-based, reusable across the app)
 
@@ -661,7 +626,7 @@ The web shows confetti + lifer toasts when new species are added. iOS has none o
 
 - **Success haptic** (`.sensoryFeedback(.success)`): On save confirmations (AddPhotos, outing edit, species add, import)
 - **Impact haptic** (`.sensoryFeedback(.impact)`): On milestones (new species, first outing)
-- **Selection haptic**: On sort/filter changes, tab switches
+- [ ] **Selection haptic**: On sort/filter changes, tab switches
 
 **Files**: Various views where save/milestone actions occur
 
@@ -673,20 +638,13 @@ Add photos with a new species -> confetti animation fires + lifer toast with hap
 
 ## Phase 8 - Dark Mode & Auth Fixes
 
-- [ ] 8.1: Define dark color palette (web dark colors in Theme.swift + Assets.xcassets)
-- [ ] 8.2: Appearance toggle wiring (UserDefaults, window scene override, restore on launch)
-- [ ] 8.3: Full dark mode visual audit (every view, contrast, UIAppearance overrides)
-- [ ] 8.4: Fix 401 on API calls (debug token extraction from OAuth callback)
-- [ ] 8.5: 401 auto-retry (intercept 401, re-auth prompt, retry original request)
-- [ ] 8.6: Session expiry handling (foreground check, silent validation, re-auth prompt)
-
 ### 8.1: Define Dark Color Palette
 
 iOS has light mode colors only.
 
-- **Web dark colors**: Background `#262e29`, card darker variant, lighter text, adjusted borders
-- **Color assets**: Add dark mode variants to all custom `Color` extensions in `Theme.swift` and color sets in `Assets.xcassets`
-- **Verify semantic usage**: Ensure all views use `Color.pageBg`, `Color.cardBg`, etc. and never hardcoded color values
+- [ ] **Web dark colors**: Background `#262e29`, card darker variant, lighter text, adjusted borders
+- [ ] **Color assets**: Add dark mode variants to all custom `Color` extensions in `Theme.swift` and color sets in `Assets.xcassets`
+- [ ] **Verify semantic usage**: Ensure all views use `Color.pageBg`, `Color.cardBg`, etc. and never hardcoded color values
 
 **Files**: `Theme.swift`, `Assets.xcassets` color sets
 
@@ -694,9 +652,9 @@ iOS has light mode colors only.
 
 Depends on Phase 4.5 (appearance toggle UI).
 
-- **UserDefaults**: Store preference as `"light"`, `"dark"`, or `"system"` in UserDefaults
-- **Apply**: On launch and on toggle change, set `overrideUserInterfaceStyle` on all connected window scenes
-- **System mode**: `overrideUserInterfaceStyle = .unspecified` follows iOS system setting
+- [ ] **UserDefaults**: Store preference as `"light"`, `"dark"`, or `"system"` in UserDefaults
+- [ ] **Apply**: On launch and on toggle change, set `overrideUserInterfaceStyle` on all connected window scenes
+- [ ] **System mode**: `overrideUserInterfaceStyle = .unspecified` follows iOS system setting
 
 **Files**: `Theme.swift`, `WingDexApp.swift`
 
@@ -711,25 +669,25 @@ Depends on Phase 4.5 (appearance toggle UI).
 
 Known bug. After GitHub OAuth sign-in, subsequent API calls return 401 Unauthorized.
 
-- **Debug token extraction**: The OAuth callback's `Set-Cookie` header parsing in `AuthService.handleOAuthCallback` may not be extracting the session token correctly
-- **Verify token flow**: Confirm token is stored in Keychain, retrieved on subsequent requests, and sent as `Authorization: Bearer {token}` header
-- **Add diagnostic logging**: Log token presence/absence at each stage (extraction, storage, retrieval, request)
+- [ ] **Debug token extraction**: The OAuth callback's `Set-Cookie` header parsing in `AuthService.handleOAuthCallback` may not be extracting the session token correctly
+- [ ] **Verify token flow**: Confirm token is stored in Keychain, retrieved on subsequent requests, and sent as `Authorization: Bearer {token}` header
+- [ ] **Add diagnostic logging**: Log token presence/absence at each stage (extraction, storage, retrieval, request)
 
 **Files**: `AuthService.swift`, `DataService.swift`
 
 ### 8.5: 401 Auto-Retry
 
-- **Intercept**: When any API call returns HTTP 401, intercept the response in `DataService`
-- **Re-auth prompt**: Present the sign-in sheet (via a published property or notification)
-- **Retry**: After successful re-authentication, retry the original API request that triggered the 401
+- [ ] **Intercept**: When any API call returns HTTP 401, intercept the response in `DataService`
+- [ ] **Re-auth prompt**: Present the sign-in sheet (via a published property or notification)
+- [ ] **Retry**: After successful re-authentication, retry the original API request that triggered the 401
 
 **Files**: `DataService.swift` or a shared API middleware layer
 
 ### 8.6: Session Expiry Handling
 
-- **Foreground check**: When the app returns to foreground (`scenePhase == .active`), check the stored token's age
-- **Near expiry**: If the token is close to expiring, make a silent validation request to the server (`GET /api/auth/get-session`)
-- **Expired**: If validation fails, prompt re-auth
+- [ ] **Foreground check**: When the app returns to foreground (`scenePhase == .active`), check the stored token's age
+- [ ] **Near expiry**: If the token is close to expiring, make a silent validation request to the server (`GET /api/auth/get-session`)
+- [ ] **Expired**: If validation fails, prompt re-auth
 
 **Files**: `AuthService.swift`, `WingDexApp.swift`
 
@@ -742,36 +700,6 @@ Toggle appearance Light/Dark/System -> every screen renders correctly in dark mo
 ## Phase 9 - iOS-Native Enhancements
 
 Features leveraging iOS platform APIs that the web cannot access. These go beyond parity - they make the iOS app feel like a first-class citizen on the platform.
-
-- [ ] A1: Share Extension (receive photos from other apps into AddPhotos flow)
-- [ ] A2: Home Screen quick actions (3D Touch / long press on app icon)
-- [ ] B1: Context menus on all list rows and images (long-press)
-- [ ] B2: Swipe actions on list rows (export, delete, remove)
-- [ ] C1: App Intents for Shortcuts app (upload, view, count, export)
-- [ ] C2: Siri phrases ("Show my WingDex", "How many birds have I seen?")
-- [ ] C3: Action Button support (assign upload to hardware button)
-- [ ] D1: Spotlight indexing (species + outings as CSSearchableItem)
-- [ ] D2: NSUserActivity donations (Siri Suggestions on Lock Screen)
-- [ ] D3: Handoff (continue current view on another Apple device)
-- [ ] E1: Species Count widget (small, WidgetKit)
-- [ ] E2: Recent Species widget (medium, WidgetKit)
-- [ ] E3: Recent Outing widget (medium, WidgetKit)
-- [ ] E4: Lock Screen widgets (accessory circular/rectangular/inline)
-- [ ] E5: Control Center control (Upload Photos button)
-- [ ] F1: Direct camera capture in AddPhotos (CLLocationManager for GPS)
-- [ ] G1: Local notifications (weekly summary, milestones, user-configurable)
-- [ ] G2: Background App Refresh (sync data, update widgets + Spotlight)
-- [ ] H1: Full map view showing all outings as clustered pins
-- [ ] H2: Species range map (all sighting locations for one species)
-- [ ] I1: TipKit contextual onboarding tips
-- [ ] J1: Visual Intelligence integration (iOS 26, camera -> "Search in WingDex")
-- [ ] K1: VoiceOver labels and custom accessibility actions
-- [ ] K2: Dynamic Type verification at all sizes
-- [ ] K3: Reduce Motion support (skip confetti, reduce animations)
-- [ ] L1: Local cache via SwiftData (instant launch, offline browsing)
-- [ ] L2: Offline mutation queue (queue changes, sync on reconnect)
-- [ ] M1: iPad adaptive layout (NavigationSplitView, two-column)
-- [ ] M2: Multi-window support (UIScene, side-by-side species comparison)
 
 ### Category A: Sharing & Export
 
@@ -995,13 +923,6 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ## Phase 10 - Polish & App Store
 
-- [ ] 10.1: Error handling audit (network errors, 500s, rate limits, offline degradation)
-- [ ] 10.2: Accessibility final pass (VoiceOver, Dynamic Type, Large Content Viewer, contrast)
-- [ ] 10.3: App icon and launch screen
-- [ ] 10.4: TestFlight internal testing build
-- [ ] 10.5: App Store listing (screenshots, description, keywords, privacy nutrition labels)
-- [ ] 10.6: App Store submission
-
 ### 10.1: Error Handling Audit
 
 - Network errors: show user-friendly alerts with "Retry" button, not raw error messages
@@ -1018,8 +939,8 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ### 10.3: App Icon & Launch Screen
 
-- **App icon**: Design and add to `Assets.xcassets` in all required sizes
-- **Launch screen**: Simple branded launch screen matching the warm color palette (beige background, centered bird logo)
+- [ ] **App icon**: Design and add to `Assets.xcassets` in all required sizes
+- [ ] **Launch screen**: Simple branded launch screen matching the warm color palette (beige background, centered bird logo)
 
 ### 10.4: TestFlight
 
@@ -1029,11 +950,11 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ### 10.5: App Store Listing
 
-- **Screenshots**: Capture on multiple device sizes (iPhone 15 Pro Max, iPhone SE)
-- **Description**: Concise pitch highlighting photo-first bird ID, AI identification, eBird compatibility
-- **Keywords**: birding, bird identification, life list, WingDex, eBird, bird photos
-- **Category**: Reference or Lifestyle
-- **Privacy nutrition labels**: Match the web privacy policy disclosures (no data sold, photos not retained, etc.)
+- [ ] **Screenshots**: Capture on multiple device sizes (iPhone 15 Pro Max, iPhone SE)
+- [ ] **Description**: Concise pitch highlighting photo-first bird ID, AI identification, eBird compatibility
+- [ ] **Keywords**: birding, bird identification, life list, WingDex, eBird, bird photos
+- [ ] **Category**: Reference or Lifestyle
+- [ ] **Privacy nutrition labels**: Match the web privacy policy disclosures (no data sold, photos not retained, etc.)
 
 ### 10.6: App Store Submission
 
