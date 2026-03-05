@@ -34,6 +34,12 @@ struct ContentView: View {
                 MainTabView()
                     .task {
                         await store.loadAll()
+                        #if DEBUG
+                        if ProcessInfo.processInfo.arguments.contains("--auto-demo-data"),
+                           store.dex.isEmpty {
+                            try? await store.loadDemoData()
+                        }
+                        #endif
                     }
             } else {
                 SignInView()

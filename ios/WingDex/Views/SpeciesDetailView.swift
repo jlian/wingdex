@@ -21,6 +21,9 @@ struct SpeciesDetailView: View {
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.pageBg.ignoresSafeArea())
+        .navigationDestination(for: Outing.self) { outing in
+            OutingDetailView(outingId: outing.id)
+        }
         .task { await fetchWikipediaData() }
     }
 
@@ -28,7 +31,6 @@ struct SpeciesDetailView: View {
 
     private var heroSection: some View {
         ZStack(alignment: .bottomLeading) {
-            // Image - 4:3 aspect ratio like web
             Group {
                 let imageUrl = fullImageUrl ?? entry?.thumbnailUrl
                 if let url = imageUrl, let imageURL = URL(string: url) {
@@ -70,23 +72,28 @@ struct SpeciesDetailView: View {
                 }
 
                 if let entry {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 4) {
                         Text("\(entry.totalCount) seen")
                             .fontWeight(.semibold)
-                        Text("\u{00B7}")
-                            .foregroundStyle(.white.opacity(0.4))
+                            .foregroundStyle(.white)
+                        Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
                         Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s")")
                             .fontWeight(.semibold)
-                        Text("\u{00B7}")
-                            .foregroundStyle(.white.opacity(0.4))
-                        Text("First \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))")
+                            .foregroundStyle(.white)
+                        Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
+                        Text("First ")
+                            .foregroundStyle(.white.opacity(0.7))
+                        + Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
                     }
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.7))
                 }
             }
             .padding()
         }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal)
     }
 
     private var heroPlaceholder: some View {
@@ -102,16 +109,16 @@ struct SpeciesDetailView: View {
     // MARK: - Content
 
     private var contentSection: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             // Wikipedia description
             if let extract = wikiExtract {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(extract)
                         .font(.system(size: 14))
-                        .foregroundStyle(Color.mutedText)
+                        .foregroundStyle(Color.foregroundText.opacity(0.8))
                         .lineSpacing(3)
 
-                    if let wikiTitle = entry?.wikiTitle {
+                    if entry?.wikiTitle != nil {
                         (Text("Source: ")
                             .foregroundStyle(Color.mutedText.opacity(0.6))
                         + Text("Wikipedia")
@@ -128,14 +135,23 @@ struct SpeciesDetailView: View {
                 .padding()
             }
 
-            // Links
-            VStack(spacing: 0) {
-                linkButtons
+            // Links - left justified
+            HStack(spacing: 10) {
+                if let entry, let wikiTitle = entry.wikiTitle {
+                    linkButton("Wikipedia", icon: "book", url: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")
+                }
+
+                let commonName = getDisplayName(speciesName)
+                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                linkButton("eBird", icon: "globe", url: "https://ebird.org/species/\(commonName)")
+                linkButton("All About Birds", icon: "info.circle", url: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")
+
+                Spacer()
             }
             .padding(.horizontal)
-            .padding(.bottom, 8)
+            .padding(.bottom, 12)
 
-            // Sightings
+            // Sightings - clickable
             VStack(alignment: .leading, spacing: 0) {
                 Text("SIGHTINGS (\(sightings.count))")
                     .font(.system(size: 12, weight: .medium))
@@ -144,24 +160,31 @@ struct SpeciesDetailView: View {
                     .padding(.vertical, 12)
 
                 ForEach(sightings, id: \.observation.id) { item in
-                    HStack {
-                        Image(systemName: "calendar")
-                            .font(.caption)
-                            .foregroundStyle(Color.mutedText)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.outing.locationName.isEmpty ? "Outing" : item.outing.locationName)
-                                .font(.system(size: 14, weight: .semibold, design: .serif))
-                            Text("\(DateFormatting.formatDate(item.outing.startTime, style: .medium)) \u{00B7} Confirmed")
-                                .font(.system(size: 12))
+                    NavigationLink(value: item.outing) {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .font(.caption)
                                 .foregroundStyle(Color.mutedText)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.outing.locationName.isEmpty ? "Outing" : item.outing.locationName)
+                                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                                    .foregroundStyle(Color.foregroundText)
+                                Text("\(DateFormatting.formatDate(item.outing.startTime, style: .medium)) \u{00B7} Confirmed")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.mutedText)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
-                        Spacer()
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
+                    .buttonStyle(.plain)
 
                     if item.observation.id != sightings.last?.observation.id {
-                        Divider().padding(.leading, 40)
+                        Divider().padding(.leading, 44)
                     }
                 }
             }
@@ -169,19 +192,6 @@ struct SpeciesDetailView: View {
     }
 
     // MARK: - Links
-
-    private var linkButtons: some View {
-        HStack(spacing: 12) {
-            if let entry, let wikiTitle = entry.wikiTitle {
-                linkButton("Wikipedia", icon: "book", url: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")
-            }
-
-            let commonName = getDisplayName(speciesName)
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            linkButton("eBird", icon: "globe", url: "https://ebird.org/species/\(commonName)")
-            linkButton("All About Birds", icon: "info.circle", url: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")
-        }
-    }
 
     private func linkButton(_ title: String, icon: String, url: String) -> some View {
         Link(destination: URL(string: url)!) {

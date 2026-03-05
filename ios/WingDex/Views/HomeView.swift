@@ -89,57 +89,68 @@ struct HomeView: View {
     // MARK: - Data View
 
     private var dataView: some View {
-        List {
-            // Hero stats
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(store.dex.count)")
-                            .font(.system(size: 48, weight: .semibold, design: .serif))
-                            .foregroundStyle(Color.foregroundText)
-                        Text("species observed")
-                            .font(.system(size: 18, design: .serif))
-                            .italic()
-                            .foregroundStyle(Color.mutedText)
-                    }
-                    Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Hero stats
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(store.dex.count)")
+                        .font(.system(size: 48, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("species observed")
+                        .font(.system(size: 18, design: .serif))
+                        .italic()
+                        .foregroundStyle(Color.mutedText)
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-                .padding(.vertical, 4)
-            }
+                .padding(.horizontal)
 
-            // Recent species grid
-            let recentSpecies = store.recentSpecies()
-            if !recentSpecies.isEmpty {
-                Section("Recent Species") {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                    ], spacing: 8) {
-                        ForEach(recentSpecies) { entry in
-                            NavigationLink(value: entry) {
-                                SpeciesCard(entry: entry)
+                // Recent species - horizontal scroll
+                let recentSpecies = store.recentSpecies()
+                if !recentSpecies.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Recent Species")
+                            .font(.system(size: 18, weight: .semibold, design: .serif))
+                            .padding(.horizontal)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(recentSpecies) { entry in
+                                    NavigationLink(value: entry) {
+                                        SpeciesCard(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal)
                         }
                     }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 }
-            }
 
-            // Recent outings
-            let recentOutings = store.recentOutings()
-            if !recentOutings.isEmpty {
-                Section("Recent Outings") {
-                    ForEach(recentOutings) { outing in
-                        NavigationLink(value: outing) {
-                            OutingRow(outing: outing, store: store)
+                // Recent outings
+                let recentOutings = store.recentOutings()
+                if !recentOutings.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Recent Outings")
+                            .font(.system(size: 18, weight: .semibold, design: .serif))
+                            .padding(.horizontal)
+
+                        VStack(spacing: 0) {
+                            ForEach(recentOutings) { outing in
+                                NavigationLink(value: outing) {
+                                    OutingRow(outing: outing, store: store)
+                                        .padding(.horizontal)
+                                        .padding(.vertical, 10)
+                                }
+                                .buttonStyle(.plain)
+
+                                if outing.id != recentOutings.last?.id {
+                                    Divider().padding(.leading, 60)
+                                }
+                            }
                         }
                     }
                 }
             }
+            .padding(.vertical)
         }
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
@@ -156,51 +167,47 @@ private struct SpeciesCard: View {
     let entry: DexEntry
 
     var body: some View {
-        VStack(spacing: 0) {
-            GeometryReader { geo in
-                Group {
-                    if let url = entry.thumbnailUrl, let imageURL = URL(string: url) {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable()
-                                    .scaledToFill()
-                                    .frame(width: geo.size.width, height: geo.size.width)
-                                    .clipped()
-                            case .failure:
-                                thumbnailPlaceholder
-                            default:
-                                thumbnailPlaceholder
-                            }
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                if let url = entry.thumbnailUrl, let imageURL = URL(string: url) {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable()
+                                .scaledToFill()
+                        case .failure:
+                            thumbnailPlaceholder
+                        default:
+                            thumbnailPlaceholder
                         }
-                    } else {
-                        thumbnailPlaceholder
                     }
+                } else {
+                    thumbnailPlaceholder
                 }
-                .frame(width: geo.size.width, height: geo.size.width)
             }
-            .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(width: 120, height: 90)
+            .clipped()
 
             Text(getDisplayName(entry.speciesName))
                 .font(.system(size: 11, weight: .semibold, design: .serif))
+                .foregroundStyle(Color.foregroundText)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(width: 120, alignment: .leading)
         }
         .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.warmBorder, lineWidth: 0.5)
         )
     }
 
     private var thumbnailPlaceholder: some View {
         Rectangle()
-            .fill(.quaternary)
+            .fill(Color.warmBorder.opacity(0.2))
             .overlay {
                 Image(systemName: "bird.fill")
                     .foregroundStyle(.tertiary)
