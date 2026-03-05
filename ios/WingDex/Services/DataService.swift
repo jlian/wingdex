@@ -247,15 +247,21 @@ final class DataService: Sendable {
     private func attachAuth(_ request: inout URLRequest) throws {
         let token = try auth.validToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        let method = request.httpMethod ?? "?"
+        let path = request.url?.path ?? "?"
+        let tokenPrefix = String(token.prefix(20))
+        log.debug("Request: \(method) \(path) token=\(tokenPrefix)...")
     }
 
     private func validate(_ response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else {
             throw DataServiceError.networkError("Invalid response")
         }
+        log.debug("Response: \(http.statusCode) for \(http.url?.path ?? "?")")
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("HTTP \(http.statusCode): \(body)")
+            log.error("HTTP \(http.statusCode) \(http.url?.path ?? "?"): \(body)")
             throw DataServiceError.httpError(http.statusCode, body)
         }
     }

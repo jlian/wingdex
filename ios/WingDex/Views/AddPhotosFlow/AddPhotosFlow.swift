@@ -26,6 +26,7 @@ struct AddPhotosFlow: View {
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .background(Color.pageBg.ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     if viewModel.currentStep != .done && viewModel.currentStep != .saving {

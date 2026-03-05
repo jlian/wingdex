@@ -124,6 +124,7 @@ struct SignInView: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(.red)
                                 .multilineTextAlignment(.center)
+                                .transition(.opacity)
                         }
 
                         // Mode toggle - matches web's "Already have a WingDex? Log in"

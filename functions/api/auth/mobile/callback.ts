@@ -29,8 +29,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return Response.redirect(errorUrl, 302)
   }
 
+  // Extract the signed session token from the cookie.
+  // Better Auth's middleware validates the HMAC-signed cookie, not the raw token.
+  const cookieHeader = context.request.headers.get('Cookie') || ''
+  let signedToken = session.session.token  // fallback to raw token
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim()
+    if (trimmed.startsWith('better-auth.session_token=')) {
+      signedToken = decodeURIComponent(trimmed.split('=').slice(1).join('='))
+      break
+    }
+  }
+
   const params = new URLSearchParams({
-    token: session.session.token,
+    token: signedToken,
     expires_at: session.session.expiresAt.toISOString(),
     user_id: session.user.id,
     user_name: session.user.name || '',
