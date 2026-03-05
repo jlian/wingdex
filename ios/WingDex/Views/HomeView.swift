@@ -108,6 +108,11 @@ struct HomeView: View {
             let recentSpecies = store.recentSpecies()
             if !recentSpecies.isEmpty {
                 Section {
+                    Text("Recent Species")
+                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                        .listRowSeparator(.hidden)
+
                     GeometryReader { geo in
                         let spacing: CGFloat = 10
                         let padding: CGFloat = 16
@@ -127,32 +132,30 @@ struct HomeView: View {
                     }
                     .frame(height: (UIScreen.main.bounds.width - 32 - 20) / 2.25)
                     .listRowInsets(EdgeInsets())
-                } header: {
-                    Text("Recent Species")
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
-                        .foregroundStyle(Color.foregroundText)
+                    .listRowSeparator(.hidden)
                 }
-                .listRowSeparator(.hidden)
             }
 
             // Recent outings
             let recentOutings = store.recentOutings()
             if !recentOutings.isEmpty {
                 Section {
+                    Text("Recent Outings")
+                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                        .listRowSeparator(.hidden)
+
                     ForEach(recentOutings) { outing in
                         NavigationLink(value: outing) {
                             OutingRow(outing: outing, store: store)
                         }
                     }
-                } header: {
-                    Text("Recent Outings")
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
-                        .foregroundStyle(Color.foregroundText)
                 }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .listSectionSeparator(.hidden)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }

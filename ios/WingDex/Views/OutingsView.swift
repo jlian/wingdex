@@ -114,6 +114,7 @@ struct OutingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
         }
+        .background(Color.pageBg.ignoresSafeArea())
     }
 
     private var outingsList: some View {

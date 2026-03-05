@@ -115,6 +115,7 @@ struct WingDexView: View {
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
         }
+        .background(Color.pageBg.ignoresSafeArea())
     }
 
     private var speciesList: some View {
