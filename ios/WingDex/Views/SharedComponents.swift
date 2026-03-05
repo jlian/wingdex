@@ -128,11 +128,11 @@ struct SpeciesCard: View {
             )
 
             Text(getDisplayName(entry.speciesName))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.9))
                 .lineLimit(2)
-                .padding(.horizontal, 8)
-                .padding(.bottom, 6)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
