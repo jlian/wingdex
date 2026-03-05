@@ -89,110 +89,72 @@ struct HomeView: View {
     // MARK: - Data View
 
     private var dataView: some View {
-        List {
-            // Hero stats
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(store.dex.count)")
-                    .font(.system(size: 48, weight: .semibold, design: .serif))
-                    .foregroundStyle(Color.foregroundText)
-                Text("species observed")
-                    .font(.system(size: 18, design: .serif))
-                    .italic()
-                    .foregroundStyle(Color.mutedText)
-            }
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.pageBg)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                // Hero stats
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(store.dex.count)")
+                        .font(.system(size: 48, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("species observed")
+                        .font(.system(size: 18, design: .serif))
+                        .italic()
+                        .foregroundStyle(Color.mutedText)
+                }
+                .padding(.horizontal)
 
-            // Recent species - horizontal scroll with gradient cards
-            let recentSpecies = store.recentSpecies()
-            if !recentSpecies.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Recent Species")
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                // Recent species - horizontal scroll with gradient cards
+                let recentSpecies = store.recentSpecies()
+                if !recentSpecies.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Recent Species")
+                            .font(.system(size: 18, weight: .semibold, design: .serif))
+                            .padding(.horizontal)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(recentSpecies) { entry in
-                                NavigationLink(value: entry) {
-                                    SpeciesCard(entry: entry)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(recentSpecies) { entry in
+                                    NavigationLink(value: entry) {
+                                        SpeciesCard(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+
+                // Recent outings
+                let recentOutings = store.recentOutings()
+                if !recentOutings.isEmpty {
+                    Text("Recent Outings")
+                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                        .padding(.horizontal)
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(recentOutings.enumerated()), id: \.element.id) { index, outing in
+                            NavigationLink(value: outing) {
+                                OutingRow(outing: outing, store: store)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 10)
+                            }
+                            .buttonStyle(.scrollRow)
+                            if index < recentOutings.count - 1 {
+                                Divider().padding(.leading, 72)
                             }
                         }
                     }
                 }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.pageBg)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 0))
             }
-
-            // Recent outings
-            let recentOutings = store.recentOutings()
-            if !recentOutings.isEmpty {
-                Text("Recent Outings")
-                    .font(.system(size: 18, weight: .semibold, design: .serif))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.pageBg)
-
-                ForEach(recentOutings) { outing in
-                    NavigationLink(value: outing) {
-                        OutingRow(outing: outing, store: store)
-                    }
-                    .listRowBackground(Color.pageBg)
-                }
-            }
+            .padding(.vertical)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.pageBg)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
         }
-    }
-}
-
-/// Reusable outing row - used in HomeView and OutingsView.
-/// Styled like iOS Messages/Mail: icon, bold title, secondary metadata, tertiary preview.
-struct OutingRow: View {
-    let outing: Outing
-    let store: DataStore
-
-    var body: some View {
-        let confirmed = store.confirmedObservations(outing.id)
-        let speciesNames = Array(Set(confirmed.map(\.speciesName))).sorted()
-
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 22))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                    .font(.system(size: 14, weight: .semibold, design: .serif))
-                    .foregroundStyle(Color.foregroundText)
-                    .lineLimit(1)
-
-                Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.mutedText)
-
-                if !speciesNames.isEmpty {
-                    Text(
-                        speciesNames.prefix(4).map { getDisplayName($0) }.joined(separator: ", ")
-                        + (speciesNames.count > 4 ? " +\(speciesNames.count - 4) more" : "")
-                    )
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.mutedText.opacity(0.7))
-                    .lineLimit(1)
-                }
-            }
-        }
-        .padding(.vertical, 2)
     }
 }
 

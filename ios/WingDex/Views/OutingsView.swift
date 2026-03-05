@@ -117,17 +117,13 @@ struct OutingsView: View {
     }
 
     private var outingsList: some View {
-        List {
-            ForEach(sortedOutings) { outing in
-                NavigationLink(value: outing) {
-                    OutingRow(outing: outing, store: store)
-                }
-                .listRowBackground(Color.pageBg)
+        List(sortedOutings) { outing in
+            NavigationLink(value: outing) {
+                OutingRow(outing: outing, store: store)
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.pageBg)
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
         }

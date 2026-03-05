@@ -64,7 +64,7 @@ struct SpeciesDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(getDisplayName(speciesName))
                     .font(.system(size: 26, weight: .semibold, design: .serif))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.white.opacity(0.9))
 
                 if let sci = getScientificName(speciesName) {
                     Text(sci)
@@ -77,17 +77,17 @@ struct SpeciesDetailView: View {
                     HStack(spacing: 4) {
                         Text("\(entry.totalCount) seen")
                             .fontWeight(.semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.white.opacity(0.9))
                         Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
                         Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s")")
                             .fontWeight(.semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.white.opacity(0.9))
                         Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
                         Text("First ")
                             .foregroundStyle(.white.opacity(0.7))
                         + Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))
                             .fontWeight(.semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.white.opacity(0.9))
                     }
                     .font(.system(size: 13))
                 }
@@ -156,7 +156,7 @@ struct SpeciesDetailView: View {
             .padding(.horizontal)
             .padding(.bottom, 12)
 
-            // Sightings - clickable
+            // Sightings - clickable, using shared OutingRow
             VStack(alignment: .leading, spacing: 0) {
                 Text("SIGHTINGS (\(sightings.count))")
                     .font(.system(size: 12, weight: .medium))
@@ -164,33 +164,15 @@ struct SpeciesDetailView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 12)
 
-                ForEach(sightings, id: \.observation.id) { item in
+                ForEach(Array(sightings.enumerated()), id: \.element.observation.id) { index, item in
                     NavigationLink(value: item.outing) {
-                        HStack {
-                            Image(systemName: "calendar")
-                                .font(.caption)
-                                .foregroundStyle(Color.mutedText)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.outing.locationName.isEmpty ? "Outing" : item.outing.locationName)
-                                    .font(.system(size: 14, weight: .semibold, design: .serif))
-                                    .foregroundStyle(Color.foregroundText)
-                                Text("\(DateFormatting.formatDate(item.outing.startTime, style: .medium)) \u{00B7} Confirmed")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.mutedText)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(Color.mutedText.opacity(0.4))
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 10)
-                        .contentShape(Rectangle())
+                        OutingRow(outing: item.outing, store: store)
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                     }
-                    .buttonStyle(.pressHighlight)
-
-                    if item.observation.id != sightings.last?.observation.id {
-                        Divider().padding(.leading, 44)
+                    .buttonStyle(.scrollRow)
+                    if index < sightings.count - 1 {
+                        Divider().padding(.leading, 72)
                     }
                 }
             }

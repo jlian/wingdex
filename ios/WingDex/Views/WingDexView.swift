@@ -118,21 +118,17 @@ struct WingDexView: View {
     }
 
     private var speciesList: some View {
-        List {
-            ForEach(sortedDex) { entry in
-                NavigationLink(value: entry) {
-                    BirdRow(
-                        speciesName: entry.speciesName,
-                        thumbnailUrl: entry.thumbnailUrl,
-                        subtitle: "\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))"
-                    )
-                }
-                .listRowBackground(Color.pageBg)
+        List(sortedDex) { entry in
+            NavigationLink(value: entry) {
+                BirdRow(
+                    speciesName: entry.speciesName,
+                    thumbnailUrl: entry.thumbnailUrl,
+                    subtitle: "\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))"
+                )
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.pageBg)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }
