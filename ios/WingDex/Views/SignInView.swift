@@ -38,19 +38,11 @@ struct SignInView: View {
                                 .font(.system(size: 18, weight: .semibold, design: .serif))
                                 .foregroundStyle(Color.foregroundText)
 
-                            (Text("By continuing you accept our ")
+                            Text("By continuing you accept our \(Text("Terms of Use").foregroundStyle(Color.accentColor)) and \(Text("Privacy Policy").foregroundStyle(Color.accentColor)).")
+                                .font(.system(size: 14))
                                 .foregroundStyle(Color.mutedText)
-                            + Text("Terms of Use")
-                                .foregroundStyle(Color.accentColor)
-                            + Text(" and ")
-                                .foregroundStyle(Color.mutedText)
-                            + Text("Privacy Policy")
-                                .foregroundStyle(Color.accentColor)
-                            + Text(".")
-                                .foregroundStyle(Color.mutedText))
-                            .font(.system(size: 14))
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
 
                         // Social buttons - web: 36px height, 12px radius, 14px medium
@@ -135,17 +127,13 @@ struct SignInView: View {
                             }
                         } label: {
                             if mode == .signup {
-                                (Text("Already have a WingDex? ")
+                                Text("Already have a WingDex? \(Text("Log in").foregroundStyle(Color.accentColor))")
+                                    .font(.system(size: 14))
                                     .foregroundStyle(Color.mutedText)
-                                + Text("Log in")
-                                    .foregroundStyle(Color.accentColor))
-                                .font(.system(size: 14))
                             } else {
-                                (Text("New to WingDex? ")
+                                Text("New to WingDex? \(Text("Sign up").foregroundStyle(Color.accentColor))")
+                                    .font(.system(size: 14))
                                     .foregroundStyle(Color.mutedText)
-                                + Text("Sign up")
-                                    .foregroundStyle(Color.accentColor))
-                                .font(.system(size: 14))
                             }
                         }
                         .buttonStyle(.plain)

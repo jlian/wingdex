@@ -376,12 +376,8 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
 
 extension PasskeyService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = scene.windows.first
-        else {
-            return ASPresentationAnchor()
-        }
-        return window
+        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        return scene?.keyWindow ?? UIWindow()
     }
 }
 
