@@ -91,7 +91,7 @@ describe('useAuthGate', () => {
     mockAddPasskey.mockResolvedValue({ error: null })
   })
 
-  it('opens in sign-up mode and creates account with passkey', async () => {
+  it('opens the combined auth modal and signs up with the passkey action', async () => {
     mockAddPasskey.mockResolvedValue({ data: { id: 'pk-test-1' }, error: null })
 
     const fetchMock = vi.fn()
@@ -103,8 +103,8 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
-    expect(screen.getByRole('heading', { name: /sign up/i })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /sign up with a passkey/i }))
+    expect(screen.getByRole('heading', { name: /continue to wingdex/i })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /sign up/i }))
 
     await waitFor(() => {
       expect(onUpgraded).toHaveBeenCalledTimes(1)
@@ -122,7 +122,7 @@ describe('useAuthGate', () => {
     })
   })
 
-  it('switches to log-in mode and uses passkey sign-in', async () => {
+  it('uses the passkey log-in action from the combined auth modal', async () => {
     mockSignInPasskey.mockResolvedValue({ error: null })
     mockGetSession.mockResolvedValue({
       data: {
@@ -139,9 +139,8 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
+    expect(screen.getByRole('heading', { name: /continue to wingdex/i })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /log in/i }))
-    expect(screen.getByRole('heading', { name: /^log in$/i })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /log in with a passkey/i }))
 
     await waitFor(() => {
       expect(mockSignInPasskey).toHaveBeenCalled()
@@ -160,7 +159,7 @@ describe('useAuthGate', () => {
     // Callback runs immediately without opening modal
     expect(screen.getByText('action-ran')).toBeInTheDocument()
     expect(onUpgraded).not.toHaveBeenCalled()
-    expect(screen.queryByRole('heading', { name: /sign up/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /continue to wingdex/i })).not.toBeInTheDocument()
   })
 
   it('does not call onUpgraded when passkey creation is cancelled', async () => {
@@ -174,7 +173,7 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
-    await userEvent.click(screen.getByRole('button', { name: /sign up with a passkey/i }))
+    await userEvent.click(screen.getByRole('button', { name: /sign up/i }))
 
     await waitFor(() => {
       expect(mockAddPasskey).toHaveBeenCalledTimes(1)
@@ -196,7 +195,7 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
-    await userEvent.click(screen.getByRole('button', { name: /sign up with a passkey/i }))
+    await userEvent.click(screen.getByRole('button', { name: /sign up/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/already has a passkey/i)).toBeInTheDocument()

@@ -23,17 +23,14 @@ interface AuthGateOptions {
   onSetDemoDataEnabled?: (enabled: boolean) => Promise<void> | void
 }
 
-type AuthMode = 'signup' | 'login'
-
 /**
  * Hook that gates actions behind authentication.
- * Returns `requireAuth(callback)` -- if user is anonymous, opens sign-up modal.
+ * Returns `requireAuth(callback)` -- if user is anonymous, opens auth modal.
  * If user is already authenticated, runs the callback immediately.
  * Also returns `authGateModal` element to render once in the tree.
  */
 export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDemoDataEnabled }: AuthGateOptions) {
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<AuthMode>('signup')
   const pendingCallback = useRef<(() => void) | null>(null)
 
   const requireAuth = useCallback((callback: () => void) => {
@@ -42,13 +39,11 @@ export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDem
       return
     }
     pendingCallback.current = callback
-    setMode('signup')
     setOpen(true)
   }, [isAnonymous])
 
   const openSignIn = useCallback(() => {
     pendingCallback.current = null
-    setMode('login')
     setOpen(true)
   }, [])
 
@@ -64,8 +59,6 @@ export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDem
     <AuthGateModal
       open={open}
       onOpenChange={setOpen}
-      mode={mode}
-      onModeChange={setMode}
       onUpgraded={handleUpgraded}
       demoDataEnabled={demoDataEnabled}
       onSetDemoDataEnabled={onSetDemoDataEnabled}
@@ -80,8 +73,6 @@ export function useAuthGate({ isAnonymous, onUpgraded, demoDataEnabled, onSetDem
 interface AuthGateModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  mode: AuthMode
-  onModeChange: (mode: AuthMode) => void
   onUpgraded: () => void
   demoDataEnabled?: boolean
   onSetDemoDataEnabled?: (enabled: boolean) => Promise<void> | void
@@ -90,8 +81,6 @@ interface AuthGateModalProps {
 function AuthGateModal({
   open,
   onOpenChange,
-  mode,
-  onModeChange,
   onUpgraded,
   demoDataEnabled,
   onSetDemoDataEnabled,
@@ -100,11 +89,16 @@ function AuthGateModal({
   const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [providers, setProviders] = useState<string[] | null>(null)
-  // Before fetch resolves (null) show common providers to avoid layout shift;
-  // after fetch resolves to [] hide them (env vars not configured).
-  const visibleProviders = providers === null
-    ? ['github', 'apple']
-    : providers
+
+  const isLocalVisualAuth = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+
+  // Keep both social buttons visible in local/dev so modal polish can be done
+  // without depending on provider secrets.
+  const visibleProviders = Array.from(new Set([
+    ...(providers ?? ['github', 'apple']),
+    ...(isLocalVisualAuth ? ['github', 'apple'] : []),
+  ]))
 
   const buildSocialCallbackURL = (provider: 'github' | 'apple'): string => {
     if (typeof window === 'undefined') return '/'
@@ -235,7 +229,7 @@ function AuthGateModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{mode === 'signup' ? 'Sign up' : 'Log in'}</DialogTitle>
+          <DialogTitle>Continue to WingDex</DialogTitle>
           <DialogDescription>
             By continuing you accept our{' '}
             <a
@@ -299,54 +293,32 @@ function AuthGateModal({
           )}
 
           {/* Passkey */}
-          <div className="space-y-3">
-            <Button
-              className="w-full"
-              onClick={() => void (mode === 'signup' ? handleSignUpWithPasskey() : handlePasskeySignIn())}
-              disabled={isLoading}
-            >
-              <Key size={18} className="mr-2" />
-              {isLoading
-                ? 'Working…'
-                : (mode === 'signup' ? 'Sign up with a Passkey' : 'Log in with a Passkey')}
-            </Button>
+          <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+            <p className="text-center text-sm font-medium text-foreground">Continue with a Passkey</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                className="w-full"
+                onClick={() => void handlePasskeySignIn()}
+                disabled={isLoading}
+              >
+                <Key size={18} className="mr-2" />
+                {isLoading ? 'Working…' : 'Log in'}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => void handleSignUpWithPasskey()}
+                disabled={isLoading}
+              >
+                <Key size={18} className="mr-2" />
+                {isLoading ? 'Working…' : 'Sign up'}
+              </Button>
+            </div>
           </div>
 
           {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
-          <p className="text-center text-sm text-muted-foreground">
-            {mode === 'signup' ? (
-              <>
-                Already have a WingDex?{' '}
-                <button
-                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
-                  onClick={() => {
-                    setErrorMessage(null)
-                    onModeChange('login')
-                  }}
-                  disabled={isLoading}
-                >
-                  Log in
-                </button>
-              </>
-            ) : (
-              <>
-                New to WingDex?{' '}
-                <button
-                  className="text-primary underline-offset-4 hover:underline cursor-pointer"
-                  onClick={() => {
-                    setErrorMessage(null)
-                    onModeChange('signup')
-                  }}
-                  disabled={isLoading}
-                >
-                  Sign up
-                </button>
-              </>
-            )}
-          </p>
-
-          {mode === 'signup' && typeof demoDataEnabled === 'boolean' && onSetDemoDataEnabled && (
+          {typeof demoDataEnabled === 'boolean' && onSetDemoDataEnabled && (
             <div className="pt-1">
               <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <div>
