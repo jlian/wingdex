@@ -95,6 +95,9 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   if (env.APPLE_CLIENT_ID && env.APPLE_CLIENT_SECRET) {
     socialProviders.apple = { clientId: env.APPLE_CLIENT_ID, clientSecret: env.APPLE_CLIENT_SECRET }
   }
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    socialProviders.google = { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
+  }
 
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
@@ -116,7 +119,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     account: {
       accountLinking: {
         enabled: true,
-        trustedProviders: ['github', 'apple'],
+        trustedProviders: ['github', 'apple', 'google'],
         allowDifferentEmails: true,
       },
     },

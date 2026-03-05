@@ -53,6 +53,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Key: () => <span>Key</span>,
   GithubLogo: () => <span>GitHub</span>,
   AppleLogo: () => <span>Apple</span>,
+  GoogleChromeLogo: () => <span>Google</span>,
 }))
 
 vi.mock('@/components/ui/switch', () => ({

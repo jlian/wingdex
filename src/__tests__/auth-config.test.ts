@@ -25,6 +25,7 @@ describe('auth config', () => {
     expect(auth.options.account?.accountLinking?.enabled).toBe(true)
     expect(auth.options.account?.accountLinking?.trustedProviders).toContain('github')
     expect(auth.options.account?.accountLinking?.trustedProviders).toContain('apple')
+    expect(auth.options.account?.accountLinking?.trustedProviders).toContain('google')
     expect(auth.options.account?.accountLinking?.allowDifferentEmails).toBe(true)
   })
 
@@ -55,6 +56,15 @@ describe('auth config', () => {
       ...mockEnv,
       APPLE_CLIENT_ID: 'test-apple-id',
       APPLE_CLIENT_SECRET: 'test-apple-secret',
+    })
+    expect(auth.api.signInSocial).toBeDefined()
+  })
+
+  it('registers Google provider when credentials are set', () => {
+    const auth = createAuth({
+      ...mockEnv,
+      GOOGLE_CLIENT_ID: 'test-google-id',
+      GOOGLE_CLIENT_SECRET: 'test-google-secret',
     })
     expect(auth.api.signInSocial).toBeDefined()
   })
