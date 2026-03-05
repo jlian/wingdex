@@ -2,6 +2,7 @@ import AuthenticationServices
 import Foundation
 import KeychainAccess
 import Observation
+import UIKit
 import os
 
 private let log = Logger(subsystem: Config.bundleID, category: "Auth")
@@ -259,9 +260,15 @@ final class AuthService: @unchecked Sendable {
             }
             // Use non-ephemeral so OAuth cookies persist across the redirect chain
             session.prefersEphemeralWebBrowserSession = false
+            // Presentation context: use the first window scene's key window
+            let contextProvider = WebAuthContextProvider()
+            session.presentationContextProvider = contextProvider
+            self.webAuthContext = contextProvider
             session.start()
         }
     }
+
+    private var webAuthContext: WebAuthContextProvider?
 
     // MARK: - Callback Processing
 
@@ -288,7 +295,13 @@ final class AuthService: @unchecked Sendable {
         }
 
         let formatter = ISO8601DateFormatter()
-        guard let expiry = formatter.date(from: expiresAt) else {
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        // Try with fractional seconds first, then without
+        let expiry = formatter.date(from: expiresAt) ?? {
+            let basic = ISO8601DateFormatter()
+            return basic.date(from: expiresAt)
+        }()
+        guard let expiry else {
             throw AuthError.oauthFailed("Invalid expiry date")
         }
 
@@ -397,6 +410,17 @@ final class AuthService: @unchecked Sendable {
         for cookie in cookies {
             HTTPCookieStorage.shared.deleteCookie(cookie)
         }
+    }
+}
+
+/// Provides the presentation anchor for ASWebAuthenticationSession.
+private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.keyWindow else {
+            return ASPresentationAnchor()
+        }
+        return window
     }
 }
 

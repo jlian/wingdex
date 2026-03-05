@@ -34,6 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     method: 'POST',
     headers: new Headers({
       'Content-Type': 'application/json',
+      Origin: url.origin,
       Cookie: context.request.headers.get('Cookie') || '',
     }),
     body: JSON.stringify({
@@ -44,16 +45,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const response = await auth.handler(internalReq)
 
-  // Better Auth returns JSON { url, redirect: true } plus Set-Cookie for state/PKCE
+  // Better Auth may return either:
+  // 1. JSON { url, redirect: true } with Set-Cookie (newer versions)
+  // 2. A 302 redirect with Location header (some configurations)
   let redirectUrl: string
-  try {
-    const json = (await response.json()) as { url?: string; redirect?: boolean }
-    if (!json.url) {
-      return new Response('No redirect URL from auth provider', { status: 500 })
+  const setCookieHeaders: string[] = []
+
+  if (response.status >= 300 && response.status < 400) {
+    // 302 redirect - read Location header
+    redirectUrl = response.headers.get('Location') || ''
+  } else {
+    // JSON response
+    try {
+      const json = (await response.json()) as { url?: string; redirect?: boolean }
+      redirectUrl = json.url || ''
+    } catch {
+      return new Response('Invalid response from auth', { status: 500 })
     }
-    redirectUrl = json.url
-  } catch {
-    return new Response('Invalid response from auth', { status: 500 })
+  }
+
+  if (!redirectUrl) {
+    return new Response('No redirect URL from auth provider', { status: 500 })
   }
 
   // Build a 302 redirect, forwarding all Set-Cookie headers from Better Auth

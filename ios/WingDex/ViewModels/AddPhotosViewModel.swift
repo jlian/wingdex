@@ -123,15 +123,24 @@ final class AddPhotosViewModel {
 
     /// Send each photo to the AI identification endpoint.
     func identifyBirds() async {
-        guard let service = dataService else { return }
+        guard let service = dataService else {
+            log.error("identifyBirds: dataService is nil")
+            await MainActor.run { currentStep = .review }
+            return
+        }
         isProcessing = true
         processingMessage = "Identifying birds..."
         processedCount = 0
         totalCount = processedPhotos.count
+        log.info("Starting bird identification for \(self.processedPhotos.count) photos")
 
         for photo in processedPhotos {
             do {
-                guard let image = UIImage(data: photo.image) else { continue }
+                guard let image = UIImage(data: photo.image) else {
+                    log.warning("Skipping photo \(photo.id): could not create UIImage")
+                    processedCount += 1
+                    continue
+                }
 
                 // Compress to 640px max for the API
                 let maxDim: CGFloat = 640
@@ -188,7 +197,9 @@ final class AddPhotosViewModel {
             processedCount += 1
         }
 
+        log.info("Bird identification complete: \(self.identifications.count) identified, \(self.confirmedSpecies.count) auto-confirmed")
         isProcessing = false
+        await MainActor.run { currentStep = .review }
     }
 
     /// Save confirmed outings and observations to the API.
