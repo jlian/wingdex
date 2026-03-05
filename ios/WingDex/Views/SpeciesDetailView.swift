@@ -12,12 +12,41 @@ struct SpeciesDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        List {
+            // Hero image section - no separators, full bleed
+            Section {
                 heroSection
-                contentSection
+                    .listRowInsets(EdgeInsets())
+            }
+            .listRowSeparator(.hidden)
+
+            // Wikipedia + links section
+            if wikiExtract != nil || entry != nil {
+                Section {
+                    wikiSection
+                }
+                .listRowSeparator(.hidden)
+
+                Section {
+                    linksSection
+                }
+            }
+
+            // Sightings section
+            Section {
+                ForEach(sightings, id: \.observation.id) { item in
+                    NavigationLink(value: item.outing) {
+                        OutingRow(outing: item.outing, store: store)
+                    }
+                }
+            } header: {
+                Text("Sightings (\(sightings.count))")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.mutedText)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.pageBg.ignoresSafeArea())
@@ -111,69 +140,29 @@ struct SpeciesDetailView: View {
             }
     }
 
-    // MARK: - Content
+    // MARK: - Wiki
 
-    private var contentSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Wikipedia description
-            if let extract = wikiExtract {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(extract)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.foregroundText.opacity(0.8))
-                        .lineSpacing(3)
+    @ViewBuilder
+    private var wikiSection: some View {
+        if let extract = wikiExtract {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(extract)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.foregroundText.opacity(0.8))
+                    .lineSpacing(3)
 
-                    if entry?.wikiTitle != nil {
-                        (Text("Source: ")
-                            .foregroundStyle(Color.mutedText.opacity(0.6))
-                        + Text("Wikipedia")
-                            .foregroundStyle(Color.accentColor)
-                        + Text(". Text and images available under ")
-                            .foregroundStyle(Color.mutedText.opacity(0.6))
-                        + Text("CC BY-SA 4.0")
-                            .foregroundStyle(Color.accentColor)
-                        + Text(".")
-                            .foregroundStyle(Color.mutedText.opacity(0.6)))
-                        .font(.system(size: 11))
-                    }
-                }
-                .padding()
-            }
-
-            // Links - left justified
-            HStack(spacing: 10) {
-                if let entry, let wikiTitle = entry.wikiTitle {
-                    linkButton("Wikipedia", icon: "book", url: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")
-                }
-
-                let commonName = getDisplayName(speciesName)
-                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                linkButton("eBird", icon: "globe", url: "https://ebird.org/species/\(commonName)")
-                linkButton("All About Birds", icon: "info.circle", url: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")
-
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 12)
-
-            // Sightings - clickable, using shared OutingRow
-            VStack(alignment: .leading, spacing: 0) {
-                Text("SIGHTINGS (\(sightings.count))")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mutedText)
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-
-                ForEach(Array(sightings.enumerated()), id: \.element.observation.id) { index, item in
-                    NavigationLink(value: item.outing) {
-                        OutingRow(outing: item.outing, store: store)
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.scrollRow)
-                    if index < sightings.count - 1 {
-                        Divider().padding(.leading, 72)
-                    }
+                if entry?.wikiTitle != nil {
+                    (Text("Source: ")
+                        .foregroundStyle(Color.mutedText.opacity(0.6))
+                    + Text("Wikipedia")
+                        .foregroundStyle(Color.accentColor)
+                    + Text(". Text and images available under ")
+                        .foregroundStyle(Color.mutedText.opacity(0.6))
+                    + Text("CC BY-SA 4.0")
+                        .foregroundStyle(Color.accentColor)
+                    + Text(".")
+                        .foregroundStyle(Color.mutedText.opacity(0.6)))
+                    .font(.system(size: 11))
                 }
             }
         }
@@ -181,18 +170,21 @@ struct SpeciesDetailView: View {
 
     // MARK: - Links
 
-    private func linkButton(_ title: String, icon: String, url: String) -> some View {
-        Link(destination: URL(string: url)!) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 13))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.cardBg)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.warmBorder, lineWidth: 0.5)
-                )
+    @ViewBuilder
+    private var linksSection: some View {
+        if let entry, let wikiTitle = entry.wikiTitle {
+            Link(destination: URL(string: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")!) {
+                Label("Wikipedia", systemImage: "book")
+            }
+        }
+
+        let commonName = getDisplayName(speciesName)
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        Link(destination: URL(string: "https://ebird.org/species/\(commonName)")!) {
+            Label("eBird", systemImage: "globe")
+        }
+        Link(destination: URL(string: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")!) {
+            Label("All About Birds", systemImage: "info.circle")
         }
     }
 
