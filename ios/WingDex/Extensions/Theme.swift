@@ -54,7 +54,7 @@ extension UICollectionViewListCell {
     open override func updateConfiguration(using state: UICellConfigurationState) {
         super.updateConfiguration(using: state)
         guard isPlainListCell else { return }
-        var bg = UIBackgroundConfiguration.listPlainCell()
+        var bg = UIBackgroundConfiguration.listCell()
         bg.backgroundColor = UIColor(Color.pageBg)
         if state.isHighlighted || state.isSelected {
             bg.backgroundColor = UIColor(Color.foregroundText.opacity(0.08))
