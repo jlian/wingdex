@@ -7,14 +7,36 @@ struct CropView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var cropBox: CropBoxResult
-    @State private var dragOffset: CGSize = .zero
+    @State private var paddedInitialCrop: CropBoxResult
+    @State private var dragStartCrop: CropBoxResult?
 
     init(imageData: Data, initialCropBox: CropBoxResult?, onApply: @escaping (CropBoxResult) -> Void) {
         self.imageData = imageData
         self.initialCropBox = initialCropBox
         self.onApply = onApply
-        // Default to center 50% crop if no AI suggestion
-        self._cropBox = State(initialValue: initialCropBox ?? CropBoxResult(x: 25, y: 25, width: 50, height: 50))
+
+        // Convert AI percentage crop to padded square, matching web's computePaddedSquareCropFromPercent
+        let defaultCrop = CropBoxResult(x: 25, y: 25, width: 50, height: 50)
+        let padded: CropBoxResult
+        if let aiCrop = initialCropBox, let uiImage = UIImage(data: imageData) {
+            let natW = uiImage.size.width
+            let natH = uiImage.size.height
+            let pixelCrop = CropService.paddedSquareCrop(
+                from: CropService.CropBox(x: aiCrop.x, y: aiCrop.y, width: aiCrop.width, height: aiCrop.height),
+                naturalWidth: natW,
+                naturalHeight: natH
+            )
+            padded = CropBoxResult(
+                x: pixelCrop.x / natW * 100,
+                y: pixelCrop.y / natH * 100,
+                width: pixelCrop.width / natW * 100,
+                height: pixelCrop.height / natH * 100
+            )
+        } else {
+            padded = defaultCrop
+        }
+        self._cropBox = State(initialValue: padded)
+        self._paddedInitialCrop = State(initialValue: padded)
     }
 
     var body: some View {
@@ -47,11 +69,16 @@ struct CropView: View {
                             .gesture(
                                 DragGesture()
                                     .onChanged { value in
+                                        let start = dragStartCrop ?? cropBox
+                                        if dragStartCrop == nil { dragStartCrop = cropBox }
                                         let dx = value.translation.width / imageRect.renderedW * 100
                                         let dy = value.translation.height / imageRect.renderedH * 100
-                                        let newX = max(0, min(100 - cropBox.width, (initialCropBox?.x ?? cropBox.x) + dx))
-                                        let newY = max(0, min(100 - cropBox.height, (initialCropBox?.y ?? cropBox.y) + dy))
+                                        let newX = max(0, min(100 - cropBox.width, start.x + dx))
+                                        let newY = max(0, min(100 - cropBox.height, start.y + dy))
                                         cropBox = CropBoxResult(x: newX, y: newY, width: cropBox.width, height: cropBox.height)
+                                    }
+                                    .onEnded { _ in
+                                        dragStartCrop = nil
                                     }
                             )
                     }
@@ -60,7 +87,7 @@ struct CropView: View {
 
             HStack(spacing: 16) {
                 Button("Reset") {
-                    cropBox = initialCropBox ?? CropBoxResult(x: 25, y: 25, width: 50, height: 50)
+                    cropBox = paddedInitialCrop
                 }
                 .buttonStyle(.bordered)
 
