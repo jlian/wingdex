@@ -118,17 +118,23 @@ struct WingDexView: View {
     }
 
     private var speciesList: some View {
-        List {
-            Section {
-                Text("\(store.dex.count) \(store.dex.count == 1 ? "species" : "species") in your WingDex")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(store.dex.count) species in your WingDex")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.mutedText)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
 
-            ForEach(sortedDex) { entry in
-                NavigationLink(value: entry) {
-                    DexRow(entry: entry)
+                ForEach(sortedDex) { entry in
+                    NavigationLink(value: entry) {
+                        DexRow(entry: entry)
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+
+                    Divider().padding(.leading, 76)
                 }
             }
         }
