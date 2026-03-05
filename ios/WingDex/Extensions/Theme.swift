@@ -22,8 +22,8 @@ extension Color {
 
     // MARK: - Text
 
-    /// Muted secondary text - oklch(0.55 0.04 240) -> rgb(93, 117, 135)
-    static let mutedText = Color(red: 93/255, green: 117/255, blue: 135/255)
+    /// Muted secondary text - darker than web's oklch(0.55 0.04 240) for readability on beige
+    static let mutedText = Color(red: 70/255, green: 90/255, blue: 105/255)
 
     /// Foreground text - oklch(0.25 0.02 155) -> rgb(26, 37, 29)
     static let foregroundText = Color(red: 26/255, green: 37/255, blue: 29/255)
@@ -32,6 +32,21 @@ extension Color {
 
     /// Warm border - oklch(0.80 0.02 85) -> rgb(196, 189, 176)
     static let warmBorder = Color(red: 196/255, green: 189/255, blue: 176/255)
+}
+
+// MARK: - Press Highlight Button Style
+
+/// Button style that darkens on press, matching web app's press-feel and iOS Messages/Mail.
+struct PressHighlightButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color.foregroundText.opacity(0.06) : Color.clear)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressHighlightButtonStyle {
+    static var pressHighlight: PressHighlightButtonStyle { PressHighlightButtonStyle() }
 }
 
 // MARK: - View Modifiers

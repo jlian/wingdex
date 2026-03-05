@@ -14,6 +14,7 @@
 		1C59F45B5FEBEF6C412CB307 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB5C722ED2F16A2C5666DB3 /* ReviewView.swift */; };
 		223DAEB5BCD5CAC52065CF13 /* taxonomy.json in Resources */ = {isa = PBXBuildFile; fileRef = F930B7A16F2B5C40B971D674 /* taxonomy.json */; };
 		2300C447E8E145BFE9E12FA5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B8621A8E42D9A18A2125F8 /* Config.swift */; };
+		2314AD2B5AD2CAE6D1426754 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */; };
 		27F3FC5181B71ADB687A56CC /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26C4686392C96AAB515199 /* CropView.swift */; };
 		2C9C67D638E44F34D95746BD /* ConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C018AA33198FA823AABA8B0 /* ConfirmView.swift */; };
 		3765CB91633BD6B909098629 /* AddPhotosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61DFE3278988BC58601C97F3 /* AddPhotosViewModel.swift */; };
@@ -50,6 +51,7 @@
 		01F34071627BDA774005F033 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		01FABF05EDCB9B13D4839648 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */ = {isa = PBXFileReference; path = "demo-ebird-import.csv"; sourceTree = "<group>"; };
+		0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosFlow.swift; sourceTree = "<group>"; };
 		1A4472F76A8259376EBEA738 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -146,6 +148,7 @@
 				BB01BEA15BC45041F637C903 /* OutingsView.swift */,
 				2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */,
 				01F34071627BDA774005F033 /* SettingsView.swift */,
+				0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */,
 				01FABF05EDCB9B13D4839648 /* SignInView.swift */,
 				D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */,
 				6B5043AC2718CF99118DD12C /* WingDexView.swift */,
@@ -330,6 +333,7 @@
 				1C59F45B5FEBEF6C412CB307 /* ReviewView.swift in Sources */,
 				4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */,
 				94FF36C55254CADF7AE8552A /* SettingsViewModel.swift in Sources */,
+				2314AD2B5AD2CAE6D1426754 /* SharedComponents.swift in Sources */,
 				9E3F0C28882FAFAA45934BCF /* SignInView.swift in Sources */,
 				BE1BC5ECDCCA3BB2EAA10E79 /* SpeciesDetailView.swift in Sources */,
 				62CEC4EA93999F921A2BE78B /* TaxonomyEntry.swift in Sources */,

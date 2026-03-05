@@ -117,26 +117,17 @@ struct OutingsView: View {
     }
 
     private var outingsList: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(store.outings.count) \(store.outings.count == 1 ? "outing" : "outings") recorded")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.mutedText)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-
-                ForEach(sortedOutings) { outing in
-                    NavigationLink(value: outing) {
-                        OutingRow(outing: outing, store: store)
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider().padding(.leading, 60)
+        List {
+            ForEach(sortedOutings) { outing in
+                NavigationLink(value: outing) {
+                    OutingRow(outing: outing, store: store)
                 }
+                .listRowBackground(Color.pageBg)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBg)
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
         }
