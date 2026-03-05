@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/jlian/wingdex/compare/v1.11.6...v1.12.0) (2026-03-05)
+
+
+### Features
+
+* **Home:** species cards with gradient text overlay, white/90 hero text ([248fa63](https://github.com/jlian/wingdex/commit/248fa63d2834364a5f3d1c1cbd65bfaa3208113d))
+
 ## [1.11.6](https://github.com/jlian/wingdex/compare/v1.11.5...v1.11.6) (2026-03-04)
 
 
