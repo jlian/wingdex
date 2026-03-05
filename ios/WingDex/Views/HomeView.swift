@@ -108,17 +108,24 @@ struct HomeView: View {
             let recentSpecies = store.recentSpecies()
             if !recentSpecies.isEmpty {
                 Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(recentSpecies) { entry in
-                                NavigationLink(value: entry) {
-                                    SpeciesCard(entry: entry)
+                    GeometryReader { geo in
+                        let spacing: CGFloat = 10
+                        let padding: CGFloat = 16
+                        // 2 full cards + 1/4 of third visible
+                        let cardSize = (geo.size.width - padding * 2 - spacing * 2) / 2.25
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: spacing) {
+                                ForEach(recentSpecies) { entry in
+                                    NavigationLink(value: entry) {
+                                        SpeciesCard(entry: entry, size: cardSize)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
+                            .padding(.horizontal, padding)
                         }
-                        .padding(.horizontal)
                     }
+                    .frame(height: (UIScreen.main.bounds.width - 32 - 20) / 2.25)
                     .listRowInsets(EdgeInsets())
                 } header: {
                     Text("Recent Species")
