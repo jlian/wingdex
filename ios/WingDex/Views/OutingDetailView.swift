@@ -181,11 +181,9 @@ struct OutingDetailView: View {
                             count: totalCount
                         )
                         .padding(.horizontal)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                        .padding(.vertical, 10)
                     }
-                    .buttonStyle(.pressHighlight)
-
+                    .buttonStyle(.scrollRow)
                     if index < grouped.count - 1 {
                         Divider().padding(.leading, 76)
                     }
@@ -219,11 +217,9 @@ struct OutingDetailView: View {
                             count: totalCount
                         )
                         .padding(.horizontal)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                        .padding(.vertical, 10)
                     }
-                    .buttonStyle(.pressHighlight)
-
+                    .buttonStyle(.scrollRow)
                     if index < grouped.count - 1 {
                         Divider().padding(.leading, 76)
                     }

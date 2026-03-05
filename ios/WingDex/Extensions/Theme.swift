@@ -34,19 +34,36 @@ extension Color {
     static let warmBorder = Color(red: 196/255, green: 189/255, blue: 176/255)
 }
 
-// MARK: - Press Highlight Button Style
+// MARK: - List Cell Appearance
 
-/// Button style that darkens on press, matching web app's press-feel and iOS Messages/Mail.
-struct PressHighlightButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Color.foregroundText.opacity(0.06) : Color.clear)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+/// Override UICollectionViewListCell to set custom background + highlight colors.
+/// On iOS 16+ SwiftUI List uses UICollectionView, so UITableView appearance has no effect.
+extension UICollectionViewListCell {
+    open override func updateConfiguration(using state: UICellConfigurationState) {
+        super.updateConfiguration(using: state)
+        var bg = UIBackgroundConfiguration.listPlainCell()
+        bg.backgroundColor = UIColor(Color.pageBg)
+        if state.isHighlighted || state.isSelected {
+            bg.backgroundColor = UIColor(Color.foregroundText.opacity(0.08))
+        }
+        backgroundConfiguration = bg
     }
 }
 
-extension ButtonStyle where Self == PressHighlightButtonStyle {
-    static var pressHighlight: PressHighlightButtonStyle { PressHighlightButtonStyle() }
+// MARK: - ScrollView Row Button Style
+
+/// Button style for NavigationLink rows in ScrollView contexts (detail pages).
+/// Matches the List cell highlight from UICollectionViewListCell above.
+struct ScrollRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color.foregroundText.opacity(0.08) : Color.clear)
+            .animation(.easeInOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == ScrollRowButtonStyle {
+    static var scrollRow: ScrollRowButtonStyle { ScrollRowButtonStyle() }
 }
 
 // MARK: - View Modifiers
