@@ -452,18 +452,18 @@ function SpeciesDetail({
 
           {/* Gradient overlay + text at bottom */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-16 pb-4 px-4 sm:px-5">
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-white leading-tight drop-shadow-md">
+            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-white/90 leading-tight drop-shadow-md">
               {displayName}
             </h2>
             {scientificName && (
               <p className="text-sm text-white/75 italic mt-0.5 drop-shadow-sm">{scientificName}</p>
             )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-white/70">
-              <span><span className="font-semibold text-white">{entry.totalCount}</span> seen</span>
+              <span><span className="font-semibold text-white/90">{entry.totalCount}</span> seen</span>
               <span className="text-white/40">·</span>
-              <span><span className="font-semibold text-white">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}</span>
+              <span><span className="font-semibold text-white/90">{entry.totalOutings}</span> {entry.totalOutings === 1 ? 'outing' : 'outings'}</span>
               <span className="text-white/40">·</span>
-              <span>First <span className="font-semibold text-white">{formatStoredDate(entry.firstSeenDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span></span>
+              <span>First <span className="font-semibold text-white/90">{formatStoredDate(entry.firstSeenDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span></span>
             </div>
           </div>
         </div>

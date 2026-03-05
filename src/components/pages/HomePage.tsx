@@ -231,15 +231,14 @@ function SpeciesCard({ speciesName, date, onClick }: { speciesName: string; date
 
   return (
     <button
-      className="overflow-hidden rounded-lg bg-card border border-border cursor-pointer press-feel text-left"
+      className="relative overflow-hidden rounded-lg cursor-pointer press-feel text-left aspect-square"
       onClick={onClick}
     >
-      <WikiBirdThumbnail speciesName={speciesName} alt={displayName} className="rounded-b-none" />
-      <div className="px-2 py-1.5">
-        <p className="font-serif text-xs font-semibold text-foreground truncate">
-          {displayName}
-        </p>
-      </div>
+      <WikiBirdThumbnail speciesName={speciesName} alt={displayName} className="rounded-lg" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg" />
+      <p className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs text-white/90 leading-tight line-clamp-2">
+        {displayName}
+      </p>
     </button>
   )
 }
