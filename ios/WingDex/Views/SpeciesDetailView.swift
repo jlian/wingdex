@@ -3,6 +3,8 @@ import SwiftUI
 struct SpeciesDetailView: View {
     let speciesName: String
     @Environment(DataStore.self) private var store
+    @State private var wikiExtract: String?
+    @State private var fullImageUrl: String?
 
     private var entry: DexEntry? { store.dexEntry(for: speciesName) }
     private var sightings: [(observation: BirdObservation, outing: Outing)] {
@@ -10,69 +12,86 @@ struct SpeciesDetailView: View {
     }
 
     var body: some View {
-        List {
-            heroSection
-            statsSection
-            sightingsSection
-            linksSection
+        ScrollView {
+            VStack(spacing: 0) {
+                heroSection
+                contentSection
+            }
         }
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
+        .task { await fetchWikipediaData() }
     }
 
     // MARK: - Hero
 
     private var heroSection: some View {
-        Section {
-            ZStack(alignment: .bottomLeading) {
-                Group {
-                    if let url = entry?.thumbnailUrl, let imageURL = URL(string: url) {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().scaledToFill()
-                            default:
-                                heroPlaceholder
-                            }
+        ZStack(alignment: .bottomLeading) {
+            // Image - 4:3 aspect ratio like web
+            Group {
+                let imageUrl = fullImageUrl ?? entry?.thumbnailUrl
+                if let url = imageUrl, let imageURL = URL(string: url) {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable()
+                                .scaledToFill()
+                        default:
+                            heroPlaceholder
                         }
-                    } else {
-                        heroPlaceholder
                     }
+                } else {
+                    heroPlaceholder
                 }
-                .frame(height: 220)
-                .clipped()
-
-                // Gradient overlay with name
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.7)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 100)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(getDisplayName(speciesName))
-                        .font(.system(.title2, design: .serif, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    if let sci = getScientificName(speciesName) {
-                        Text(sci)
-                            .font(.subheadline)
-                            .italic()
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                }
-                .padding()
             }
-            .listRowInsets(EdgeInsets())
+            .frame(height: 280)
+            .frame(maxWidth: .infinity)
+            .clipped()
+
+            // Gradient overlay
+            LinearGradient(
+                colors: [.clear, .clear, .black.opacity(0.6)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            // Name + stats overlay
+            VStack(alignment: .leading, spacing: 4) {
+                Text(getDisplayName(speciesName))
+                    .font(.system(size: 26, weight: .semibold, design: .serif))
+                    .foregroundStyle(.white)
+
+                if let sci = getScientificName(speciesName) {
+                    Text(sci)
+                        .font(.system(size: 14))
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+
+                if let entry {
+                    HStack(spacing: 12) {
+                        Text("\(entry.totalCount) seen")
+                            .fontWeight(.semibold)
+                        Text("\u{00B7}")
+                            .foregroundStyle(.white.opacity(0.4))
+                        Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s")")
+                            .fontWeight(.semibold)
+                        Text("\u{00B7}")
+                            .foregroundStyle(.white.opacity(0.4))
+                        Text("First \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))")
+                    }
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+            .padding()
         }
     }
 
     private var heroPlaceholder: some View {
         Rectangle()
-            .fill(.quaternary)
+            .fill(Color.warmBorder.opacity(0.3))
             .overlay {
                 Image(systemName: "bird.fill")
                     .font(.system(size: 48))
@@ -80,61 +99,69 @@ struct SpeciesDetailView: View {
             }
     }
 
-    // MARK: - Stats
+    // MARK: - Content
 
-    private var statsSection: some View {
-        Section("Stats") {
-            if let entry {
-                HStack(spacing: 0) {
-                    statCell(value: "\(entry.totalCount)", label: "Seen", icon: "number")
-                    Divider().frame(height: 36)
-                    statCell(value: "\(entry.totalOutings)", label: "Outings", icon: "binoculars")
+    private var contentSection: some View {
+        VStack(spacing: 0) {
+            // Wikipedia description
+            if let extract = wikiExtract {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(extract)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.mutedText)
+                        .lineSpacing(3)
+
+                    if let wikiTitle = entry?.wikiTitle {
+                        (Text("Source: ")
+                            .foregroundStyle(Color.mutedText.opacity(0.6))
+                        + Text("Wikipedia")
+                            .foregroundStyle(Color.accentColor)
+                        + Text(". Text and images available under ")
+                            .foregroundStyle(Color.mutedText.opacity(0.6))
+                        + Text("CC BY-SA 4.0")
+                            .foregroundStyle(Color.accentColor)
+                        + Text(".")
+                            .foregroundStyle(Color.mutedText.opacity(0.6)))
+                        .font(.system(size: 11))
+                    }
                 }
-
-                LabeledContent("First Seen", value: DateFormatting.formatDate(entry.firstSeenDate, style: .medium))
-                LabeledContent("Last Seen", value: DateFormatting.formatDate(entry.lastSeenDate, style: .medium))
-            } else {
-                Text("No data available")
-                    .foregroundStyle(.secondary)
+                .padding()
             }
-        }
-    }
 
-    private func statCell(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.bold().monospacedDigit())
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
+            // Links
+            VStack(spacing: 0) {
+                linkButtons
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
 
-    // MARK: - Sightings
+            // Sightings
+            VStack(alignment: .leading, spacing: 0) {
+                Text("SIGHTINGS (\(sightings.count))")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.mutedText)
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
 
-    private var sightingsSection: some View {
-        Section("Sighting History (\(sightings.count))") {
-            if sightings.isEmpty {
-                Text("No sightings recorded")
-                    .foregroundStyle(.secondary)
-            } else {
                 ForEach(sightings, id: \.observation.id) { item in
                     HStack {
+                        Image(systemName: "calendar")
+                            .font(.caption)
+                            .foregroundStyle(Color.mutedText)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.outing.locationName.isEmpty ? "Outing" : item.outing.locationName)
-                                .font(.subheadline.weight(.medium))
-                            Text(DateFormatting.formatDate(item.outing.startTime, style: .medium))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 14, weight: .semibold, design: .serif))
+                            Text("\(DateFormatting.formatDate(item.outing.startTime, style: .medium)) \u{00B7} Confirmed")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.mutedText)
                         }
                         Spacer()
-                        Text("x\(item.observation.count)")
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+
+                    if item.observation.id != sightings.last?.observation.id {
+                        Divider().padding(.leading, 40)
                     }
                 }
             }
@@ -143,24 +170,54 @@ struct SpeciesDetailView: View {
 
     // MARK: - Links
 
-    private var linksSection: some View {
-        Section("Learn More") {
+    private var linkButtons: some View {
+        HStack(spacing: 12) {
             if let entry, let wikiTitle = entry.wikiTitle {
-                Link(destination: URL(string: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")!) {
-                    Label("Wikipedia", systemImage: "book")
-                }
+                linkButton("Wikipedia", icon: "book", url: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")
             }
 
             let commonName = getDisplayName(speciesName)
                 .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            linkButton("eBird", icon: "globe", url: "https://ebird.org/species/\(commonName)")
+            linkButton("All About Birds", icon: "info.circle", url: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")
+        }
+    }
 
-            Link(destination: URL(string: "https://ebird.org/species/\(commonName)")!) {
-                Label("eBird", systemImage: "globe")
-            }
+    private func linkButton(_ title: String, icon: String, url: String) -> some View {
+        Link(destination: URL(string: url)!) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 13))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.cardBg)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.warmBorder, lineWidth: 0.5)
+                )
+        }
+    }
 
-            Link(destination: URL(string: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")!) {
-                Label("All About Birds", systemImage: "info.circle")
+    // MARK: - Wikipedia Fetch
+
+    private func fetchWikipediaData() async {
+        guard let wikiTitle = entry?.wikiTitle else { return }
+        let encoded = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
+        guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encoded)") else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                await MainActor.run {
+                    wikiExtract = json["extract"] as? String
+                    if let original = json["originalimage"] as? [String: Any],
+                       let src = original["source"] as? String {
+                        fullImageUrl = src
+                    }
+                }
             }
+        } catch {
+            // Silently fail - the thumbnail from dex is still shown
         }
     }
 }
