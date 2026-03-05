@@ -74,46 +74,4 @@ enum CropService {
             scale: scale
         )
     }
-
-    /// Convert a pointer position to natural image coordinates.
-    static func pointerPosition(
-        clientX: Double,
-        clientY: Double,
-        containerLeft: Double,
-        containerTop: Double,
-        containerW: Double,
-        containerH: Double,
-        naturalW: Double,
-        naturalH: Double
-    ) -> (x: Double, y: Double) {
-        let info = renderedImageRect(
-            containerW: containerW,
-            containerH: containerH,
-            naturalW: naturalW,
-            naturalH: naturalH
-        )
-        let x = (clientX - containerLeft - info.offsetX) / info.scale
-        let y = (clientY - containerTop - info.offsetY) / info.scale
-        return (x, y)
-    }
-
-    /// Check if a point is inside a crop box (both in pixel coordinates).
-    static func isInsideCrop(px: Double, py: Double, crop: CropBox) -> Bool {
-        px >= crop.x && px <= crop.x + crop.width &&
-            py >= crop.y && py <= crop.y + crop.height
-    }
-
-    /// Clamp a drag position so the crop box stays within image bounds.
-    static func clampDragPosition(
-        px: Double,
-        py: Double,
-        cropW: Double,
-        cropH: Double,
-        naturalW: Double,
-        naturalH: Double
-    ) -> (x: Double, y: Double) {
-        let x = max(0, min(px, naturalW - cropW))
-        let y = max(0, min(py, naturalH - cropH))
-        return (x, y)
-    }
 }
