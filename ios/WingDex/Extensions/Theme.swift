@@ -37,10 +37,23 @@ extension Color {
 // MARK: - List Cell Appearance
 
 /// Override UICollectionViewListCell to set custom background + highlight colors.
-/// On iOS 16+ SwiftUI List uses UICollectionView, so UITableView appearance has no effect.
+/// Only applies to plain-style lists; Forms/grouped lists keep their default look.
 extension UICollectionViewListCell {
+    private var isPlainListCell: Bool {
+        // Walk up to find the UICollectionView, then check if cell spans full width
+        var view: UIView? = superview
+        while let v = view {
+            if let cv = v as? UICollectionView {
+                return frame.width >= cv.bounds.width - 1
+            }
+            view = v.superview
+        }
+        return false
+    }
+
     open override func updateConfiguration(using state: UICellConfigurationState) {
         super.updateConfiguration(using: state)
+        guard isPlainListCell else { return }
         var bg = UIBackgroundConfiguration.listPlainCell()
         bg.backgroundColor = UIColor(Color.pageBg)
         if state.isHighlighted || state.isSelected {
