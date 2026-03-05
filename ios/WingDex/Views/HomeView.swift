@@ -116,7 +116,6 @@ struct HomeView: View {
                     GeometryReader { geo in
                         let spacing: CGFloat = 10
                         let padding: CGFloat = 16
-                        // 2 full cards + 1/4 of third visible
                         let cardSize = (geo.size.width - padding * 2 - spacing * 2) / 2.25
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: spacing) {
@@ -129,8 +128,9 @@ struct HomeView: View {
                             }
                             .padding(.horizontal, padding)
                         }
+                        .frame(height: cardSize)
                     }
-                    .frame(height: (UIScreen.main.bounds.width - 32 - 20) / 2.25)
+                    .aspectRatio(2.25, contentMode: .fit)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                 }

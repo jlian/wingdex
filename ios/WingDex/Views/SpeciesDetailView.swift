@@ -112,11 +112,8 @@ struct SpeciesDetailView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.white.opacity(0.9))
                         Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
-                        Text("First ")
+                        Text("First \(Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium)).fontWeight(.semibold).foregroundStyle(.white.opacity(0.9)))")
                             .foregroundStyle(.white.opacity(0.7))
-                        + Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white.opacity(0.9))
                     }
                     .font(.system(size: 13))
                 }
@@ -152,17 +149,9 @@ struct SpeciesDetailView: View {
                     .lineSpacing(3)
 
                 if entry?.wikiTitle != nil {
-                    (Text("Source: ")
+                    Text("Source: \(Text("Wikipedia").foregroundStyle(Color.accentColor)). Text and images available under \(Text("CC BY-SA 4.0").foregroundStyle(Color.accentColor)).")
+                        .font(.system(size: 11))
                         .foregroundStyle(Color.mutedText.opacity(0.6))
-                    + Text("Wikipedia")
-                        .foregroundStyle(Color.accentColor)
-                    + Text(". Text and images available under ")
-                        .foregroundStyle(Color.mutedText.opacity(0.6))
-                    + Text("CC BY-SA 4.0")
-                        .foregroundStyle(Color.accentColor)
-                    + Text(".")
-                        .foregroundStyle(Color.mutedText.opacity(0.6)))
-                    .font(.system(size: 11))
                 }
             }
         }

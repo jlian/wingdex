@@ -222,8 +222,8 @@ private struct MiniMapSnapshot: View {
             latitudinalMeters: 4000,
             longitudinalMeters: 4000
         )
-        let scale = UIScreen.main.scale
-        options.size = CGSize(width: size * scale, height: size * scale)
+        // Use 2x for snapshot; actual screen scale not needed for thumbnails
+        options.size = CGSize(width: size * 2, height: size * 2)
         options.pointOfInterestFilter = .excludingAll
         options.showsBuildings = false
 
