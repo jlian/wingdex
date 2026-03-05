@@ -30,26 +30,28 @@ struct SpeciesDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                let imageUrl = fullImageUrl ?? entry?.thumbnailUrl
-                if let url = imageUrl, let imageURL = URL(string: url) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable()
-                                .scaledToFill()
-                        default:
-                            heroPlaceholder
+        GeometryReader { geo in
+            ZStack(alignment: .bottomLeading) {
+                Group {
+                    let imageUrl = fullImageUrl ?? entry?.thumbnailUrl
+                    if let url = imageUrl, let imageURL = URL(string: url) {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable()
+                                    .scaledToFill()
+                                    .frame(width: geo.size.width, height: 280, alignment: .top)
+                                    .clipped()
+                            default:
+                                heroPlaceholder
+                            }
                         }
+                    } else {
+                        heroPlaceholder
                     }
-                } else {
-                    heroPlaceholder
                 }
-            }
-            .frame(height: 280)
-            .frame(maxWidth: .infinity)
-            .clipped()
+                .frame(width: geo.size.width, height: 280)
+                .clipped()
 
             // Gradient overlay
             LinearGradient(
@@ -92,7 +94,10 @@ struct SpeciesDetailView: View {
             }
             .padding()
         }
+        .frame(width: geo.size.width, height: 280)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .frame(height: 280)
         .padding(.horizontal)
     }
 
@@ -102,7 +107,7 @@ struct SpeciesDetailView: View {
             .overlay {
                 Image(systemName: "bird.fill")
                     .font(.system(size: 48))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color.mutedText.opacity(0.3))
             }
     }
 
@@ -176,12 +181,13 @@ struct SpeciesDetailView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(Color.mutedText.opacity(0.4))
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressHighlight)
 
                     if item.observation.id != sightings.last?.observation.id {
                         Divider().padding(.leading, 44)

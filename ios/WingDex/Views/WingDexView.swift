@@ -118,83 +118,24 @@ struct WingDexView: View {
     }
 
     private var speciesList: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(store.dex.count) species in your WingDex")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.mutedText)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-
-                ForEach(sortedDex) { entry in
-                    NavigationLink(value: entry) {
-                        DexRow(entry: entry)
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider().padding(.leading, 76)
+        List {
+            ForEach(sortedDex) { entry in
+                NavigationLink(value: entry) {
+                    BirdRow(
+                        speciesName: entry.speciesName,
+                        thumbnailUrl: entry.thumbnailUrl,
+                        subtitle: "\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))"
+                    )
                 }
+                .listRowBackground(Color.pageBg)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBg)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }
-    }
-}
-
-private struct DexRow: View {
-    let entry: DexEntry
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Group {
-                if let url = entry.thumbnailUrl, let imageURL = URL(string: url) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            thumbnailPlaceholder
-                        }
-                    }
-                } else {
-                    thumbnailPlaceholder
-                }
-            }
-            .frame(width: 48, height: 48)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(getDisplayName(entry.speciesName))
-                    .font(.system(size: 14, weight: .semibold, design: .serif))
-                    .lineLimit(1)
-
-                if let sci = getScientificName(entry.speciesName) {
-                    Text(sci)
-                        .font(.caption)
-                        .italic()
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    private var thumbnailPlaceholder: some View {
-        Rectangle()
-            .fill(.quaternary)
-            .overlay {
-                Image(systemName: "bird.fill")
-                    .foregroundStyle(.tertiary)
-            }
     }
 }
 
