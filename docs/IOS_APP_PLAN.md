@@ -90,11 +90,14 @@ The app uses a tab bar + navigation bar layout inspired by Apple Music:
 
 ## Auth Strategy
 
-The backend uses cookie-based sessions via Better Auth. Instead of custom JWT + refresh token infrastructure, we reuse Better Auth's existing session tokens as bearer tokens. The middleware injects the bearer token as a session cookie so `getSession` validates it normally. A mobile callback bridge endpoint extracts the session token after OAuth and redirects to the app's custom URL scheme.
+The backend uses cookie-based sessions via Better Auth for the web app. For the iOS app, we use Better Auth's official `bearer()` plugin (`better-auth/plugins`) which natively accepts `Authorization: Bearer <session_token>` headers - no cookie translation middleware needed. The session token is obtained via OAuth redirect flow or passkey ceremony and stored securely in iOS Keychain.
 
-### Server-Side (done)
+### Server-Side
 
-- [x] Middleware update: accept `Authorization: Bearer <session_token>` header alongside existing cookie auth
+- [x] `bearer()` plugin added to Better Auth - natively accepts `Authorization: Bearer` headers (Phase 3.1)
+- [x] `GET /api/auth/mobile/callback` - bridge endpoint reads session after OAuth, redirects to `wingdex://auth/callback?token=...`
+- [x] `GET /api/auth/mobile/start` - GET proxy for ASWebAuthenticationSession, internally POSTs to Better Auth sign-in/social
+- [ ] Remove legacy middleware cookie translation (Phase 3.1)
 - [x] `GET /api/auth/mobile/callback` - bridge endpoint reads session cookie after OAuth, redirects to `wingdex://auth/callback?token=...`
 - [x] `GET /api/auth/mobile/start` - GET proxy for ASWebAuthenticationSession, internally POSTs to Better Auth sign-in/social
 
@@ -226,6 +229,82 @@ Basic flow implemented, but needs significant rework to match web app (see Phase
 
 ---
 
+## Phase 3.1 - Auth Rework: Migrate to Better Auth Bearer Plugin
+
+The current auth implementation hand-rolls cookie name management, resulting in 19 hardcoded cookie strings, fragile `__Secure-` prefix logic, and a middleware hack that translates Bearer tokens to cookies. This phase replaces all of that with Better Auth's official `bearer()` plugin, which natively accepts `Authorization: Bearer <token>` - no cookie translation needed.
+
+**Decision**: Use Better Auth's first-party `bearer()` plugin (`better-auth/plugins`, already in dependencies). This is the standard pattern for native mobile clients authenticating against Better Auth.
+
+### 3.1.1: Server - Add Bearer Plugin
+
+- [ ] **Add bearer plugin**: In `functions/lib/auth.ts`, add `bearer()` to the plugins array: `import { bearer } from 'better-auth/plugins'` then `plugins: [anonymous(), passkey({...}), bearer()]`
+- [ ] **Remove middleware cookie translation**: Delete the entire Bearer-to-cookie injection block from `functions/_middleware.ts` (the `if (authHeader?.startsWith('Bearer '))` block that injects `better-auth.session_token` and `__Secure-better-auth.session_token`). With the bearer plugin, `auth.api.getSession({ headers })` natively accepts the `Authorization: Bearer` header
+- [ ] **Verify getSession works with Bearer**: After adding the plugin, test that `getSession({ headers: requestHeaders })` succeeds when the request has `Authorization: Bearer <session_token>` and no cookies. Test on both HTTP (local dev) and HTTPS (preview deployment)
+- [ ] **Keep mobile/start and mobile/callback**: These endpoints are still needed for the OAuth redirect flow via `ASWebAuthenticationSession`. The callback extracts the signed session token and passes it to the app via custom scheme URL
+
+**Files**: `functions/lib/auth.ts`, `functions/_middleware.ts`
+
+### 3.1.2: Server - Fix Mobile Callback Token Extraction
+
+- [ ] **Use set-auth-token header**: The bearer plugin adds a `set-auth-token` response header on sign-in responses. Update `mobile/callback.ts` to check if this header is available from the Better Auth session creation, and prefer it over manual Set-Cookie parsing
+- [ ] **Remove manual cookie name parsing**: Delete the `trimmed.startsWith('better-auth.session_token=')` and `__Secure-better-auth.session_token` string splitting from `mobile/callback.ts`. Instead, use `session.session.token` directly (the raw token from the DB) since the bearer plugin validates raw tokens without HMAC signatures
+- [ ] **Verify callback URL**: Ensure the `wingdex://auth/callback?token=...` redirect still works with the raw session token
+
+**Files**: `functions/api/auth/mobile/callback.ts`
+
+### 3.1.3: iOS - Clean Up AuthService
+
+- [ ] **fetchUserInfo - use Bearer header**: Replace the manual cookie construction (`"better-auth.session_token=\(token); __Secure-..."`) in `fetchUserInfo()` with `Authorization: Bearer \(token)` header. The `/api/auth/get-session` endpoint will now accept Bearer tokens natively via the plugin
+- [ ] **processTokenResponse - simplify**: In the Apple Sign-In flow, the `processTokenResponse` method parses Set-Cookie headers to extract the signed token. With the bearer plugin, check for the `set-auth-token` response header first (simpler, plugin-provided), fall back to the raw `token` field from the JSON body
+- [ ] **Remove all hardcoded cookie name strings**: Search for `better-auth.session_token` and `__Secure-better-auth.session_token` across all Swift files. Replace all instances with Bearer header usage. Target: zero cookie name strings in iOS code
+- [ ] **Keychain storage stays**: Continue storing the session token in Keychain via KeychainAccess. This is correct and secure for native apps
+
+**Files**: `ios/WingDex/Services/AuthService.swift`
+
+### 3.1.4: iOS - Clean Up PasskeyService
+
+- [ ] **Registration options request**: Replace cookie header `"better-auth.session_token=\(token); __Secure-..."` with `Authorization: Bearer \(token)` header on the `generate-registration-options` request
+- [ ] **Registration verify request**: Replace cookie-based session token with `Authorization: Bearer \(token)` header. Keep the challenge cookie forwarding (challenge cookies are separate from session auth - they bind the WebAuthn challenge to the request and are handled by Better Auth internally)
+- [ ] **Authentication verify - token extraction**: After passkey verify succeeds, extract the new session token from the `set-auth-token` response header (provided by bearer plugin) instead of parsing Set-Cookie. Fall back to `session.token` from JSON body
+- [ ] **Challenge cookie forwarding**: The passkey challenge flow (generate-options -> verify) uses a signed challenge cookie that must be forwarded between the two requests. This is separate from session auth and NOT affected by the bearer plugin migration. Keep the `extractCookieHeader` helper and `HTTPCookie.cookies(withResponseHeaderFields:)` usage for challenge cookies only
+- [ ] **Remove all session cookie name strings**: Zero instances of `better-auth.session_token` in PasskeyService after migration
+
+**Files**: `ios/WingDex/Services/PasskeyService.swift`
+
+### 3.1.5: Security Hardening
+
+- [ ] **Keychain accessibility**: Change `Keychain(service: Config.bundleID)` to `Keychain(service: Config.bundleID).accessibility(.whenPasscodeSetThisDeviceOnly)` to restrict token access to the device with passcode set, and only while unlocked
+- [ ] **Token not in logs**: Audit all `log.debug`/`log.info`/`log.error` calls across AuthService, PasskeyService, and DataService. Ensure no log statement contains the actual token value - only log token length or presence (`"token present: true"`)
+- [ ] **Remove DEBUG cookie logging**: Remove the `if (context.env.DEBUG) console.log(JSON.stringify({ bearer: true, tokenLen: ... }))` from middleware since the cookie translation is being removed entirely
+
+**Files**: `ios/WingDex/Services/AuthService.swift`, `ios/WingDex/Services/PasskeyService.swift`, `ios/WingDex/Services/DataService.swift`, `functions/_middleware.ts`
+
+### 3.1.6: Investigate Frequent get-session Polling
+
+- [ ] **Identify source**: The `[wrangler:info] GET /api/auth/get-session 200 OK (2ms)` every second observed in Wrangler logs needs investigation. Determine if this is from the web app's `useSession` hook polling, the iOS app, or a browser extension
+- [ ] **Fix if excessive**: If it's the web app, ensure `useSession` is not over-polling. Better Auth's `useSession` hook should only poll based on `updateAge` config, not every second
+
+### 3.1.7: Verification
+
+Test all auth flows end-to-end after migration:
+
+- [ ] **GitHub OAuth (simulator)**: Sign in -> data loads -> sign out -> sign in again
+- [ ] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
+- [ ] **Apple Sign-In**: Native Face ID/Touch ID flow -> data loads
+- [ ] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
+- [ ] **Passkey registration**: From settings, add new passkey -> verify it appears in list
+- [ ] **Session persistence**: Kill app, relaunch -> session restored from Keychain -> data loads without re-auth
+- [ ] **Sign out**: Clear state, return to sign-in screen, verify Keychain is empty
+- [ ] **Load demo data**: After sign-in, load demo data from settings -> data appears
+- [ ] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
+
+## Phase 3.4 - Polish for read only views
+
+- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design, ensuring they render well in all contexts (tab bar, sign-in screen, etc.)
+- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design, replacing the current custom bird icon. Ensure it renders well in the tab bar
+- [ ] Make sure 3D touch works wherever appropriate, like pressing a bird in the WingDex to peek at the SpeciesDetailView, or pressing an outing in the Outings list to preview the OutingDetailView
+- [ ] Font size and weight adjustments to better match the web app's typography hierarchy, while still using native system fonts and styles
+
 ## Phase 3.5 - Navigation & SignIn Rework
 
 The current iOS app uses a 4-tab layout (Home, WingDex, Outings, Settings) with an "Upload" button in the top-right nav bar. This needs to migrate to the new navigation architecture defined above, and the SignInView needs significant rework to match the web's auth modal.
@@ -255,6 +334,8 @@ The current iOS SignInView is a full-screen `ScrollView` with a single passkey b
 - [ ] **Error display**: Keep the red error text below the passkey section
 - [ ] **Demo data toggle** (DEBUG only): Add a toggle switch matching web's demo data toggle: label "Demo data", subtitle "Preview WingDex with sample sightings", bordered container
 - [ ] **Loading state**: Show `ProgressView` overlay and disable all buttons when `isSigningIn` is true
+- [ ] **Naming**: Align with web app naming to use "Sign up" and "Log in" terminology in both UI and file names. The current `SignInView` should be renamed to `AuthView` or `SignInSignUpView` to reflect that it now contains both actions, and the passkey buttons should be labeled "Log in" and "Sign up" respectively
+- [ ] **Perf**: The auth gate seems very slow to load, and the log out button in settings is also slow. Profile data is fetched on every app launch to populate the avatar and name, but this should be cached in Keychain and only refreshed on demand or after a certain time interval to speed up app startup and logout
 
 **Files**: `SignInView.swift`
 **Reference**: `src/hooks/use-auth-gate.tsx` (auth modal JSX)
