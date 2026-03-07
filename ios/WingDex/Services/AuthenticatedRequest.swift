@@ -7,10 +7,10 @@ private let log = Logger(subsystem: Config.bundleID, category: "API")
 ///
 /// Better Auth has two auth mechanisms:
 /// - **Bearer token**: Used by the `bearer()` plugin for middleware-protected routes
-///   (`/api/data/*`) and some auth endpoints (`get-session`, `list-user-passkeys`).
+///   (`/api/data/*`) and some auth endpoints (`get-session`).
 ///   Accepts the raw session token.
-/// - **Session cookie**: Used by Better Auth's internal plugin endpoints (passkey
-///   verify, registration verify) which do their own cookie-based session validation.
+/// - **Session cookie**: Used by Better Auth's internal plugin endpoints (all passkey
+///   endpoints) which do their own cookie-based session validation.
 ///   Requires the HMAC-signed session token as a cookie value.
 ///
 /// This helper encapsulates both patterns so callers don't need to know which to use.
@@ -35,38 +35,35 @@ enum AuthenticatedRequest {
         return request
     }
 
-    /// Build a request with Bearer + signed session cookie (for passkey verify endpoints).
-    /// Also forwards additional cookies (e.g., challenge cookies from passkey flow).
-    static func withBearerAndCookies(
+    /// Build a request with signed session cookie only (NO Bearer).
+    /// Used for Better Auth internal plugin endpoints (passkey register, verify)
+    /// where mixing Bearer + cookies causes auth failures.
+    /// Optionally forwards additional cookies (e.g., challenge cookies).
+    static func withCookieOnly(
         url: URL,
-        token: String,
-        signedToken: String?,
+        signedToken: String,
         additionalCookies: String? = nil,
-        method: String = "POST",
+        method: String = "GET",
         body: Data? = nil,
-        contentType: String? = "application/json"
+        contentType: String? = nil
     ) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         if let contentType {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
         request.httpBody = body
 
-        // Build cookie header with signed session token + any additional cookies
-        var cookieParts: [String] = []
-        if let signed = signedToken {
-            cookieParts.append("better-auth.session_token=\(signed)")
-            cookieParts.append("__Secure-better-auth.session_token=\(signed)")
-        }
+        // Session cookie only - both prefixed variants for HTTP/HTTPS compat
+        var cookieParts = [
+            "better-auth.session_token=\(signedToken)",
+            "__Secure-better-auth.session_token=\(signedToken)",
+        ]
         if let extra = additionalCookies {
             cookieParts.append(extra)
         }
-        if !cookieParts.isEmpty {
-            request.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
-        }
+        request.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
 
         return request
     }

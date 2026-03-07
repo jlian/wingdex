@@ -261,6 +261,11 @@ final class DataService: Sendable {
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
             log.error("HTTP \(http.statusCode) \(http.url?.path ?? "?"): \(body)")
+            // Server rejected the session - clear stale local auth state
+            // so the UI shows the sign-in screen instead of a broken homepage.
+            if http.statusCode == 401 {
+                auth.signOut()
+            }
             throw DataServiceError.httpError(http.statusCode, body)
         }
     }

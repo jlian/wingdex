@@ -208,21 +208,33 @@ final class AuthService: @unchecked Sendable {
             try? await fetchUserInfo(token: token)
         }
         let service = PasskeyService()
-        try await service.register(name: name, token: token, signedToken: signedSessionToken)
+        try await service.register(name: name, signedToken: signedSessionToken)
     }
 
     /// List the current user's passkeys.
     func listPasskeys() async throws -> [PasskeyService.PasskeyInfo] {
         let token = try validToken()
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
+        guard let signedToken = signedSessionToken else {
+            throw AuthError.notAuthenticated
+        }
         let service = PasskeyService()
-        return try await service.listPasskeys(token: token)
+        return try await service.listPasskeys(signedToken: signedToken)
     }
 
     /// Delete a passkey by ID.
     func deletePasskey(id: String) async throws {
         let token = try validToken()
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
+        guard let signedToken = signedSessionToken else {
+            throw AuthError.notAuthenticated
+        }
         let service = PasskeyService()
-        try await service.deletePasskey(id: id, token: token)
+        try await service.deletePasskey(id: id, signedToken: signedToken)
     }
 
     /// Fetch user info from Better Auth's get-session endpoint.
@@ -436,6 +448,11 @@ final class AuthService: @unchecked Sendable {
         userName = keychain[Self.userNameKey]
         userEmail = keychain[Self.userEmailKey]
         isAuthenticated = true
+
+        // Clear stale cookies so URLSession doesn't send them alongside
+        // the Bearer header. Stale cookies can cause 401 if Better Auth
+        // checks them before the Bearer token.
+        clearAPICookies()
     }
 
     private func clearKeychain() {
