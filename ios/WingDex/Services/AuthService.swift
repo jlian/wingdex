@@ -22,11 +22,15 @@ final class AuthService: @unchecked Sendable {
     var userImage: String?
 
     private var sessionToken: String?
+    /// Signed session token (includes HMAC suffix) for cookie-based auth.
+    /// Needed by passkey plugin endpoints which use internal cookie validation.
+    private(set) var signedSessionToken: String?
     private var sessionExpiry: Date?
     private let keychain = Keychain(service: Config.bundleID)
         .accessibility(.whenPasscodeSetThisDeviceOnly)
 
     private static let tokenKey = "session_token"
+    private static let signedTokenKey = "signed_session_token"
     private static let expiryKey = "session_expires_at"
     private static let userIdKey = "user_id"
     private static let userNameKey = "user_name"
@@ -165,6 +169,7 @@ final class AuthService: @unchecked Sendable {
     func signOut() {
         log.info("Signing out")
         sessionToken = nil
+        signedSessionToken = nil
         sessionExpiry = nil
         isAuthenticated = false
         userId = nil
@@ -184,6 +189,7 @@ final class AuthService: @unchecked Sendable {
         let result = try await service.authenticate()
 
         sessionToken = result.token
+        signedSessionToken = result.signedToken
         sessionExpiry = result.expiresAt ?? Date.now.addingTimeInterval(7 * 24 * 60 * 60)
         userId = result.userId
 
@@ -198,7 +204,7 @@ final class AuthService: @unchecked Sendable {
     func registerPasskey(name: String) async throws {
         let token = try validToken()
         let service = PasskeyService()
-        try await service.register(name: name, token: token)
+        try await service.register(name: name, token: token, signedToken: signedSessionToken)
     }
 
     /// List the current user's passkeys.
@@ -216,7 +222,8 @@ final class AuthService: @unchecked Sendable {
     }
 
     /// Fetch user info from Better Auth's get-session endpoint.
-    /// Uses Bearer token auth via the bearer() plugin - no cookie names needed.
+    /// Uses Bearer token auth via the bearer() plugin.
+    /// Also captures the signed session token for passkey endpoint cookies.
     private func fetchUserInfo(token: String) async throws {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
@@ -234,6 +241,12 @@ final class AuthService: @unchecked Sendable {
         userName = user["name"] as? String
         userEmail = user["email"] as? String
         userImage = user["image"] as? String
+
+        // Capture signed token for passkey cookie auth
+        if let signed = httpResponse.value(forHTTPHeaderField: "set-auth-token") {
+            signedSessionToken = signed
+            keychain[Self.signedTokenKey] = signed
+        }
     }
 
     /// Get a valid session token for API requests.
@@ -363,21 +376,20 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Invalid token response")
         }
 
-        // Prefer set-auth-token header (provided by bearer plugin), fall back to JSON body
-        var token: String?
-        if let httpResponse = response as? HTTPURLResponse {
-            token = httpResponse.value(forHTTPHeaderField: "set-auth-token")
-        }
-        if token == nil {
-            token = json["token"] as? String
-        }
-        guard let resolvedToken = token else {
+        // Raw token from JSON body - used for Bearer auth
+        guard let rawToken = json["token"] as? String else {
             throw AuthError.oauthFailed("No session token in response")
+        }
+
+        // Signed token from set-auth-token header - used for cookie auth on passkey endpoints
+        if let httpResponse = response as? HTTPURLResponse,
+           let signed = httpResponse.value(forHTTPHeaderField: "set-auth-token") {
+            signedSessionToken = signed
         }
 
         let user = json["user"] as? [String: Any]
 
-        self.sessionToken = resolvedToken
+        self.sessionToken = rawToken
         // Better Auth sessions default to 7 days; use that as expiry
         sessionExpiry = Date.now.addingTimeInterval(7 * 24 * 60 * 60)
         userId = user?["id"] as? String
@@ -393,6 +405,7 @@ final class AuthService: @unchecked Sendable {
 
     private func persistSession() {
         keychain[Self.tokenKey] = sessionToken
+        keychain[Self.signedTokenKey] = signedSessionToken
         keychain[Self.expiryKey] = sessionExpiry?.ISO8601Format()
         keychain[Self.userIdKey] = userId
         keychain[Self.userNameKey] = userName
@@ -413,6 +426,7 @@ final class AuthService: @unchecked Sendable {
         }
 
         sessionToken = token
+        signedSessionToken = keychain[Self.signedTokenKey]
         sessionExpiry = expiry
         userId = keychain[Self.userIdKey]
         userName = keychain[Self.userNameKey]
@@ -422,6 +436,7 @@ final class AuthService: @unchecked Sendable {
 
     private func clearKeychain() {
         keychain[Self.tokenKey] = nil
+        keychain[Self.signedTokenKey] = nil
         keychain[Self.expiryKey] = nil
         keychain[Self.userIdKey] = nil
         keychain[Self.userNameKey] = nil

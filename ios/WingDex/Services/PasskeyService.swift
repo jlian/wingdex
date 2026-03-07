@@ -20,6 +20,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
     struct AuthResult {
         let token: String
+        let signedToken: String?
         let userId: String
         let expiresAt: Date?
     }
@@ -110,15 +111,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             throw PasskeyError.invalidResponse
         }
 
-        // Prefer set-auth-token header (provided by bearer plugin), fall back to raw JSON token
-        var token: String?
-        if let authToken = verifyHttp.value(forHTTPHeaderField: "set-auth-token") {
-            token = authToken
-        }
-        if token == nil {
-            token = session["token"] as? String
-        }
-        guard let resolvedToken = token else {
+        // Raw token for Bearer auth, signed token for cookie auth on passkey endpoints
+        let rawToken = session["token"] as? String
+        let signedToken = verifyHttp.value(forHTTPHeaderField: "set-auth-token")
+        guard let resolvedToken = rawToken ?? signedToken else {
             throw PasskeyError.invalidResponse
         }
 
@@ -127,14 +123,14 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             expiresAt = ISO8601DateFormatter().date(from: expiresAtString)
         }
 
-        return AuthResult(token: resolvedToken, userId: userId, expiresAt: expiresAt)
+        return AuthResult(token: resolvedToken, signedToken: signedToken, userId: userId, expiresAt: expiresAt)
     }
 
     // MARK: - Registration (Add Passkey)
 
     /// Register a new passkey for the currently authenticated user.
-    /// Requires a valid session token.
-    func register(name: String, token: String) async throws {
+    /// - signedToken: HMAC-signed token for cookie auth on passkey verify endpoint
+    func register(name: String, token: String, signedToken: String? = nil) async throws {
         // Step 1 - Fetch registration options
         var components = URLComponents(
             url: Config.apiBaseURL.appendingPathComponent("api/auth/passkey/generate-register-options"),
@@ -148,7 +144,6 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         var optionsRequest = URLRequest(url: optionsURL)
         optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         optionsRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        optionsRequest.setValue(sessionCookies(token: token), forHTTPHeaderField: "Cookie")
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
@@ -186,17 +181,24 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         verifyRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
 
-        // Send session token as Bearer + cookie (passkey plugin needs cookie for internal session)
-        // plus challenge cookies from step 1
+        // Send Bearer for auth + challenge cookies from step 1 + signed session cookie
+        // The passkey verify endpoint uses Better Auth's internal cookie session validation,
+        // not the bearer plugin, so we must include the signed session token as a cookie.
         verifyRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        var cookieParts = [sessionCookies(token: token)]
-        if let challengeCookies = challengeCookieHeader {
-            cookieParts.append(challengeCookies)
-            log.debug("Forwarding challenge cookies to verify")
-        } else {
-            log.warning("No challenge cookies to forward to verify")
+        var cookieParts: [String] = []
+        if let signed = signedToken {
+            cookieParts.append("better-auth.session_token=\(signed)")
+            cookieParts.append("__Secure-better-auth.session_token=\(signed)")
         }
-        verifyRequest.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
+        if let challenge = challengeCookieHeader {
+            cookieParts.append(challenge)
+        }
+        if !cookieParts.isEmpty {
+            verifyRequest.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
+            log.debug("Forwarding cookies to verify (session: \(signedToken != nil), challenge: \(challengeCookieHeader != nil))")
+        } else {
+            log.warning("No cookies to forward to verify")
+        }
 
         let credentialID = registration.credentialID.base64URLEncodedString()
         let registrationBody: [String: Any] = [
@@ -234,7 +236,6 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/list-user-passkeys")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue(sessionCookies(token: token), forHTTPHeaderField: "Cookie")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -255,7 +256,6 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue(sessionCookies(token: token), forHTTPHeaderField: "Cookie")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["id": id])
 
         let (_, response) = try await URLSession.shared.data(for: request)
@@ -342,14 +342,6 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
         guard !cookies.isEmpty else { return nil }
         return cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-    }
-
-    /// Build session cookie string for Better Auth internal endpoints.
-    /// The bearer plugin handles getSession, but Better Auth's passkey
-    /// endpoints use their own internal session validation via cookies.
-    /// We send both prefixed and non-prefixed variants for HTTP/HTTPS compat.
-    private func sessionCookies(token: String) -> String {
-        "better-auth.session_token=\(token); __Secure-better-auth.session_token=\(token)"
     }
 
     // MARK: - Decodable Models
