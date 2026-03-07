@@ -376,4 +376,79 @@ test.describe('API smoke (request context)', () => {
     await freshApi.dispose()
     await api.dispose()
   })
+
+  test('mobile callback returns token that works as Bearer', async () => {
+    // Sign in via cookies first (simulating web OAuth flow)
+    const api = await request.newContext({ baseURL: API_BASE })
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(h => h.name.toLowerCase() === 'set-cookie')
+        .map(h => h.value),
+    )
+
+    // Hit the mobile callback endpoint with the session cookie
+    // This simulates what happens after OAuth redirect completes
+    const callback = await api.get('/api/auth/mobile/callback', {
+      headers: { cookie: authCookie },
+      maxRedirects: 0,
+    })
+    // Should redirect to wingdex:// scheme
+    expect([301, 302]).toContain(callback.status())
+    const location = callback.headers()['location']
+    expect(location).toContain('wingdex://')
+    expect(location).toContain('token=')
+
+    // Extract the token from the redirect URL
+    const callbackURL = new URL(location!)
+    const token = callbackURL.searchParams.get('token')
+    expect(token).toBeTruthy()
+
+    // The extracted token should work as a Bearer token
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
+    const data = await bearerApi.get('/api/data/all', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    await bearerApi.dispose()
+    await api.dispose()
+  })
+
+  test('cookie auth still works for protected endpoints', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(h => h.name.toLowerCase() === 'set-cookie')
+        .map(h => h.value),
+    )
+
+    // Cookie auth should work for data endpoints (web app uses cookies)
+    const data = await api.get('/api/data/all', {
+      headers: { cookie: authCookie },
+    })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    // Cookie auth should work for get-session
+    const session = await api.get('/api/auth/get-session', {
+      headers: { cookie: authCookie },
+    })
+    expect(session.status()).toBe(200)
+    const sessionJson = await session.json()
+    expect(sessionJson?.user?.id).toBeTruthy()
+
+    await api.dispose()
+  })
 })
