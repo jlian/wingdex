@@ -1,3 +1,52 @@
+# [1.13.0](https://github.com/jlian/wingdex/compare/v1.12.1...v1.13.0) (2026-03-07)
+
+
+### Bug Fixes
+
+* **Auth:** unify auth modal login and signup ([d5a4ad1](https://github.com/jlian/wingdex/commit/d5a4ad1b2b3a0137bd2471cee010289122c2d133))
+* **Auth:** update e2e helper for combined passkey signup flow ([50be5a6](https://github.com/jlian/wingdex/commit/50be5a643d3641953bf71d990f0e679fd6e64944))
+* **Icon:** add app icon ([3d4f883](https://github.com/jlian/wingdex/commit/3d4f883e25190f84d28d383f14fa11f7603e227a))
+* **iOS:** add localhost webcredentials for simulator passkey support ([473fb0a](https://github.com/jlian/wingdex/commit/473fb0ae24fc86f99a7ee323fd081b655b5eb3a9))
+* **iOS:** convert HomeView to List, remove ScrollRowButtonStyle dead code ([c2d3da4](https://github.com/jlian/wingdex/commit/c2d3da4121f6164eca7b301ea7b16d876af27d2c))
+* **iOS:** enable edge-to-edge layout and match web styling precisely ([3a5f240](https://github.com/jlian/wingdex/commit/3a5f24063feee4b91516a629a7af15ae2fbf7460))
+* **iOS:** extract signed session token from Set-Cookie, add demo data loading ([fef03fc](https://github.com/jlian/wingdex/commit/fef03fc68f0efe16a633df143ee52670a4569e40))
+* **iOS:** fix auth flow and match web app styling ([8fe445a](https://github.com/jlian/wingdex/commit/8fe445a257f9f52e7a37f106b9a9cd6d4dbab477)), closes [#2B6B4F](https://github.com/jlian/wingdex/issues/2B6B4F) [#3D9B6E](https://github.com/jlian/wingdex/issues/3D9B6E)
+* **iOS:** GitHub OAuth origin header, signed token callback, date parsing, debug logging ([89676c3](https://github.com/jlian/wingdex/commit/89676c3b73ddff483c8d83c3a6d0ea170c4adf07))
+* **iOS:** major UI polish pass matching web app styling ([71c0af4](https://github.com/jlian/wingdex/commit/71c0af4c8d12df6819bbafc51463d05e20b21916))
+* **iOS:** make all sign-in buttons visually consistent ([7ff0fc7](https://github.com/jlian/wingdex/commit/7ff0fc73d60e95d93ed616a3c7f912ff58d62fe1))
+* **iOS:** native List for detail pages, consistent dividers and highlights ([ec56cd0](https://github.com/jlian/wingdex/commit/ec56cd0608ba4e27453f55bd6b73d6b4a14d1e76))
+* **iOS:** polish empty states and settings view ([bb8f234](https://github.com/jlian/wingdex/commit/bb8f234a8db1f13aee57f7ae647b561b72d39d9c))
+* **iOS:** polish list rows to match web app's Messages/Mail-style layout ([fb087d3](https://github.com/jlian/wingdex/commit/fb087d3be05e16e51f49e84b10f2da530ce9d683))
+* **iOS:** resolve all 16 Xcode deprecation warnings for iOS 26 ([d930fa2](https://github.com/jlian/wingdex/commit/d930fa290ce975531b7aff07b62362c975a1650a))
+* **iOS:** scope cell override to plain lists, fix Settings Form appearance ([dd7d97f](https://github.com/jlian/wingdex/commit/dd7d97feda0900b2bc4c02d30304717376d9ef86))
+* **iOS:** switch to List for native press highlights, fix hero crop ([f6e26a2](https://github.com/jlian/wingdex/commit/f6e26a27975d39cd39f756f821eded2b488c7d57))
+* **iOS:** target iOS 26 and use macos-16 CI runner ([6cd0df7](https://github.com/jlian/wingdex/commit/6cd0df710deefc1f0baa216a777ad6b1a0de120f))
+* **iOS:** use macos-26 runner label (not macos-16) ([458a551](https://github.com/jlian/wingdex/commit/458a5517b3d885c6cf76282cd2912ebe65914fce))
+* **iOS:** visual polish to match web app styling ([2db6ace](https://github.com/jlian/wingdex/commit/2db6acedac0ffd9643a2edbb4dafbf502411ed47))
+* **iOS:** wire up AI crop suggestion with paddedSquareCrop, fix drag tracking ([8d7a2bf](https://github.com/jlian/wingdex/commit/8d7a2bf06a9ae650862d9e1431e8d50cc0e9c8fe))
+* **PR:** address review comments and iOS CI build failure ([8f52f83](https://github.com/jlian/wingdex/commit/8f52f83749aa6d158d832c146af84651a393805c))
+
+
+### Features
+
+* **API:** add OpenAPI 3.1 spec for all endpoints ([ed1526b](https://github.com/jlian/wingdex/commit/ed1526b421df23544b3c51df4fe32ed4fcc96b4d))
+* **Auth:** add Google sign-in and polish auth entry ([fa95acc](https://github.com/jlian/wingdex/commit/fa95accd99b0fdbd62d3242cb3be5f0b7eb49bc1))
+* **Auth:** implement bearer token auth for iOS via session token bridge ([4c30227](https://github.com/jlian/wingdex/commit/4c3022798cd0e5867795df1d57ed9266e2b4aab1))
+* **Auth:** implement native Apple Sign-In via ASAuthorizationAppleIDProvider ([6fac920](https://github.com/jlian/wingdex/commit/6fac920e4b500459ab16b02a411d1f8f93a75239))
+* **Auth:** implement passkey sign-in, registration, and management ([0a5041c](https://github.com/jlian/wingdex/commit/0a5041ce23a3ae236691302a6e2367fa733a9fd9))
+* **Icons:** monochrome circle favicon with filled bird silhouette ([40868d8](https://github.com/jlian/wingdex/commit/40868d8e9b731e678cf5fa685e050cc9eb813cc5))
+* **Icons:** replace Phosphor Bird with custom BirdLogo glyph ([8375a20](https://github.com/jlian/wingdex/commit/8375a20aa549402cd3c72ccbadda9fc2d9a34258))
+* **iOS:** add os_log debugging and anonymous sign-in for local dev ([f16c302](https://github.com/jlian/wingdex/commit/f16c3020fe14b06d608a06714407e0c29673ca26))
+* **iOS:** auth mode toggle, tab icon fix, and anonymous sign-in cookie fix ([9951a28](https://github.com/jlian/wingdex/commit/9951a2868243e60a625e097c256e7f523a5af3cd))
+* **iOS:** implement Add Photos flow (Phase 3) ([4a64c3d](https://github.com/jlian/wingdex/commit/4a64c3d5c434ba12ebe99cd9349b37fed666861e))
+* **iOS:** implement Phase 2 core data views ([185ae23](https://github.com/jlian/wingdex/commit/185ae238c5c073336394d852925dce46ef57c15b))
+* **iOS:** larger species cards, Apple Music style 2.25 per row ([4fa3acb](https://github.com/jlian/wingdex/commit/4fa3acb003deb5e9e65f4b2666b4c98bccd72620))
+* **iOS:** match web app warm color palette and fullscreen layout ([889ca6e](https://github.com/jlian/wingdex/commit/889ca6e8e4918eebd824a8430547da011e9136d3))
+* **iOS:** scaffold Xcode project with stub views, services, and CI ([b11049c](https://github.com/jlian/wingdex/commit/b11049cc747958c2d644e9eb49e544e2522365c3)), closes [#Preview](https://github.com/jlian/wingdex/issues/Preview)
+* **iOS:** shared bird logo, tab reorder, and home empty state ([27a46c8](https://github.com/jlian/wingdex/commit/27a46c8386793e67ba140291dfdf428ae5a5f50e))
+* **iOS:** square species cards, mini maps, List perf, consistent highlights ([e7c6e2e](https://github.com/jlian/wingdex/commit/e7c6e2e336cb155ed8fdf7e9947c01f8a6801f03))
+* **iOS:** target iOS 26 with liquid glass, modern Tab API, and HIG design principles ([ce8e7ad](https://github.com/jlian/wingdex/commit/ce8e7add53de82ead6e3a64603ef5a53cd363cdb))
+
 ## [1.12.1](https://github.com/jlian/wingdex/compare/v1.12.0...v1.12.1) (2026-03-07)
 
 
