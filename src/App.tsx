@@ -75,7 +75,11 @@ function useHashRouter() {
       }
     }
     window.addEventListener('popstate', onChange)
-    return () => window.removeEventListener('popstate', onChange)
+    window.addEventListener('hashchange', onChange)
+    return () => {
+      window.removeEventListener('popstate', onChange)
+      window.removeEventListener('hashchange', onChange)
+    }
   }, [])
 
   // Clear the guard after each render
@@ -600,8 +604,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="press-feel-light">By John Lian</a>
         </div>
         <nav className="flex items-center gap-4">
-          <button onClick={() => navigate('privacy')} className="cursor-pointer press-feel-light">Privacy</button>
-          <button onClick={() => navigate('terms')} className="cursor-pointer press-feel-light">Terms</button>
+          <a href="/#privacy" className="press-feel-light">Privacy</a>
+          <a href="/#terms" className="press-feel-light">Terms</a>
           <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="press-feel-light">Issues?</a>
         </nav>
       </footer>
