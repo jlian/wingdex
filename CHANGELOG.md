@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/jlian/wingdex/compare/v1.12.0...v1.12.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **LegalLinks:** expose crawlable Privacy and Terms links for OAuth branding verification ([#217](https://github.com/jlian/wingdex/issues/217)) ([1968362](https://github.com/jlian/wingdex/commit/1968362784090df6d8d0acf86399c12a0b5740ec))
+
 # [1.12.0](https://github.com/jlian/wingdex/compare/v1.11.6...v1.12.0) (2026-03-05)
 
 
