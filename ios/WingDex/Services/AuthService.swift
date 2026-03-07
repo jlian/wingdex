@@ -24,6 +24,7 @@ final class AuthService: @unchecked Sendable {
     private var sessionToken: String?
     private var sessionExpiry: Date?
     private let keychain = Keychain(service: Config.bundleID)
+        .accessibility(.whenPasscodeSetThisDeviceOnly)
 
     private static let tokenKey = "session_token"
     private static let expiryKey = "session_expires_at"
@@ -209,11 +210,11 @@ final class AuthService: @unchecked Sendable {
     }
 
     /// Fetch user info from Better Auth's get-session endpoint.
+    /// Uses Bearer token auth via the bearer() plugin - no cookie names needed.
     private func fetchUserInfo(token: String) async throws {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
-        // Send both cookie name variants: Better Auth uses __Secure- prefix on HTTPS
-        request.setValue("better-auth.session_token=\(token); __Secure-better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -323,31 +324,19 @@ final class AuthService: @unchecked Sendable {
 
     /// Parse Better Auth's JSON response from sign-in/social with idToken.
     /// Response shape: { token: string, user: { id, name, email, image, ... } }
+    ///
+    /// With the bearer() plugin, the server also sets a `set-auth-token` response
+    /// header containing the session token. We prefer that, falling back to the
+    /// raw `token` field from the JSON body.
     private func processTokenResponse(data: Data, response: URLResponse? = nil) throws {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw AuthError.oauthFailed("Invalid token response")
         }
 
-        // Prefer the full signed session token from Set-Cookie header,
-        // which includes the HMAC signature Better Auth needs for validation.
-        // Fallback to the raw "token" field from the JSON body.
+        // Prefer set-auth-token header (provided by bearer plugin), fall back to JSON body
         var token: String?
-        if let httpResponse = response as? HTTPURLResponse,
-           let cookies = httpResponse.value(forHTTPHeaderField: "Set-Cookie")
-        {
-            // Parse "better-auth.session_token=VALUE; ..." from Set-Cookie
-            for part in cookies.components(separatedBy: ",") {
-                let trimmed = part.trimmingCharacters(in: .whitespaces)
-                if trimmed.contains("session_token=") {
-                    if let range = trimmed.range(of: "session_token=") {
-                        let afterEquals = trimmed[range.upperBound...]
-                        let tokenValue = String(afterEquals.prefix(while: { $0 != ";" }))
-                        if !tokenValue.isEmpty {
-                            token = tokenValue.removingPercentEncoding ?? tokenValue
-                        }
-                    }
-                }
-            }
+        if let httpResponse = response as? HTTPURLResponse {
+            token = httpResponse.value(forHTTPHeaderField: "set-auth-token")
         }
         if token == nil {
             token = json["token"] as? String

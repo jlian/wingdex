@@ -10,8 +10,7 @@ import UIKit
 /// URLSession's automatic cookie storage.
 ///
 /// For authenticated endpoints (registration, list, delete) the session token is
-/// sent directly as a `better-auth.session_token` cookie, bypassing the Bearer
-/// header middleware (which only runs for non-auth routes).
+/// sent as an `Authorization: Bearer` header, validated by Better Auth's bearer plugin.
 final class PasskeyService: NSObject, @unchecked Sendable {
 
     // MARK: - Public Types
@@ -108,22 +107,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             throw PasskeyError.invalidResponse
         }
 
-        // Prefer the signed session token from Set-Cookie (needed for HTTPS deployments
-        // where Better Auth validates the HMAC signature), fall back to raw JSON token
+        // Prefer set-auth-token header (provided by bearer plugin), fall back to raw JSON token
         var token: String?
-        if let cookies = verifyHttp.value(forHTTPHeaderField: "Set-Cookie") {
-            for part in cookies.components(separatedBy: ",") {
-                let trimmed = part.trimmingCharacters(in: .whitespaces)
-                if trimmed.contains("session_token=") {
-                    if let range = trimmed.range(of: "session_token=") {
-                        let afterEquals = trimmed[range.upperBound...]
-                        let tokenValue = String(afterEquals.prefix(while: { $0 != ";" }))
-                        if !tokenValue.isEmpty {
-                            token = tokenValue.removingPercentEncoding ?? tokenValue
-                        }
-                    }
-                }
-            }
+        if let authToken = verifyHttp.value(forHTTPHeaderField: "set-auth-token") {
+            token = authToken
         }
         if token == nil {
             token = session["token"] as? String
@@ -157,7 +144,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         var optionsRequest = URLRequest(url: optionsURL)
         optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        optionsRequest.setValue("better-auth.session_token=\(token); __Secure-better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        optionsRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
@@ -192,12 +179,11 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         verifyRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
 
-        // Merge session token with challenge cookies from step 1
-        var cookieParts = ["better-auth.session_token=\(token)", "__Secure-better-auth.session_token=\(token)"]
+        // Send session token as Bearer header + challenge cookies from step 1
+        verifyRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if let challengeCookies = challengeCookieHeader {
-            cookieParts.append(challengeCookies)
+            verifyRequest.setValue(challengeCookies, forHTTPHeaderField: "Cookie")
         }
-        verifyRequest.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
 
         let credentialID = registration.credentialID.base64URLEncodedString()
         let registrationBody: [String: Any] = [
@@ -231,7 +217,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
     func listPasskeys(token: String) async throws -> [PasskeyInfo] {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/list-user-passkeys")
         var request = URLRequest(url: url)
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -251,7 +237,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["id": id])
 
         let (_, response) = try await URLSession.shared.data(for: request)
