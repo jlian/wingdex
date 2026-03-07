@@ -225,4 +225,73 @@ test.describe('API smoke (request context)', () => {
 
     await api.dispose()
   })
+
+  test('bearer token auth - CRUD without cookies', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    // Sign in anonymously to get a session token
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+    const signInJson = await signIn.json()
+    const token = signInJson?.token
+    expect(token).toBeTruthy()
+
+    const bearerHeader = { Authorization: `Bearer ${token}` }
+
+    // GET /api/data/all with Bearer token (no cookies)
+    const data = await api.get('/api/data/all', { headers: bearerHeader })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    // POST to create an outing with Bearer token
+    const outingId = `bearer-smoke-${Date.now()}`
+    const createOuting = await api.post('/api/data/outings', {
+      headers: { ...bearerHeader, 'Content-Type': 'application/json' },
+      data: {
+        id: outingId,
+        startTime: '2026-03-07T08:00:00.000Z',
+        endTime: '2026-03-07T09:00:00.000Z',
+        locationName: 'Bearer Smoke Park',
+        createdAt: '2026-03-07T09:00:00.000Z',
+      },
+    })
+    expect(createOuting.status()).toBe(200)
+
+    // Verify outing was created
+    const postCreate = await api.get('/api/data/all', { headers: bearerHeader })
+    const postCreateJson = await postCreate.json()
+    expect(postCreateJson.outings.some((o: { id: string }) => o.id === outingId)).toBe(true)
+
+    // DELETE the outing with Bearer token
+    const deleteOuting = await api.delete(`/api/data/outings/${outingId}`, { headers: bearerHeader })
+    expect(deleteOuting.status()).toBe(200)
+
+    // Invalid token returns 401
+    const badToken = await api.get('/api/data/all', {
+      headers: { Authorization: 'Bearer invalid-token-12345' },
+    })
+    expect(badToken.status()).toBe(401)
+
+    await api.dispose()
+  })
+
+  test('bearer token auth - get-session returns user info', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+    const token = (await signIn.json())?.token
+    expect(token).toBeTruthy()
+
+    // get-session should work with Bearer token (used by iOS fetchUserInfo)
+    const session = await api.get('/api/auth/get-session', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(session.status()).toBe(200)
+    const sessionJson = await session.json()
+    expect(sessionJson?.user?.id).toBeTruthy()
+
+    await api.dispose()
+  })
 })

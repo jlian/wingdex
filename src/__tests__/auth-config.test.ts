@@ -104,4 +104,13 @@ describe('auth config', () => {
     const trusted = auth.options.trustedOrigins as string[] | undefined
     expect(trusted).not.toContain('https://appleid.apple.com')
   })
+
+  it('includes bearer plugin for native mobile token auth', () => {
+    const auth = createAuth(mockEnv)
+    // The bearer plugin registers the token endpoint
+    const pluginIds = auth.options.plugins?.map(
+      (p: { id?: string }) => p.id,
+    ) ?? []
+    expect(pluginIds).toContain('bearer')
+  })
 })
