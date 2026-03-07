@@ -177,8 +177,17 @@ struct SignInView: View {
         Task {
             do {
                 try await action()
+            } catch let error as ASAuthorizationError where error.code == .notHandled {
+                // Code 1004: associated domain not set up for this rpID
+                errorMessage = "Passkey not available for this domain. Check Associated Domains entitlement."
+            } catch let error as ASAuthorizationError where error.code == .canceled {
+                // User cancelled - no error message needed
+                errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription
+                #if DEBUG
+                print("[SignIn] Error: \(error)")
+                #endif
             }
             isSigningIn = false
         }

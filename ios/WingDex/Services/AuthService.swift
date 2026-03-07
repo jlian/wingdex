@@ -277,6 +277,7 @@ final class AuthService: @unchecked Sendable {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw AuthError.oauthFailed("Invalid callback URL")
         }
+        log.info("Processing callback (\(url.host ?? "?"), \(components.queryItems?.count ?? 0) params)")
 
         let params = Dictionary(
             uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
@@ -291,8 +292,11 @@ final class AuthService: @unchecked Sendable {
         guard let token = params["token"],
               let expiresAt = params["expires_at"]
         else {
+            log.error("Missing token or expires_at in callback. Params: \(params.keys.joined(separator: ", "))")
             throw AuthError.oauthFailed("Missing token in callback")
         }
+
+        log.info("Got token (\(token.count) chars), expires_at: \(expiresAt)")
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -416,8 +420,8 @@ final class AuthService: @unchecked Sendable {
 /// Provides the presentation anchor for ASWebAuthenticationSession.
 private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        return scene?.keyWindow ?? UIWindow(frame: .zero)
+        let scene = UIApplication.shared.connectedScenes.first as! UIWindowScene
+        return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
 
