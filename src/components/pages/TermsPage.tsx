@@ -98,7 +98,7 @@ export default function TermsPage() {
 
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">17. Entire agreement</h3>
-          <p>These Terms, together with the <a href="#privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy Policy</a>, constitute the entire agreement regarding use of the Service.</p>
+          <p>These Terms, together with the <a href="/#privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy Policy</a>, constitute the entire agreement regarding use of the Service.</p>
         </section>
 
         <section className="space-y-1">

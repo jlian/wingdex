@@ -45,6 +45,26 @@ test.describe('App smoke tests', () => {
     await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 });
   });
 
+  test('footer exposes crawlable legal links and they navigate correctly', async ({ page }) => {
+    await loadApp(page, { promote: false });
+
+    const footer = page.locator('footer');
+    const privacyLink = footer.getByRole('link', { name: 'Privacy', exact: true });
+    const termsLink = footer.getByRole('link', { name: 'Terms', exact: true });
+
+    await expect(privacyLink).toHaveAttribute('href', '/#privacy');
+    await expect(termsLink).toHaveAttribute('href', '/#terms');
+
+    await privacyLink.click();
+    await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible({ timeout: 5_000 });
+
+    await termsLink.click();
+    await expect(page.getByRole('heading', { name: 'Terms of Use' })).toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole('link', { name: 'Privacy Policy' }).click();
+    await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible({ timeout: 5_000 });
+  });
+
   test('settings page renders without errors', async ({ page }) => {
     const errors: string[] = [];
     page.on('console', msg => {
