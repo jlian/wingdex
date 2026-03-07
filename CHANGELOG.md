@@ -1,3 +1,15 @@
+# [1.15.0](https://github.com/jlian/wingdex/compare/v1.14.1...v1.15.0) (2026-03-07)
+
+
+### Bug Fixes
+
+* **Icons:** use correct paths and gradients for color BirdLogo variants ([325e636](https://github.com/jlian/wingdex/commit/325e636657b368c511ea6dc02563f9e13da12b24))
+
+
+### Features
+
+* **Icons:** add color and color-dark gradient variants to BirdLogo ([55a6ab6](https://github.com/jlian/wingdex/commit/55a6ab600d9f4a72e959f354f13f4fed811f17d4))
+
 ## [1.14.1](https://github.com/jlian/wingdex/compare/v1.14.0...v1.14.1) (2026-03-07)
 
 
