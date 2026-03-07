@@ -232,21 +232,24 @@ test.describe('API smoke (request context)', () => {
     // Sign in anonymously to get a session token
     const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
     expect(signIn.status()).toBe(200)
-    const signInJson = await signIn.json()
-    const token = signInJson?.token
+
+    // Use the signed token from set-auth-token header (bearer plugin)
+    const token = signIn.headers()['set-auth-token']
     expect(token).toBeTruthy()
 
+    // New context without cookies to ensure we're testing Bearer-only auth
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
     const bearerHeader = { Authorization: `Bearer ${token}` }
 
     // GET /api/data/all with Bearer token (no cookies)
-    const data = await api.get('/api/data/all', { headers: bearerHeader })
+    const data = await bearerApi.get('/api/data/all', { headers: bearerHeader })
     expect(data.status()).toBe(200)
     const dataJson = await data.json()
     expect(Array.isArray(dataJson.outings)).toBe(true)
 
     // POST to create an outing with Bearer token
     const outingId = `bearer-smoke-${Date.now()}`
-    const createOuting = await api.post('/api/data/outings', {
+    const createOuting = await bearerApi.post('/api/data/outings', {
       headers: { ...bearerHeader, 'Content-Type': 'application/json' },
       data: {
         id: outingId,
@@ -259,20 +262,21 @@ test.describe('API smoke (request context)', () => {
     expect(createOuting.status()).toBe(200)
 
     // Verify outing was created
-    const postCreate = await api.get('/api/data/all', { headers: bearerHeader })
+    const postCreate = await bearerApi.get('/api/data/all', { headers: bearerHeader })
     const postCreateJson = await postCreate.json()
     expect(postCreateJson.outings.some((o: { id: string }) => o.id === outingId)).toBe(true)
 
     // DELETE the outing with Bearer token
-    const deleteOuting = await api.delete(`/api/data/outings/${outingId}`, { headers: bearerHeader })
+    const deleteOuting = await bearerApi.delete(`/api/data/outings/${outingId}`, { headers: bearerHeader })
     expect(deleteOuting.status()).toBe(200)
 
     // Invalid token returns 401
-    const badToken = await api.get('/api/data/all', {
+    const badToken = await bearerApi.get('/api/data/all', {
       headers: { Authorization: 'Bearer invalid-token-12345' },
     })
     expect(badToken.status()).toBe(401)
 
+    await bearerApi.dispose()
     await api.dispose()
   })
 
@@ -281,17 +285,20 @@ test.describe('API smoke (request context)', () => {
 
     const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
     expect(signIn.status()).toBe(200)
-    const token = (await signIn.json())?.token
+    const token = signIn.headers()['set-auth-token']
     expect(token).toBeTruthy()
 
     // get-session should work with Bearer token (used by iOS fetchUserInfo)
-    const session = await api.get('/api/auth/get-session', {
+    // Use a fresh context to avoid cookie interference
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
+    const session = await bearerApi.get('/api/auth/get-session', {
       headers: { Authorization: `Bearer ${token}` },
     })
     expect(session.status()).toBe(200)
     const sessionJson = await session.json()
     expect(sessionJson?.user?.id).toBeTruthy()
 
+    await bearerApi.dispose()
     await api.dispose()
   })
 })
