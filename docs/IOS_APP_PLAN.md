@@ -298,6 +298,18 @@ Test all auth flows end-to-end after migration:
 - [ ] **Load demo data**: After sign-in, load demo data from settings -> data appears
 - [ ] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
 
+### 3.1.8: Automated Tests
+
+Add server-side tests that verify Bearer token auth works end-to-end with the bearer plugin, alongside the existing cookie-based tests.
+
+- [ ] **Unit test - bearer plugin registered**: In `src/__tests__/auth-config.test.ts`, add a test verifying the bearer plugin is in the plugins list and that `auth.api` includes bearer-related functionality
+- [ ] **API smoke test - Bearer auth CRUD**: In `e2e/api-smoke.spec.ts`, add a test that: (1) signs in anonymously, (2) extracts the session token from the JSON response, (3) makes all subsequent requests using `Authorization: Bearer <token>` header instead of cookies, (4) verifies `GET /api/data/all`, `POST /api/data/outings`, `DELETE /api/data/outings/:id` all succeed with Bearer auth, (5) verifies Bearer auth returns 401 with an invalid token
+- [ ] **API smoke test - mobile callback**: Add a test that: (1) signs in anonymously via cookies, (2) hits `GET /api/auth/mobile/callback` with the session cookie, (3) verifies the redirect URL contains `wingdex://auth/callback?token=...`, (4) extracts the token from the redirect URL, (5) uses that token as Bearer header on `GET /api/data/all` and verifies 200
+- [ ] **API smoke test - get-session via Bearer**: Verify `GET /api/auth/get-session` returns the correct user when called with `Authorization: Bearer <token>` (needed for iOS `fetchUserInfo`)
+- [ ] **Regression test - cookie auth still works**: Ensure existing cookie-based web auth is not broken by the bearer plugin. The existing `api-smoke.spec.ts` cookie tests should continue to pass unchanged
+
+**Files**: `src/__tests__/auth-config.test.ts`, `e2e/api-smoke.spec.ts`
+
 ## Phase 3.4 - Polish for read only views
 
 - [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design, ensuring they render well in all contexts (tab bar, sign-in screen, etc.)
