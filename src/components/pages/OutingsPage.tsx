@@ -22,9 +22,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import {
   MapPin, CalendarBlank, ArrowLeft, Download,
-  Trash, PencilSimple, Check, Plus, X, Bird, Clock, MagnifyingGlass,
+  Trash, PencilSimple, Check, Plus, X, Clock, MagnifyingGlass,
   ArrowUp, ArrowDown, Hash, TextAa
 } from '@phosphor-icons/react'
+import { BirdLogo } from '@/components/ui/bird-logo'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BirdRow } from '@/components/ui/bird-row'
 import { StatCard } from '@/components/ui/stat-card'
@@ -56,7 +57,7 @@ const LOAD_MORE_STEP = 40
 
 const outingSortOptions: { key: OutingSortField; icon: React.ElementType; label: string }[] = [
   { key: 'date', icon: CalendarBlank, label: 'Sort by date' },
-  { key: 'species', icon: Bird, label: 'Sort by species count' },
+  { key: 'species', icon: BirdLogo, label: 'Sort by species count' },
   { key: 'name', icon: TextAa, label: 'Sort A-Z' },
 ]
 
@@ -184,7 +185,7 @@ export default function OutingsPage({
   if (outings.length === 0) {
     return (
       <EmptyState
-        icon={Bird}
+        icon={BirdLogo}
         title="No outings yet"
         description="Upload photos to create your first outing"
       />
@@ -673,7 +674,7 @@ function OutingDetail({
 
         {groupedConfirmed.length === 0 && groupedPossible.length === 0 && (
           <div className="py-8 text-center">
-            <Bird size={32} className="text-muted-foreground/30 mx-auto mb-2" />
+            <BirdLogo size={32} className="text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
               No species recorded yet
             </p>

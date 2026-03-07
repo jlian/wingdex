@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  Bird, ArrowUp, ArrowDown, Camera, Hash, TextAa, Leaf
+  ArrowUp, ArrowDown, Camera, Hash, TextAa, Leaf
 } from '@phosphor-icons/react'
+import { BirdLogo } from '@/components/ui/bird-logo'
 import { useBirdSummary } from '@/hooks/use-bird-image'
 import { BirdRow } from '@/components/ui/bird-row'
 import { ListRow } from '@/components/ui/list-row'
@@ -206,7 +207,7 @@ export default function WingDexPage({
   if (dex.length === 0) {
     return (
       <EmptyState
-        icon={Bird}
+        icon={BirdLogo}
         title="Your WingDex is empty"
         description="Upload photos and confirm species to start building your WingDex"
       >
@@ -446,7 +447,7 @@ function SpeciesDetail({
           )}
           {!baseImageUrl && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Bird size={48} className="text-muted-foreground/40" />
+              <BirdLogo size={48} className="text-muted-foreground/40" />
             </div>
           )}
 

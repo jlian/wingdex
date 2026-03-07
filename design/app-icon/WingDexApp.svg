@@ -7,9 +7,9 @@
    width="1024"
    height="1024"
    viewBox="0 0 1024 1024"
-   sodipodi:docname="WingDex App.svg"
+   sodipodi:docname="WingDexApp.svg"
    inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
-   inkscape:export-filename="../Layers/4-eye-light.svg"
+   inkscape:export-filename="/Users/jlian/Desktop/wingdex-icon.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -229,7 +229,7 @@
     <path
        id="path8-0"
        d="m 274.15238,420.66462 c 19.53477,27.85814 63.19254,18.32901 69.19832,-15.09337 6.00578,-33.42638 -31.63922,-57.38956 -59.66519,-37.97267 -17.37201,12.03853 -21.64158,35.79493 -9.53313,53.06604 z"
-       style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.998963"
+       style="display:inline;fill:#ffffff;fill-opacity:0.94864863;fill-rule:nonzero;stroke:none;stroke-width:0.998963"
        inkscape:label="eye" />
   </g>
   <g
