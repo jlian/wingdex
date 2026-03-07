@@ -203,6 +203,10 @@ final class AuthService: @unchecked Sendable {
     /// Register a new passkey for the current user.
     func registerPasskey(name: String) async throws {
         let token = try validToken()
+        // Ensure we have the signed token for passkey cookie auth
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
         let service = PasskeyService()
         try await service.register(name: name, token: token, signedToken: signedSessionToken)
     }
