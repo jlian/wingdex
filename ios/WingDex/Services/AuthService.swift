@@ -212,7 +212,8 @@ final class AuthService: @unchecked Sendable {
     private func fetchUserInfo(token: String) async throws {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        // Send both cookie name variants: Better Auth uses __Secure- prefix on HTTPS
+        request.setValue("better-auth.session_token=\(token); __Secure-better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

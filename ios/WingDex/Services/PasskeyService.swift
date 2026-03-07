@@ -103,9 +103,32 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         // Response shape: { session: { token, userId, expiresAt, ... } }
         guard let json = try JSONSerialization.jsonObject(with: verifyData) as? [String: Any],
               let session = json["session"] as? [String: Any],
-              let token = session["token"] as? String,
               let userId = session["userId"] as? String
         else {
+            throw PasskeyError.invalidResponse
+        }
+
+        // Prefer the signed session token from Set-Cookie (needed for HTTPS deployments
+        // where Better Auth validates the HMAC signature), fall back to raw JSON token
+        var token: String?
+        if let cookies = verifyHttp.value(forHTTPHeaderField: "Set-Cookie") {
+            for part in cookies.components(separatedBy: ",") {
+                let trimmed = part.trimmingCharacters(in: .whitespaces)
+                if trimmed.contains("session_token=") {
+                    if let range = trimmed.range(of: "session_token=") {
+                        let afterEquals = trimmed[range.upperBound...]
+                        let tokenValue = String(afterEquals.prefix(while: { $0 != ";" }))
+                        if !tokenValue.isEmpty {
+                            token = tokenValue.removingPercentEncoding ?? tokenValue
+                        }
+                    }
+                }
+            }
+        }
+        if token == nil {
+            token = session["token"] as? String
+        }
+        guard let resolvedToken = token else {
             throw PasskeyError.invalidResponse
         }
 
@@ -114,7 +137,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             expiresAt = ISO8601DateFormatter().date(from: expiresAtString)
         }
 
-        return AuthResult(token: token, userId: userId, expiresAt: expiresAt)
+        return AuthResult(token: resolvedToken, userId: userId, expiresAt: expiresAt)
     }
 
     // MARK: - Registration (Add Passkey)
@@ -134,7 +157,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         var optionsRequest = URLRequest(url: optionsURL)
         optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        optionsRequest.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        optionsRequest.setValue("better-auth.session_token=\(token); __Secure-better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
@@ -170,7 +193,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
 
         // Merge session token with challenge cookies from step 1
-        var cookieParts = ["better-auth.session_token=\(token)"]
+        var cookieParts = ["better-auth.session_token=\(token)", "__Secure-better-auth.session_token=\(token)"]
         if let challengeCookies = challengeCookieHeader {
             cookieParts.append(challengeCookies)
         }
