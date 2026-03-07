@@ -50,8 +50,7 @@ struct WingDexView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
+        Group {
                 if store.dex.isEmpty {
                     VStack(spacing: 24) {
                         Spacer()
@@ -114,8 +113,6 @@ struct WingDexView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
-        }
-        .background(Color.pageBg.ignoresSafeArea())
     }
 
     private var speciesList: some View {

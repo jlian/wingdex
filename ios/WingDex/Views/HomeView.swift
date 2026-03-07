@@ -1,37 +1,26 @@
 import SwiftUI
 
 struct HomeView: View {
-    @Binding var showingAddPhotos: Bool
     @Environment(DataStore.self) private var store
+    @Environment(\.showAddPhotos) private var showAddPhotos
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if store.isLoading && store.dex.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if store.dex.isEmpty {
-                    emptyState
-                } else {
-                    dataView
-                }
+        Group {
+            if store.isLoading && store.dex.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.dex.isEmpty {
+                emptyState
+            } else {
+                dataView
             }
-            .navigationTitle("Home")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAddPhotos = true
-                    } label: {
-                        Label("Add Photos", systemImage: "plus.circle.fill")
-                    }
-                }
-            }
-            .refreshable {
-                await store.loadAll()
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.pageBg.ignoresSafeArea())
         }
+        .navigationTitle("Home")
+        .refreshable {
+            await store.loadAll()
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBg.ignoresSafeArea())
     }
 
     // MARK: - Empty State
@@ -66,7 +55,7 @@ struct HomeView: View {
             }
 
             Button {
-                showingAddPhotos = true
+                showAddPhotos()
             } label: {
                 Label {
                     Text("Upload & Identify")
@@ -166,6 +155,6 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView(showingAddPhotos: .constant(false))
+    HomeView()
         .environment(DataStore(service: DataService(auth: AuthService())))
 }

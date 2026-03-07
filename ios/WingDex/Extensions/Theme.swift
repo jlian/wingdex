@@ -72,3 +72,17 @@ extension View {
             .background(Color.pageBg)
     }
 }
+
+// MARK: - Environment Keys
+
+/// Environment action for triggering the Add Photos flow from any view.
+private struct ShowAddPhotosKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+extension EnvironmentValues {
+    var showAddPhotos: () -> Void {
+        get { self[ShowAddPhotosKey.self] }
+        set { self[ShowAddPhotosKey.self] = newValue }
+    }
+}

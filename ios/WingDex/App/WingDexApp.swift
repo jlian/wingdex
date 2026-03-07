@@ -56,32 +56,82 @@ struct ContentView: View {
     }
 }
 
-/// Four-tab main interface.
+/// Three-tab main interface with detached "+" and avatar settings sheet.
 struct MainTabView: View {
+    @Environment(AuthService.self) private var auth
     @State private var selectedTab = AppTab.home
     @State private var showingAddPhotos = false
+    @State private var showingSettings = false
 
     enum AppTab: Hashable {
-        case home, outings, wingdex, settings
+        case home, outings, wingdex
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "house", value: AppTab.home) {
-                HomeView(showingAddPhotos: $showingAddPhotos)
+                NavigationStack {
+                    HomeView()
+                        .toolbar { avatarToolbarItem }
+                }
             }
             Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
-                WingDexView()
+                NavigationStack {
+                    WingDexView()
+                        .toolbar { avatarToolbarItem }
+                }
             }
             Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
-                OutingsView()
+                NavigationStack {
+                    OutingsView()
+                        .toolbar { avatarToolbarItem }
+                }
             }
-            Tab("Settings", systemImage: "gear", value: AppTab.settings) {
-                SettingsView()
+        }
+        .tabViewBottomAccessory {
+            Button {
+                showingAddPhotos = true
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
             }
         }
         .sheet(isPresented: $showingAddPhotos) {
             AddPhotosFlow()
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
+        .environment(\.showAddPhotos) { showingAddPhotos = true }
+    }
+
+    private var avatarToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showingSettings = true
+            } label: {
+                if let image = auth.userImage, !image.isEmpty,
+                   let url = URL(string: image) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable()
+                                .scaledToFill()
+                                .frame(width: 28, height: 28)
+                                .clipShape(Circle())
+                        default:
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(Color.mutedText)
+                        }
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.mutedText)
+                }
+            }
         }
     }
 }

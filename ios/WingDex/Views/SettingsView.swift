@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
     @State private var isLoadingDemo = false
@@ -111,6 +112,11 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete Everything", role: .destructive) {
                     Task {

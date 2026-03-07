@@ -52,8 +52,7 @@ struct OutingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
+        Group {
                 if store.outings.isEmpty {
                     VStack(spacing: 24) {
                         Spacer()
@@ -113,8 +112,6 @@ struct OutingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
-        }
-        .background(Color.pageBg.ignoresSafeArea())
     }
 
     private var outingsList: some View {

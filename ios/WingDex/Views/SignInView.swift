@@ -9,11 +9,10 @@ struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @State private var isSigningIn = false
     @State private var errorMessage: String?
-    @State private var mode: AuthMode = .signup
-
-    enum AuthMode {
-        case signup, login
-    }
+    #if DEBUG
+    @Environment(DataStore.self) private var store
+    @State private var demoDataEnabled = false
+    #endif
 
     var body: some View {
         GeometryReader { geometry in
@@ -21,7 +20,7 @@ struct SignInView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
 
-                    // Bird icon - shared Phosphor bird duotone logo
+                    // Bird icon
                     Image("BirdLogo")
                         .renderingMode(.template)
                         .resizable()
@@ -30,11 +29,10 @@ struct SignInView: View {
                         .foregroundStyle(Color.accentColor)
                         .padding(.bottom, 24)
 
-                    // Auth controls - vertically stacked with consistent 36pt button height
                     VStack(spacing: 16) {
-                        // Header - web: serif 18px semibold + 14px muted terms
+                        // Header
                         VStack(spacing: 8) {
-                            Text(mode == .signup ? "Sign up" : "Log in")
+                            Text("Start your WingDex")
                                 .font(.system(size: 18, weight: .semibold, design: .serif))
                                 .foregroundStyle(Color.foregroundText)
 
@@ -45,9 +43,8 @@ struct SignInView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        // Social buttons - web: 36px height, 12px radius, 14px medium
+                        // Social buttons
                         VStack(spacing: 12) {
-                            // GitHub - outlined
                             Button {
                                 signIn { try await auth.signInWithGitHub() }
                             } label: {
@@ -63,7 +60,6 @@ struct SignInView: View {
                             .buttonStyle(.bordered)
                             .tint(Color.foregroundText)
 
-                            // Apple - styled to match other buttons
                             Button {
                                 signIn { try await auth.signInWithAppleNative() }
                             } label: {
@@ -79,7 +75,6 @@ struct SignInView: View {
                             .buttonStyle(.bordered)
                             .tint(Color.foregroundText)
 
-                            // Google - outlined
                             Button {
                                 signIn { try await auth.signInWithGoogle() }
                             } label: {
@@ -96,7 +91,7 @@ struct SignInView: View {
                             .tint(Color.foregroundText)
                         }
 
-                        // OR divider - web: 12px uppercase muted text, 1px border line
+                        // OR divider
                         HStack(spacing: 8) {
                             Rectangle()
                                 .fill(Color.warmBorder)
@@ -110,21 +105,45 @@ struct SignInView: View {
                                 .frame(height: 1)
                         }
 
-                        // Passkey - web: primary bg, white text, 14px medium
-                        Button {
-                            signIn { try await auth.signInWithPasskey() }
-                        } label: {
+                        // Passkey section - bordered container matching web
+                        VStack(spacing: 12) {
                             Label {
-                                Text(mode == .signup ? "Sign up with a Passkey" : "Log in with a Passkey")
+                                Text("Continue with a Passkey")
                                     .font(.system(size: 14, weight: .medium))
                             } icon: {
                                 Image(systemName: "key.fill")
                                     .font(.system(size: 14))
                             }
-                            .frame(maxWidth: .infinity, minHeight: 36)
+                            .foregroundStyle(Color.foregroundText)
+
+                            HStack(spacing: 12) {
+                                Button {
+                                    signIn { try await auth.signInWithPasskey() }
+                                } label: {
+                                    Text("Log in")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .frame(maxWidth: .infinity, minHeight: 36)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(Color.accentColor)
+
+                                Button {
+                                    signIn { try await auth.signInWithPasskey() }
+                                } label: {
+                                    Text("Sign up")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .frame(maxWidth: .infinity, minHeight: 36)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(Color.foregroundText)
+                            }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.accentColor)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.mutedText.opacity(0.06))
+                                .stroke(Color.warmBorder.opacity(0.7), lineWidth: 1)
+                        )
 
                         // Error
                         if let errorMessage {
@@ -135,40 +154,34 @@ struct SignInView: View {
                                 .transition(.opacity)
                         }
 
-                        // Mode toggle - matches web's "Already have a WingDex? Log in"
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                errorMessage = nil
-                                mode = mode == .signup ? .login : .signup
-                            }
-                        } label: {
-                            if mode == .signup {
-                                Text("Already have a WingDex? \(Text("Log in").foregroundStyle(Color.accentColor))")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(Color.mutedText)
-                            } else {
-                                Text("New to WingDex? \(Text("Sign up").foregroundStyle(Color.accentColor))")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(Color.mutedText)
-                            }
-                        }
-                        .buttonStyle(.plain)
-
                         #if DEBUG
-                        Button {
-                            signIn { try await auth.signInAnonymously() }
-                        } label: {
-                            Label {
-                                Text("Try Without Account")
+                        // Demo data toggle
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Demo data")
                                     .font(.system(size: 14, weight: .medium))
-                            } icon: {
-                                Image(systemName: "person.crop.circle.badge.questionmark")
-                                    .font(.system(size: 14))
+                                    .foregroundStyle(Color.foregroundText)
+                                Text("Preview WingDex with sample sightings")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.mutedText)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 36)
+                            Spacer()
+                            Toggle("", isOn: $demoDataEnabled)
+                                .labelsHidden()
+                                .onChange(of: demoDataEnabled) { _, enabled in
+                                    if enabled {
+                                        signIn {
+                                            try await auth.signInAnonymously()
+                                            try await store.loadDemoData()
+                                        }
+                                    }
+                                }
                         }
-                        .buttonStyle(.bordered)
-                        .tint(Color.mutedText)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.warmBorder, lineWidth: 1)
+                        )
                         #endif
                     }
                     .padding(.horizontal, 24)
@@ -211,6 +224,8 @@ struct SignInView: View {
 }
 
 #Preview {
+    let auth = AuthService()
     SignInView()
-        .environment(AuthService())
+        .environment(auth)
+        .environment(DataStore(service: DataService(auth: auth)))
 }
