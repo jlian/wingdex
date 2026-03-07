@@ -1,6 +1,9 @@
 import AuthenticationServices
 import Foundation
+import os
 import UIKit
+
+private let log = Logger(subsystem: Config.bundleID, category: "Passkey")
 
 /// Handles WebAuthn passkey operations against Better Auth's passkey plugin.
 ///
@@ -151,10 +154,13 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         guard let httpResponse = optionsResponse as? HTTPURLResponse,
               httpResponse.statusCode == 200
         else {
-            throw PasskeyError.serverError("Failed to get registration options")
+            let status = (optionsResponse as? HTTPURLResponse)?.statusCode ?? -1
+            log.error("Registration options failed: HTTP \(status)")
+            throw PasskeyError.serverError("Failed to get registration options (HTTP \(status))")
         }
 
-        let challengeCookieHeader = extractCookieHeader(from: httpResponse, for: optionsURL)
+        let challengeCookieHeader = self.extractCookieHeader(from: httpResponse, for: optionsURL)
+        log.info("Registration options received, challenge cookie present: \(challengeCookieHeader != nil)")
         let options = try JSONDecoder().decode(RegistrationOptions.self, from: optionsData)
 
         guard let challengeData = Data(base64URLEncoded: options.challenge) else {
@@ -183,6 +189,9 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         verifyRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if let challengeCookies = challengeCookieHeader {
             verifyRequest.setValue(challengeCookies, forHTTPHeaderField: "Cookie")
+            log.debug("Forwarding challenge cookies to verify")
+        } else {
+            log.warning("No challenge cookies to forward to verify")
         }
 
         let credentialID = registration.credentialID.base64URLEncodedString()
@@ -208,8 +217,11 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         guard let verifyHttp = verifyResponse as? HTTPURLResponse,
               verifyHttp.statusCode == 200
         else {
+            let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
+            log.error("Registration verify failed: HTTP \(status)")
             throw PasskeyError.registrationFailed
         }
+        log.info("Passkey registration succeeded")
     }
 
     // MARK: - List Passkeys
