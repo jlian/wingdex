@@ -604,26 +604,8 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
           <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="press-feel-light">By John Lian</a>
         </div>
         <nav className="flex items-center gap-4">
-          <a
-            href="/#privacy"
-            onClick={(event) => {
-              event.preventDefault()
-              navigate('privacy')
-            }}
-            className="press-feel-light"
-          >
-            Privacy
-          </a>
-          <a
-            href="/#terms"
-            onClick={(event) => {
-              event.preventDefault()
-              navigate('terms')
-            }}
-            className="press-feel-light"
-          >
-            Terms
-          </a>
+          <a href="/#privacy" className="press-feel-light">Privacy</a>
+          <a href="/#terms" className="press-feel-light">Terms</a>
           <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="press-feel-light">Issues?</a>
         </nav>
       </footer>
