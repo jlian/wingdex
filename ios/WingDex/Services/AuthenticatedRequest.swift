@@ -44,13 +44,15 @@ enum AuthenticatedRequest {
         additionalCookies: String? = nil,
         method: String = "POST",
         body: Data? = nil,
-        contentType: String = "application/json"
+        contentType: String? = "application/json"
     ) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        if let contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        }
         request.httpBody = body
 
         // Build cookie header with signed session token + any additional cookies
@@ -69,12 +71,14 @@ enum AuthenticatedRequest {
         return request
     }
 
-    /// Extract all Set-Cookie values from a response as a single Cookie header string.
-    /// Used to forward challenge cookies between passkey flow steps.
+    /// Extract cookie name=value pairs from Set-Cookie response headers.
+    /// Uses HTTPCookie parsing and preserves URL-encoded values.
     static func extractCookies(from response: HTTPURLResponse, for url: URL) -> String? {
         guard let headerFields = response.allHeaderFields as? [String: String] else { return nil }
         let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
         guard !cookies.isEmpty else { return nil }
-        return cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        let result = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        log.debug("Extracted cookies: \(cookies.map { $0.name }.joined(separator: ", "))")
+        return result
     }
 }

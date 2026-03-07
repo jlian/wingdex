@@ -131,7 +131,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
     /// Register a new passkey for the currently authenticated user.
     /// - signedToken: HMAC-signed token for cookie auth on passkey verify endpoint
     func register(name: String, token: String, signedToken: String? = nil) async throws {
-        // Step 1 - Fetch registration options (Bearer only)
+        // Step 1 - Fetch registration options
+        // Must use session cookies (not just Bearer) so the challenge is bound to
+        // the same session context as the verify step. The passkey plugin uses
+        // cookie-based session validation internally.
         var components = URLComponents(
             url: Config.apiBaseURL.appendingPathComponent("api/auth/passkey/generate-register-options"),
             resolvingAgainstBaseURL: false
@@ -140,7 +143,13 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             URLQueryItem(name: "authenticatorAttachment", value: "platform"),
         ]
         let optionsURL = components.url!
-        let optionsRequest = AuthenticatedRequest.withBearer(url: optionsURL, token: token)
+        let optionsRequest = AuthenticatedRequest.withBearerAndCookies(
+            url: optionsURL,
+            token: token,
+            signedToken: signedToken,
+            method: "GET",
+            contentType: nil
+        )
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
