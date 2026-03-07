@@ -93,14 +93,19 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // Support bearer tokens from mobile clients: inject the token as a session
   // cookie so Better Auth's getSession can validate it normally.
+  // Inject BOTH prefixed and non-prefixed cookie names so it works regardless
+  // of whether Better Auth has useSecureCookies on (HTTPS) or off (HTTP).
   let sessionHeaders = context.request.headers
   const authHeader = context.request.headers.get('authorization')
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7)
     sessionHeaders = new Headers(context.request.headers)
     const existing = sessionHeaders.get('cookie') || ''
-    const injected = `better-auth.session_token=${token}`
+    const injected = `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`
     sessionHeaders.set('cookie', existing ? `${existing}; ${injected}` : injected)
+    if (context.env.DEBUG) {
+      console.log(JSON.stringify({ bearer: true, tokenLen: token.length }))
+    }
   }
 
   const session = await auth.api.getSession({
@@ -108,6 +113,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
+    if (context.env.DEBUG) {
+      console.log(JSON.stringify({ auth: 'rejected', method: context.request.method, path: pathname, bearer: !!authHeader }))
+    }
     logRequest(context.request.method, pathname, 401)
     return errorResponse('Unauthorized', 401)
   }
