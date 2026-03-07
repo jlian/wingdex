@@ -32,20 +32,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return Response.redirect(errorUrl, 302)
   }
 
-  // Use the raw session token from the DB. The bearer() plugin validates
-  // raw tokens directly - no HMAC-signed cookie value needed.
-  const params = new URLSearchParams({
-    token: session.session.token,
-    expires_at: session.session.expiresAt.toISOString(),
-    user_id: session.user.id,
-    user_name: session.user.name || '',
-    user_email: session.user.email || '',
-  })
-
+  // Build callback URL with proper percent-encoding (not form-encoding).
+  // URLSearchParams encodes spaces as + which Swift's URLComponents doesn't decode.
+  // Use encodeURIComponent instead which produces %20 for spaces.
+  const p = (key: string, value: string) => `${key}=${encodeURIComponent(value)}`
+  const parts = [
+    p('token', session.session.token),
+    p('expires_at', session.session.expiresAt.toISOString()),
+    p('user_id', session.user.id),
+    p('user_name', session.user.name || ''),
+    p('user_email', session.user.email || ''),
+  ]
   if (session.user.image) {
-    params.set('user_image', session.user.image)
+    parts.push(p('user_image', session.user.image))
   }
 
-  const callbackUrl = `${APP_SCHEME}://auth/callback?${params.toString()}`
+  const callbackUrl = `${APP_SCHEME}://auth/callback?${parts.join('&')}`
   return Response.redirect(callbackUrl, 302)
 }
