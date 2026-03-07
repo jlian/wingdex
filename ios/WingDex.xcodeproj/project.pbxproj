@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,16 +16,23 @@
 		2314AD2B5AD2CAE6D1426754 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */; };
 		27F3FC5181B71ADB687A56CC /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26C4686392C96AAB515199 /* CropView.swift */; };
 		2C9C67D638E44F34D95746BD /* ConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C018AA33198FA823AABA8B0 /* ConfirmView.swift */; };
+		2CD0EF1907C27E1880E4EAD7 /* 4-eye-light.svg in Resources */ = {isa = PBXBuildFile; fileRef = 870AF9E13B85CCAC1F3AB8F5 /* 4-eye-light.svg */; };
+		36D13B20ECEE4BB1F1E37B0A /* 0-background-dark.svg in Resources */ = {isa = PBXBuildFile; fileRef = B031F6D2B9D5460F59BF2406 /* 0-background-dark.svg */; };
 		3765CB91633BD6B909098629 /* AddPhotosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61DFE3278988BC58601C97F3 /* AddPhotosViewModel.swift */; };
 		3E0B15C139B971B778758337 /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF3BE4EAF4D781A2029593E /* DataStore.swift */; };
 		4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494CD419AD323D541E04D2AB /* AuthService.swift */; };
 		4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F34071627BDA774005F033 /* SettingsView.swift */; };
+		4FF36BAE5B155F70094B1F41 /* 1-body-dark.svg in Resources */ = {isa = PBXBuildFile; fileRef = 1903CDC800719AF2F20386B3 /* 1-body-dark.svg */; };
+		57572C225811128D5CF1A868 /* icon.json in Resources */ = {isa = PBXBuildFile; fileRef = CE28F1AAB8B69D292E353518 /* icon.json */; };
 		6541BF20FA6B0465C6AA8204 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584DE950D0BBC4D9543B7EB4 /* HomeView.swift */; };
+		6AB33F8DA1D9CEF39E5B5D68 /* 4-eye-dark.svg in Resources */ = {isa = PBXBuildFile; fileRef = E6D210E5E1EA39D7F91440F0 /* 4-eye-dark.svg */; };
 		71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */ = {isa = PBXBuildFile; fileRef = 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */; };
+		72298F73A6624FC487525EC7 /* 1-body-light.svg in Resources */ = {isa = PBXBuildFile; fileRef = A8F2B0A20502EAA709C063AE /* 1-body-light.svg */; };
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
+		821C576A11A7EE7C5E65D4F9 /* 2-lower-wing.svg in Resources */ = {isa = PBXBuildFile; fileRef = 4017CC5C6E763A5473ADCDE3 /* 2-lower-wing.svg */; };
 		8789AC9CBFD81D2B38495B2A /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = B8A97988C95C91C186AFD127 /* OpenAPIURLSession */; };
-		9842A8992F5B82AE001267AD /* WingDexApp.icon in Resources */ = {isa = PBXBuildFile; fileRef = 9842A8982F5B82AE001267AD /* WingDexApp.icon */; };
 		9D86C5364CD6EE6224D8BE43 /* DateFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFB4D1BB4367DDC5F16A9D39 /* DateFormatting.swift */; };
+		9E2CD163B6A25D82FBB0BB85 /* 3-upper-wing.svg in Resources */ = {isa = PBXBuildFile; fileRef = CD84C75517AC9C8F4EB4990D /* 3-upper-wing.svg */; };
 		9E3F0C28882FAFAA45934BCF /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FABF05EDCB9B13D4839648 /* SignInView.swift */; };
 		A50BC3771AA5086CA25A13B7 /* WingDexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5043AC2718CF99118DD12C /* WingDexView.swift */; };
 		A7FD52F0548A2FA50CB2C848 /* PasskeyManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */; };
@@ -46,13 +53,15 @@
 /* Begin PBXFileReference section */
 		01F34071627BDA774005F033 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		01FABF05EDCB9B13D4839648 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
-		071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = "demo-ebird-import.csv"; sourceTree = "<group>"; };
+		071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */ = {isa = PBXFileReference; path = "demo-ebird-import.csv"; sourceTree = "<group>"; };
 		0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
+		1903CDC800719AF2F20386B3 /* 1-body-dark.svg */ = {isa = PBXFileReference; path = "1-body-dark.svg"; sourceTree = "<group>"; };
 		190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosFlow.swift; sourceTree = "<group>"; };
 		1A4472F76A8259376EBEA738 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyManagementView.swift; sourceTree = "<group>"; };
 		34B8621A8E42D9A18A2125F8 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		4017CC5C6E763A5473ADCDE3 /* 2-lower-wing.svg */ = {isa = PBXFileReference; path = "2-lower-wing.svg"; sourceTree = "<group>"; };
 		494CD419AD323D541E04D2AB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		584DE950D0BBC4D9543B7EB4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		5873328D24830AA514049E5C /* PhotoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoService.swift; sourceTree = "<group>"; };
@@ -62,18 +71,23 @@
 		6B5043AC2718CF99118DD12C /* WingDexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WingDexView.swift; sourceTree = "<group>"; };
 		73B4D479201C022372C3F4BF /* WingDexApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WingDexApp.swift; sourceTree = "<group>"; };
 		839C24B2C567AC5C75E3844C /* Data+Base64URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Base64URL.swift"; sourceTree = "<group>"; };
+		870AF9E13B85CCAC1F3AB8F5 /* 4-eye-light.svg */ = {isa = PBXFileReference; path = "4-eye-light.svg"; sourceTree = "<group>"; };
 		8C018AA33198FA823AABA8B0 /* ConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmView.swift; sourceTree = "<group>"; };
 		8DF3BE4EAF4D781A2029593E /* DataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStore.swift; sourceTree = "<group>"; };
-		9842A8982F5B82AE001267AD /* WingDexApp.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = WingDexApp.icon; sourceTree = "<group>"; };
 		9986F927C0C622E7A4DE4C2E /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
 		9E26C4686392C96AAB515199 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
 		A4E7F8433923067E08E2E6C2 /* WingDex.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WingDex.entitlements; sourceTree = "<group>"; };
+		A8F2B0A20502EAA709C063AE /* 1-body-light.svg */ = {isa = PBXFileReference; path = "1-body-light.svg"; sourceTree = "<group>"; };
 		AFB4D1BB4367DDC5F16A9D39 /* DateFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateFormatting.swift; sourceTree = "<group>"; };
+		B031F6D2B9D5460F59BF2406 /* 0-background-dark.svg */ = {isa = PBXFileReference; path = "0-background-dark.svg"; sourceTree = "<group>"; };
 		BB01BEA15BC45041F637C903 /* OutingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsView.swift; sourceTree = "<group>"; };
 		C3E027D5423D69EFC1429801 /* PhotoSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSelectionView.swift; sourceTree = "<group>"; };
 		C55734005BE9F01B6719A826 /* PasskeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyService.swift; sourceTree = "<group>"; };
+		CD84C75517AC9C8F4EB4990D /* 3-upper-wing.svg */ = {isa = PBXFileReference; path = "3-upper-wing.svg"; sourceTree = "<group>"; };
+		CE28F1AAB8B69D292E353518 /* icon.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = icon.json; sourceTree = "<group>"; };
 		CFBE1598DFE8F27ED8313060 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesDetailView.swift; sourceTree = "<group>"; };
+		E6D210E5E1EA39D7F91440F0 /* 4-eye-dark.svg */ = {isa = PBXFileReference; path = "4-eye-dark.svg"; sourceTree = "<group>"; };
 		E6F5DCDBE61DDC1D237FD032 /* OutingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingDetailView.swift; sourceTree = "<group>"; };
 		EF5196BB0E920CD88E769065 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F930B7A16F2B5C40B971D674 /* taxonomy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taxonomy.json; sourceTree = "<group>"; };
@@ -179,6 +193,15 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		94C59AE47BB152E1347E1D47 /* WingDexApp.icon */ = {
+			isa = PBXGroup;
+			children = (
+				CE28F1AAB8B69D292E353518 /* icon.json */,
+				F46E9FD845FA48E2CBF9E1B0 /* Assets */,
+			);
+			path = WingDexApp.icon;
+			sourceTree = "<group>";
+		};
 		B3245F51E3319C4574E0AAD5 = {
 			isa = PBXGroup;
 			children = (
@@ -192,7 +215,7 @@
 			children = (
 				071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */,
 				F930B7A16F2B5C40B971D674 /* taxonomy.json */,
-				9842A8982F5B82AE001267AD /* WingDexApp.icon */,
+				94C59AE47BB152E1347E1D47 /* WingDexApp.icon */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -203,6 +226,20 @@
 				9986F927C0C622E7A4DE4C2E /* AppModels.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		F46E9FD845FA48E2CBF9E1B0 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				B031F6D2B9D5460F59BF2406 /* 0-background-dark.svg */,
+				1903CDC800719AF2F20386B3 /* 1-body-dark.svg */,
+				A8F2B0A20502EAA709C063AE /* 1-body-light.svg */,
+				4017CC5C6E763A5473ADCDE3 /* 2-lower-wing.svg */,
+				CD84C75517AC9C8F4EB4990D /* 3-upper-wing.svg */,
+				E6D210E5E1EA39D7F91440F0 /* 4-eye-dark.svg */,
+				870AF9E13B85CCAC1F3AB8F5 /* 4-eye-light.svg */,
+			);
+			path = Assets;
 			sourceTree = "<group>";
 		};
 		F9CBE6C17AEE91B8E883A213 /* App */ = {
@@ -270,6 +307,7 @@
 				3CC5DFA95CB1275F46DE1DF6 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */,
 				05914FFD98F0F320B88F6693 /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -283,9 +321,16 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36D13B20ECEE4BB1F1E37B0A /* 0-background-dark.svg in Resources */,
+				4FF36BAE5B155F70094B1F41 /* 1-body-dark.svg in Resources */,
+				72298F73A6624FC487525EC7 /* 1-body-light.svg in Resources */,
+				821C576A11A7EE7C5E65D4F9 /* 2-lower-wing.svg in Resources */,
+				9E2CD163B6A25D82FBB0BB85 /* 3-upper-wing.svg in Resources */,
+				6AB33F8DA1D9CEF39E5B5D68 /* 4-eye-dark.svg in Resources */,
+				2CD0EF1907C27E1880E4EAD7 /* 4-eye-light.svg in Resources */,
 				CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
-				9842A8992F5B82AE001267AD /* WingDexApp.icon in Resources */,
 				71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */,
+				57572C225811128D5CF1A868 /* icon.json in Resources */,
 				223DAEB5BCD5CAC52065CF13 /* taxonomy.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -398,9 +443,8 @@
 		2393A245882253E89992ACAD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = WingDexApp;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -408,8 +452,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WingDex;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -483,9 +525,8 @@
 		E117ABF5C00CB20BDCC976FA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = WingDexApp;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -493,8 +534,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WingDex;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
