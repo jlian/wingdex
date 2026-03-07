@@ -660,7 +660,7 @@ Add photos with a new species -> confetti animation fires + lifer toast with hap
 
 ---
 
-## Phase 8 - Dark Mode & Auth Fixes
+## Phase 8 - Dark Mode, Auth Fixes & Error Handling
 
 ### 8.1: Define Dark Color Palette
 
@@ -689,15 +689,12 @@ Depends on Phase 4.5 (appearance toggle UI).
 - Verify `UITableViewCell.appearance().backgroundColor` and other UIAppearance overrides work correctly in dark mode
 - Verify map styling (`.standard` map with dark scheme)
 
-### 8.4: Fix 401 on API Calls
+### 8.4: Fix 401 on API Calls ✅
 
-Known bug. After GitHub OAuth sign-in, subsequent API calls return 401 Unauthorized.
+Fixed. Root cause: middleware injected bearer token with wrong cookie name on HTTPS (`better-auth.session_token` vs `__Secure-better-auth.session_token`). Fix: inject both prefixed and non-prefixed cookie names so it works regardless of the `useSecureCookies` setting.
 
-- [ ] **Debug token extraction**: The OAuth callback's `Set-Cookie` header parsing in `AuthService.handleOAuthCallback` may not be extracting the session token correctly
-- [ ] **Verify token flow**: Confirm token is stored in Keychain, retrieved on subsequent requests, and sent as `Authorization: Bearer {token}` header
-- [ ] **Add diagnostic logging**: Log token presence/absence at each stage (extraction, storage, retrieval, request)
-
-**Files**: `AuthService.swift`, `DataService.swift`
+- [x] **Dual cookie injection**: Middleware now injects both `better-auth.session_token` and `__Secure-better-auth.session_token`
+- [x] **Mobile callback cookie extraction**: Reads both prefixed and non-prefixed cookie names
 
 ### 8.5: 401 Auto-Retry
 
@@ -715,9 +712,36 @@ Known bug. After GitHub OAuth sign-in, subsequent API calls return 401 Unauthori
 
 **Files**: `AuthService.swift`, `WingDexApp.swift`
 
+### 8.7: Error Handling Overhaul (iOS)
+
+Currently errors are either silently ignored or show raw `localizedDescription` strings which are often unhelpful (e.g., "(null)" for ASAuthorization errors). Needs a systematic pass across the entire iOS app.
+
+- [ ] **Typed error mapping**: Create a central `AppError` enum that maps network errors, auth errors, passkey errors, and API errors to user-friendly messages. All `catch` blocks should map through this instead of using raw `localizedDescription`
+- [ ] **User-facing error alerts**: Show `.alert` or banner for errors that need user action (auth failure, network unreachable). Show inline error text for recoverable errors (form validation, import conflicts)
+- [ ] **Network error handling**: Detect no-connectivity (`URLError.notConnectedToInternet`) and show a clear offline banner. Detect timeouts and offer retry. Detect server errors (500) with generic "Something went wrong" message
+- [ ] **Rate limit feedback**: When `POST /api/identify-bird` returns 429, show "AI identification limit reached (150/day). Try again tomorrow." with the daily limit from `Config.aiDailyRateLimit`
+- [ ] **Passkey error messages**: Map all `ASAuthorizationError` codes to clear messages - `.canceled` (silent dismiss), `.notHandled` ("Passkey not available for this domain"), `.failed` ("Authentication failed")
+- [ ] **Pull-to-refresh retry**: On data load failure, show the error message and let pull-to-refresh retry the request
+- [ ] **Toast/banner system**: Create a reusable toast overlay (environment-based) for success and error messages. Auto-dismiss after 3-5 seconds. Used across settings saves, imports, exports, species additions
+
+**Files**: New `AppError.swift`, update `SignInView.swift`, `DataStore.swift`, `SettingsView.swift`, all views with error states
+
+### 8.8: Logging Overhaul (iOS + Server)
+
+Part of [#222](https://github.com/jlian/wingdex/issues/222). Ensure consistent, structured logging across all layers.
+
+- [ ] **iOS Logger audit**: Verify all services use `Logger` with appropriate subsystem/category. Ensure `.debug` for routine operations (request/response), `.info` for state changes (sign-in, data load), `.error` for failures. Remove any credential values from log messages
+- [ ] **iOS request/response timing**: Add elapsed time logging to `DataService` API calls (time between request start and response) for performance monitoring
+- [ ] **Server DEBUG flag**: All API route handlers log request entry and error details when `env.DEBUG` is set. Already implemented in middleware; extend to all `functions/api/` route files
+- [ ] **Server structured format**: Use `JSON.stringify({ method, path, status, ... })` consistently for easy filtering in Wrangler terminal and Cloudflare log tailing
+- [ ] **Web client debug logger**: Add a `debugLog()` utility gated on `import.meta.env.DEV` using `console.debug()`. Cover auth state changes, API calls, data mutations, flow transitions
+- [ ] **No credentials in logs**: Audit all log statements across iOS, server, and web to ensure tokens, keys, and user data are never logged (log token length and presence, not values)
+
+**Files**: All service files (iOS), all `functions/api/*.ts` files (server), new web debug utility
+
 ### Phase 8 Verification
 
-Toggle appearance Light/Dark/System -> every screen renders correctly in dark mode -> sign in via GitHub -> all API calls succeed (no 401) -> background the app for 24+ hours -> return -> session still valid or re-auth prompted gracefully.
+Toggle appearance Light/Dark/System -> every screen renders correctly in dark mode -> sign in via GitHub -> all API calls succeed (no 401) -> background the app for 24+ hours -> return -> session still valid or re-auth prompted gracefully -> errors shown as user-friendly messages, not raw strings -> no credentials in any log output -> server logs structured JSON when DEBUG=1.
 
 ---
 
@@ -1066,6 +1090,6 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |
-| 8 | **Dark Mode & Auth Fixes** (palette, toggle, visual audit, 401 fix, session expiry) | Not started |
+| 8 | **Dark Mode, Auth Fixes & Error Handling** (palette, toggle, visual audit, 401 fix, error/logging overhaul) | Not started |
 | 9 | **iOS-Native Enhancements** (sharing, context menus, shortcuts, Spotlight, widgets, camera, tips, etc.) | Not started |
 | 10 | **Polish & App Store** (errors, accessibility, icon, TestFlight, listing, submission) | Not started |
