@@ -288,14 +288,14 @@ The current auth implementation hand-rolls cookie name management, resulting in 
 Test all auth flows end-to-end after migration:
 
 - [ ] **GitHub OAuth (simulator)**: Sign in -> data loads -> sign out -> sign in again
-- [ ] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
+- [x] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
 - [ ] **Apple Sign-In**: Native Face ID/Touch ID flow -> data loads
-- [ ] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
+- [x] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
 - [ ] **Passkey registration**: From settings, add new passkey -> verify it appears in list
-- [ ] **Session persistence**: Kill app, relaunch -> session restored from Keychain -> data loads without re-auth
-- [ ] **Sign out**: Clear state, return to sign-in screen, verify Keychain is empty
-- [ ] **Load demo data**: After sign-in, load demo data from settings -> data appears
-- [ ] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
+- [x] **Session persistence**: Kill app, relaunch -> session restored from Keychain -> data loads without re-auth
+- [x] **Sign out**: Clear state, return to sign-in screen, verify Keychain is empty
+- [x] **Load demo data**: After sign-in, load demo data from settings -> data appears
+- [x] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
 
 ### 3.1.8: Automated Tests
 
@@ -356,7 +356,7 @@ The current iOS SignInView is a full-screen `ScrollView` with a single passkey b
 
 - [ ] **Remove unnecessary ScrollView**: The sign-in content should not be scrollable on normal device sizes. Use a centered `VStack` within a `GeometryReader` without wrapping in `ScrollView`. Only allow scrolling if Dynamic Type pushes content beyond the viewport
 - [ ] **Title**: Change from "Sign up" / "Log in" to "Start your WingDex" (matching web's `DialogTitle`)
-- [ ] **Social buttons first**: GitHub and Apple buttons at the top (matching web order: social providers above passkey)
+- [ ] **Social buttons first**: GitHub, Apple, and Google buttons at the top (matching web order: social providers above passkey). Google Sign-In uses the same `ASWebAuthenticationSession` OAuth flow as GitHub - the server already has the Google provider configured. Add `signInWithGoogle()` to `AuthService` (calls `signInWithProvider("google")`), add a Google button to `SignInView` with the Google icon (SF Symbol `globe` or a custom Google logo asset)
 - [ ] **Passkey section with border**: Wrap the passkey area in a bordered, lightly tinted container (matching web's `rounded-lg border border-border/70 bg-muted/20 px-3 py-3`). Show a centered header: Key icon + "Continue with a Passkey"
 - [ ] **Two passkey buttons side-by-side**: Replace the single mode-switching passkey button with two buttons in a horizontal grid (matching web's `grid-cols-2`): "Log in" (primary/filled) and "Sign up" (outlined). Both always visible regardless of mode
 - [ ] **Remove mode toggle**: Since the passkey section now has both Log in and Sign up buttons, the "Already have a WingDex? Log in" / "New to WingDex? Sign up" toggle is no longer needed. Remove it entirely
