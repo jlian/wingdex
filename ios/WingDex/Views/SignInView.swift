@@ -78,6 +78,22 @@ struct SignInView: View {
                             }
                             .buttonStyle(.bordered)
                             .tint(Color.foregroundText)
+
+                            // Google - outlined
+                            Button {
+                                signIn { try await auth.signInWithGoogle() }
+                            } label: {
+                                Label {
+                                    Text("Continue with Google")
+                                        .font(.system(size: 14, weight: .medium))
+                                } icon: {
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 14))
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 36)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(Color.foregroundText)
                         }
 
                         // OR divider - web: 12px uppercase muted text, 1px border line

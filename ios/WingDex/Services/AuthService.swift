@@ -45,6 +45,12 @@ final class AuthService: @unchecked Sendable {
         try await signInWithProvider("github")
     }
 
+    /// Sign in with Google via ASWebAuthenticationSession.
+    @MainActor
+    func signInWithGoogle() async throws {
+        try await signInWithProvider("google")
+    }
+
     /// Sign in with Apple using the native ASAuthorizationAppleIDProvider.
     /// Shows the system Face ID / Touch ID sheet - no web view needed.
     @MainActor
