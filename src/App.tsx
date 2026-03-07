@@ -450,7 +450,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 className="flex items-center gap-2 cursor-pointer press-feel-light"
                 aria-label="Home"
               >
-                <BirdLogo size={32} variant={resolvedTheme === 'dark' ? 'color-dark' : 'color'} />
+                <BirdLogo size={32} className="text-primary" duotone />
               </button>
 
               {/* Nav tabs, WingDex + Outings (Home via logo, Settings via avatar) */}
