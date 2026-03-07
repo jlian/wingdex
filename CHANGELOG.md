@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/jlian/wingdex/compare/v1.13.0...v1.14.0) (2026-03-07)
+
+
+### Features
+
+* **Icons:** regenerate PWA PNGs and favicon with new branding ([4050a2a](https://github.com/jlian/wingdex/commit/4050a2a6e03c2cf1e76ca8bbaba2b0662407c8b7)), closes [#12391b](https://github.com/jlian/wingdex/issues/12391b)
+
 # [1.13.0](https://github.com/jlian/wingdex/compare/v1.12.1...v1.13.0) (2026-03-07)
 
 
