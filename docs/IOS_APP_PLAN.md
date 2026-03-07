@@ -287,15 +287,24 @@ The current auth implementation hand-rolls cookie name management, resulting in 
 
 Test all auth flows end-to-end after migration:
 
-- [ ] **GitHub OAuth (simulator)**: Sign in -> data loads -> sign out -> sign in again
 - [x] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
-- [ ] **Apple Sign-In**: Native Face ID/Touch ID flow -> data loads
+- [ ] **Apple Sign-In**: Blocked on local dev - `.dev.vars` does not have `APPLE_CLIENT_ID`/`APPLE_CLIENT_SECRET`. Works on production/preview deployments where Apple credentials are configured in Cloudflare Pages dashboard. Native `ASAuthorizationAppleIDProvider` flow (bypasses web redirect) should work when credentials are present
 - [x] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
-- [ ] **Passkey registration**: From settings, add new passkey -> verify it appears in list
+- [ ] **Passkey registration**: 401 on registration. Bearer plugin confirmed working for passkey endpoints via curl. Likely cause: stale token after sign-out/re-sign-in cycle, or challenge cookie not being forwarded correctly on HTTPS. Needs further debugging with logging
 - [x] **Session persistence**: Kill app, relaunch -> session restored from Keychain -> data loads without re-auth
 - [x] **Sign out**: Clear state, return to sign-in screen, verify Keychain is empty
-- [x] **Load demo data**: After sign-in, load demo data from settings -> data appears
+- [x] **Load demo data**: After sign-in, load demo data from settings -> data appears. **Needs confirmation dialog** (web app shows a destructive confirmation before loading demo data)
 - [x] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
+
+### 3.1.10: Remaining Issues from Manual Testing
+
+Issues discovered during manual verification. These should be fixed before Phase 3.1 is considered complete.
+
+- [ ] **Passkey registration 401**: Registration fails with 401 on verify-registration (first attempt) or generate-register-options (second attempt). Bearer plugin works for these endpoints (verified via curl), so the issue is likely token staleness or challenge cookie forwarding. Add debug logging to PasskeyService to log HTTP status codes and presence of Authorization/Cookie headers on each request
+- [ ] **Passkey name/label mismatch**: iOS passkey names don't match web app logic. Web generates names like "Safari on Mac" using `getDeviceLabelFromNavigator()` from `src/lib/passkey-label.ts`. iOS should use a similar device-descriptive label (e.g., "WingDex on iPhone 17 Pro") instead of whatever is currently being used. Port the naming logic from `src/lib/passkey-label.ts`
+- [ ] **Apple Sign-In not configured locally**: Add `APPLE_CLIENT_ID` and `APPLE_CLIENT_SECRET` to `.dev.vars` for local testing, or document that Apple Sign-In only works on deployed environments
+- [ ] **Load demo data - add confirmation**: Web app shows a destructive confirmation dialog ("This will replace all your current data") before loading demo data. iOS should match with a `.confirmationDialog` before calling the load demo data API
+- [ ] **Google Sign-In button**: iOS only has GitHub + Apple buttons. Web has Google too. Add "Continue with Google" button using the same `signInWithProvider("google")` pattern as GitHub
 
 ### 3.1.8: Automated Tests
 
