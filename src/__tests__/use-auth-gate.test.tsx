@@ -104,7 +104,7 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
-    expect(screen.getByRole('heading', { name: /continue to wingdex/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /start your wingdex/i })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /sign up/i }))
 
     await waitFor(() => {
@@ -140,7 +140,7 @@ describe('useAuthGate', () => {
     render(<Harness onUpgraded={onUpgraded} />)
 
     await userEvent.click(screen.getByText('Open gated action'))
-    expect(screen.getByRole('heading', { name: /continue to wingdex/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /start your wingdex/i })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /log in/i }))
 
     await waitFor(() => {
@@ -160,7 +160,7 @@ describe('useAuthGate', () => {
     // Callback runs immediately without opening modal
     expect(screen.getByText('action-ran')).toBeInTheDocument()
     expect(onUpgraded).not.toHaveBeenCalled()
-    expect(screen.queryByRole('heading', { name: /continue to wingdex/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /start your wingdex/i })).not.toBeInTheDocument()
   })
 
   it('does not call onUpgraded when passkey creation is cancelled', async () => {

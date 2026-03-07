@@ -4,7 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
-import { MapPin, Bird, GithubLogo, UserCircle } from '@phosphor-icons/react'
+import { MapPin, GithubLogo, UserCircle } from '@phosphor-icons/react'
+import { BirdLogo } from '@/components/ui/bird-logo'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 import { authClient } from '@/lib/auth-client'
@@ -301,7 +302,7 @@ function App() {
 function BootShell() {
   return (
     <div className="min-h-dvh bg-background flex items-center justify-center">
-      <Bird size={40} weight="duotone" className="text-primary animate-pulse" />
+      <BirdLogo size={40} className="text-primary animate-pulse" duotone />
       <p className="sr-only" aria-live="polite">Verifying your session.</p>
     </div>
   )
@@ -427,7 +428,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
   }, [prefetchAddPhotosFlow])
 
   const navItems = [
-    { value: 'wingdex', label: 'WingDex', icon: Bird },
+    { value: 'wingdex', label: 'WingDex', icon: BirdLogo },
     { value: 'outings', label: 'Outings', icon: MapPin },
   ]
   const avatarColorClass = getEmojiAvatarColor(user.image)
@@ -449,7 +450,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                 className="flex items-center gap-2 cursor-pointer press-feel-light"
                 aria-label="Home"
               >
-                <Bird size={28} weight="duotone" className="text-primary" />
+                <BirdLogo size={28} className="text-primary" duotone />
               </button>
 
               {/* Nav tabs, WingDex + Outings (Home via logo, Settings via avatar) */}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  MapPin, Camera, Bird, ArrowRight
+  MapPin, Camera, ArrowRight
 } from '@phosphor-icons/react'
+import { BirdLogo } from '@/components/ui/bird-logo'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { ListRow } from '@/components/ui/list-row'
 import { getDisplayName } from '@/lib/utils'
@@ -79,7 +80,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
         <div className="max-w-md mx-auto text-center space-y-6">
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bird size={40} className="text-primary" weight="duotone" />
+              <BirdLogo size={40} className="text-primary" duotone />
             </div>
           </div>
           <div className="space-y-3">

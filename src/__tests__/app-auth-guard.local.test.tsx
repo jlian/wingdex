@@ -54,7 +54,6 @@ vi.mock('@/components/ui/sonner', () => ({
 vi.mock('@phosphor-icons/react', () => ({
   House: () => <span>House</span>,
   List: () => <span>List</span>,
-  Bird: () => <span>Bird</span>,
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
   GithubLogo: () => <span>GithubLogo</span>,
@@ -63,6 +62,10 @@ vi.mock('@phosphor-icons/react', () => ({
   UserPlus: () => <span>UserPlus</span>,
   ArrowsClockwise: () => <span>ArrowsClockwise</span>,
   ArrowLeft: () => <span>ArrowLeft</span>,
+}))
+
+vi.mock('@/components/ui/bird-logo', () => ({
+  BirdLogo: () => <span>BirdLogo</span>,
 }))
 
 vi.mock('@/components/pages/HomePage', () => ({

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bird } from '@phosphor-icons/react'
+import { BirdLogo } from '@/components/ui/bird-logo'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { cn } from '@/lib/utils'
 
@@ -70,7 +70,7 @@ export function WikiBirdThumbnail({
             externalLoading && 'animate-pulse',
           )}
         >
-          <Bird size={24} className="text-muted-foreground/40" />
+          <BirdLogo size={24} className="text-muted-foreground/40" />
         </div>
       )}
     </div>
