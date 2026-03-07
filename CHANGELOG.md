@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/jlian/wingdex/compare/v1.14.0...v1.14.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **Icons:** use circle shape for favicon ([3cb6bea](https://github.com/jlian/wingdex/commit/3cb6bea49da791a04fe16f7f452ad552b11a6b9e))
+
 # [1.14.0](https://github.com/jlian/wingdex/compare/v1.13.0...v1.14.0) (2026-03-07)
 
 
