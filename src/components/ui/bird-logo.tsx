@@ -18,18 +18,29 @@ const WING_FILL = "M 216.73837,19.901949 93.772421,128.59066 C 143.3096,176.8334
 const WING_OUTLINE = "m 215.52038,14.590906 c -2.74422,0.209053 -4.62709,2.427307 -6.57843,4.093848 -39.78468,35.028825 -79.57609,70.051228 -119.334273,105.109196 -2.477303,2.43617 -2.431303,6.9363 0.218977,9.23387 3.763973,3.73422 7.99351,6.99205 12.449596,9.86542 13.27582,8.50957 28.79392,13.13858 44.44524,14.58183 19.07986,1.79986 38.47323,-0.86954 56.58134,-7.00885 18.02164,-6.15586 34.92231,-16.03737 48.3161,-29.6195 10.61616,-10.80565 18.82541,-24.106707 22.90634,-38.719051 0.87706,-3.156383 1.683,-6.361369 1.99836,-9.625403 -0.0639,-3.601667 -3.61494,-6.743463 -7.22984,-6.208092 -2.5225,0.332998 -4.45947,2.147095 -6.64463,3.280256 -13.48113,7.823919 -28.53643,13.135732 -44.11625,14.492376 -1.88613,0.143479 -3.82647,0.272987 -5.73871,0.285258 7.09345,-9.9664 12.85569,-21.136309 15.11837,-33.230568 1.83929,-9.664362 0.97462,-20.04415 -3.58376,-28.870426 -1.14628,-2.220216 -2.35912,-4.487104 -4.16291,-6.249289 -1.29371,-1.038299 -2.99395,-1.531198 -4.64552,-1.410875 z M 214.1215,31.5079 c 2.4378,6.880036 2.05146,14.469179 0.0522,21.405964 -2.62085,9.288614 -7.46693,17.735764 -13.11962,25.520585 -2.06785,2.82273 -4.35195,5.480974 -6.56189,8.188577 -2.01659,3.108987 -0.64422,7.878044 2.86239,9.256722 2.35619,0.982658 4.96545,0.924437 7.46107,1.233264 15.47274,1.180786 31.04587,-1.831966 45.47758,-7.317768 3.09825,-1.191343 6.15073,-2.499713 9.14776,-3.92437 -5.61653,13.976764 -15.64466,26.020576 -27.64738,35.082116 -16.02357,12.17802 -35.35136,19.69217 -55.21357,22.67994 -16.31465,2.4009 -33.2488,1.67622 -49.02705,-3.3084 -8.40253,-2.68179 -16.40233,-6.63349 -23.38019,-12.05035 36.64571,-32.265703 73.2914,-64.53141 109.93709,-96.797119 z"
 const EYE = "m 86.443909,79.547404 c 6.01111,8.62464 19.447201,5.67515 21.295021,-4.67264 1.84781,-10.34778 -9.737021,-17.76529 -18.361661,-11.75418 -5.34617,3.72612 -6.65948,11.08065 -2.93336,16.42682 z"
 
-// Color-variant gradient configs
-const GRADIENTS = {
+// Color icon paths (from icon.svg / icon-dark.svg - 3 overlapping shapes + eye)
+// These use a different coordinate space from the glyph, with their own group transform.
+const COLOR_BODY = "m 459.91271,1471.7066 c -92.78544,0.2484 -156.68149,72.8854 -173.76184,148.598 -1.57848,1.1421 -3.16114,2.2852 -5.39475,3.8864 -6.04535,4.3338 -14.0783,10.0596 -22.08674,15.7538 -16.01695,11.3886 -31.94967,22.6686 -31.94967,22.6686 a 17.332699,17.229801 0 0 0 0.96472,28.7 l 73.6035,45.0596 c 98.77121,132.2178 187.60689,210.259 266.58969,252.2753 79.56137,42.324 149.47183,47.6445 206.03516,34.6369 C 887.03943,1997.27 945.85314,1900.832 945.85314,1900.832 a 17.332699,17.229801 0 0 0 -2.44352,-21.1291 L 665.96691,1600.6518 c -1.16962,-1.347 -27.70649,-31.8357 -65.75253,-63.1603 -38.89167,-32.0208 -88.78194,-65.9228 -140.30167,-65.7849 z"
+const COLOR_WING_LOWER = "m 1042.0204,1595.3585 a 17.332699,17.229801 0 0 0 -8.911,2.6498 c -60.46579,37.8935 -115.08971,51.2326 -154.48023,55.2803 -39.39051,4.0476 -62.13489,-0.9969 -62.13489,-0.9969 a 17.332699,17.229801 0 0 0 -3.51607,-0.3912 c -102.99808,-0.8679 -160.50928,12.968 -207.86942,36.7442 -47.3601,23.7762 -82.82971,55.3526 -147.59409,90.8004 a 17.332699,17.229801 0 0 0 -3.73825,27.4319 c 86.5396,83.7781 226.07604,98.4911 349.32617,62.4096 123.25009,-36.0816 233.18098,-124.6758 256.30808,-253.6822 a 17.332699,17.229801 0 0 0 -17.3903,-20.2459 z"
+const COLOR_WING_UPPER = "m 865.52217,1426.1486 a 17.332699,17.229801 0 0 0 -11.54491,4.3155 l -399.58624,351.0946 a 17.332699,17.229801 0 0 0 11.1386,30.1322 c 59.854,1.1664 119.91363,3.7639 180.60363,-11.8611 60.50261,-15.5768 120.85393,-49.908 179.4296,-119.0967 0.15948,-0.1683 31.57234,-33.3175 54.41717,-80.0182 22.90265,-46.8193 38.11227,-110.9531 -0.18401,-167.0206 a 17.332699,17.229801 0 0 0 -12.17946,-7.4131 17.332699,17.229801 0 0 0 -2.09423,-0.1325 z"
+const COLOR_EYE = "m 390.91414,1627.5688 c 19.53336,27.8597 63.19456,18.3321 69.19917,-15.0939 6.00453,-33.426 -31.6409,-57.3863 -59.66708,-37.969 -17.37261,12.0363 -21.6403,35.7934 -9.53209,53.0629 z"
+
+// Gradient configs with original userSpaceOnUse coordinates + transforms from the SVG sources.
+// The matrix scales ~3.25x and translates to match the path coordinate space.
+// All color variants share the same paths (from icon-dark.svg coordinate space)
+// and gradient geometry, only swapping stop colors and eye fill.
+const COLOR_GROUP_TRANSFORM = 'translate(-219.445,-1426.149)'
+const COLOR_GRADIENTS = {
   light: {
-    body: [['#1b432a', 0], ['#2d6a46', 1]] as const,
-    wingLower: [['#347f3f', 0], ['#539739', 1]] as const,
-    wingUpper: [['#b0da39', 0], ['#e7f657', 1]] as const,
+    body: { stops: [['#1b432a', 0], ['#2d6a46', 1]] as const, x1: 900.73, y1: 422.06, x2: 894.71, y2: 316.33, transform: 'matrix(3.2495455,0,0,3.230254,-2340.7955,544.04329)' },
+    wingLower: { stops: [['#347f3f', 0], ['#539739', 1]] as const, x1: 992.43, y1: 388.36, x2: 986.26, y2: 365.32, transform: 'matrix(3.2495455,0,0,3.230254,-2340.8071,544.04329)' },
+    wingUpper: { stops: [['#b0da39', 0], ['#e7f657', 1]] as const, x1: 961.39, y1: 357.69, x2: 943.41, y2: 333.54, transform: 'matrix(3.2495455,0,0,3.230254,-2340.7955,544.04329)' },
     eye: '#ffffff',
   },
   dark: {
-    body: [['#77b281', 0], ['#f1fcbb', 1]] as const,
-    wingLower: [['#347f3f', 0], ['#539739', 1]] as const,
-    wingUpper: [['#b0da39', 0], ['#e7f657', 1]] as const,
+    body: { stops: [['#77b281', 0], ['#f1fcbb', 1]] as const, x1: 900.73, y1: 422.06, x2: 894.71, y2: 316.33, transform: 'matrix(3.2495455,0,0,3.230254,-2340.7955,544.04329)' },
+    wingLower: { stops: [['#347f3f', 0], ['#539739', 1]] as const, x1: 992.43, y1: 388.36, x2: 986.26, y2: 365.32, transform: 'matrix(3.2495455,0,0,3.230254,-2340.8071,544.04329)' },
+    wingUpper: { stops: [['#b0da39', 0], ['#e7f657', 1]] as const, x1: 961.39, y1: 357.69, x2: 943.41, y2: 333.54, transform: 'matrix(3.2495455,0,0,3.230254,-2340.7955,544.04329)' },
     eye: '#173924',
   },
 } as const
@@ -51,43 +62,36 @@ function GlyphPaths({ duotone }: { duotone: boolean }) {
 }
 
 function ColorPaths({ theme, uid }: { theme: 'light' | 'dark'; uid: string }) {
-  const g = GRADIENTS[theme]
+  const g = COLOR_GRADIENTS[theme]
   const bodyId = `${uid}-body`
   const wingLowerId = `${uid}-wl`
   const wingUpperId = `${uid}-wu`
 
+  const grad = (id: string, cfg: { stops: readonly (readonly [string, number])[]; x1: number; y1: number; x2: number; y2: number; transform: string }) => (
+    <linearGradient
+      id={id}
+      gradientUnits="userSpaceOnUse"
+      x1={cfg.x1} y1={cfg.y1} x2={cfg.x2} y2={cfg.y2}
+      gradientTransform={cfg.transform}
+    >
+      {cfg.stops.map(([color, offset]) => (
+        <stop key={offset} stopColor={color} offset={offset} />
+      ))}
+    </linearGradient>
+  )
+
   return (
     <>
       <defs>
-        <linearGradient id={bodyId} x1="0" y1="1" x2="0" y2="0">
-          {g.body.map(([color, offset]) => (
-            <stop key={offset} stopColor={color} offset={offset} />
-          ))}
-        </linearGradient>
-        <linearGradient id={wingLowerId} x1="0" y1="1" x2="0" y2="0">
-          {g.wingLower.map(([color, offset]) => (
-            <stop key={offset} stopColor={color} offset={offset} />
-          ))}
-        </linearGradient>
-        <linearGradient id={wingUpperId} x1="1" y1="1" x2="0" y2="0">
-          {g.wingUpper.map(([color, offset]) => (
-            <stop key={offset} stopColor={color} offset={offset} />
-          ))}
-        </linearGradient>
+        {grad(bodyId, g.body)}
+        {grad(wingLowerId, g.wingLower)}
+        {grad(wingUpperId, g.wingUpper)}
       </defs>
-      <g transform="matrix(3.24954,0,0,3.14642,-109.433,-54.095)">
-        <g transform="translate(15.739,2.623)">
-          <path d={BODY_FILL} fill={`url(#${bodyId})`} />
-          <path d={BODY_OUTLINE} fill={`url(#${bodyId})`} />
-        </g>
-        <g transform="translate(15.739,2.623)">
-          <path d={WING_FILL} fill={`url(#${wingLowerId})`} />
-          <path d={WING_OUTLINE} fill={`url(#${wingLowerId})`} />
-        </g>
-        <g transform="translate(15.739,2.623)">
-          <path d={WING_FILL} fill={`url(#${wingUpperId})`} />
-        </g>
-        <path d={EYE} fill={g.eye} />
+      <g transform={COLOR_GROUP_TRANSFORM}>
+        <path d={COLOR_BODY} fill={`url(#${bodyId})`} />
+        <path d={COLOR_WING_LOWER} fill={`url(#${wingLowerId})`} />
+        <path d={COLOR_WING_UPPER} fill={`url(#${wingUpperId})`} />
+        <path d={COLOR_EYE} fill={g.eye} fillOpacity="0.95" />
       </g>
     </>
   )
@@ -102,7 +106,7 @@ export function BirdLogo({ size = 24, className, variant, duotone = false }: Bir
     <svg
       width={size}
       height={size}
-      viewBox="0 0 840.23 587.74"
+      viewBox={isColor ? '0 0 840.23 603.39' : '0 0 840.23 587.74'}
       fill={isColor ? undefined : 'currentColor'}
       className={className}
       aria-hidden="true"
