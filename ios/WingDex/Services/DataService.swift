@@ -250,8 +250,7 @@ final class DataService: Sendable {
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         let method = request.httpMethod ?? "?"
         let path = request.url?.path ?? "?"
-        let tokenPrefix = String(token.prefix(20))
-        log.debug("Request: \(method) \(path) token=\(tokenPrefix)...")
+        log.debug("Request: \(method) \(path)")
     }
 
     private func validate(_ response: URLResponse, data: Data) throws {
