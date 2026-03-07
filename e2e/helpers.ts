@@ -47,7 +47,6 @@ async function registerVirtualPasskey(page: Page) {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
 
     await page.getByRole('button', { name: 'Sign up' }).click()
-    await page.getByRole('button', { name: 'Sign up with a Passkey' }).click()
 
     await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible({ timeout: 10_000 })
   } finally {
