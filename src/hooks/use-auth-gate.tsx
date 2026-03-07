@@ -229,9 +229,9 @@ function AuthGateModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Continue to WingDex</DialogTitle>
+          <DialogTitle>Start your WingDex</DialogTitle>
           <DialogDescription>
-            By continuing you accept our{' '}
+            By continuing you accept{' '}
             <a
               href="#terms"
               onClick={() => onOpenChange(false)}
@@ -247,7 +247,7 @@ function AuthGateModal({
             >
               Privacy Policy
             </a>
-            .
+            
           </DialogDescription>
         </DialogHeader>
 
@@ -305,14 +305,16 @@ function AuthGateModal({
 
           {/* Passkey */}
           <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
-            <p className="text-center text-sm font-medium text-foreground">Continue with a Passkey</p>
+            <p className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+              <Key size={18} />
+              Continue with a Passkey
+            </p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 className="w-full"
                 onClick={() => void handlePasskeySignIn()}
                 disabled={isLoading}
               >
-                <Key size={18} className="mr-2" />
                 {isLoading ? 'Working…' : 'Log in'}
               </Button>
               <Button
@@ -321,7 +323,6 @@ function AuthGateModal({
                 onClick={() => void handleSignUpWithPasskey()}
                 disabled={isLoading}
               >
-                <Key size={18} className="mr-2" />
                 {isLoading ? 'Working…' : 'Sign up'}
               </Button>
             </div>
