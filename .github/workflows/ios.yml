@@ -32,6 +32,7 @@ jobs:
 
       - name: Build for Simulator
         run: |
+          set -o pipefail
           xcodebuild build \
             -project WingDex.xcodeproj \
             -scheme WingDex \

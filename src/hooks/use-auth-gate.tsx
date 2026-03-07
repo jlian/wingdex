@@ -96,7 +96,7 @@ function AuthGateModal({
   // Keep both social buttons visible in local/dev so modal polish can be done
   // without depending on provider secrets.
   const visibleProviders = Array.from(new Set([
-    ...(providers ?? ['github', 'apple', 'google']),
+    ...(providers ?? []),
     ...(isLocalVisualAuth ? ['github', 'apple', 'google'] : []),
   ]))
 
@@ -247,7 +247,6 @@ function AuthGateModal({
             >
               Privacy Policy
             </a>
-            
           </DialogDescription>
         </DialogHeader>
 

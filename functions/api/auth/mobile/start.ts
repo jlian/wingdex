@@ -26,6 +26,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response('Missing provider parameter', { status: 400 })
   }
 
+  const allowedProviders = new Set(['github', 'apple', 'google'])
+  if (!allowedProviders.has(provider)) {
+    return new Response('Unsupported provider parameter', { status: 400 })
+  }
+
   const auth = createAuth(context.env, { request: context.request })
 
   // Build a synthetic POST to Better Auth's sign-in/social endpoint
@@ -49,7 +54,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 1. JSON { url, redirect: true } with Set-Cookie (newer versions)
   // 2. A 302 redirect with Location header (some configurations)
   let redirectUrl: string
-  const setCookieHeaders: string[] = []
 
   if (response.status >= 300 && response.status < 400) {
     // 302 redirect - read Location header
