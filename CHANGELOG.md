@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/jlian/wingdex/compare/v1.15.0...v1.15.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **Icons:** revert nav header logo to duotone variant ([9df82c5](https://github.com/jlian/wingdex/commit/9df82c5ce21ee4e0650359f9a4dd33a9cf25d490))
+
 # [1.15.0](https://github.com/jlian/wingdex/compare/v1.14.1...v1.15.0) (2026-03-07)
 
 
