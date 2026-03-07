@@ -226,6 +226,41 @@ Basic flow implemented, but needs significant rework to match web app (see Phase
 
 ---
 
+## Phase 3.5 - Navigation & SignIn Rework
+
+The current iOS app uses a 4-tab layout (Home, WingDex, Outings, Settings) with an "Upload" button in the top-right nav bar. This needs to migrate to the new navigation architecture defined above, and the SignInView needs significant rework to match the web's auth modal.
+
+### 3.5.1: Tab Bar & Navigation Migration
+
+Migrate from the current 4-tab layout to the new architecture: 3 tabs left + detached "+" button right + avatar settings sheet.
+
+- [ ] **Remove Settings tab**: Delete the 4th tab from `TabView`. Three content tabs remain: Home, WingDex, Outings
+- [ ] **Cluster tabs left**: Position the three tabs on the left side of the tab bar
+- [ ] **Add detached "+" button**: Place an "Upload & Identify" action button on the right side of the tab bar, visually separated from the three tabs (Apple Music-style). Tapping opens the AddPhotos flow as a `.sheet`. This replaces the current top-right nav bar upload button
+- [ ] **Avatar button in nav bar**: Add a small circular avatar button (~28pt) to the top-right of the navigation bar, visible on all tabs. Shows user's emoji avatar or social provider photo; falls back to `person.circle.fill` SF Symbol. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
+- [ ] **Update BirdLogo and BirdTab assets**: Replace the current Phosphor-style bird SVGs with the new app icon artwork (updated March 2026 on web: `public/favicon.svg`, `public/icon-192.png`, `public/icon-512.png`). Ensure the tab icon and sign-in logo use the new design
+
+**Files**: `WingDexApp.swift`, `SettingsView.swift`, `Assets.xcassets` (BirdLogo, BirdTab image sets)
+
+### 3.5.2: SignInView Rework
+
+The current iOS SignInView is a full-screen `ScrollView` with a single passkey button that changes label based on signup/login mode. The web's auth modal has a different structure that should be matched:
+
+- [ ] **Remove unnecessary ScrollView**: The sign-in content should not be scrollable on normal device sizes. Use a centered `VStack` within a `GeometryReader` without wrapping in `ScrollView`. Only allow scrolling if Dynamic Type pushes content beyond the viewport
+- [ ] **Title**: Change from "Sign up" / "Log in" to "Start your WingDex" (matching web's `DialogTitle`)
+- [ ] **Social buttons first**: GitHub and Apple buttons at the top (matching web order: social providers above passkey)
+- [ ] **Passkey section with border**: Wrap the passkey area in a bordered, lightly tinted container (matching web's `rounded-lg border border-border/70 bg-muted/20 px-3 py-3`). Show a centered header: Key icon + "Continue with a Passkey"
+- [ ] **Two passkey buttons side-by-side**: Replace the single mode-switching passkey button with two buttons in a horizontal grid (matching web's `grid-cols-2`): "Log in" (primary/filled) and "Sign up" (outlined). Both always visible regardless of mode
+- [ ] **Remove mode toggle**: Since the passkey section now has both Log in and Sign up buttons, the "Already have a WingDex? Log in" / "New to WingDex? Sign up" toggle is no longer needed. Remove it entirely
+- [ ] **Error display**: Keep the red error text below the passkey section
+- [ ] **Demo data toggle** (DEBUG only): Add a toggle switch matching web's demo data toggle: label "Demo data", subtitle "Preview WingDex with sample sightings", bordered container
+- [ ] **Loading state**: Show `ProgressView` overlay and disable all buttons when `isSigningIn` is true
+
+**Files**: `SignInView.swift`
+**Reference**: `src/hooks/use-auth-gate.tsx` (auth modal JSX)
+
+---
+
 ## Phase 3-R - Add Photos Flow Rework
 
 The iOS flow is ~60% feature-complete vs the web app. The web wizard is a 9-step flow with per-photo confirmation, two-tier AI, crop retry, and outing review. The iOS flow needs fundamental restructuring to match.
@@ -344,20 +379,9 @@ Select 5+ photos from library -> see outing review with reverse-geocoded locatio
 
 ## Phase 4 - Settings & Profile Parity
 
-Settings is now accessed via the avatar button in the navigation bar (not a tab). Content is presented in a card-style sheet (Apple Music-style). All features below match the web's SettingsPage.
+Settings is now accessed via the avatar button in the navigation bar (not a tab) per Phase 3.5. Content is presented in a card-style sheet (Apple Music-style). All features below match the web's SettingsPage.
 
-### 4.1: Navigation Architecture Change
-
-Currently Settings is a 4th tab. Needs restructuring.
-
-- [ ] **Remove Settings tab**: Delete the 4th tab from `TabView`. Three tabs remain: Home, WingDex, Outings, clustered to the left
-- [ ] **Add "+" button**: Add a detached "Upload & Identify" button on the right side of the tab bar (visually separated from the three tabs, like Apple Music). Tapping opens the AddPhotos flow as a `.sheet`
-- [ ] **Avatar button in navigation bar**: Add a small circular avatar button (user's emoji or social provider photo, ~28pt) to the top-right of the navigation bar, visible on all tabs. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
-- [ ] **Default avatar**: Show `person.circle.fill` SF Symbol when no user avatar is set
-
-**Files**: `WingDexApp.swift` (TabView restructure, toolbar avatar button), `SettingsView.swift` (adapt for sheet presentation)
-
-### 4.2: Display Name Editing
+### 4.1: Display Name Editing
 
 iOS shows the name read-only. The web has an inline pencil edit button.
 
@@ -369,7 +393,7 @@ iOS shows the name read-only. The web has an inline pencil edit button.
 **Files**: `SettingsView.swift`
 **Reference**: `SettingsPage.tsx` (name editing section with `window.prompt()`)
 
-### 4.3: Random Bird Nickname Generator
+### 4.2: Random Bird Nickname Generator
 
 Does not exist on iOS. The web has a circular arrows button that generates a bird-themed display name + emoji avatar.
 
@@ -381,7 +405,7 @@ Does not exist on iOS. The web has a circular arrows button that generates a bir
 **Files**: `SettingsView.swift`, new `FunNames.swift`
 **Reference**: `src/lib/fun-names.ts` (`generateBirdName`, `BIRD_ADJECTIVES`, `BIRD_NOUNS`, `BIRD_EMOJIS`)
 
-### 4.4: Avatar Emoji Selection
+### 4.3: Avatar Emoji Selection
 
 Does not exist on iOS. The web has a row of 8 emoji buttons.
 
@@ -396,7 +420,7 @@ Does not exist on iOS. The web has a row of 8 emoji buttons.
 **Files**: `SettingsView.swift`, port avatar utilities from `src/lib/fun-names.ts`
 **Reference**: `SettingsPage.tsx` (avatar section)
 
-### 4.5: Appearance Toggle (Light/Dark/System)
+### 4.4: Appearance Toggle (Light/Dark/System)
 
 Does not exist on iOS. The web uses `next-themes` with three buttons.
 
@@ -409,7 +433,7 @@ Does not exist on iOS. The web uses `next-themes` with three buttons.
 
 **Files**: `SettingsView.swift`, `Theme.swift` (appearance management), `WingDexApp.swift` (restore on launch)
 
-### 4.6: eBird CSV Import with Timezone Picker
+### 4.5: eBird CSV Import with Timezone Picker
 
 Stub exists (button present, marked TODO). Needs full implementation matching the web's import flow.
 
@@ -425,7 +449,7 @@ Stub exists (button present, marked TODO). Needs full implementation matching th
 **Files**: `SettingsView.swift`, new `EBirdImportView.swift` sheet, `DataService.swift` (import API calls)
 **Reference**: `SettingsPage.tsx` (import section), `functions/api/import/`
 
-### 4.7: Export Sightings CSV
+### 4.6: Export Sightings CSV
 
 Stub exists (button present, marked TODO). Needs implementation.
 
@@ -436,7 +460,7 @@ Stub exists (button present, marked TODO). Needs implementation.
 
 **Files**: `SettingsView.swift`, `DataService.swift` (export API call)
 
-### 4.8: Data Privacy Card
+### 4.7: Data Privacy Card
 
 Does not exist on iOS.
 
@@ -448,7 +472,7 @@ Does not exist on iOS.
 
 **Files**: `SettingsView.swift`
 
-### 4.9: Delete Account & All Data (Two-Stage Confirmation)
+### 4.8: Delete Account & All Data (Two-Stage Confirmation)
 
 iOS only has "Delete All Data" (single confirmation). The web has a separate "Delete Account & All Data" with a two-stage confirmation flow.
 
@@ -459,7 +483,7 @@ iOS only has "Delete All Data" (single confirmation). The web has a separate "De
 
 **Files**: `SettingsView.swift`, `DataService.swift`, `AuthService.swift`
 
-### 4.10: Remove "Saved Locations" Stub
+### 4.9: Remove "Saved Locations" Stub
 
 iOS has a placeholder "No saved locations" section that references a feature the web app removed.
 
@@ -469,7 +493,7 @@ iOS has a placeholder "No saved locations" section that references a feature the
 
 ### Phase 4 Verification
 
-Avatar button visible in nav bar on all tabs -> tap opens card-style settings sheet -> edit name (pencil), generate nickname (arrows), pick emoji avatar (8 grid) -> appearance toggle switches between Light/Dark/System immediately -> import eBird CSV with timezone picker works end-to-end with conflict display -> export sightings CSV via share sheet -> privacy card shows correct disclosures -> delete account requires 2 confirmations then signs out -> no "Saved Locations" section.
+Edit name (pencil), generate nickname (arrows), pick emoji avatar (8 grid) -> appearance toggle switches between Light/Dark/System immediately -> import eBird CSV with timezone picker works end-to-end with conflict display -> export sightings CSV via share sheet -> privacy card shows correct disclosures -> delete account requires 2 confirmations then signs out -> no "Saved Locations" section.
 
 ---
 
@@ -939,8 +963,8 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ### 10.3: App Icon & Launch Screen
 
-- [ ] **App icon**: Design and add to `Assets.xcassets` in all required sizes
-- [ ] **Launch screen**: Simple branded launch screen matching the warm color palette (beige background, centered bird logo)
+- [ ] **App icon**: Export the new bird icon (updated March 2026 on web: `public/icon-512.png`, `public/favicon.svg`) as a 1024x1024 PNG and add to `Assets.xcassets/AppIcon.appiconset`. The current AppIcon slot is empty - Xcode auto-generates all required sizes from the single 1024x1024 source
+- [ ] **Launch screen**: Simple branded launch screen matching the warm color palette (beige background, centered new bird icon)
 
 ### 10.4: TestFlight
 
@@ -1005,7 +1029,8 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 
 | File | Status | Changes needed |
 | --- | --- | --- |
-| `WingDexApp.swift` | Modify | Restructure: 3 tabs + detached "+" button + avatar toolbar button |
+| `WingDexApp.swift` | Modify | Restructure: 3 tabs + detached "+" button + avatar toolbar button (Phase 3.5) |
+| `SignInView.swift` | Rework | Match web auth modal: title, two passkey buttons, remove mode toggle (Phase 3.5) |
 | `SettingsView.swift` | Modify | Adapt for sheet presentation; add all Phase 4 features |
 | `AddPhotosViewModel.swift` | Major rework | Two-tier AI, per-photo flow, outing review step, crop retry, certainty |
 | `AddPhotosFlow/OutingReviewView.swift` | New | Nominatim geocoding, place search, existing outing matching |
@@ -1035,8 +1060,9 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 2.5 | Styling & Layout (colors, edge-to-edge, List theming) | ✅ Done |
 | 2.6 | Auth UX, Tab Icon, Session Fixes | ✅ Done |
 | 3 | Add Photos Flow (initial, needs rework) | ✅ Done (basic) |
+| 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | Not started |
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | Not started |
-| 4 | **Settings & Profile Parity** (nav change, name, avatar, appearance, import/export, delete account) | Not started |
+| 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | Not started |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |
