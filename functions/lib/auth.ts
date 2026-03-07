@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { anonymous } from 'better-auth/plugins'
+import { anonymous, bearer } from 'better-auth/plugins'
 import { passkey } from '@better-auth/passkey'
 import { Kysely } from 'kysely'
 import { D1Dialect } from 'kysely-d1'
@@ -125,6 +125,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     },
     plugins: [
       anonymous(),
+      bearer(),
       passkey({
         rpName: 'WingDex',
         rpID: new URL(passkeyOrigin).hostname,

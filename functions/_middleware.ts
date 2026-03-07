@@ -91,30 +91,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const auth = createAuth(context.env, { request: context.request })
 
-  // Support bearer tokens from mobile clients: inject the token as a session
-  // cookie so Better Auth's getSession can validate it normally.
-  // Inject BOTH prefixed and non-prefixed cookie names so it works regardless
-  // of whether Better Auth has useSecureCookies on (HTTPS) or off (HTTP).
-  let sessionHeaders = context.request.headers
-  const authHeader = context.request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7)
-    sessionHeaders = new Headers(context.request.headers)
-    const existing = sessionHeaders.get('cookie') || ''
-    const injected = `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`
-    sessionHeaders.set('cookie', existing ? `${existing}; ${injected}` : injected)
-    if (context.env.DEBUG) {
-      console.log(JSON.stringify({ bearer: true, tokenLen: token.length }))
-    }
-  }
-
+  // The bearer() plugin enables getSession to accept Authorization: Bearer headers
+  // natively, so no cookie translation is needed.
   const session = await auth.api.getSession({
-    headers: sessionHeaders,
+    headers: context.request.headers,
   })
 
   if (!session) {
     if (context.env.DEBUG) {
-      console.log(JSON.stringify({ auth: 'rejected', method: context.request.method, path: pathname, bearer: !!authHeader }))
+      const hasBearer = !!context.request.headers.get('authorization')
+      console.log(JSON.stringify({ auth: 'rejected', method: context.request.method, path: pathname, bearer: hasBearer }))
     }
     logRequest(context.request.method, pathname, 401)
     return errorResponse('Unauthorized', 401)

@@ -5,14 +5,18 @@
  * sets a session cookie, and redirects the user to the configured callbackURL.
  * For mobile clients, that callbackURL points here.
  *
- * This handler reads the session cookie, looks up the user, and redirects to
- * the app's custom URL scheme with the session token + user info in the URL
+ * This handler reads the session via cookie, extracts the raw session token,
+ * and redirects to the app's custom URL scheme with the token + user info
  * so ASWebAuthenticationSession can capture it.
+ *
+ * The iOS app stores this token in Keychain and sends it as
+ * Authorization: Bearer on all subsequent requests. The bearer() plugin
+ * on the server validates it natively.
  *
  * Flow:
  *   1. iOS opens /api/auth/signin/github?callbackURL=/api/auth/mobile/callback
  *   2. OAuth happens... Better Auth sets cookie + redirects here
- *   3. We read the cookie, redirect to wingdex://auth/callback?token=...
+ *   3. We read the session, redirect to wingdex://auth/callback?token=...
  *   4. ASWebAuthenticationSession captures the custom scheme URL
  */
 import { createAuth } from '../../../lib/auth'
@@ -24,26 +28,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const session = await auth.api.getSession({ headers: context.request.headers })
 
   if (!session?.user?.id || !session?.session?.token) {
-    // OAuth failed or session cookie missing - redirect to app with error
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
     return Response.redirect(errorUrl, 302)
   }
 
-  // Extract the signed session token from the cookie.
-  // On HTTPS, Better Auth prefixes cookies with __Secure-.
-  const cookieHeader = context.request.headers.get('Cookie') || ''
-  let signedToken = session.session.token  // fallback to raw token
-  for (const part of cookieHeader.split(';')) {
-    const trimmed = part.trim()
-    if (trimmed.startsWith('better-auth.session_token=') ||
-        trimmed.startsWith('__Secure-better-auth.session_token=')) {
-      signedToken = decodeURIComponent(trimmed.split('=').slice(1).join('='))
-      break
-    }
-  }
-
+  // Use the raw session token from the DB. The bearer() plugin validates
+  // raw tokens directly - no HMAC-signed cookie value needed.
   const params = new URLSearchParams({
-    token: signedToken,
+    token: session.session.token,
     expires_at: session.session.expiresAt.toISOString(),
     user_id: session.user.id,
     user_name: session.user.name || '',
