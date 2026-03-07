@@ -301,4 +301,79 @@ test.describe('API smoke (request context)', () => {
     await bearerApi.dispose()
     await api.dispose()
   })
+
+  test('passkey endpoints require signed session cookie for auth', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    // Sign in to get both raw and signed tokens
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+    const signInJson = await signIn.json()
+    const rawToken = signInJson?.token
+    const signedToken = signIn.headers()['set-auth-token']
+    expect(rawToken).toBeTruthy()
+    expect(signedToken).toBeTruthy()
+    expect(rawToken).not.toBe(signedToken) // signed has HMAC suffix
+
+    const freshApi = await request.newContext({ baseURL: API_BASE })
+
+    // list-user-passkeys works with Bearer only (read endpoint)
+    const listBearer = await freshApi.get('/api/auth/passkey/list-user-passkeys', {
+      headers: { Authorization: `Bearer ${rawToken}` },
+    })
+    expect(listBearer.status()).toBe(200)
+
+    // generate-register-options works with Bearer only
+    const opts = await freshApi.get(
+      '/api/auth/passkey/generate-register-options?authenticatorAttachment=platform',
+      { headers: { Authorization: `Bearer ${rawToken}`, Origin: API_BASE } },
+    )
+    expect(opts.status()).toBe(200)
+
+    // Extract challenge cookie from options response
+    const challengeCookie = opts
+      .headersArray()
+      .filter(h => h.name.toLowerCase() === 'set-cookie')
+      .map(h => h.value.split(';')[0])
+      .find(c => c.includes('passkey'))
+    expect(challengeCookie).toBeTruthy()
+
+    // verify-registration with Bearer + raw token cookie = 401 (raw token rejected as cookie)
+    const verifyRaw = await freshApi.post('/api/auth/passkey/verify-registration', {
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Origin: API_BASE,
+        'Content-Type': 'application/json',
+        Cookie: `better-auth.session_token=${rawToken}; ${challengeCookie}`,
+      },
+      data: {
+        response: { id: 'test', rawId: 'test', type: 'public-key',
+          response: { clientDataJSON: 'test', attestationObject: 'test' },
+          authenticatorAttachment: 'platform', clientExtensionResults: {} },
+        name: 'test',
+      },
+    })
+    expect(verifyRaw.status()).toBe(401)
+
+    // verify-registration with Bearer + signed token cookie = 400 (auth passes, fake data rejected)
+    const verifySigned = await freshApi.post('/api/auth/passkey/verify-registration', {
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Origin: API_BASE,
+        'Content-Type': 'application/json',
+        Cookie: `better-auth.session_token=${signedToken}; __Secure-better-auth.session_token=${signedToken}; ${challengeCookie}`,
+      },
+      data: {
+        response: { id: 'test', rawId: 'test', type: 'public-key',
+          response: { clientDataJSON: 'test', attestationObject: 'test' },
+          authenticatorAttachment: 'platform', clientExtensionResults: {} },
+        name: 'test',
+      },
+    })
+    // 400 or 500 = auth passed (bad WebAuthn data), NOT 401
+    expect(verifySigned.status()).not.toBe(401)
+
+    await freshApi.dispose()
+    await api.dispose()
+  })
 })
