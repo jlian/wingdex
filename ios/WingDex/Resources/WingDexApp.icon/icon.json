@@ -3,7 +3,10 @@
   "fill-specializations" : [
     {
       "value" : {
-        "automatic-gradient" : "display-p3:1.00000,0.97204,0.89934,1.00000",
+        "linear-gradient" : [
+          "display-p3:0.90196,0.88627,0.84314,1.00000",
+          "display-p3:0.81569,0.79608,0.75294,1.00000"
+        ],
         "orientation" : {
           "start" : {
             "x" : 0.5,
@@ -19,7 +22,7 @@
     {
       "appearance" : "dark",
       "value" : {
-        "automatic-gradient" : "display-p3:0.09020,0.18431,0.09804,1.00000",
+        "automatic-gradient" : "display-p3:0.05462,0.07753,0.07295,1.00000",
         "orientation" : {
           "start" : {
             "x" : 0.5,
@@ -71,6 +74,7 @@
           "name" : "4-eye-dark"
         },
         {
+          "glass" : true,
           "image-name" : "3-upper-wing.svg",
           "name" : "3-upper-wing",
           "opacity" : 0.95
