@@ -274,12 +274,22 @@ final class AuthService: @unchecked Sendable {
 
     // MARK: - Callback Processing
 
+    /// Parsed result from an OAuth callback URL.
+    struct CallbackResult {
+        let token: String
+        let expiry: Date
+        let userId: String?
+        let userName: String?
+        let userEmail: String?
+        let userImage: String?
+    }
+
     /// Parse the wingdex://auth/callback?token=...&user_id=... redirect URL.
-    private func processAuthCallback(url: URL) throws {
+    /// Extracted as a static method for testability.
+    static func parseCallbackURL(_ url: URL) throws -> CallbackResult {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw AuthError.oauthFailed("Invalid callback URL")
         }
-        log.info("Processing callback (\(url.host ?? "?"), \(components.queryItems?.count ?? 0) params)")
 
         let params = Dictionary(
             uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
@@ -294,29 +304,43 @@ final class AuthService: @unchecked Sendable {
         guard let token = params["token"],
               let expiresAt = params["expires_at"]
         else {
-            log.error("Missing token or expires_at in callback. Params: \(params.keys.joined(separator: ", "))")
             throw AuthError.oauthFailed("Missing token in callback")
         }
 
-        log.info("Got token (\(token.count) chars), expires_at: \(expiresAt)")
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        // Try with fractional seconds first, then without
-        let expiry = formatter.date(from: expiresAt) ?? {
-            let basic = ISO8601DateFormatter()
-            return basic.date(from: expiresAt)
-        }()
-        guard let expiry else {
+        guard let expiry = Self.parseISO8601(expiresAt) else {
             throw AuthError.oauthFailed("Invalid expiry date")
         }
 
-        sessionToken = token
-        sessionExpiry = expiry
-        userId = params["user_id"]
-        userName = params["user_name"]
-        userEmail = params["user_email"]
-        userImage = params["user_image"]
+        return CallbackResult(
+            token: token,
+            expiry: expiry,
+            userId: params["user_id"],
+            userName: params["user_name"],
+            userEmail: params["user_email"],
+            userImage: params["user_image"]
+        )
+    }
+
+    /// Parse an ISO 8601 date string, trying with fractional seconds first.
+    static func parseISO8601(_ string: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) { return date }
+        let basic = ISO8601DateFormatter()
+        return basic.date(from: string)
+    }
+
+    private func processAuthCallback(url: URL) throws {
+        log.info("Processing callback (\(url.host ?? "?"))")
+        let result = try Self.parseCallbackURL(url)
+        log.info("Got token (\(result.token.count) chars)")
+
+        sessionToken = result.token
+        sessionExpiry = result.expiry
+        userId = result.userId
+        userName = result.userName
+        userEmail = result.userEmail
+        userImage = result.userImage
         isAuthenticated = true
 
         persistSession()

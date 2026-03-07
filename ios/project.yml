@@ -55,6 +55,19 @@ targets:
         product: OpenAPIURLSession
       - package: KeychainAccess
 
+  WingDexTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WingDexTests
+    dependencies:
+      - target: WingDex
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.wingdex.tests
+        DEVELOPMENT_TEAM: Z8LQS5S492
+        CODE_SIGN_STYLE: Automatic
+
 packages:
   swift-openapi-generator:
     url: https://github.com/apple/swift-openapi-generator
