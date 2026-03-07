@@ -4,7 +4,7 @@ A photo-first bird identification and life list tracker built on Cloudflare Page
 
 **[Try it →](https://wingdex.app)**
 
-<img width="1232" height="1187" alt="image" src="https://github.com/user-attachments/assets/b0963b71-bec5-4210-b8b5-009b53e85359" />
+<img width="1150" height="1142" alt="image" src="https://github.com/user-attachments/assets/79c364ae-e4f3-49ba-9fed-6e5966470304" />
 
 ## What is WingDex?
 
