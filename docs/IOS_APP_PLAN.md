@@ -309,7 +309,9 @@ Server-side tests verifying Bearer token auth works end-to-end.
 
 ### 3.1.9: iOS Tests
 
-No iOS test target exists yet. Add XCTest target and unit tests for auth logic.
+No iOS test target exists yet. Add XCTest target with unit tests and integration tests for auth logic.
+
+#### Unit Tests (no server needed)
 
 - [ ] **Create XCTest target**: Add a `WingDexTests` test target to `project.yml` with the XCTest framework. Configure it to access the app's source files
 - [ ] **AuthService token parsing**: Test `processAuthCallback(url:)` with valid callback URLs, missing params, invalid dates, URL-encoded values. Verify token, userId, expiry are extracted correctly
@@ -318,7 +320,19 @@ No iOS test target exists yet. Add XCTest target and unit tests for auth logic.
 - [ ] **Config URL tiers**: Test that `Config.apiBaseURL` returns correct URL for simulator vs device vs release builds
 - [ ] **Date formatting edge cases**: Test ISO8601 date parsing with and without fractional seconds, with timezone offsets
 
-**Files**: New `ios/WingDexTests/` directory, `ios/project.yml` (add test target)
+#### Integration Tests (require running dev server)
+
+These tests run against the actual API server to verify full auth flows work from Swift code. Run with the dev server active (either `wingdev.johnspecificproblems.net` or a test-specific Wrangler instance).
+
+- [ ] **Anonymous sign-in + Bearer data fetch**: POST `/api/auth/sign-in/anonymous`, extract token from JSON response, GET `/api/data/all` with `Authorization: Bearer` header, verify 200 with valid response shape
+- [ ] **Bearer token rejection**: Send `Authorization: Bearer invalid-token` to `/api/data/all`, verify 401. Send no auth header, verify 401
+- [ ] **Session validation via Bearer**: After sign-in, GET `/api/auth/get-session` with `Authorization: Bearer` header, verify response contains `user.id` and `session.token`
+- [ ] **Data CRUD via Bearer**: Create outing with Bearer auth, verify it appears in `/api/data/all`, delete it, verify it's gone
+- [ ] **Sign-out clears Keychain**: Call `AuthService.signOut()`, verify `validToken()` throws, verify Keychain keys are nil
+- [ ] **Expired session handling**: Store a token with past expiry in Keychain, call `validToken()`, verify it throws and clears state via `signOut()`
+- [ ] **Mobile callback token roundtrip**: If server is available, sign in via anonymous, call mobile callback endpoint, extract token from redirect URL, verify it works as Bearer token on protected endpoints
+
+**Files**: New `ios/WingDexTests/` directory, `ios/WingDexTests/AuthServiceTests.swift`, `ios/WingDexTests/AuthIntegrationTests.swift`, `ios/project.yml` (add test target)
 
 ## Phase 3.5 - Navigation & SignIn Rework
 
