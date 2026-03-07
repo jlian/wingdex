@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showingSignOutConfirmation = false
     @State private var isLoadingDemo = false
     @State private var demoError: String?
+    @State private var showingDemoConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -60,16 +61,7 @@ struct SettingsView: View {
                 #if DEBUG
                 Section("Development") {
                     Button {
-                        isLoadingDemo = true
-                        demoError = nil
-                        Task {
-                            do {
-                                try await store.loadDemoData()
-                            } catch {
-                                demoError = error.localizedDescription
-                            }
-                            isLoadingDemo = false
-                        }
+                        showingDemoConfirmation = true
                     } label: {
                         if isLoadingDemo {
                             ProgressView()
@@ -78,6 +70,26 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isLoadingDemo)
+                    .confirmationDialog(
+                        "Load Demo Data?",
+                        isPresented: $showingDemoConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Replace All Data", role: .destructive) {
+                            isLoadingDemo = true
+                            demoError = nil
+                            Task {
+                                do {
+                                    try await store.loadDemoData()
+                                } catch {
+                                    demoError = error.localizedDescription
+                                }
+                                isLoadingDemo = false
+                            }
+                        }
+                    } message: {
+                        Text("This will replace all your current outings, observations, and WingDex entries with demo data. This cannot be undone.")
+                    }
 
                     if let demoError {
                         Text(demoError)
