@@ -235,47 +235,46 @@ The current auth implementation hand-rolls cookie name management, resulting in 
 
 **Decision**: Use Better Auth's first-party `bearer()` plugin (`better-auth/plugins`, already in dependencies). This is the standard pattern for native mobile clients authenticating against Better Auth.
 
-### 3.1.1: Server - Add Bearer Plugin
+### 3.1.1: Server - Add Bearer Plugin ✅
 
-- [ ] **Add bearer plugin**: In `functions/lib/auth.ts`, add `bearer()` to the plugins array: `import { bearer } from 'better-auth/plugins'` then `plugins: [anonymous(), passkey({...}), bearer()]`
-- [ ] **Remove middleware cookie translation**: Delete the entire Bearer-to-cookie injection block from `functions/_middleware.ts` (the `if (authHeader?.startsWith('Bearer '))` block that injects `better-auth.session_token` and `__Secure-better-auth.session_token`). With the bearer plugin, `auth.api.getSession({ headers })` natively accepts the `Authorization: Bearer` header
-- [ ] **Verify getSession works with Bearer**: After adding the plugin, test that `getSession({ headers: requestHeaders })` succeeds when the request has `Authorization: Bearer <session_token>` and no cookies. Test on both HTTP (local dev) and HTTPS (preview deployment)
-- [ ] **Keep mobile/start and mobile/callback**: These endpoints are still needed for the OAuth redirect flow via `ASWebAuthenticationSession`. The callback extracts the signed session token and passes it to the app via custom scheme URL
+- [x] **Add bearer plugin**: In `functions/lib/auth.ts`, add `bearer()` to the plugins array: `import { bearer } from 'better-auth/plugins'` then `plugins: [anonymous(), passkey({...}), bearer()]`
+- [x] **Remove middleware cookie translation**: Deleted the entire Bearer-to-cookie injection block from `functions/_middleware.ts`. `getSession` now accepts `Authorization: Bearer` natively
+- [x] **Verify getSession works with Bearer**: Verified via unit test and API smoke test
+- [x] **Keep mobile/start and mobile/callback**: Kept, simplified callback to use `session.session.token` directly
 
 **Files**: `functions/lib/auth.ts`, `functions/_middleware.ts`
 
-### 3.1.2: Server - Fix Mobile Callback Token Extraction
+### 3.1.2: Server - Fix Mobile Callback Token Extraction ✅
 
-- [ ] **Use set-auth-token header**: The bearer plugin adds a `set-auth-token` response header on sign-in responses. Update `mobile/callback.ts` to check if this header is available from the Better Auth session creation, and prefer it over manual Set-Cookie parsing
-- [ ] **Remove manual cookie name parsing**: Delete the `trimmed.startsWith('better-auth.session_token=')` and `__Secure-better-auth.session_token` string splitting from `mobile/callback.ts`. Instead, use `session.session.token` directly (the raw token from the DB) since the bearer plugin validates raw tokens without HMAC signatures
-- [ ] **Verify callback URL**: Ensure the `wingdex://auth/callback?token=...` redirect still works with the raw session token
+- [x] **Use raw session token**: Callback now uses `session.session.token` directly - no Set-Cookie parsing needed
+- [x] **Remove manual cookie name parsing**: Deleted all `better-auth.session_token` and `__Secure-` string splitting
 
 **Files**: `functions/api/auth/mobile/callback.ts`
 
-### 3.1.3: iOS - Clean Up AuthService
+### 3.1.3: iOS - Clean Up AuthService ✅
 
-- [ ] **fetchUserInfo - use Bearer header**: Replace the manual cookie construction (`"better-auth.session_token=\(token); __Secure-..."`) in `fetchUserInfo()` with `Authorization: Bearer \(token)` header. The `/api/auth/get-session` endpoint will now accept Bearer tokens natively via the plugin
-- [ ] **processTokenResponse - simplify**: In the Apple Sign-In flow, the `processTokenResponse` method parses Set-Cookie headers to extract the signed token. With the bearer plugin, check for the `set-auth-token` response header first (simpler, plugin-provided), fall back to the raw `token` field from the JSON body
-- [ ] **Remove all hardcoded cookie name strings**: Search for `better-auth.session_token` and `__Secure-better-auth.session_token` across all Swift files. Replace all instances with Bearer header usage. Target: zero cookie name strings in iOS code
-- [ ] **Keychain storage stays**: Continue storing the session token in Keychain via KeychainAccess. This is correct and secure for native apps
+- [x] **fetchUserInfo - use Bearer header**: Replaced cookie header with `Authorization: Bearer` header
+- [x] **processTokenResponse - simplify**: Now reads `set-auth-token` response header (bearer plugin), falls back to JSON `token` field. Deleted all Set-Cookie parsing
+- [x] **Remove all hardcoded cookie name strings**: Zero `better-auth.session_token` or `__Secure-` strings in iOS codebase
+- [x] **Keychain storage stays**: Unchanged
 
 **Files**: `ios/WingDex/Services/AuthService.swift`
 
-### 3.1.4: iOS - Clean Up PasskeyService
+### 3.1.4: iOS - Clean Up PasskeyService ✅
 
-- [ ] **Registration options request**: Replace cookie header `"better-auth.session_token=\(token); __Secure-..."` with `Authorization: Bearer \(token)` header on the `generate-registration-options` request
-- [ ] **Registration verify request**: Replace cookie-based session token with `Authorization: Bearer \(token)` header. Keep the challenge cookie forwarding (challenge cookies are separate from session auth - they bind the WebAuthn challenge to the request and are handled by Better Auth internally)
-- [ ] **Authentication verify - token extraction**: After passkey verify succeeds, extract the new session token from the `set-auth-token` response header (provided by bearer plugin) instead of parsing Set-Cookie. Fall back to `session.token` from JSON body
-- [ ] **Challenge cookie forwarding**: The passkey challenge flow (generate-options -> verify) uses a signed challenge cookie that must be forwarded between the two requests. This is separate from session auth and NOT affected by the bearer plugin migration. Keep the `extractCookieHeader` helper and `HTTPCookie.cookies(withResponseHeaderFields:)` usage for challenge cookies only
-- [ ] **Remove all session cookie name strings**: Zero instances of `better-auth.session_token` in PasskeyService after migration
+- [x] **Registration options request**: Uses `Authorization: Bearer` header
+- [x] **Registration verify request**: Uses `Authorization: Bearer` header. Challenge cookie forwarding kept (separate from session auth)
+- [x] **Authentication verify - token extraction**: Reads `set-auth-token` header, falls back to JSON `session.token`
+- [x] **Challenge cookie forwarding**: Kept as-is (uses `extractCookieHeader` and `HTTPCookie.cookies`)
+- [x] **Remove all session cookie name strings**: Zero cookie name strings in PasskeyService
 
 **Files**: `ios/WingDex/Services/PasskeyService.swift`
 
-### 3.1.5: Security Hardening
+### 3.1.5: Security Hardening ✅
 
-- [ ] **Keychain accessibility**: Change `Keychain(service: Config.bundleID)` to `Keychain(service: Config.bundleID).accessibility(.whenPasscodeSetThisDeviceOnly)` to restrict token access to the device with passcode set, and only while unlocked
-- [ ] **Token not in logs**: Audit all `log.debug`/`log.info`/`log.error` calls across AuthService, PasskeyService, and DataService. Ensure no log statement contains the actual token value - only log token length or presence (`"token present: true"`)
-- [ ] **Remove DEBUG cookie logging**: Remove the `if (context.env.DEBUG) console.log(JSON.stringify({ bearer: true, tokenLen: ... }))` from middleware since the cookie translation is being removed entirely
+- [x] **Keychain accessibility**: Changed to `.accessibility(.whenPasscodeSetThisDeviceOnly)`
+- [x] **Token not in logs**: Audited - no token values in log statements (only length/presence)
+- [x] **Remove DEBUG cookie logging**: Removed (cookie translation deleted entirely)
 
 **Files**: `ios/WingDex/Services/AuthService.swift`, `ios/WingDex/Services/PasskeyService.swift`, `ios/WingDex/Services/DataService.swift`, `functions/_middleware.ts`
 
@@ -300,22 +299,26 @@ Test all auth flows end-to-end after migration:
 
 ### 3.1.8: Automated Tests
 
-Add server-side tests that verify Bearer token auth works end-to-end with the bearer plugin, alongside the existing cookie-based tests.
+Server-side tests verifying Bearer token auth works end-to-end.
 
-- [ ] **Unit test - bearer plugin registered**: In `src/__tests__/auth-config.test.ts`, add a test verifying the bearer plugin is in the plugins list and that `auth.api` includes bearer-related functionality
-- [ ] **API smoke test - Bearer auth CRUD**: In `e2e/api-smoke.spec.ts`, add a test that: (1) signs in anonymously, (2) extracts the session token from the JSON response, (3) makes all subsequent requests using `Authorization: Bearer <token>` header instead of cookies, (4) verifies `GET /api/data/all`, `POST /api/data/outings`, `DELETE /api/data/outings/:id` all succeed with Bearer auth, (5) verifies Bearer auth returns 401 with an invalid token
-- [ ] **API smoke test - mobile callback**: Add a test that: (1) signs in anonymously via cookies, (2) hits `GET /api/auth/mobile/callback` with the session cookie, (3) verifies the redirect URL contains `wingdex://auth/callback?token=...`, (4) extracts the token from the redirect URL, (5) uses that token as Bearer header on `GET /api/data/all` and verifies 200
-- [ ] **API smoke test - get-session via Bearer**: Verify `GET /api/auth/get-session` returns the correct user when called with `Authorization: Bearer <token>` (needed for iOS `fetchUserInfo`)
-- [ ] **Regression test - cookie auth still works**: Ensure existing cookie-based web auth is not broken by the bearer plugin. The existing `api-smoke.spec.ts` cookie tests should continue to pass unchanged
+- [x] **Unit test - bearer plugin registered**: In `src/__tests__/auth-config.test.ts`, verifies bearer plugin is in plugins list
+- [x] **API smoke test - Bearer auth CRUD**: In `e2e/api-smoke.spec.ts`, full CRUD with Bearer headers, 401 on invalid token
+- [x] **API smoke test - get-session via Bearer**: Verifies `get-session` returns user with Bearer header
+- [ ] **API smoke test - mobile callback**: Sign in via cookies, hit `GET /api/auth/mobile/callback`, verify redirect contains token that works as Bearer
+- [ ] **Regression test - cookie auth still works**: Run existing cookie-based tests (should pass unchanged)
 
-**Files**: `src/__tests__/auth-config.test.ts`, `e2e/api-smoke.spec.ts`
+### 3.1.9: iOS Tests
 
-## Phase 3.4 - Polish for read only views
+No iOS test target exists yet. Add XCTest target and unit tests for auth logic.
 
-- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design, ensuring they render well in all contexts (tab bar, sign-in screen, etc.)
-- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design, replacing the current custom bird icon. Ensure it renders well in the tab bar
-- [ ] Make sure 3D touch works wherever appropriate, like pressing a bird in the WingDex to peek at the SpeciesDetailView, or pressing an outing in the Outings list to preview the OutingDetailView
-- [ ] Font size and weight adjustments to better match the web app's typography hierarchy, while still using native system fonts and styles
+- [ ] **Create XCTest target**: Add a `WingDexTests` test target to `project.yml` with the XCTest framework. Configure it to access the app's source files
+- [ ] **AuthService token parsing**: Test `processAuthCallback(url:)` with valid callback URLs, missing params, invalid dates, URL-encoded values. Verify token, userId, expiry are extracted correctly
+- [ ] **AuthService session restore**: Test `restoreSession()` reads from Keychain, validates expiry, signs out if expired
+- [ ] **PasskeyService token extraction**: Test that `set-auth-token` header is preferred over JSON body token. Test fallback when header is absent
+- [ ] **Config URL tiers**: Test that `Config.apiBaseURL` returns correct URL for simulator vs device vs release builds
+- [ ] **Date formatting edge cases**: Test ISO8601 date parsing with and without fractional seconds, with timezone offsets
+
+**Files**: New `ios/WingDexTests/` directory, `ios/project.yml` (add test target)
 
 ## Phase 3.5 - Navigation & SignIn Rework
 
@@ -351,6 +354,13 @@ The current iOS SignInView is a full-screen `ScrollView` with a single passkey b
 
 **Files**: `SignInView.swift`
 **Reference**: `src/hooks/use-auth-gate.tsx` (auth modal JSX)
+
+## 3.5.3 - Polish & Parity
+
+- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design, ensuring they render well in all contexts (tab bar, sign-in screen, etc.)
+- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design, replacing the current custom bird icon. Ensure it renders well in the tab bar
+- [ ] Make sure 3D touch works wherever appropriate, like pressing a bird in the WingDex to peek at the SpeciesDetailView, or pressing an outing in the Outings list to preview the OutingDetailView
+- [ ] Font size and weight adjustments to better match the web app's typography hierarchy, while still using native system fonts and styles
 
 ---
 
