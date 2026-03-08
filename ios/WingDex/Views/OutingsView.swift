@@ -83,7 +83,7 @@ struct OutingsView: View {
             .navigationTitle("Outings")
             .searchable(text: $searchText, prompt: "Search outings")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Picker("Sort by", selection: $sortField) {
                             ForEach(OutingSortField.allCases, id: \.self) { field in

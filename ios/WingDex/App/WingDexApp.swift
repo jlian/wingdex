@@ -72,19 +72,16 @@ struct MainTabView: View {
                 Tab("Home", systemImage: "house", value: AppTab.home) {
                     NavigationStack {
                         HomeView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
                 Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
                     NavigationStack {
                         WingDexView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
                 Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
                     NavigationStack {
                         OutingsView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
             }
@@ -95,24 +92,20 @@ struct MainTabView: View {
                 Label("Add", systemImage: "camera.fill")
             }
         }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                showingSettings = true
+            } label: {
+                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
+            .padding(.top, 6)
+        }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
         .environment(\.showAddPhotos) { selectedTab = .add }
-    }
-
-    /// Avatar toolbar item - always the rightmost item in the nav bar.
-    /// Child views add their sort menus via separate toolbar items which
-    /// stack to the left of this one.
-    private var avatarToolbarItem: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                showingSettings = true
-            } label: {
-                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 32)
-                    .glassEffect(.regular.interactive())
-            }
-        }
     }
 
 }
