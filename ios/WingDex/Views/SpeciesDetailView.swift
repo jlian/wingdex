@@ -40,7 +40,7 @@ struct SpeciesDetailView: View {
                     }
                     .contextMenu {
                         Button(role: .destructive) {
-                            Task { try? await store.deleteOuting(id: item.outing.id) }
+                            Task { await store.deleteOuting(id: item.outing.id) }
                         } label: {
                             Label("Delete Outing", systemImage: "trash")
                         }

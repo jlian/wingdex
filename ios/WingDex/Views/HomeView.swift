@@ -18,12 +18,14 @@ struct HomeView: View {
             }
         }
         .navigationTitle("Home")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showSettings() } label: {
                     AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
                         .glassEffect(.regular.interactive())
                 }
+                .buttonBorderShape(.circle)
             }
         }
         .refreshable {
@@ -150,7 +152,7 @@ struct HomeView: View {
                         }
                         .contextMenu {
                             Button(role: .destructive) {
-                                Task { try? await store.deleteOuting(id: outing.id) }
+                                Task { await store.deleteOuting(id: outing.id) }
                             } label: {
                                 Label("Delete Outing", systemImage: "trash")
                             }

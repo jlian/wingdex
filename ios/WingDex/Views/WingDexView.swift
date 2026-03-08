@@ -85,6 +85,7 @@ struct WingDexView: View {
                 }
             }
             .navigationTitle("WingDex")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search species")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -159,6 +160,7 @@ struct WingDexView: View {
             }
         }
         .listStyle(.plain)
+        .listSectionSeparator(.hidden)
         .scrollContentBackground(.hidden)
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)

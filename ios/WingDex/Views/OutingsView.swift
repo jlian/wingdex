@@ -84,6 +84,7 @@ struct OutingsView: View {
                 }
             }
             .navigationTitle("Outings")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search outings")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -130,7 +131,7 @@ struct OutingsView: View {
             }
             .contextMenu {
                 Button(role: .destructive) {
-                    Task { try? await store.deleteOuting(id: outing.id) }
+                    Task { await store.deleteOuting(id: outing.id) }
                 } label: {
                     Label("Delete Outing", systemImage: "trash")
                 }
@@ -142,6 +143,7 @@ struct OutingsView: View {
             }
         }
         .listStyle(.plain)
+        .listSectionSeparator(.hidden)
         .scrollContentBackground(.hidden)
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
