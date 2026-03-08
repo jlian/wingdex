@@ -150,8 +150,7 @@ struct WingDexView: View {
                 )
             }
             .contextMenu {
-                if let ebirdName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-                   let url = URL(string: "https://ebird.org/species/\(ebirdName.lowercased().replacingOccurrences(of: "%20", with: "_"))") {
+                if let url = getEbirdURL(for: entry.speciesName) {
                     Link(destination: url) {
                         Label("Open in eBird", systemImage: "bird")
                     }

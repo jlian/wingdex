@@ -53,8 +53,8 @@ struct SpeciesDetailView: View {
                 }
             } header: {
                 Text("Sightings (\(sightings.count))")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mutedText)
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
+                    .foregroundStyle(Color.foregroundText)
             }
         }
         .listStyle(.plain)
@@ -174,18 +174,17 @@ struct SpeciesDetailView: View {
     @ViewBuilder
     private var linksSection: some View {
         if let entry, let wikiTitle = entry.wikiTitle {
-            Link(destination: URL(string: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)")!) {
-                Label("Wikipedia", systemImage: "book")
+            if let url = URL(string: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)") {
+                Link(destination: url) {
+                    Label("Wikipedia", systemImage: "book")
+                }
             }
         }
 
-        let commonName = getDisplayName(speciesName)
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        Link(destination: URL(string: "https://ebird.org/species/\(commonName)")!) {
-            Label("eBird", systemImage: "globe")
-        }
-        Link(destination: URL(string: "https://www.allaboutbirds.org/guide/\(commonName.replacingOccurrences(of: "%20", with: "_"))")!) {
-            Label("All About Birds", systemImage: "info.circle")
+        if let url = getEbirdURL(for: speciesName) {
+            Link(destination: url) {
+                Label("eBird", systemImage: "globe")
+            }
         }
     }
 
