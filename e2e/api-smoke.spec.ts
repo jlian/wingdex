@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const API_BASE = 'http://localhost:5000'
+const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://wingdev.johnspecificproblems.net'
+const runLivePreviewAuth = process.env.RUN_LIVE_E2E === '1'
 
 function buildCookieHeader(setCookieHeaders: string[]) {
   return setCookieHeaders
@@ -405,7 +407,9 @@ test.describe('API smoke (request context)', () => {
     // Extract the token from the redirect URL
     const callbackURL = new URL(location!)
     const token = callbackURL.searchParams.get('token')
+    const signedToken = callbackURL.searchParams.get('signed_token')
     expect(token).toBeTruthy()
+    expect(signedToken).toBeTruthy()
 
     // The extracted token should work as a Bearer token
     const bearerApi = await request.newContext({ baseURL: API_BASE })
@@ -416,7 +420,62 @@ test.describe('API smoke (request context)', () => {
     const dataJson = await data.json()
     expect(Array.isArray(dataJson.outings)).toBe(true)
 
+    // The signed token from the callback should work for passkey plugin endpoints.
+    const passkeys = await bearerApi.get('/api/auth/passkey/list-user-passkeys', {
+      headers: {
+        Origin: API_BASE,
+        Cookie: `better-auth.session_token=${signedToken}; __Secure-better-auth.session_token=${signedToken}`,
+      },
+    })
+    expect(passkeys.status()).toBe(200)
+    expect(Array.isArray(await passkeys.json())).toBe(true)
+
     await bearerApi.dispose()
+    await api.dispose()
+  })
+
+  test('localhost mobile callback path returns app redirect for local cookies', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(h => h.name.toLowerCase() === 'set-cookie')
+        .map(h => h.value),
+    )
+
+    const callback = await api.get('/api/auth/mobile/callback', {
+      headers: { cookie: authCookie },
+      maxRedirects: 0,
+    })
+
+    expect([301, 302]).toContain(callback.status())
+    const location = callback.headers()['location']
+    expect(location).toContain('wingdex://auth/callback?token=')
+    expect(location).toContain('signed_token=')
+
+    await api.dispose()
+  })
+
+  test('hosted callback through local proxy keeps wingdev error redirect', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const callback = await api.get('/api/auth/callback/github?code=fake&state=fake', {
+      headers: {
+        Referer: `${PREVIEW_BASE}/`,
+      },
+      maxRedirects: 0,
+    })
+
+    expect([301, 302]).toContain(callback.status())
+    const location = callback.headers()['location']
+    expect(location).toBeTruthy()
+    expect(location).toContain(`${PREVIEW_BASE}/api/auth/error?error=`)
+    expect(location).not.toContain('http://localhost:5000')
+
     await api.dispose()
   })
 
@@ -448,6 +507,31 @@ test.describe('API smoke (request context)', () => {
     expect(session.status()).toBe(200)
     const sessionJson = await session.json()
     expect(sessionJson?.user?.id).toBeTruthy()
+
+    await api.dispose()
+  })
+})
+
+test.describe('API smoke (live preview auth)', () => {
+  test.skip(!runLivePreviewAuth, 'Set RUN_LIVE_E2E=1 to run deployed preview auth smoke test')
+
+  test('preview social OAuth emits hosted callback URI', async () => {
+    const api = await request.newContext()
+
+    const response = await api.post(`${PREVIEW_BASE}/api/auth/sign-in/social`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: PREVIEW_BASE,
+      },
+      data: { provider: 'github' },
+    })
+
+    expect(response.status()).toBe(200)
+    const body = await response.json() as { url?: string }
+    expect(body.url).toBeTruthy()
+
+    const redirectURI = new URL(body.url!).searchParams.get('redirect_uri')
+    expect(redirectURI).toBe(`${PREVIEW_BASE}/api/auth/callback/github`)
 
     await api.dispose()
   })

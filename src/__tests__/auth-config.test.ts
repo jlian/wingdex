@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createAuth } from '../../functions/lib/auth'
+import { createAuth, normalizeAuthRequest } from '../../functions/lib/auth'
 
 const mockEnv = {
   DB: {} as D1Database,
@@ -89,6 +89,113 @@ describe('auth config', () => {
     expect(trusted).toContain('http://localhost:8788')
   })
 
+  it('uses configured non-loopback Origin header in default mode during proxied local dev', () => {
+    const req = new Request('http://localhost:8788/api/auth/sign-in/social', {
+      headers: { origin: 'https://wingdev.example.net' },
+    })
+
+    const auth = createAuth(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
+  })
+
+  it('uses configured forwarded host in default mode during proxied callback requests', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/google', {
+      headers: {
+        host: 'wingdev.example.net',
+        'x-forwarded-proto': 'https',
+      },
+    })
+
+    const auth = createAuth(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
+  })
+
+  it('uses configured referer origin in default mode during hosted callback requests', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/github?code=test&state=test', {
+      headers: {
+        referer: 'https://wingdev.example.net/',
+      },
+    })
+
+    const auth = createAuth(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
+  })
+
+  it('normalizes proxied hosted callback requests before passing to Better Auth', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/github?code=test&state=test', {
+      headers: {
+        referer: 'https://wingdev.example.net/',
+      },
+    })
+
+    const normalized = normalizeAuthRequest(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      req,
+    )
+    expect(normalized.url).toBe('https://wingdev.example.net/api/auth/callback/github?code=test&state=test')
+  })
+
+  it('uses hosted auth URL when callback request carries secure Better Auth cookies', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/github?code=test&state=test', {
+      headers: {
+        cookie: '__Secure-better-auth.state=test.sig',
+      },
+    })
+
+    const auth = createAuth(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
+  })
+
+  it('normalizes secure-cookie callback requests to hosted auth URL', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/github?code=test&state=test', {
+      headers: {
+        cookie: '__Secure-better-auth.state=test.sig',
+      },
+    })
+
+    const normalized = normalizeAuthRequest(
+      {
+        ...mockEnv,
+        BETTER_AUTH_URL: 'https://wingdev.example.net',
+        TRUSTED_ORIGINS: 'https://wingdev.example.net',
+      } as Env,
+      req,
+    )
+    expect(normalized.url).toBe('https://wingdev.example.net/api/auth/callback/github?code=test&state=test')
+  })
+
   it('trusts appleid.apple.com origin when Apple provider is configured', () => {
     const auth = createAuth({
       ...mockEnv,
@@ -124,5 +231,35 @@ describe('auth config', () => {
       { request: req },
     )
     expect(auth.options.baseURL).toBe('http://localhost:5000')
+  })
+
+  it('uses hosted BETTER_AUTH_URL in hosted OAuth mode during local dev', () => {
+    const req = new Request('http://localhost:8788/api/auth/mobile/start?provider=github')
+
+    const auth = createAuth(
+      { ...mockEnv, BETTER_AUTH_URL: 'https://wingdev.example.net' },
+      { request: req, mode: 'hosted-oauth' },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
+  })
+
+  it('falls back to localhost in default mode on callback paths without hosted public origin signals', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/google')
+
+    const auth = createAuth(
+      { ...mockEnv, BETTER_AUTH_URL: 'https://wingdev.example.net' },
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('http://localhost:5000')
+  })
+
+  it('uses hosted BETTER_AUTH_URL for OAuth callback routes when mode is hosted OAuth', () => {
+    const req = new Request('http://localhost:8788/api/auth/callback/google')
+
+    const auth = createAuth(
+      { ...mockEnv, BETTER_AUTH_URL: 'https://wingdev.example.net' },
+      { request: req, mode: 'hosted-oauth' },
+    )
+    expect(auth.options.baseURL).toBe('https://wingdev.example.net')
   })
 })
