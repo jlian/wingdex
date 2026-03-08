@@ -18,15 +18,18 @@ struct HomeView: View {
             }
         }
         .navigationTitle("Home")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showSettings() } label: {
-                    AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
-                        .glassEffect(.regular.interactive())
+                Button {
+                    showSettings()
+                } label: {
+                    AvatarView(
+                        imageURL: auth.userImage,
+                        name: auth.userName,
+                        size: 32)
                 }
-                .buttonBorderShape(.circle)
             }
+            .sharedBackgroundVisibility(.hidden)
         }
         .refreshable {
             await store.loadAll()

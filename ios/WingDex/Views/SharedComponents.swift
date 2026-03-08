@@ -91,13 +91,13 @@ struct BirdRow: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.mutedText.opacity(0.85))
+                        .foregroundStyle(Color.mutedText)
                         .lineLimit(1)
                 }
 
                 if let count, count > 1 {
                     Text("x\(count)")
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.mutedText)
                 }
             }
@@ -152,7 +152,7 @@ struct OutingRow: View {
         HStack(alignment: .center, spacing: 12) {
             outingLeadingIcon
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.foregroundText)
@@ -164,11 +164,11 @@ struct OutingRow: View {
 
                 if !speciesNames.isEmpty {
                     Text(
-                        speciesNames.prefix(4).map { getDisplayName($0) }.joined(separator: ", ")
-                        + (speciesNames.count > 4 ? " +\(speciesNames.count - 4) more" : "")
+                        speciesNames.prefix(2).map { getDisplayName($0) }.joined(separator: ", ")
+                        + (speciesNames.count > 2 ? " +\(speciesNames.count - 2) more" : "")
                     )
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.mutedText.opacity(0.85))
+                    .foregroundStyle(Color.mutedText)
                     .lineLimit(1)
                 }
             }
@@ -180,7 +180,7 @@ struct OutingRow: View {
     @ViewBuilder
     private var outingLeadingIcon: some View {
         if let lat = outing.lat, let lon = outing.lon {
-            MiniMapSnapshot(latitude: lat, longitude: lon, size: 44)
+            MiniMapSnapshot(latitude: lat, longitude: lon, size: 48)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         } else {
             Image(systemName: "mappin")

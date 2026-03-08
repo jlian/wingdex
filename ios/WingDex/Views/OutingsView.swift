@@ -84,39 +84,38 @@ struct OutingsView: View {
                 }
             }
             .navigationTitle("Outings")
-            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search outings")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("Sort by", selection: $sortField) {
-                            ForEach(OutingSortField.allCases, id: \.self) { field in
-                                Label(field.label, systemImage: field.icon)
-                                    .tag(field)
+                    HStack(spacing: 8) {
+                        Menu {
+                            Picker("Sort by", selection: $sortField) {
+                                ForEach(OutingSortField.allCases, id: \.self) { field in
+                                    Label(field.label, systemImage: field.icon)
+                                        .tag(field)
+                                }
                             }
-                        }
 
-                        Divider()
+                            Divider()
 
-                        Button {
-                            sortAscending.toggle()
+                            Button {
+                                sortAscending.toggle()
+                            } label: {
+                                Label(
+                                    sortAscending ? "Ascending" : "Descending",
+                                    systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                                )
+                            }
                         } label: {
-                            Label(
-                                sortAscending ? "Ascending" : "Descending",
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
+                            Label("Sort", systemImage: "arrow.up.arrow.down")
                         }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
+
+                        Button { showSettings() } label: {
+                            AvatarView(imageURL: auth.userImage, name: auth.userName, size: 32)
+                        }
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showSettings() } label: {
-                        AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
-                            .glassEffect(.regular.interactive())
-                    }
-                    .buttonBorderShape(.circle)
-                }
+                .sharedBackgroundVisibility(.hidden)
             }
             .refreshable {
                 await store.loadAll()
