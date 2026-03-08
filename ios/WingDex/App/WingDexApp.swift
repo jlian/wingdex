@@ -109,9 +109,9 @@ struct MainTabView: View {
             Button {
                 showingSettings = true
             } label: {
-                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 28)
+                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 32)
+                    .glassEffect(.regular.interactive())
             }
-            .buttonStyle(.plain)
         }
     }
 
