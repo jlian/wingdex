@@ -91,7 +91,7 @@ struct HomeView: View {
         List {
             // Hero stats
             Section {
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(store.dex.count)")
                         .font(.system(size: 48, weight: .semibold, design: .serif))
                         .foregroundStyle(Color.foregroundText)
