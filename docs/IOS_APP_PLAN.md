@@ -373,7 +373,7 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 
 **Files**: `SignInView.swift`, `AuthService.swift`
 
-## 3.5.3 - Polish & Parity ✅
+## 3.5.3 - Polish & Parity
 
 - [x] Custom SF Symbols: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
 - [x] Empty state views: added `frame(maxWidth: .infinity, maxHeight: .infinity)` to fix white bars on empty WingDex/Outings views
@@ -385,6 +385,16 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Apple Sign-In: added `appBundleIdentifier` to server config for native iOS identity token verification
 - [x] Config: restored simulator vs physical device URL split
 - [x] Font weight adjustments (deferred - minor polish)
+- [x] Flat circle avatar like Apple Music
+- [x] Left justify the main view headers? I guess big is fine
+- [x] Ebird Links don’t work in details - should check web app we've fixed this bug before
+- [x] Missing 3D Touch for homepage recent species
+- [x] Missing chevron on homepage to go to Wingdex and outings lists (with sort)
+- [x] Clickable maps? To Apple Maps?
+- [x] Inconsistent font in outings detail view ("species") and species detail view (fix in web app as well)
+- [x] Can probably just remove the all about birds link (fix in web app too)
+- [ ] Improve `#Preview` data with more realistic data like demo data
+- [ ] Comments in the swift UI views
 
 ---
 

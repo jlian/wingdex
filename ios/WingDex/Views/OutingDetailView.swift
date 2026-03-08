@@ -150,12 +150,37 @@ struct OutingDetailView: View {
     private func mapSection(_ outing: Outing) -> some View {
         if let lat = outing.lat, let lon = outing.lon {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            Map(initialPosition: .camera(.init(centerCoordinate: coordinate, distance: 3000))) {
-                Marker(outing.locationName, coordinate: coordinate)
+            Button {
+                openInMaps(for: outing, coordinate: coordinate)
+            } label: {
+                Map(initialPosition: .camera(.init(centerCoordinate: coordinate, distance: 3000))) {
+                    Marker(outing.locationName, coordinate: coordinate)
+                }
+                .allowsHitTesting(false)
+                .frame(height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(alignment: .topTrailing) {
+                    Image(systemName: "arrow.up.right.square.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(.black.opacity(0.45), in: Circle())
+                        .padding(10)
+                }
             }
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open outing in Apple Maps")
         }
+    }
+
+    private func openInMaps(for outing: Outing, coordinate: CLLocationCoordinate2D) {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = outing.locationName.isEmpty ? "Outing" : outing.locationName
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsMapCenterKey: NSValue(mkCoordinate: coordinate),
+            MKLaunchOptionsMapSpanKey: NSValue(mkCoordinateSpan: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)),
+        ])
     }
 
     // MARK: - Confirmed
