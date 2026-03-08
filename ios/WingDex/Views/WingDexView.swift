@@ -52,6 +52,62 @@ struct WingDexView: View {
     }
 
     var body: some View {
+        NavigationStack {
+            rootContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .navigationSurface()
+                .navigationTitle("WingDex")
+                .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack {
+                            Menu {
+                                Picker("Sort by", selection: $sortField) {
+                                    ForEach(DexSortField.allCases, id: \.self) { field in
+                                        Label(field.label, systemImage: field.icon)
+                                            .tag(field)
+                                    }
+                                }
+
+                                Divider()
+
+                                Button {
+                                    sortAscending.toggle()
+                                } label: {
+                                    Label(
+                                        sortAscending ? "Ascending" : "Descending",
+                                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                                    )
+                                }
+                            } label: {
+                                Label("Sort", systemImage: "arrow.up.arrow.down")
+                            }
+                            .glassEffect(.regular.interactive())
+
+                            Button { showSettings() } label: {
+                                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                            }
+                        }
+                        .padding(.trailing, -20)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                }
+                .refreshable {
+                    await store.loadAll()
+                }
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .automatic),
+                    prompt: "Search species"
+                )
+                .navigationDestination(for: DexEntry.self) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
         if store.dex.isEmpty {
             VStack(spacing: 24) {
                 Spacer()
@@ -121,50 +177,6 @@ struct WingDexView: View {
         .listStyle(.plain)
         .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
-        .background(Color.pageBg)
-        .navigationTitle("WingDex")
-        .toolbarTitleDisplayMode(.inlineLarge)
-        .searchable(text: $searchText, prompt: "Search species")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack {
-                    Menu {
-                        Picker("Sort by", selection: $sortField) {
-                            ForEach(DexSortField.allCases, id: \.self) { field in
-                                Label(field.label, systemImage: field.icon)
-                                    .tag(field)
-                            }
-                        }
-
-                        Divider()
-
-                        Button {
-                            sortAscending.toggle()
-                        } label: {
-                            Label(
-                                sortAscending ? "Ascending" : "Descending",
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
-                    }
-                    .glassEffect(.regular.interactive())
-
-                    Button { showSettings() } label: {
-                        AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
-                    }
-                }
-                .padding(.trailing, -20)
-            }
-            .sharedBackgroundVisibility(.hidden)
-        }
-        .refreshable {
-            await store.loadAll()
-        }
-        .navigationDestination(for: DexEntry.self) { entry in
-            SpeciesDetailView(speciesName: entry.speciesName)
-        }
     }
 }
 

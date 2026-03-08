@@ -7,6 +7,35 @@ struct HomeView: View {
     @Environment(\.showSettings) private var showSettings
 
     var body: some View {
+        NavigationStack {
+            rootContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .navigationSurface()
+                .navigationTitle("Home")
+                .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showSettings() } label: {
+                            AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                        }
+                        .padding(.trailing, -20)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                }
+                .refreshable {
+                    await store.loadAll()
+                }
+                .navigationDestination(for: DexEntry.self) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+                .navigationDestination(for: Outing.self) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
         if store.isLoading && store.dex.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -150,28 +179,7 @@ struct HomeView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.pageBg)
         .listSectionSeparator(.hidden, edges: .top)
-        .navigationTitle("Home")
-        .toolbarTitleDisplayMode(.inlineLarge)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showSettings() } label: {
-                    AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
-                }
-                .padding(.trailing, -20)
-            }
-            .sharedBackgroundVisibility(.hidden)
-        }
-        .refreshable {
-            await store.loadAll()
-        }
-        .navigationDestination(for: DexEntry.self) { entry in
-            SpeciesDetailView(speciesName: entry.speciesName)
-        }
-        .navigationDestination(for: Outing.self) { outing in
-            OutingDetailView(outingId: outing.id)
-        }
     }
 }
 

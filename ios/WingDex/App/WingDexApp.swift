@@ -70,19 +70,13 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             TabSection {
                 Tab("Home", systemImage: "house", value: AppTab.home) {
-                    NavigationStack {
-                        HomeView()
-                    }
+                    HomeView()
                 }
                 Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
-                    NavigationStack {
-                        WingDexView()
-                    }
+                    WingDexView()
                 }
                 Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
-                    NavigationStack {
-                        OutingsView()
-                    }
+                    OutingsView()
                 }
             }
 
