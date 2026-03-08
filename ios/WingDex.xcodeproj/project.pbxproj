@@ -24,6 +24,7 @@
 		58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */; };
 		6541BF20FA6B0465C6AA8204 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584DE950D0BBC4D9543B7EB4 /* HomeView.swift */; };
 		71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */ = {isa = PBXBuildFile; fileRef = 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */; };
+		76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */ = {isa = PBXBuildFile; fileRef = B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */; };
 		78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */; };
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
 		8789AC9CBFD81D2B38495B2A /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = B8A97988C95C91C186AFD127 /* OpenAPIURLSession */; };
@@ -32,6 +33,7 @@
 		9E3F0C28882FAFAA45934BCF /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FABF05EDCB9B13D4839648 /* SignInView.swift */; };
 		A50BC3771AA5086CA25A13B7 /* WingDexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5043AC2718CF99118DD12C /* WingDexView.swift */; };
 		A7FD52F0548A2FA50CB2C848 /* PasskeyManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C367F98A44D6C24B18F1301 /* PasskeyManagementView.swift */; };
+		A989546664F59DD8E785BBDE /* wingdex.bird.svg in Resources */ = {isa = PBXBuildFile; fileRef = EED95BB5C7C9CBADD0CB3D05 /* wingdex.bird.svg */; };
 		A9F53E5EAD8952F1C8720B77 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = ADE7F85F2A587DBB70E7CF19 /* KeychainAccess */; };
 		ABA7A9183EF63B93C1241B34 /* AddPhotosFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */; };
 		BE1BC5ECDCCA3BB2EAA10E79 /* SpeciesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */; };
@@ -85,6 +87,7 @@
 		A4E7F8433923067E08E2E6C2 /* WingDex.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WingDex.entitlements; sourceTree = "<group>"; };
 		AFB4D1BB4367DDC5F16A9D39 /* DateFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateFormatting.swift; sourceTree = "<group>"; };
 		B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedRequest.swift; sourceTree = "<group>"; };
+		B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */ = {isa = PBXFileReference; path = wingdex.bird.fill.svg; sourceTree = "<group>"; };
 		BB01BEA15BC45041F637C903 /* OutingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsView.swift; sourceTree = "<group>"; };
 		C3E027D5423D69EFC1429801 /* PhotoSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSelectionView.swift; sourceTree = "<group>"; };
 		C55734005BE9F01B6719A826 /* PasskeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyService.swift; sourceTree = "<group>"; };
@@ -92,6 +95,7 @@
 		D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesDetailView.swift; sourceTree = "<group>"; };
 		DE1613DCCF3480F9644D0D29 /* AuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceTests.swift; sourceTree = "<group>"; };
 		E6F5DCDBE61DDC1D237FD032 /* OutingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingDetailView.swift; sourceTree = "<group>"; };
+		EED95BB5C7C9CBADD0CB3D05 /* wingdex.bird.svg */ = {isa = PBXFileReference; path = wingdex.bird.svg; sourceTree = "<group>"; };
 		EF5196BB0E920CD88E769065 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F930B7A16F2B5C40B971D674 /* taxonomy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taxonomy.json; sourceTree = "<group>"; };
 		FCB5C722ED2F16A2C5666DB3 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
@@ -180,6 +184,15 @@
 			path = AddPhotosFlow;
 			sourceTree = "<group>";
 		};
+		6C0CFAE4F6ECEE1B9223C35E /* SFSymbols */ = {
+			isa = PBXGroup;
+			children = (
+				B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */,
+				EED95BB5C7C9CBADD0CB3D05 /* wingdex.bird.svg */,
+			);
+			path = SFSymbols;
+			sourceTree = "<group>";
+		};
 		731C2CB75500F5BE1AA2754F /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
@@ -222,6 +235,7 @@
 								A1B2C3D4E5F6A7B8C9D0E1F2 /* AppIcon.icon */,
 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */,
 				F930B7A16F2B5C40B971D674 /* taxonomy.json */,
+				6C0CFAE4F6ECEE1B9223C35E /* SFSymbols */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -340,6 +354,8 @@
 CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */,
 				223DAEB5BCD5CAC52065CF13 /* taxonomy.json in Resources */,
+				76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */,
+				A989546664F59DD8E785BBDE /* wingdex.bird.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
