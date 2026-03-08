@@ -85,9 +85,103 @@
           "opacity" : 0.95
         },
         {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.60310,0.79746,0.63604,1.00000",
+                  "display-p3:0.46667,0.69804,0.50588,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.7
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.94510,0.98824,0.73333,1.00000",
+                  "srgb:0.46667,0.69804,0.50588,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.6911477862254026
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.60310,0.79746,0.63604,1.00000",
+                  "display-p3:0.46667,0.69804,0.50588,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.7
+                  }
+                }
+              }
+            }
+          ],
+          "image-name" : "1-body-light.svg",
+          "name" : "1-body-light",
+          "opacity" : 0.99
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "normal"
+            }
+          ],
           "fill-specializations" : [
             {
               "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.94510,0.98824,0.73333,1.00000",
+                  "srgb:0.46667,0.69804,0.50588,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.6911477862254026
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "tinted",
               "value" : {
                 "linear-gradient" : [
                   "display-p3:0.94510,0.98824,0.73333,1.00000",

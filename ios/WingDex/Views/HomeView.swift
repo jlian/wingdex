@@ -23,7 +23,7 @@ struct HomeView: View {
                         Button { showSettings() } label: {
                             AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                         }
-                        .padding(.trailing, -20)
+                        .padding(.trailing, -12)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }

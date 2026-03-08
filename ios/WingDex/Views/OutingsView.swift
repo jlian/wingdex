@@ -63,7 +63,7 @@ struct OutingsView: View {
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        HStack {
+                        HStack(spacing: 5) {
                             Menu {
                                 Picker("Sort by", selection: $sortField) {
                                     ForEach(OutingSortField.allCases, id: \.self) { field in
@@ -85,13 +85,14 @@ struct OutingsView: View {
                             } label: {
                                 Label("Sort", systemImage: "arrow.up.arrow.down")
                             }
-                            .glassEffect(.regular.interactive())
+                            .glassEffect(.clear.interactive())
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
+                            .glassEffect(.identity)
                         }
-                        .padding(.trailing, -20)
+                        .padding(.trailing, -12)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }
