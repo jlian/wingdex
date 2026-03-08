@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(\.showAddPhotos) private var showAddPhotos
+    @Environment(\.showSettings) private var showSettings
 
     var body: some View {
         Group {
@@ -16,6 +18,14 @@ struct HomeView: View {
             }
         }
         .navigationTitle("Home")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showSettings() } label: {
+                    AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
+                        .glassEffect(.regular.interactive())
+                }
+            }
+        }
         .refreshable {
             await store.loadAll()
         }

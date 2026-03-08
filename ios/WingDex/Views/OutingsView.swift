@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct OutingsView: View {
+    @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.showSettings) private var showSettings
     @State private var searchText = ""
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
@@ -83,7 +85,7 @@ struct OutingsView: View {
             .navigationTitle("Outings")
             .searchable(text: $searchText, prompt: "Search outings")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Sort by", selection: $sortField) {
                             ForEach(OutingSortField.allCases, id: \.self) { field in
@@ -104,6 +106,12 @@ struct OutingsView: View {
                         }
                     } label: {
                         Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings() } label: {
+                        AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
+                            .glassEffect(.regular.interactive())
                     }
                 }
             }

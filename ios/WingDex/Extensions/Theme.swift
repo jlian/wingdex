@@ -80,9 +80,18 @@ private struct ShowAddPhotosKey: EnvironmentKey {
     nonisolated(unsafe) static let defaultValue: () -> Void = {}
 }
 
+/// Environment action for opening the Settings sheet.
+private struct ShowSettingsKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
 extension EnvironmentValues {
     var showAddPhotos: () -> Void {
         get { self[ShowAddPhotosKey.self] }
         set { self[ShowAddPhotosKey.self] = newValue }
+    }
+    var showSettings: () -> Void {
+        get { self[ShowSettingsKey.self] }
+        set { self[ShowSettingsKey.self] = newValue }
     }
 }

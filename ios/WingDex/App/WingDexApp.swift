@@ -92,22 +92,12 @@ struct MainTabView: View {
                 Label("Add", systemImage: "camera.fill")
             }
         }
-        .overlay(alignment: .topTrailing) {
-            Button {
-                showingSettings = true
-            } label: {
-                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 20)
-            .padding(.top, 6)
-        }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
         .environment(\.showAddPhotos) { selectedTab = .add }
+        .environment(\.showSettings) { showingSettings = true }
     }
-
 }
 
 /// Renders a user avatar - emoji (from SVG data URL), remote image, or fallback initial.
