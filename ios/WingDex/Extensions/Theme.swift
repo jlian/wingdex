@@ -22,16 +22,16 @@ extension Color {
 
     // MARK: - Text
 
-    /// Muted secondary text - darker than web's oklch(0.55 0.04 240) for readability on beige
-    static let mutedText = Color(red: 70/255, green: 90/255, blue: 105/255)
+    /// Muted secondary text - adapts to light/dark mode
+    static let mutedText = Color("MutedText")
 
-    /// Foreground text - oklch(0.25 0.02 155) -> rgb(26, 37, 29)
-    static let foregroundText = Color(red: 26/255, green: 37/255, blue: 29/255)
+    /// Foreground text - adapts to light/dark mode
+    static let foregroundText = Color("ForegroundText")
 
     // MARK: - Borders
 
-    /// Warm border - oklch(0.80 0.02 85) -> rgb(196, 189, 176)
-    static let warmBorder = Color(red: 196/255, green: 189/255, blue: 176/255)
+    /// Warm border - adapts to light/dark mode
+    static let warmBorder = Color("WarmBorder")
 }
 
 // MARK: - List Cell Appearance
