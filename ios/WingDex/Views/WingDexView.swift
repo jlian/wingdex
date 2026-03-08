@@ -7,6 +7,7 @@ struct WingDexView: View {
     @State private var searchText = ""
     @State private var sortField: DexSortField = .date
     @State private var sortAscending = false
+    @State private var contextMenuSpecies: DexEntry?
 
     enum DexSortField: String, CaseIterable {
         case date, count, name
@@ -103,6 +104,9 @@ struct WingDexView: View {
                 .navigationDestination(for: DexEntry.self) { entry in
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }
+                .navigationDestination(item: $contextMenuSpecies) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
         }
     }
 
@@ -150,9 +154,14 @@ struct WingDexView: View {
                 )
             }
             .contextMenu {
+                Button {
+                    contextMenuSpecies = entry
+                } label: {
+                    Label("View Species", systemImage: "bird")
+                }
                 if let url = getEbirdURL(for: entry.speciesName) {
                     Link(destination: url) {
-                        Label("Open in eBird", systemImage: "bird")
+                        Label("Open in eBird", systemImage: "globe")
                     }
                 }
                 if let wikiName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),

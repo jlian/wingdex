@@ -8,6 +8,7 @@ struct OutingDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var editingNotes = false
     @State private var notesText = ""
+    @State private var contextMenuSpecies: String?
 
     private var outing: Outing? { store.outing(id: outingId) }
     private var confirmed: [BirdObservation] { store.confirmedObservations(outingId) }
@@ -73,6 +74,9 @@ struct OutingDetailView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .navigationDestination(for: String.self) { speciesName in
+            SpeciesDetailView(speciesName: speciesName)
+        }
+        .navigationDestination(item: $contextMenuSpecies) { speciesName in
             SpeciesDetailView(speciesName: speciesName)
         }
     }
@@ -208,6 +212,11 @@ struct OutingDetailView: View {
                     }
                     .contextMenu {
                         Button {
+                            contextMenuSpecies = speciesName
+                        } label: {
+                            Label("View Species", systemImage: "bird")
+                        }
+                        Button {
                             UIPasteboard.general.string = speciesName
                         } label: {
                             Label("Copy Name", systemImage: "doc.on.doc")
@@ -247,6 +256,11 @@ struct OutingDetailView: View {
                         )
                     }
                     .contextMenu {
+                        Button {
+                            contextMenuSpecies = speciesName
+                        } label: {
+                            Label("View Species", systemImage: "bird")
+                        }
                         Button {
                             UIPasteboard.general.string = speciesName
                         } label: {

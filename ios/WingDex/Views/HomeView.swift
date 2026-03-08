@@ -9,6 +9,7 @@ struct HomeView: View {
     @Environment(\.showOutings) private var showOutings
     @Environment(\.showSettings) private var showSettings
     @State private var committedSpeciesEntry: DexEntry?
+    @State private var contextMenuOuting: Outing?
 
     var body: some View {
         NavigationStack {
@@ -33,6 +34,9 @@ struct HomeView: View {
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }
                 .navigationDestination(for: Outing.self) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
+                .navigationDestination(item: $contextMenuOuting) { outing in
                     OutingDetailView(outingId: outing.id)
                 }
                 .navigationDestination(item: $committedSpeciesEntry) { entry in
@@ -201,6 +205,11 @@ struct HomeView: View {
                             OutingRow(outing: outing, store: store)
                         }
                         .contextMenu {
+                            Button {
+                                contextMenuOuting = outing
+                            } label: {
+                                Label("View Outing", systemImage: "binoculars")
+                            }
                             Button(role: .destructive) {
                                 Task { await store.deleteOuting(id: outing.id) }
                             } label: {

@@ -5,6 +5,7 @@ struct SpeciesDetailView: View {
     @Environment(DataStore.self) private var store
     @State private var wikiExtract: String?
     @State private var fullImageUrl: String?
+    @State private var contextMenuOuting: Outing?
 
     private var entry: DexEntry? { store.dexEntry(for: speciesName) }
     private var sightings: [(observation: BirdObservation, outing: Outing)] {
@@ -39,6 +40,11 @@ struct SpeciesDetailView: View {
                         OutingRow(outing: item.outing, store: store)
                     }
                     .contextMenu {
+                        Button {
+                            contextMenuOuting = item.outing
+                        } label: {
+                            Label("View Outing", systemImage: "binoculars")
+                        }
                         Button(role: .destructive) {
                             Task { await store.deleteOuting(id: item.outing.id) }
                         } label: {
@@ -63,6 +69,9 @@ struct SpeciesDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.pageBg.ignoresSafeArea())
         .navigationDestination(for: Outing.self) { outing in
+            OutingDetailView(outingId: outing.id)
+        }
+        .navigationDestination(item: $contextMenuOuting) { outing in
             OutingDetailView(outingId: outing.id)
         }
         .task { await fetchWikipediaData() }

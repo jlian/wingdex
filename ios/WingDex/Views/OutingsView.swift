@@ -7,6 +7,7 @@ struct OutingsView: View {
     @State private var searchText = ""
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
+    @State private var contextMenuOuting: Outing?
 
     enum OutingSortField: String, CaseIterable {
         case date, species, name
@@ -105,6 +106,9 @@ struct OutingsView: View {
                 .navigationDestination(for: Outing.self) { outing in
                     OutingDetailView(outingId: outing.id)
                 }
+                .navigationDestination(item: $contextMenuOuting) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
         }
     }
 
@@ -145,6 +149,11 @@ struct OutingsView: View {
                 OutingRow(outing: outing, store: store)
             }
             .contextMenu {
+                Button {
+                    contextMenuOuting = outing
+                } label: {
+                    Label("View Outing", systemImage: "binoculars")
+                }
                 Button(role: .destructive) {
                     Task { await store.deleteOuting(id: outing.id) }
                 } label: {
