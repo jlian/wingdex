@@ -173,3 +173,10 @@ struct PasskeyManagementView: View {
         return display.string(from: date)
     }
 }
+
+#Preview {
+    NavigationStack {
+        PasskeyManagementView()
+            .environment(AuthService())
+    }
+}

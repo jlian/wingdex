@@ -22,12 +22,14 @@ targets:
         excludes:
           - "Preview Content"
           - "Resources/AppIcon.icon"
+      - path: WingDex/Preview Content
+        compilerFlags: ""
     resources:
       - path: WingDex/Resources
         excludes:
           - "AppIcon.icon"
       - path: WingDex/Assets.xcassets
-      - path: WingDex/Preview Content
+      - path: WingDex/Preview Content/Preview Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.wingdex

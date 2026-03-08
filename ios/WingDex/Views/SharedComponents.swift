@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import UIKit
 
+// MARK: - Image Cache
+
 /// In-memory image cache shared across all thumbnails to avoid re-downloads on scroll.
 @MainActor
 private final class ImageCache {
@@ -12,6 +14,8 @@ private final class ImageCache {
     func image(for key: String) -> UIImage? { cache.object(forKey: key as NSString) }
     func set(_ image: UIImage, for key: String) { cache.setObject(image, forKey: key as NSString) }
 }
+
+// MARK: - Bird Thumbnail
 
 /// Portrait-aware bird thumbnail that crops tall images near the top (head area).
 /// Uses an in-memory cache for smooth scrolling.
@@ -63,6 +67,8 @@ struct BirdThumbnail: View {
     }
 }
 
+// MARK: - Bird Row
+
 /// Reusable bird species row used in WingDex list, outing detail species, and home.
 /// Matches web app's BirdRow/ListRow pattern: thumbnail, serif name, italic scientific name, metadata.
 struct BirdRow: View {
@@ -110,6 +116,8 @@ struct BirdRow: View {
     }
 }
 
+// MARK: - Species Card
+
 /// Square gradient-overlay species card for horizontal scroll (Home recent species).
 /// Image fills the card with species name overlaid at the bottom with gradient.
 struct SpeciesCard: View {
@@ -141,6 +149,8 @@ struct SpeciesCard: View {
         .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
+
+// MARK: - Context Menu
 
 /// UIKit-backed context menu host that supports preview commit, i.e. tapping the
 /// peeked content to navigate to the destination.
@@ -275,6 +285,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
     }
 }
 
+// MARK: - Maps Helper
+
 /// Open an outing's location in Apple Maps.
 func openInMaps(outing: Outing, lat: Double, lon: Double) {
     let location = CLLocation(latitude: lat, longitude: lon)
@@ -282,6 +294,8 @@ func openInMaps(outing: Outing, lat: Double, lon: Double) {
     mapItem.name = outing.locationName.isEmpty ? "Outing" : outing.locationName
     mapItem.openInMaps()
 }
+
+// MARK: - Outing Row
 
 /// Reusable outing row with mini map (when coordinates available) or subtle pin icon.
 /// Used in HomeView, OutingsView, and SpeciesDetailView sightings.
@@ -337,6 +351,8 @@ struct OutingRow: View {
     }
 }
 
+// MARK: - Mini Map
+
 /// Static map snapshot image - no controls, no "Legal" text.
 private struct MiniMapSnapshot: View {
     let latitude: Double
@@ -381,12 +397,51 @@ private struct MiniMapSnapshot: View {
     }
 }
 
+// MARK: - Previews
+
 #Preview("BirdRow") {
     ScrollView {
-        BirdRow(speciesName: "Northern Cardinal (Cardinalis cardinalis)", subtitle: "1 outing · 5 seen · Jan 1, 2026")
-            .padding(.horizontal)
-        BirdRow(speciesName: "Blue Jay (Cyanocitta cristata)", count: 3)
-            .padding(.horizontal)
+        BirdRow(
+            speciesName: "Northern Cardinal (Cardinalis cardinalis)",
+            thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Cardinal_-_3679055844.jpg/320px-Cardinal_-_3679055844.jpg",
+            subtitle: "3 outings · 5 seen · Jan 12, 2026"
+        )
+        .padding(.horizontal)
+        BirdRow(
+            speciesName: "Blue Jay (Cyanocitta cristata)",
+            thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Blue_jay_in_PP_%2830960%29.jpg/320px-Blue_jay_in_PP_%2830960%29.jpg",
+            count: 3
+        )
+        .padding(.horizontal)
+        BirdRow(
+            speciesName: "Bald Eagle (Haliaeetus leucocephalus)",
+            thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/About_to_Launch_%2826075320352%29.jpg/320px-About_to_Launch_%2826075320352%29.jpg",
+            subtitle: "2 outings · 2 seen · Jan 12, 2026"
+        )
+        .padding(.horizontal)
     }
+    .background(Color.pageBg)
+}
+
+#Preview("SpeciesCard") {
+    let entries = PreviewData.dex.prefix(4)
+    ScrollView(.horizontal) {
+        HStack(spacing: 10) {
+            ForEach(Array(entries)) { entry in
+                SpeciesCard(entry: entry, size: 140)
+            }
+        }
+        .padding()
+    }
+    .background(Color.pageBg)
+}
+
+#Preview("OutingRow") {
+    let store = previewStore()
+    List(PreviewData.outings.prefix(5)) { outing in
+        OutingRow(outing: outing, store: store)
+    }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
     .background(Color.pageBg)
 }

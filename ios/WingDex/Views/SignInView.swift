@@ -8,6 +8,8 @@ import SwiftUI
 struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    // MARK: - State
+
     @State private var isSigningIn = false
     @State private var errorMessage: String?
 
@@ -185,6 +187,8 @@ struct SignInView: View {
         .animation(.default, value: errorMessage)
     }
 
+    // MARK: - Sign-In Handler
+
     private func signIn(action: @escaping () async throws -> Void) {
         isSigningIn = true
         errorMessage = nil
@@ -211,4 +215,5 @@ struct SignInView: View {
 #Preview {
     SignInView()
         .environment(AuthService())
+        .environment(previewStore(empty: true))
 }

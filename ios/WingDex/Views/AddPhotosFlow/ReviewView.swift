@@ -156,5 +156,6 @@ private struct PhotoReviewRow: View {
 #Preview {
     NavigationStack {
         ReviewView(viewModel: AddPhotosViewModel())
+            .environment(previewStore())
     }
 }

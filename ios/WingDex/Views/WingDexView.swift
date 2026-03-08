@@ -9,6 +9,8 @@ struct WingDexView: View {
     @State private var sortAscending = false
     @State private var contextMenuSpecies: DexEntry?
 
+    // MARK: - Sort Options
+
     enum DexSortField: String, CaseIterable {
         case date, count, name
         var label: String {
@@ -26,6 +28,8 @@ struct WingDexView: View {
             }
         }
     }
+
+    // MARK: - Sorted Data
 
     private var sortedDex: [DexEntry] {
         let sorted: [DexEntry]
@@ -51,6 +55,8 @@ struct WingDexView: View {
         let query = searchText.lowercased()
         return sorted.filter { $0.speciesName.lowercased().contains(query) }
     }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -111,6 +117,8 @@ struct WingDexView: View {
         }
     }
 
+    // MARK: - Empty State
+
     @ViewBuilder
     private var rootContent: some View {
         if store.dex.isEmpty {
@@ -145,6 +153,8 @@ struct WingDexView: View {
         }
     }
 
+    // MARK: - Species List
+
     private var speciesList: some View {
         List(sortedDex) { entry in
             NavigationLink(value: entry) {
@@ -178,7 +188,14 @@ struct WingDexView: View {
     }
 }
 
-#Preview {
+#Preview("WingDex - Populated") {
     WingDexView()
-        .environment(DataStore(service: DataService(auth: AuthService())))
+        .environment(AuthService())
+        .environment(previewStore())
+}
+
+#Preview("WingDex - Empty") {
+    WingDexView()
+        .environment(AuthService())
+        .environment(previewStore(empty: true))
 }

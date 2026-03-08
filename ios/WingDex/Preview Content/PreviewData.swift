@@ -1,0 +1,303 @@
+#if DEBUG
+import Foundation
+
+// MARK: - Preview Helpers
+
+/// Pre-populated DataStore for SwiftUI previews with realistic demo data.
+/// Uses the same locations and species as the bundled demo eBird CSV.
+@MainActor
+func previewStore(empty: Bool = false) -> DataStore {
+    let store = DataStore(service: DataService(auth: AuthService()))
+    if !empty {
+        store.outings = PreviewData.outings
+        store.observations = PreviewData.observations
+        store.dex = PreviewData.dex
+    }
+    return store
+}
+
+/// Static demo data derived from the bundled eBird CSV (10 outings, 80+ observations, 50+ species).
+/// Covers diverse locations (Seattle, Hawaii, NYC, New Mexico, Florida, San Francisco,
+/// London, Tokyo, Vancouver, Sao Paulo) with realistic counts and dates.
+enum PreviewData {
+
+    // MARK: - Outings
+
+    static let outings: [Outing] = [
+        Outing(
+            id: "outing-001", userId: "preview-user",
+            startTime: "2026-01-12T08:10:00-08:00", endTime: "2026-01-12T09:32:00-08:00",
+            locationName: "Discovery Park", lat: 47.6587, lon: -122.4050,
+            stateProvince: "US-WA", countryCode: "US",
+            notes: "Winter shoreline and meadow loop.", createdAt: "2026-01-12T16:10:00Z"
+        ),
+        Outing(
+            id: "outing-002", userId: "preview-user",
+            startTime: "2026-01-18T07:05:00-10:00", endTime: "2026-01-18T08:19:00-10:00",
+            locationName: "Haleakala National Park Summit", lat: 20.7097, lon: -156.2536,
+            stateProvince: "US-HI", countryCode: "US",
+            notes: "High-elevation scrub and crater overlooks.", createdAt: "2026-01-18T17:05:00Z"
+        ),
+        Outing(
+            id: "outing-003", userId: "preview-user",
+            startTime: "2026-01-24T09:15:00-05:00", endTime: "2026-01-24T10:51:00-05:00",
+            locationName: "Jamaica Bay Wildlife Refuge", lat: 40.6155, lon: -73.8227,
+            stateProvince: "US-NY", countryCode: "US",
+            notes: "Saltmarsh pools and East Pond trail.", createdAt: "2026-01-24T14:15:00Z"
+        ),
+        Outing(
+            id: "outing-004", userId: "preview-user",
+            startTime: "2026-01-29T06:55:00-07:00", endTime: "2026-01-29T08:45:00-07:00",
+            locationName: "Bosque del Apache NWR", lat: 33.8040, lon: -106.8917,
+            stateProvince: "US-NM", countryCode: "US",
+            notes: "Farm loop and impoundments at dawn.", createdAt: "2026-01-29T13:55:00Z"
+        ),
+        Outing(
+            id: "outing-005", userId: "preview-user",
+            startTime: "2026-02-02T08:02:00-05:00", endTime: "2026-02-02T09:10:00-05:00",
+            locationName: "Anhinga Trail, Everglades NP", lat: 25.3948, lon: -80.6078,
+            stateProvince: "US-FL", countryCode: "US",
+            notes: "Boardwalk survey with calm weather.", createdAt: "2026-02-02T13:02:00Z"
+        ),
+        Outing(
+            id: "outing-006", userId: "preview-user",
+            startTime: "2026-02-05T07:48:00-08:00", endTime: "2026-02-05T09:01:00-08:00",
+            locationName: "Presidio, San Francisco", lat: 37.7989, lon: -122.4662,
+            stateProvince: "US-CA", countryCode: "US",
+            notes: "Coastal scrub and cypress groves.", createdAt: "2026-02-05T15:48:00Z"
+        ),
+        Outing(
+            id: "outing-007", userId: "preview-user",
+            startTime: "2026-02-08T10:30:00+00:00", endTime: "2026-02-08T11:45:00+00:00",
+            locationName: "Hyde Park, London", lat: 51.5073, lon: -0.1657,
+            stateProvince: "GB-LND", countryCode: "GB",
+            notes: "The Serpentine and surrounding paths.", createdAt: "2026-02-08T10:30:00Z"
+        ),
+        Outing(
+            id: "outing-008", userId: "preview-user",
+            startTime: "2026-02-10T08:15:00+09:00", endTime: "2026-02-10T09:30:00+09:00",
+            locationName: "Ueno Park, Tokyo", lat: 35.7146, lon: 139.7714,
+            stateProvince: "JP-13", countryCode: "JP",
+            notes: "Shinobazu Pond and surrounding garden.", createdAt: "2026-02-09T23:15:00Z"
+        ),
+        Outing(
+            id: "outing-009", userId: "preview-user",
+            startTime: "2026-02-11T08:00:00-08:00", endTime: "2026-02-11T09:20:00-08:00",
+            locationName: "Stanley Park, Vancouver", lat: 49.3017, lon: -123.1417,
+            stateProvince: "CA-BC", countryCode: "CA",
+            notes: "Seawall and Lost Lagoon.", createdAt: "2026-02-11T16:00:00Z"
+        ),
+        Outing(
+            id: "outing-010", userId: "preview-user",
+            startTime: "2026-02-12T07:30:00-03:00", endTime: "2026-02-12T08:50:00-03:00",
+            locationName: "Parque Ibirapuera, Sao Paulo", lat: -23.5874, lon: -46.6576,
+            stateProvince: "BR-SP", countryCode: "BR",
+            notes: "Lake circuit and wooded trails.", createdAt: "2026-02-12T10:30:00Z"
+        ),
+    ]
+
+    // MARK: - Observations
+
+    /// 80+ observations across the 10 outings, matching the demo CSV species and counts.
+    static let observations: [BirdObservation] = {
+        var obs: [BirdObservation] = []
+        var n = 1
+
+        func add(_ outing: String, _ species: String, count: Int = 1, certainty: ObservationStatus = .confirmed) {
+            obs.append(BirdObservation(
+                id: "obs-\(String(format: "%03d", n))", outingId: outing,
+                speciesName: species, count: count, certainty: certainty,
+                notes: ""
+            ))
+            n += 1
+        }
+
+        // Outing 1 - Discovery Park, Seattle
+        add("outing-001", "Bald Eagle (Haliaeetus leucocephalus)")
+        add("outing-001", "Great Blue Heron (Ardea herodias)")
+        add("outing-001", "Mallard (Anas platyrhynchos)", count: 14)
+        add("outing-001", "Song Sparrow (Melospiza melodia)")
+        add("outing-001", "Black-capped Chickadee (Poecile atricapillus)")
+        add("outing-001", "Blue Jay (Cyanocitta cristata)")
+        add("outing-001", "Northern Cardinal (Cardinalis cardinalis)")
+        add("outing-001", "Steller's Jay (Cyanocitta stelleri)", count: 3)
+        add("outing-001", "Dark-eyed Junco (Junco hyemalis)")
+
+        // Outing 2 - Haleakala, Hawaii
+        add("outing-002", "Chukar (Alectoris chukar)", count: 2)
+        add("outing-002", "Hawaiian Goose (Branta sandvicensis)", count: 6)
+        add("outing-002", "Hawaii Amakihi (Chlorodrepanis virens)")
+        add("outing-002", "Apapane (Himatione sanguinea)")
+        add("outing-002", "Pacific Golden-Plover (Pluvialis fulva)")
+        add("outing-002", "Warbling White-eye (Zosterops japonicus)")
+        add("outing-002", "Northern Cardinal (Cardinalis cardinalis)")
+        add("outing-002", "Eurasian Skylark (Alauda arvensis)")
+
+        // Outing 3 - Jamaica Bay, NYC
+        add("outing-003", "Northern Cardinal (Cardinalis cardinalis)")
+        add("outing-003", "Blue Jay (Cyanocitta cristata)")
+        add("outing-003", "Mallard (Anas platyrhynchos)", count: 22)
+        add("outing-003", "Great Blue Heron (Ardea herodias)")
+        add("outing-003", "Song Sparrow (Melospiza melodia)")
+        add("outing-003", "Osprey (Pandion haliaetus)")
+        add("outing-003", "American Black Duck (Anas rubripes)", count: 7)
+        add("outing-003", "Mute Swan (Cygnus olor)")
+        add("outing-003", "Double-crested Cormorant (Nannopterum auritum)")
+        add("outing-003", "American Robin (Turdus migratorius)")
+        add("outing-003", "European Starling (Sturnus vulgaris)")
+        add("outing-003", "Mourning Dove (Zenaida macroura)")
+
+        // Outing 4 - Bosque del Apache, NM
+        add("outing-004", "Sandhill Crane (Antigone canadensis)", count: 120)
+        add("outing-004", "Snow Goose (Anser caerulescens)", count: 240)
+        add("outing-004", "Northern Pintail (Anas acuta)")
+        add("outing-004", "American Wigeon (Mareca americana)")
+        add("outing-004", "Bald Eagle (Haliaeetus leucocephalus)")
+        add("outing-004", "Mallard (Anas platyrhynchos)")
+        add("outing-004", "Northern Harrier (Circus hudsonius)")
+        add("outing-004", "Great Blue Heron (Ardea herodias)")
+
+        // Outing 5 - Everglades, FL
+        add("outing-005", "Anhinga (Anhinga anhinga)", count: 12)
+        add("outing-005", "Great Egret (Ardea alba)")
+        add("outing-005", "Snowy Egret (Egretta thula)")
+        add("outing-005", "Little Blue Heron (Egretta caerulea)")
+        add("outing-005", "White Ibis (Eudocimus albus)", count: 17)
+        add("outing-005", "Purple Gallinule (Porphyrio martinica)")
+        add("outing-005", "Common Gallinule (Gallinula galeata)")
+        add("outing-005", "Osprey (Pandion haliaetus)")
+        add("outing-005", "Black Vulture (Coragyps atratus)")
+
+        // Outing 6 - Presidio, SF
+        add("outing-006", "Anna's Hummingbird (Calypte anna)")
+        add("outing-006", "Chestnut-backed Chickadee (Poecile rufescens)")
+        add("outing-006", "Song Sparrow (Melospiza melodia)")
+        add("outing-006", "California Towhee (Melozone crissalis)")
+        add("outing-006", "Mallard (Anas platyrhynchos)", count: 11)
+        add("outing-006", "Great Blue Heron (Ardea herodias)")
+        add("outing-006", "Red-tailed Hawk (Buteo jamaicensis)")
+        add("outing-006", "Black Phoebe (Sayornis nigricans)")
+        add("outing-006", "Steller's Jay (Cyanocitta stelleri)")
+
+        // Outing 7 - Hyde Park, London
+        add("outing-007", "Mallard (Anas platyrhynchos)", count: 16)
+        add("outing-007", "Great Tit (Parus major)")
+        add("outing-007", "Eurasian Blue Tit (Cyanistes caeruleus)")
+        add("outing-007", "European Robin (Erithacus rubecula)")
+        add("outing-007", "Eurasian Coot (Fulica atra)", count: 10)
+        add("outing-007", "Mute Swan (Cygnus olor)")
+        add("outing-007", "Common Wood-Pigeon (Columba palumbus)")
+        add("outing-007", "Carrion Crow (Corvus corone)")
+        add("outing-007", "Great Cormorant (Phalacrocorax carbo)")
+
+        // Outing 8 - Ueno Park, Tokyo
+        add("outing-008", "Eastern Spot-billed Duck (Anas zonorhyncha)", count: 18)
+        add("outing-008", "Large-billed Crow (Corvus macrorhynchos)")
+        add("outing-008", "Brown-eared Bulbul (Hypsipetes amaurotis)")
+        add("outing-008", "Asian Tit (Parus minor)")
+        add("outing-008", "White-cheeked Starling (Spodiopsar cineraceus)")
+        add("outing-008", "Eurasian Tree Sparrow (Passer montanus)", count: 22)
+        add("outing-008", "Oriental Turtle-Dove (Streptopelia orientalis)")
+        add("outing-008", "Black-crowned Night Heron (Nycticorax nycticorax)")
+        add("outing-008", "Great Cormorant (Phalacrocorax carbo)")
+
+        // Outing 9 - Stanley Park, Vancouver
+        add("outing-009", "Bald Eagle (Haliaeetus leucocephalus)")
+        add("outing-009", "Great Blue Heron (Ardea herodias)")
+        add("outing-009", "Black-capped Chickadee (Poecile atricapillus)")
+        add("outing-009", "Song Sparrow (Melospiza melodia)")
+        add("outing-009", "Mallard (Anas platyrhynchos)", count: 19)
+        add("outing-009", "American Crow (Corvus brachyrhynchos)")
+        add("outing-009", "Northern Flicker (Colaptes auratus)")
+        add("outing-009", "Glaucous-winged Gull (Larus glaucescens)", count: 9)
+
+        // Outing 10 - Ibirapuera, Sao Paulo
+        add("outing-010", "Rufous-bellied Thrush (Turdus rufiventris)")
+        add("outing-010", "Southern Lapwing (Vanellus chilensis)")
+        add("outing-010", "Great Kiskadee (Pitangus sulphuratus)")
+        add("outing-010", "Saffron Finch (Sicalis flaveola)", count: 5)
+        add("outing-010", "Chalk-browed Mockingbird (Mimus saturninus)")
+        add("outing-010", "Eared Dove (Zenaida auriculata)")
+        add("outing-010", "Neotropic Cormorant (Nannopterum brasilianum)", count: 7)
+        add("outing-010", "House Sparrow (Passer domesticus)")
+        add("outing-010", "Rufous Hornero (Furnarius rufus)")
+        add("outing-010", "Plush-crested Jay (Cyanocorax chrysops)")
+
+        // Add a few "possible" observations for variety
+        add("outing-003", "Peregrine Falcon (Falco peregrinus)", certainty: .possible)
+        add("outing-005", "Roseate Spoonbill (Platalea ajaja)", certainty: .possible)
+        add("outing-009", "Barred Owl (Strix varia)", certainty: .possible)
+
+        return obs
+    }()
+
+    // MARK: - Dex Entries
+
+    /// Life list entries computed from the observations above.
+    /// Includes Wikipedia thumbnail URLs for species with well-known articles.
+    static let dex: [DexEntry] = {
+        // Build from observations: unique confirmed species with stats
+        let confirmed = observations.filter { $0.certainty == .confirmed }
+        var speciesMap: [String: (firstDate: String, lastDate: String, outingIds: Set<String>, totalCount: Int)] = [:]
+        let outingDates = Dictionary(uniqueKeysWithValues: outings.map { ($0.id, $0.startTime) })
+
+        for obs in confirmed {
+            let date = outingDates[obs.outingId] ?? "2026-01-01T00:00:00Z"
+            if var existing = speciesMap[obs.speciesName] {
+                if date < existing.firstDate { existing.firstDate = date }
+                if date > existing.lastDate { existing.lastDate = date }
+                existing.outingIds.insert(obs.outingId)
+                existing.totalCount += obs.count
+                speciesMap[obs.speciesName] = existing
+            } else {
+                speciesMap[obs.speciesName] = (date, date, [obs.outingId], obs.count)
+            }
+        }
+
+        // Wikipedia thumbnails for common species (subset for fast preview rendering)
+        let wikiThumbs: [String: (title: String, thumb: String)] = [
+            "Bald Eagle (Haliaeetus leucocephalus)": ("Bald_eagle", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/About_to_Launch_%2826075320352%29.jpg/320px-About_to_Launch_%2826075320352%29.jpg"),
+            "Northern Cardinal (Cardinalis cardinalis)": ("Northern_cardinal", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Cardinal_-_3679055844.jpg/320px-Cardinal_-_3679055844.jpg"),
+            "Blue Jay (Cyanocitta cristata)": ("Blue_jay", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Blue_jay_in_PP_%2830960%29.jpg/320px-Blue_jay_in_PP_%2830960%29.jpg"),
+            "Great Blue Heron (Ardea herodias)": ("Great_blue_heron", "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Great_blue_heron_-_nanswer.jpg/320px-Great_blue_heron_-_nAnswer.jpg"),
+            "Mallard (Anas platyrhynchos)": ("Mallard", "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Anas_platyrhynchos_male_female_quadrat.jpg/320px-Anas_platyrhynchos_male_female_quadrat.jpg"),
+            "Song Sparrow (Melospiza melodia)": ("Song_sparrow", "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Song_Sparrow-27527-2.jpg/320px-Song_Sparrow-27527-2.jpg"),
+            "Sandhill Crane (Antigone canadensis)": ("Sandhill_crane", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Grus_canadensis_-George_C._Reifel_Migratory_Bird_Sanctuary%2C_British_Columbia%2C_Canada-8.jpg/320px-Grus_canadensis.jpg"),
+            "Anhinga (Anhinga anhinga)": ("Anhinga", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Anhinga_anhinga_-Everglades_National_Park%2C_Florida%2C_USA-8.jpg/320px-Anhinga_anhinga.jpg"),
+            "Anna's Hummingbird (Calypte anna)": ("Anna%27s_hummingbird", "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Calypte_anna_-San_Luis_Obispo%2C_California%2C_USA-8.jpg/320px-Calypte_anna.jpg"),
+            "American Robin (Turdus migratorius)": ("American_robin", "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Turdus-migratorius-002.jpg/320px-Turdus-migratorius-002.jpg"),
+            "European Robin (Erithacus rubecula)": ("European_robin", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Erithacus_rubecula_with_cocked_head.jpg/320px-Erithacus_rubecula_with_cocked_head.jpg"),
+            "Great Kiskadee (Pitangus sulphuratus)": ("Great_kiskadee", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Pitangus_sulphuratus_-Iguazu_Falls%2C_Misiones%2C_Argentina-8.jpg/320px-Pitangus_sulphuratus.jpg"),
+            "Osprey (Pandion haliaetus)": ("Osprey", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pandion_haliaetus_-_Sanibel_Island%2C_Florida%2C_USA_-flying-8.jpg/320px-Pandion_haliaetus.jpg"),
+            "Snow Goose (Anser caerulescens)": ("Snow_goose", "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Chen_caerulescens_30018.jpg/320px-Chen_caerulescens_30018.jpg"),
+            "Red-tailed Hawk (Buteo jamaicensis)": ("Red-tailed_hawk", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Red-tailed_Hawk_Buteo_jamaicensis_Full_Body_1880px.jpg/320px-Red-tailed_Hawk_Buteo_jamaicensis.jpg"),
+        ]
+
+        return speciesMap.map { species, stats in
+            let wiki = wikiThumbs[species]
+            return DexEntry(
+                speciesName: species,
+                firstSeenDate: stats.firstDate,
+                lastSeenDate: stats.lastDate,
+                totalOutings: stats.outingIds.count,
+                totalCount: stats.totalCount,
+                notes: "",
+                wikiTitle: wiki?.title,
+                thumbnailUrl: wiki?.thumb
+            )
+        }
+        .sorted { $0.firstSeenDate > $1.firstSeenDate }
+    }()
+
+    // MARK: - Individual Samples
+
+    /// A single well-known species for detail view previews.
+    static let sampleSpecies = "Northern Cardinal (Cardinalis cardinalis)"
+
+    /// A single outing ID for detail view previews (Discovery Park).
+    static let sampleOutingId = "outing-001"
+
+    /// The Everglades outing - good for previewing rich species lists.
+    static let richOutingId = "outing-005"
+}
+#endif

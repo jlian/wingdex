@@ -319,9 +319,23 @@ struct OutingDetailView: View {
     }
 }
 
-#Preview {
+#Preview("Outing Detail - Discovery Park") {
     NavigationStack {
-        OutingDetailView(outingId: "preview-id")
-            .environment(DataStore(service: DataService(auth: AuthService())))
+        OutingDetailView(outingId: PreviewData.sampleOutingId)
+            .environment(previewStore())
+    }
+}
+
+#Preview("Outing Detail - Everglades") {
+    NavigationStack {
+        OutingDetailView(outingId: PreviewData.richOutingId)
+            .environment(previewStore())
+    }
+}
+
+#Preview("Outing Detail - Not Found") {
+    NavigationStack {
+        OutingDetailView(outingId: "nonexistent")
+            .environment(previewStore())
     }
 }

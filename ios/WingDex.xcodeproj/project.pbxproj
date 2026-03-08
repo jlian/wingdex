@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* AppIcon.icon */; };
 		0288642E71720F4AE48BDDB5 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 54957EE9C072C5F2FCC08BD2 /* OpenAPIRuntime */; };
+		08DD179D53004B5D6B3771C5 /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D57FC6933BCB9DA6D01C6F9E /* PreviewData.swift */; };
 		0C26BD71C3D1128D41123339 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9986F927C0C622E7A4DE4C2E /* AppModels.swift */; };
 		0FED48A726585A89C3989A51 /* WingDexApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B4D479201C022372C3F4BF /* WingDexApp.swift */; };
 		1C59F45B5FEBEF6C412CB307 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB5C722ED2F16A2C5666DB3 /* ReviewView.swift */; };
@@ -44,6 +45,7 @@
 		EE234F9D0E5A8EC5DDC52616 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFBE1598DFE8F27ED8313060 /* DataService.swift */; };
 		F328447561BB5DDA17308FD4 /* Data+Base64URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 839C24B2C567AC5C75E3844C /* Data+Base64URL.swift */; };
 		F6615E3D24C9B015D69520FA /* PasskeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C55734005BE9F01B6719A826 /* PasskeyService.swift */; };
+		F8B6EC497AAFE5B360FEB1C4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E01D6CCC5A4C9255372AFD03 /* Preview Assets.xcassets */; };
 		FD2A7A67F8326BF5BAAF67BE /* OutingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F5DCDBE61DDC1D237FD032 /* OutingDetailView.swift */; };
 		FE52C5B543CE063EF47FEFF5 /* CropService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CACACCB759F9881B6989222 /* CropService.swift */; };
 /* End PBXBuildFile section */
@@ -93,7 +95,9 @@
 		C55734005BE9F01B6719A826 /* PasskeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyService.swift; sourceTree = "<group>"; };
 		CFBE1598DFE8F27ED8313060 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		D0102B85A0116EB696C3EBD1 /* SpeciesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesDetailView.swift; sourceTree = "<group>"; };
+		D57FC6933BCB9DA6D01C6F9E /* PreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewData.swift; sourceTree = "<group>"; };
 		DE1613DCCF3480F9644D0D29 /* AuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceTests.swift; sourceTree = "<group>"; };
+		E01D6CCC5A4C9255372AFD03 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		E6F5DCDBE61DDC1D237FD032 /* OutingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingDetailView.swift; sourceTree = "<group>"; };
 		EED95BB5C7C9CBADD0CB3D05 /* wingdex.bird.svg */ = {isa = PBXFileReference; path = wingdex.bird.svg; sourceTree = "<group>"; };
 		EF5196BB0E920CD88E769065 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -147,6 +151,7 @@
 				F9CBE6C17AEE91B8E883A213 /* App */,
 				731C2CB75500F5BE1AA2754F /* Extensions */,
 				E6423F10CAA29DF0E53067C9 /* Models */,
+				6CADE1F53225577F04624AC0 /* Preview Content */,
 				DBBBCF6459FAFC8C168D249D /* Resources */,
 				35BD944CBBE8885E7DDD1742 /* Services */,
 				891B23AA8B22C88571C3D021 /* ViewModels */,
@@ -191,6 +196,15 @@
 				EED95BB5C7C9CBADD0CB3D05 /* wingdex.bird.svg */,
 			);
 			path = SFSymbols;
+			sourceTree = "<group>";
+		};
+		6CADE1F53225577F04624AC0 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				E01D6CCC5A4C9255372AFD03 /* Preview Assets.xcassets */,
+				D57FC6933BCB9DA6D01C6F9E /* PreviewData.swift */,
+			);
+			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 		731C2CB75500F5BE1AA2754F /* Extensions */ = {
@@ -352,6 +366,7 @@
 			files = (
 								F2E1D0C9B8A7F6E5D4C3B2A1 /* AppIcon.icon in Resources */,
 CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
+				F8B6EC497AAFE5B360FEB1C4 /* Preview Assets.xcassets in Resources */,
 				71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */,
 				223DAEB5BCD5CAC52065CF13 /* taxonomy.json in Resources */,
 				76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */,
@@ -386,6 +401,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				F6615E3D24C9B015D69520FA /* PasskeyService.swift in Sources */,
 				D23336CF295224BCB488B19B /* PhotoSelectionView.swift in Sources */,
 				7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */,
+				08DD179D53004B5D6B3771C5 /* PreviewData.swift in Sources */,
 				1C59F45B5FEBEF6C412CB307 /* ReviewView.swift in Sources */,
 				4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */,
 				2314AD2B5AD2CAE6D1426754 /* SharedComponents.swift in Sources */,

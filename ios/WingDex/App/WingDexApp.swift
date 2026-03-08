@@ -1,5 +1,7 @@
 import SwiftUI
 
+// MARK: - App Entry Point
+
 @main
 struct WingDexApp: App {
     @State private var authService: AuthService
@@ -20,6 +22,8 @@ struct WingDexApp: App {
         }
     }
 }
+
+// MARK: - Root Content View
 
 /// Root view that shows either auth or the main tab interface.
 struct ContentView: View {
@@ -58,6 +62,8 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
     }
 }
+
+// MARK: - Main Tab View
 
 /// Three-tab main interface with detached "+" and avatar settings sheet.
 struct MainTabView: View {
@@ -98,6 +104,8 @@ struct MainTabView: View {
         .environment(\.showOutings) { selectedTab = .outings }
     }
 }
+
+// MARK: - Avatar View
 
 /// Renders a user avatar - emoji (from SVG data URL), remote image, or fallback initial.
 struct AvatarView: View {
@@ -169,9 +177,14 @@ struct AvatarView: View {
     }
 }
 
-#Preview {
-    let auth = AuthService()
+#Preview("App - Authenticated") {
     ContentView()
-        .environment(auth)
-        .environment(DataStore(service: DataService(auth: auth)))
+        .environment(AuthService())
+        .environment(previewStore())
+}
+
+#Preview("App - Signed Out") {
+    ContentView()
+        .environment(AuthService())
+        .environment(previewStore(empty: true))
 }

@@ -223,9 +223,16 @@ struct SpeciesDetailView: View {
     }
 }
 
-#Preview {
+#Preview("Species Detail - Cardinal") {
     NavigationStack {
-        SpeciesDetailView(speciesName: "Northern Cardinal (Cardinalis cardinalis)")
-            .environment(DataStore(service: DataService(auth: AuthService())))
+        SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
+            .environment(previewStore())
+    }
+}
+
+#Preview("Species Detail - Bald Eagle") {
+    NavigationStack {
+        SpeciesDetailView(speciesName: "Bald Eagle (Haliaeetus leucocephalus)")
+            .environment(previewStore())
     }
 }

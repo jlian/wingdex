@@ -395,10 +395,10 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Can probably just remove the all about birds link (fix in web app too)
 - [x] Dark tint icon
 - [x] Spacing for avatar and toolbar
-- [ ] Manage passkeys doesn’t work when logged in via GitHub and Google weird
-- [ ] Auth page jank with loading wheel and error messages shifting page content. And also it shifts down when opened via log out
-- [ ] Improve `#Preview` data with more realistic data like demo data
-- [ ] Comments in the swift UI views
+- [x] Manage passkeys doesn’t work when logged in via GitHub and Google weird
+- [x] Auth page jank with loading wheel and error messages shifting page content. And also it shifts down when opened via log out
+- [x] Improve `#Preview` data with more realistic data like demo data
+- [x] Comments in the swift UI views
 
 ---
 

@@ -4,6 +4,8 @@ struct SettingsView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    // MARK: - State
+
     @State private var showingDeleteConfirmation = false
     @State private var isLoadingDemo = false
     @State private var demoError: String?
@@ -131,8 +133,7 @@ struct SettingsView: View {
 }
 
 #Preview {
-    let auth = AuthService()
     SettingsView()
-        .environment(auth)
-        .environment(DataStore(service: DataService(auth: auth)))
+        .environment(AuthService())
+        .environment(previewStore())
 }

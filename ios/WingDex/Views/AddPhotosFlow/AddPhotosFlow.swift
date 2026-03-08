@@ -52,6 +52,8 @@ struct AddPhotosFlow: View {
         }
     }
 
+    // MARK: - Navigation Title
+
     private var navigationTitle: String {
         switch viewModel.currentStep {
         case .selectPhotos: "Add Photos"
@@ -61,6 +63,8 @@ struct AddPhotosFlow: View {
         case .done: "Complete"
         }
     }
+
+    // MARK: - Processing View
 
     private var processingView: some View {
         VStack(spacing: 24) {
@@ -92,5 +96,5 @@ struct AddPhotosFlow: View {
 #Preview {
     AddPhotosFlow()
         .environment(AuthService())
-        .environment(DataStore(service: DataService(auth: AuthService())))
+        .environment(previewStore())
 }

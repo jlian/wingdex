@@ -9,6 +9,8 @@ struct OutingsView: View {
     @State private var sortAscending = false
     @State private var contextMenuOuting: Outing?
 
+    // MARK: - Sort Options
+
     enum OutingSortField: String, CaseIterable {
         case date, species, name
         var label: String {
@@ -26,6 +28,8 @@ struct OutingsView: View {
             }
         }
     }
+
+    // MARK: - Sorted Data
 
     private var sortedOutings: [Outing] {
         let sorted: [Outing]
@@ -53,6 +57,8 @@ struct OutingsView: View {
             $0.locationName.localizedCaseInsensitiveContains(searchText)
         }
     }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -113,6 +119,8 @@ struct OutingsView: View {
         }
     }
 
+    // MARK: - Empty State
+
     @ViewBuilder
     private var rootContent: some View {
         if store.outings.isEmpty {
@@ -143,6 +151,8 @@ struct OutingsView: View {
             outingsList
         }
     }
+
+    // MARK: - Outings List
 
     private var outingsList: some View {
         List(sortedOutings) { outing in
@@ -175,7 +185,14 @@ struct OutingsView: View {
     }
 }
 
-#Preview {
+#Preview("Outings - Populated") {
     OutingsView()
-        .environment(DataStore(service: DataService(auth: AuthService())))
+        .environment(AuthService())
+        .environment(previewStore())
+}
+
+#Preview("Outings - Empty") {
+    OutingsView()
+        .environment(AuthService())
+        .environment(previewStore(empty: true))
 }

@@ -247,7 +247,14 @@ struct HomeView: View {
     }
 }
 
-#Preview {
+#Preview("Home - Populated") {
     HomeView()
-        .environment(DataStore(service: DataService(auth: AuthService())))
+        .environment(AuthService())
+        .environment(previewStore())
+}
+
+#Preview("Home - Empty") {
+    HomeView()
+        .environment(AuthService())
+        .environment(previewStore(empty: true))
 }
