@@ -140,14 +140,13 @@ struct SignInView: View {
                                 .stroke(Color.warmBorder.opacity(0.7), lineWidth: 1)
                         )
 
-                        // Error
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(.system(size: 12))
-                                .foregroundStyle(.red)
-                                .multilineTextAlignment(.center)
-                                .transition(.opacity)
-                        }
+                        // Error - always in layout to prevent content shift
+                        Text(errorMessage ?? " ")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .opacity(errorMessage != nil ? 1 : 0)
+                            .accessibilityHidden(errorMessage == nil)
 
                         #if DEBUG
                         // Demo data button
@@ -172,15 +171,18 @@ struct SignInView: View {
                     }
                     .padding(.horizontal, 24)
                     .disabled(isSigningIn)
-
-                    if isSigningIn {
-                        ProgressView()
-                            .padding(.top, 16)
+                    .overlay {
+                        if isSigningIn {
+                            ProgressView()
+                                .frame(maxHeight: .infinity, alignment: .bottom)
+                                .padding(.bottom, -32)
+                        }
                     }
 
                     Spacer()
                 }
         .background(Color.pageBg.ignoresSafeArea())
+        .animation(.default, value: errorMessage)
     }
 
     private func signIn(action: @escaping () async throws -> Void) {

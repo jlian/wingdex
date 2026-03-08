@@ -32,6 +32,7 @@ struct ContentView: View {
 
             if auth.isAuthenticated {
                 MainTabView()
+                    .transition(.opacity)
                     .task {
                         await store.loadAll()
                         #if DEBUG
@@ -43,6 +44,7 @@ struct ContentView: View {
                     }
             } else {
                 SignInView()
+                    .transition(.opacity)
                     #if DEBUG
                     .task {
                         if ProcessInfo.processInfo.arguments.contains("--auto-sign-in"),
@@ -53,6 +55,7 @@ struct ContentView: View {
                     #endif
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
     }
 }
 
