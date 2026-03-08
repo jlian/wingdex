@@ -23,9 +23,40 @@ import { createAuth } from '../../../lib/auth'
 
 const APP_SCHEME = 'wingdex'
 
+function extractSignedSessionToken(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null
+
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim()
+    if (!trimmed) continue
+
+    const separatorIndex = trimmed.indexOf('=')
+    if (separatorIndex === -1) continue
+
+    const name = trimmed.slice(0, separatorIndex)
+    if (name !== 'better-auth.session_token' && name !== '__Secure-better-auth.session_token') {
+      continue
+    }
+
+    return trimmed.slice(separatorIndex + 1)
+  }
+
+  return null
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = createAuth(context.env, { request: context.request })
-  const session = await auth.api.getSession({ headers: context.request.headers })
+  // Try default mode first so localhost e2e/local cookies keep working.
+  // If that does not resolve a session but the request carries a secure hosted
+  // session cookie, retry in hosted-oauth mode so Better Auth uses the hosted
+  // secure-cookie semantics needed by the mobile social OAuth flow.
+  let auth = createAuth(context.env, { request: context.request })
+  let session = await auth.api.getSession({ headers: context.request.headers })
+  const cookieHeader = context.request.headers.get('cookie')
+  const hasSecureSessionCookie = cookieHeader?.includes('__Secure-better-auth.session_token=') ?? false
+  if (!session && hasSecureSessionCookie) {
+    auth = createAuth(context.env, { request: context.request, mode: 'hosted-oauth' })
+    session = await auth.api.getSession({ headers: context.request.headers })
+  }
 
   if (!session?.user?.id || !session?.session?.token) {
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
@@ -43,6 +74,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     p('user_name', session.user.name || ''),
     p('user_email', session.user.email || ''),
   ]
+  const signedToken = extractSignedSessionToken(cookieHeader)
+  if (signedToken) {
+    parts.push(p('signed_token', signedToken))
+  }
   if (session.user.image) {
     parts.push(p('user_image', session.user.image))
   }

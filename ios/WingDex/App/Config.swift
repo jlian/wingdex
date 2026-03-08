@@ -11,7 +11,8 @@ enum Config {
             #if targetEnvironment(simulator)
             URL(string: "https://wingdev.johnspecificproblems.net")!
             #else
-            URL(string: "https://dev.wingdex.pages.dev")!
+            URL(string: "https://wingdev.johnspecificproblems.net")!
+            // URL(string: "https://dev.wingdex.pages.dev")!
             #endif
         #else
         URL(string: "https://wingdex.app")!

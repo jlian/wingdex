@@ -9,8 +9,8 @@ private let log = Logger(subsystem: Config.bundleID, category: "Auth")
 
 /// Manages authentication state, token storage, and OAuth flows.
 ///
-/// Uses Better Auth's session tokens as bearer tokens. The server-side middleware
-/// injects the bearer token as a session cookie so Better Auth validates it normally.
+/// Uses Better Auth's raw session token for bearer auth and the signed session token
+/// for Better Auth's passkey endpoints that still validate cookie-based sessions.
 /// Tokens are obtained via ASWebAuthenticationSession (GitHub / Apple OAuth).
 /// The server's mobile callback bridge redirects to wingdex:// with the session token.
 @Observable
@@ -313,6 +313,7 @@ final class AuthService: @unchecked Sendable {
     /// Parsed result from an OAuth callback URL.
     struct CallbackResult {
         let token: String
+        let signedToken: String?
         let expiry: Date
         let userId: String?
         let userName: String?
@@ -349,6 +350,7 @@ final class AuthService: @unchecked Sendable {
 
         return CallbackResult(
             token: token,
+            signedToken: params["signed_token"],
             expiry: expiry,
             userId: params["user_id"],
             userName: params["user_name"],
@@ -372,6 +374,7 @@ final class AuthService: @unchecked Sendable {
         log.info("Got token (\(result.token.count) chars)")
 
         sessionToken = result.token
+        signedSessionToken = result.signedToken
         sessionExpiry = result.expiry
         userId = result.userId
         userName = result.userName

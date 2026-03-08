@@ -1,6 +1,11 @@
-import { createAuth } from '../../lib/auth'
+import { createAuth, normalizeAuthRequest } from '../../lib/auth'
 
 export const onRequest: PagesFunction<Env> = async (context) => {
-  const auth = createAuth(context.env, { request: context.request })
-  return auth.handler(context.request)
+  // Generic auth routes rely on request, forwarded, and referer headers to
+  // decide whether the public origin is localhost or a hosted dev domain.
+  // Do not force hosted mode here or localhost web OAuth callbacks will fail
+  // state validation.
+  const request = normalizeAuthRequest(context.env, context.request)
+  const auth = createAuth(context.env, { request })
+  return auth.handler(request)
 }

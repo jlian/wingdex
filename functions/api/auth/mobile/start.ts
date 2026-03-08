@@ -31,7 +31,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response('Unsupported provider parameter', { status: 400 })
   }
 
-  const auth = createAuth(context.env, { request: context.request })
+  // Mobile social OAuth must start in hosted-oauth mode so the provider sees
+  // the same public callback origin that is configured in the provider app.
+  const auth = createAuth(context.env, { request: context.request, mode: 'hosted-oauth' })
 
   // Build a synthetic POST to Better Auth's sign-in/social endpoint
   const signInUrl = new URL('/api/auth/sign-in/social', url.origin)

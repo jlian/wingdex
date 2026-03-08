@@ -6,10 +6,11 @@ final class AuthCallbackParsingTests: XCTestCase {
     // MARK: - parseCallbackURL
 
     func testValidCallbackWithAllParams() throws {
-        let url = URL(string: "wingdex://auth/callback?token=abc123&expires_at=2026-03-14T19:41:56.066Z&user_id=user1&user_name=John&user_email=john@example.com&user_image=https://example.com/photo.jpg")!
+        let url = URL(string: "wingdex://auth/callback?token=abc123&signed_token=abc123.sig%252Bvalue&expires_at=2026-03-14T19:41:56.066Z&user_id=user1&user_name=John&user_email=john@example.com&user_image=https://example.com/photo.jpg")!
         let result = try AuthService.parseCallbackURL(url)
 
         XCTAssertEqual(result.token, "abc123")
+        XCTAssertEqual(result.signedToken, "abc123.sig%2Bvalue")
         XCTAssertEqual(result.userId, "user1")
         XCTAssertEqual(result.userName, "John")
         XCTAssertEqual(result.userEmail, "john@example.com")
@@ -22,6 +23,7 @@ final class AuthCallbackParsingTests: XCTestCase {
         let result = try AuthService.parseCallbackURL(url)
 
         XCTAssertEqual(result.token, "abc123")
+        XCTAssertNil(result.signedToken)
         XCTAssertNil(result.userId)
         XCTAssertNil(result.userName)
         XCTAssertNil(result.userEmail)
@@ -112,10 +114,11 @@ final class AuthCallbackParsingTests: XCTestCase {
     func testRealWorldGitHubCallbackURL() throws {
         // Simulates what the mobile/callback endpoint sends with encodeURIComponent
         // (spaces as %20, not + as URLSearchParams would produce)
-        let url = URL(string: "wingdex://auth/callback?token=hf2znuT4gSpDhB3VJkjAFsyH6wahdBP2&expires_at=2026-03-14T19%3A41%3A56.066Z&user_id=w3mYQIVlKKAlUANNqylaCCEJrG0du0Fw&user_name=John%20Lian&user_email=lianguanlun%40gmail.com&user_image=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F2320572%3Fv%3D4")!
+        let url = URL(string: "wingdex://auth/callback?token=hf2znuT4gSpDhB3VJkjAFsyH6wahdBP2&signed_token=hf2znuT4gSpDhB3VJkjAFsyH6wahdBP2.WxY%252Bsig%253D&expires_at=2026-03-14T19%3A41%3A56.066Z&user_id=w3mYQIVlKKAlUANNqylaCCEJrG0du0Fw&user_name=John%20Lian&user_email=lianguanlun%40gmail.com&user_image=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F2320572%3Fv%3D4")!
 
         let result = try AuthService.parseCallbackURL(url)
         XCTAssertEqual(result.token, "hf2znuT4gSpDhB3VJkjAFsyH6wahdBP2")
+        XCTAssertEqual(result.signedToken, "hf2znuT4gSpDhB3VJkjAFsyH6wahdBP2.WxY%2Bsig%3D")
         XCTAssertEqual(result.userId, "w3mYQIVlKKAlUANNqylaCCEJrG0du0Fw")
         XCTAssertEqual(result.userName, "John Lian")
         XCTAssertEqual(result.userEmail, "lianguanlun@gmail.com")
