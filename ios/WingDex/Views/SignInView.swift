@@ -7,6 +7,7 @@ import SwiftUI
 /// serif heading, 14px body text, 36pt button height, 12pt corner radius.
 struct SignInView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(DataStore.self) private var store
     @State private var isSigningIn = false
     @State private var errorMessage: String?
 
@@ -153,6 +154,7 @@ struct SignInView: View {
                         Button {
                             signIn {
                                 try await auth.signInAnonymously()
+                                try await store.loadDemoData()
                             }
                         } label: {
                             Label {
