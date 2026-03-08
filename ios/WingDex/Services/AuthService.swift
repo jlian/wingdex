@@ -35,6 +35,7 @@ final class AuthService: @unchecked Sendable {
     private static let userIdKey = "user_id"
     private static let userNameKey = "user_name"
     private static let userEmailKey = "user_email"
+    private static let userImageKey = "user_image"
 
     init() {
         restoreSession()
@@ -430,6 +431,7 @@ final class AuthService: @unchecked Sendable {
         keychain[Self.userIdKey] = userId
         keychain[Self.userNameKey] = userName
         keychain[Self.userEmailKey] = userEmail
+        keychain[Self.userImageKey] = userImage
     }
 
     private func restoreSession() {
@@ -451,6 +453,7 @@ final class AuthService: @unchecked Sendable {
         userId = keychain[Self.userIdKey]
         userName = keychain[Self.userNameKey]
         userEmail = keychain[Self.userEmailKey]
+        userImage = keychain[Self.userImageKey]
         isAuthenticated = true
 
         // Clear stale cookies so URLSession doesn't send them alongside
@@ -466,6 +469,7 @@ final class AuthService: @unchecked Sendable {
         keychain[Self.userIdKey] = nil
         keychain[Self.userNameKey] = nil
         keychain[Self.userEmailKey] = nil
+        keychain[Self.userImageKey] = nil
     }
 
     /// Remove cookies for the API domain so URLSession doesn't send stale session cookies.

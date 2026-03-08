@@ -90,12 +90,9 @@ struct MainTabView: View {
             }
 
             Tab(value: AppTab.add, role: .search) {
-                NavigationStack {
-                    AddPhotosFlow()
-                        .toolbar { avatarToolbarItem }
-                }
+                AddPhotosFlow()
             } label: {
-                Label("Add", systemImage: "plus")
+                Label("Add", systemImage: "camera.fill")
             }
         }
         .sheet(isPresented: $showingSettings) {
@@ -110,6 +107,7 @@ struct MainTabView: View {
                 showingSettings = true
             } label: {
                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 28)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
         }
