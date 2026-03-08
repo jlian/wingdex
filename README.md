@@ -64,6 +64,25 @@ npm run dev
 
 `npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
 
+### Local auth modes
+
+Local auth intentionally uses two different origins depending on the flow:
+
+1. `localhost` for normal local web usage, passkeys, and Playwright e2e. This keeps the WebAuthn RP ID aligned with the page the browser is actually on.
+2. `BETTER_AUTH_URL` for social OAuth flows that must present a hosted public callback URL to GitHub, Google, or Apple.
+
+Operationally, that means:
+
+1. Local web on `http://localhost:5000` keeps localhost semantics by default.
+2. Hosted web on `https://wingdev.johnspecificproblems.net` uses the hosted domain normally.
+3. Mobile social OAuth started through `/api/auth/mobile/start` uses the hosted callback domain from `BETTER_AUTH_URL`, even during local dev.
+
+If GitHub or Google reports an invalid redirect URI during local mobile testing, verify that:
+
+1. `BETTER_AUTH_URL` matches the hosted callback domain registered with the provider.
+2. The provider app allows `https://.../api/auth/callback/github` or `.../google` on that hosted domain.
+3. You are not expecting plain localhost web social OAuth to use the hosted callback domain; that path still behaves like localhost web unless you test on the hosted site.
+
 ### AI provider setup (local)
 
 AI calls run through the server endpoint (`/api/identify-bird`) via
