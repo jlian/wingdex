@@ -115,6 +115,7 @@ struct OutingsView: View {
                         AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
                             .glassEffect(.regular.interactive())
                     }
+                    .buttonBorderShape(.circle)
                 }
             }
             .refreshable {
