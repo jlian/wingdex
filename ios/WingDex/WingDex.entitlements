@@ -9,8 +9,10 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:wingdex.pages.dev</string>
-		<string>webcredentials:localhost?mode=developer</string>
 		<string>webcredentials:wingdex.app</string>
+		<string>webcredentials:dev.wingdex.pages.dev</string>
+		<string>webcredentials:wingdev.johnspecificproblems.net?mode=developer</string>
+		<string>webcredentials:localhost?mode=developer</string>
 	</array>
 </dict>
 </plist>

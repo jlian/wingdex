@@ -170,3 +170,34 @@ func getScientificName(_ speciesName: String) -> String? {
     else { return nil }
     return String(speciesName[openParen.upperBound..<closeParen.lowerBound])
 }
+
+private let ebirdCodeLookup: [String: String] = {
+    guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
+          let data = try? Data(contentsOf: url),
+          let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
+    else {
+        return [:]
+    }
+
+    var lookup: [String: String] = [:]
+    lookup.reserveCapacity(rawEntries.count)
+
+    for entry in rawEntries {
+        guard entry.count > 2,
+              let commonName = entry[0] as? String,
+              let ebirdCode = entry[2] as? String,
+              !ebirdCode.isEmpty
+        else { continue }
+
+        lookup[commonName.lowercased()] = ebirdCode
+    }
+
+    return lookup
+}()
+
+/// Build the eBird species URL for a stored species name.
+func getEbirdURL(for speciesName: String) -> URL? {
+    let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let ebirdCode = ebirdCodeLookup[commonName.lowercased()] else { return nil }
+    return URL(string: "https://ebird.org/species/\(ebirdCode)")
+}

@@ -90,11 +90,14 @@ The app uses a tab bar + navigation bar layout inspired by Apple Music:
 
 ## Auth Strategy
 
-The backend uses cookie-based sessions via Better Auth. Instead of custom JWT + refresh token infrastructure, we reuse Better Auth's existing session tokens as bearer tokens. The middleware injects the bearer token as a session cookie so `getSession` validates it normally. A mobile callback bridge endpoint extracts the session token after OAuth and redirects to the app's custom URL scheme.
+The backend uses cookie-based sessions via Better Auth for the web app. For the iOS app, we use Better Auth's official `bearer()` plugin (`better-auth/plugins`) which natively accepts `Authorization: Bearer <session_token>` headers - no cookie translation middleware needed. The session token is obtained via OAuth redirect flow or passkey ceremony and stored securely in iOS Keychain.
 
-### Server-Side (done)
+### Server-Side
 
-- [x] Middleware update: accept `Authorization: Bearer <session_token>` header alongside existing cookie auth
+- [x] `bearer()` plugin added to Better Auth - natively accepts `Authorization: Bearer` headers (Phase 3.1)
+- [x] `GET /api/auth/mobile/callback` - bridge endpoint reads session after OAuth, redirects to `wingdex://auth/callback?token=...`
+- [x] `GET /api/auth/mobile/start` - GET proxy for ASWebAuthenticationSession, internally POSTs to Better Auth sign-in/social
+- [x] Remove legacy middleware cookie translation (Phase 3.1)
 - [x] `GET /api/auth/mobile/callback` - bridge endpoint reads session cookie after OAuth, redirects to `wingdex://auth/callback?token=...`
 - [x] `GET /api/auth/mobile/start` - GET proxy for ASWebAuthenticationSession, internally POSTs to Better Auth sign-in/social
 
@@ -187,7 +190,7 @@ ios/
 - [x] Native Apple Sign-In via `ASAuthorizationAppleIDProvider`
 - [x] Passkey sign-in, registration, and management (`PasskeyManagementView`)
 - [x] SettingsView auth UI - user info, sign out, delete data confirmations
-- [ ] **401 handling** - intercept 401, prompt re-auth (deferred to Phase 8)
+- [x] **401 handling** - intercept 401 in DataService, auto-signout to show login screen
 
 ---
 
@@ -226,38 +229,196 @@ Basic flow implemented, but needs significant rework to match web app (see Phase
 
 ---
 
+## Phase 3.1 - Auth Rework: Migrate to Better Auth Bearer Plugin
+
+The current auth implementation hand-rolls cookie name management, resulting in 19 hardcoded cookie strings, fragile `__Secure-` prefix logic, and a middleware hack that translates Bearer tokens to cookies. This phase replaces all of that with Better Auth's official `bearer()` plugin, which natively accepts `Authorization: Bearer <token>` - no cookie translation needed.
+
+**Decision**: Use Better Auth's first-party `bearer()` plugin (`better-auth/plugins`, already in dependencies). This is the standard pattern for native mobile clients authenticating against Better Auth.
+
+### 3.1.1: Server - Add Bearer Plugin ✅
+
+- [x] **Add bearer plugin**: In `functions/lib/auth.ts`, add `bearer()` to the plugins array: `import { bearer } from 'better-auth/plugins'` then `plugins: [anonymous(), passkey({...}), bearer()]`
+- [x] **Remove middleware cookie translation**: Deleted the entire Bearer-to-cookie injection block from `functions/_middleware.ts`. `getSession` now accepts `Authorization: Bearer` natively
+- [x] **Verify getSession works with Bearer**: Verified via unit test and API smoke test
+- [x] **Keep mobile/start and mobile/callback**: Kept, simplified callback to use `session.session.token` directly
+
+**Files**: `functions/lib/auth.ts`, `functions/_middleware.ts`
+
+### 3.1.2: Server - Fix Mobile Callback Token Extraction ✅
+
+- [x] **Use raw session token**: Callback now uses `session.session.token` directly - no Set-Cookie parsing needed
+- [x] **Remove manual cookie name parsing**: Deleted all `better-auth.session_token` and `__Secure-` string splitting
+
+**Files**: `functions/api/auth/mobile/callback.ts`
+
+### 3.1.3: iOS - Clean Up AuthService ✅
+
+- [x] **fetchUserInfo - use Bearer header**: Replaced cookie header with `Authorization: Bearer` header
+- [x] **processTokenResponse - simplify**: Now reads `set-auth-token` response header (bearer plugin), falls back to JSON `token` field. Deleted all Set-Cookie parsing
+- [x] **Remove all hardcoded cookie name strings**: Zero `better-auth.session_token` or `__Secure-` strings in iOS codebase
+- [x] **Keychain storage stays**: Unchanged
+
+**Files**: `ios/WingDex/Services/AuthService.swift`
+
+### 3.1.4: iOS - Clean Up PasskeyService ✅
+
+- [x] **Registration options request**: Uses `Authorization: Bearer` header
+- [x] **Registration verify request**: Uses `Authorization: Bearer` header. Challenge cookie forwarding kept (separate from session auth)
+- [x] **Authentication verify - token extraction**: Reads `set-auth-token` header, falls back to JSON `session.token`
+- [x] **Challenge cookie forwarding**: Kept as-is (uses `extractCookieHeader` and `HTTPCookie.cookies`)
+- [x] **Remove all session cookie name strings**: Zero cookie name strings in PasskeyService
+
+**Files**: `ios/WingDex/Services/PasskeyService.swift`
+
+### 3.1.5: Security Hardening ✅
+
+- [x] **Keychain accessibility**: Changed to `.accessibility(.whenPasscodeSetThisDeviceOnly)`
+- [x] **Token not in logs**: Audited - no token values in log statements (only length/presence)
+- [x] **Remove DEBUG cookie logging**: Removed (cookie translation deleted entirely)
+
+**Files**: `ios/WingDex/Services/AuthService.swift`, `ios/WingDex/Services/PasskeyService.swift`, `ios/WingDex/Services/DataService.swift`, `functions/_middleware.ts`
+
+### 3.1.6: Investigate Frequent get-session Polling
+
+- [x] **Identify source**: The `[wrangler:info] GET /api/auth/get-session 200 OK (2ms)` every second observed in Wrangler logs needs investigation. Determine if this is from the web app's `useSession` hook polling, the iOS app, or a browser extension
+- [x] **Fix if excessive**: If it's the web app, ensure `useSession` is not over-polling. Better Auth's `useSession` hook should only poll based on `updateAge` config, not every second
+
+### 3.1.7: Verification
+
+Test all auth flows end-to-end after migration:
+
+- [x] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
+- [x] **Apple Sign-In**: Blocked on local dev - `.dev.vars` does not have `APPLE_CLIENT_ID`/`APPLE_CLIENT_SECRET`. Works on production/preview deployments where Apple credentials are configured in Cloudflare Pages dashboard. Native `ASAuthorizationAppleIDProvider` flow (bypasses web redirect) should work when credentials are present. **Skipped for local dev**
+- [x] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
+- [x] **Passkey registration**: Fixed - passkey plugin endpoints require cookie-only auth (signed session token as cookie, no Bearer header). `AuthenticatedRequest.withCookieOnly()` used for all passkey endpoints
+- [x] **Session persistence**: Kill app, relaunch -> session restored from Keychain -> data loads without re-auth. Stale cookies cleared on restore to prevent 401
+- [x] **Sign out**: Clear state, return to sign-in screen, verify Keychain is empty
+- [x] **Load demo data**: After sign-in, load demo data from settings -> data appears. Confirmation dialog added
+- [x] **Token not in logs**: Check Xcode console and Wrangler terminal for any token values in log output
+
+### 3.1.10: Remaining Issues from Manual Testing ✅
+
+All critical issues resolved. Remaining items deferred or skipped.
+
+- [x] **Passkey registration**: Fixed - all passkey endpoints now use `AuthenticatedRequest.withCookieOnly()` with signed session token. Challenge cookie properly forwarded between options and verify steps
+- [x] **Passkey management list/delete**: Fixed - also switched to cookie-only auth
+- [~] **Passkey name/label mismatch**: Deferred - current behavior acceptable, may be affected by merged account situations
+- [x] **Apple Sign-In not configured locally**: Skipped for local dev - works on deployed environments
+- [x] **Load demo data - add confirmation**: Done - `.confirmationDialog` added
+- [x] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub. Note: Google OAuth fails on local dev (`wingdev.johnspecificproblems.net`) because the redirect URI is not in Google Cloud Console's authorized list. Add `https://wingdev.johnspecificproblems.net/api/auth/callback/google` to authorized redirect URIs in Google Cloud Console, or test on deployed environment only
+
+### 3.1.8: Automated Tests
+
+Server-side tests verifying Bearer token auth works end-to-end.
+
+- [x] **Unit test - bearer plugin registered**: In `src/__tests__/auth-config.test.ts`, verifies bearer plugin is in plugins list
+- [x] **API smoke test - Bearer auth CRUD**: In `e2e/api-smoke.spec.ts`, full CRUD with Bearer headers, 401 on invalid token
+- [x] **API smoke test - get-session via Bearer**: Verifies `get-session` returns user with Bearer header
+- [x] **API smoke test - mobile callback**: Sign in via cookies, hit `GET /api/auth/mobile/callback`, verify redirect contains token that works as Bearer
+- [x] **Regression test - cookie auth still works**: Cookie auth verified for data endpoints and get-session
+
+### 3.1.9: iOS Tests ✅
+
+XCTest target exists with unit tests and integration tests for auth logic.
+
+#### Unit Tests (no server needed)
+
+- [x] **Create XCTest target**: `WingDexTests` target in `project.yml` with XCTest framework
+- [x] **AuthService token parsing**: Tests for `parseCallbackURL` with valid URLs, missing params, invalid dates, URL-encoded values, real-world GitHub callback URLs
+- [ ] **AuthService session restore**: Test `restoreSession()` reads from Keychain, validates expiry, signs out if expired (requires Keychain mocking)
+- [ ] **PasskeyService token extraction**: Test that `set-auth-token` header is preferred over JSON body token (covered by integration tests)
+- [x] **Config URL tiers**: Tests for `Config.apiBaseURL`, `bundleID`, `oauthCallbackScheme`, `rpID`, `aiDailyRateLimit`
+- [x] **Date formatting edge cases**: ISO8601 with/without fractional seconds, timezone offsets, invalid strings, empty strings
+
+#### Integration Tests (require running dev server)
+
+- [x] **Anonymous sign-in + Bearer data fetch**: POST `/api/auth/sign-in/anonymous`, extract token, GET `/api/data/all` with Bearer, verify 200
+- [x] **Bearer token rejection**: Invalid token returns 401, no auth returns 401
+- [x] **Session validation via Bearer**: GET `/api/auth/get-session` with Bearer, verify `user.id`
+- [x] **Data CRUD via Bearer**: Create outing, verify in `/api/data/all`, delete, verify gone
+- [ ] **Sign-out clears Keychain**: Call `AuthService.signOut()`, verify `validToken()` throws (requires Keychain mocking)
+- [ ] **Expired session handling**: Store expired token, verify `validToken()` throws (requires Keychain mocking)
+
+**Files**: `ios/WingDexTests/AuthServiceTests.swift`, `ios/WingDexTests/AuthIntegrationTests.swift`
+
 ## Phase 3.5 - Navigation & SignIn Rework
 
 The current iOS app uses a 4-tab layout (Home, WingDex, Outings, Settings) with an "Upload" button in the top-right nav bar. This needs to migrate to the new navigation architecture defined above, and the SignInView needs significant rework to match the web's auth modal.
 
 ### 3.5.1: Tab Bar & Navigation Migration
 
-Migrate from the current 4-tab layout to the new architecture: 3 tabs left + detached "+" button right + avatar settings sheet.
+Migrate from the current 4-tab layout to the new architecture: 3 tabs left + detached add button right + avatar settings sheet.
 
-- [ ] **Remove Settings tab**: Delete the 4th tab from `TabView`. Three content tabs remain: Home, WingDex, Outings
-- [ ] **Cluster tabs left**: Position the three tabs on the left side of the tab bar
-- [ ] **Add detached "+" button**: Place an "Upload & Identify" action button on the right side of the tab bar, visually separated from the three tabs (Apple Music-style). Tapping opens the AddPhotos flow as a `.sheet`. This replaces the current top-right nav bar upload button
-- [ ] **Avatar button in nav bar**: Add a small circular avatar button (~28pt) to the top-right of the navigation bar, visible on all tabs. Shows user's emoji avatar or social provider photo; falls back to `person.circle.fill` SF Symbol. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
-- [ ] **Update BirdLogo and BirdTab assets**: Replace the current Phosphor-style bird SVGs with the new app icon artwork (updated March 2026 on web: `public/favicon.svg`, `public/icon-192.png`, `public/icon-512.png`). Ensure the tab icon and sign-in logo use the new design
+- [x] **Remove Settings tab**: Deleted 4th tab. Three content tabs remain: Home, WingDex, Outings
+- [x] **Cluster tabs left**: Three tabs grouped in `TabSection`, clustered left
+- [x] **Add detached camera button**: `Tab(role: .search)` with `camera.fill` icon, visually detached on the right (Apple Music Search button pattern). Opens AddPhotosFlow as a tab destination
+- [x] **Avatar button in nav bar**: 34pt circular avatar in toolbar (`.topBarTrailing`), renders emoji avatars from SVG data URLs with colored backgrounds, falls back to name initial then person icon. `.glassEffect(.regular.interactive())` hugs circular shape. Sort button stacks to its left. Tapping presents SettingsView as `.sheet` via `showSettings` environment action
+- [x] **NavigationStack moved to MainTabView**: Each tab wraps its content in NavigationStack; removed from child views (HomeView, WingDexView, OutingsView, AddPhotosFlow)
+- [x] **Custom SF Symbols**: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
 
-**Files**: `WingDexApp.swift`, `SettingsView.swift`, `Assets.xcassets` (BirdLogo, BirdTab image sets)
+**Files**: `WingDexApp.swift`, `SettingsView.swift`, `AddPhotosFlow.swift`, `HomeView.swift`, `WingDexView.swift`, `OutingsView.swift`, `Theme.swift`
 
-### 3.5.2: SignInView Rework
+### 3.5.2: SignInView Rework ✅
 
-The current iOS SignInView is a full-screen `ScrollView` with a single passkey button that changes label based on signup/login mode. The web's auth modal has a different structure that should be matched:
+- [x] **Remove ScrollView**: Centered VStack layout, no scroll
+- [x] **Title**: "Start your WingDex" (static, matching web)
+- [x] **Social buttons**: GitHub, Apple, Google at top (all working)
+- [x] **Passkey section with border**: Bordered container with muted fill, key icon header
+- [x] **Two passkey buttons side-by-side**: "Log in" (filled) + "Sign up" (outlined)
+- [x] **Remove mode toggle**: Removed entirely
+- [x] **Error display**: Red error text below passkey section
+- [x] **Demo data button** (DEBUG only): "Try with Demo Data" button that signs in anonymously and loads demo data
+- [x] **Loading state**: ProgressView + disabled buttons when signing in
+- [x] **Perf**: userImage now persisted in Keychain; session restores instantly without network
 
-- [ ] **Remove unnecessary ScrollView**: The sign-in content should not be scrollable on normal device sizes. Use a centered `VStack` within a `GeometryReader` without wrapping in `ScrollView`. Only allow scrolling if Dynamic Type pushes content beyond the viewport
-- [ ] **Title**: Change from "Sign up" / "Log in" to "Start your WingDex" (matching web's `DialogTitle`)
-- [ ] **Social buttons first**: GitHub and Apple buttons at the top (matching web order: social providers above passkey)
-- [ ] **Passkey section with border**: Wrap the passkey area in a bordered, lightly tinted container (matching web's `rounded-lg border border-border/70 bg-muted/20 px-3 py-3`). Show a centered header: Key icon + "Continue with a Passkey"
-- [ ] **Two passkey buttons side-by-side**: Replace the single mode-switching passkey button with two buttons in a horizontal grid (matching web's `grid-cols-2`): "Log in" (primary/filled) and "Sign up" (outlined). Both always visible regardless of mode
-- [ ] **Remove mode toggle**: Since the passkey section now has both Log in and Sign up buttons, the "Already have a WingDex? Log in" / "New to WingDex? Sign up" toggle is no longer needed. Remove it entirely
-- [ ] **Error display**: Keep the red error text below the passkey section
-- [ ] **Demo data toggle** (DEBUG only): Add a toggle switch matching web's demo data toggle: label "Demo data", subtitle "Preview WingDex with sample sightings", bordered container
-- [ ] **Loading state**: Show `ProgressView` overlay and disable all buttons when `isSigningIn` is true
+**Files**: `SignInView.swift`, `AuthService.swift`
 
-**Files**: `SignInView.swift`
-**Reference**: `src/hooks/use-auth-gate.tsx` (auth modal JSX)
+## 3.5.3 - Polish & Parity
+
+- [x] Custom SF Symbols: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
+- [x] Empty state views: added `frame(maxWidth: .infinity, maxHeight: .infinity)` to fix white bars on empty WingDex/Outings views
+- [x] Context menus: species rows show preview + Open in eBird/Wikipedia/Copy Name; outing rows show preview + Delete Outing; detail view rows also have context menus
+- [x] Font size: bumped species/outing row text from 14/12px to 16/13px, darkened subtitle opacity
+- [x] Home: species count + "species observed" in horizontal layout
+- [x] Settings: "Log Out" (no confirmation), "Delete All Data" (with confirmation attached to button)
+- [x] Associated domains: added `dev.wingdex.pages.dev` for passkeys on dev preview
+- [x] Apple Sign-In: added `appBundleIdentifier` to server config for native iOS identity token verification
+- [x] Config: restored simulator vs physical device URL split
+- [x] Font weight adjustments (deferred - minor polish)
+- [x] Flat circle avatar like Apple Music
+- [x] Left justify the main view headers? I guess big is fine
+- [x] Ebird Links don’t work in details - should check web app we've fixed this bug before
+- [x] Missing 3D Touch for homepage recent species
+- [x] Missing chevron on homepage to go to Wingdex and outings lists (with sort)
+- [x] Clickable maps? To Apple Maps?
+- [x] Inconsistent font in outings detail view ("species") and species detail view (fix in web app as well)
+- [x] Can probably just remove the all about birds link (fix in web app too)
+- [ ] Improve `#Preview` data with more realistic data like demo data
+- [ ] Comments in the swift UI views
+
+---
+
+## Phase 3.6 - Dark Mode ✅
+
+Follows system appearance automatically (no toggle needed, like Apple's own apps).
+
+### 3.6.1: Move Hardcoded Colors to Asset Catalog ✅
+
+- [x] **MutedText colorset**: light: rgb(70, 90, 105), dark: rgb(155, 152, 142) - oklch(0.65 0.03 85)
+- [x] **ForegroundText colorset**: light: rgb(26, 37, 29), dark: rgb(228, 226, 220) - oklch(0.92 0.01 85)
+- [x] **WarmBorder colorset**: light: rgb(196, 189, 176), dark: rgb(62, 72, 65) - oklch(0.32 0.02 155)
+- [x] **Theme.swift**: all colors now use `Color("AssetName")` for automatic adaptation
+
+### 3.6.2: System Appearance ✅
+
+- [x] Follows system Light/Dark setting automatically - no toggle needed
+- [x] All semantic colors adapt via asset catalog dark variants
+
+### 3.6.3: Visual Audit ✅
+
+- [x] Verified in simulator: dark forest green background, light text, adapted borders
+- [x] UICollectionViewListCell appearance override works (uses Color refs)
+- [x] Species card gradient overlays legible (white text on dark gradient)
 
 ---
 
@@ -660,7 +821,7 @@ Add photos with a new species -> confetti animation fires + lifer toast with hap
 
 ---
 
-## Phase 8 - Dark Mode & Auth Fixes
+## Phase 8 - Dark Mode, Auth Fixes & Error Handling
 
 ### 8.1: Define Dark Color Palette
 
@@ -689,15 +850,12 @@ Depends on Phase 4.5 (appearance toggle UI).
 - Verify `UITableViewCell.appearance().backgroundColor` and other UIAppearance overrides work correctly in dark mode
 - Verify map styling (`.standard` map with dark scheme)
 
-### 8.4: Fix 401 on API Calls
+### 8.4: Fix 401 on API Calls ✅
 
-Known bug. After GitHub OAuth sign-in, subsequent API calls return 401 Unauthorized.
+Fixed. Root cause: middleware injected bearer token with wrong cookie name on HTTPS (`better-auth.session_token` vs `__Secure-better-auth.session_token`). Fix: inject both prefixed and non-prefixed cookie names so it works regardless of the `useSecureCookies` setting.
 
-- [ ] **Debug token extraction**: The OAuth callback's `Set-Cookie` header parsing in `AuthService.handleOAuthCallback` may not be extracting the session token correctly
-- [ ] **Verify token flow**: Confirm token is stored in Keychain, retrieved on subsequent requests, and sent as `Authorization: Bearer {token}` header
-- [ ] **Add diagnostic logging**: Log token presence/absence at each stage (extraction, storage, retrieval, request)
-
-**Files**: `AuthService.swift`, `DataService.swift`
+- [x] **Dual cookie injection**: Middleware now injects both `better-auth.session_token` and `__Secure-better-auth.session_token`
+- [x] **Mobile callback cookie extraction**: Reads both prefixed and non-prefixed cookie names
 
 ### 8.5: 401 Auto-Retry
 
@@ -715,9 +873,36 @@ Known bug. After GitHub OAuth sign-in, subsequent API calls return 401 Unauthori
 
 **Files**: `AuthService.swift`, `WingDexApp.swift`
 
+### 8.7: Error Handling Overhaul (iOS)
+
+Currently errors are either silently ignored or show raw `localizedDescription` strings which are often unhelpful (e.g., "(null)" for ASAuthorization errors). Needs a systematic pass across the entire iOS app.
+
+- [ ] **Typed error mapping**: Create a central `AppError` enum that maps network errors, auth errors, passkey errors, and API errors to user-friendly messages. All `catch` blocks should map through this instead of using raw `localizedDescription`
+- [ ] **User-facing error alerts**: Show `.alert` or banner for errors that need user action (auth failure, network unreachable). Show inline error text for recoverable errors (form validation, import conflicts)
+- [ ] **Network error handling**: Detect no-connectivity (`URLError.notConnectedToInternet`) and show a clear offline banner. Detect timeouts and offer retry. Detect server errors (500) with generic "Something went wrong" message
+- [ ] **Rate limit feedback**: When `POST /api/identify-bird` returns 429, show "AI identification limit reached (150/day). Try again tomorrow." with the daily limit from `Config.aiDailyRateLimit`
+- [ ] **Passkey error messages**: Map all `ASAuthorizationError` codes to clear messages - `.canceled` (silent dismiss), `.notHandled` ("Passkey not available for this domain"), `.failed` ("Authentication failed")
+- [ ] **Pull-to-refresh retry**: On data load failure, show the error message and let pull-to-refresh retry the request
+- [ ] **Toast/banner system**: Create a reusable toast overlay (environment-based) for success and error messages. Auto-dismiss after 3-5 seconds. Used across settings saves, imports, exports, species additions
+
+**Files**: New `AppError.swift`, update `SignInView.swift`, `DataStore.swift`, `SettingsView.swift`, all views with error states
+
+### 8.8: Logging Overhaul (iOS + Server)
+
+Part of [#222](https://github.com/jlian/wingdex/issues/222). Ensure consistent, structured logging across all layers.
+
+- [ ] **iOS Logger audit**: Verify all services use `Logger` with appropriate subsystem/category. Ensure `.debug` for routine operations (request/response), `.info` for state changes (sign-in, data load), `.error` for failures. Remove any credential values from log messages
+- [ ] **iOS request/response timing**: Add elapsed time logging to `DataService` API calls (time between request start and response) for performance monitoring
+- [ ] **Server DEBUG flag**: All API route handlers log request entry and error details when `env.DEBUG` is set. Already implemented in middleware; extend to all `functions/api/` route files
+- [ ] **Server structured format**: Use `JSON.stringify({ method, path, status, ... })` consistently for easy filtering in Wrangler terminal and Cloudflare log tailing
+- [ ] **Web client debug logger**: Add a `debugLog()` utility gated on `import.meta.env.DEV` using `console.debug()`. Cover auth state changes, API calls, data mutations, flow transitions
+- [ ] **No credentials in logs**: Audit all log statements across iOS, server, and web to ensure tokens, keys, and user data are never logged (log token length and presence, not values)
+
+**Files**: All service files (iOS), all `functions/api/*.ts` files (server), new web debug utility
+
 ### Phase 8 Verification
 
-Toggle appearance Light/Dark/System -> every screen renders correctly in dark mode -> sign in via GitHub -> all API calls succeed (no 401) -> background the app for 24+ hours -> return -> session still valid or re-auth prompted gracefully.
+Toggle appearance Light/Dark/System -> every screen renders correctly in dark mode -> sign in via GitHub -> all API calls succeed (no 401) -> background the app for 24+ hours -> return -> session still valid or re-auth prompted gracefully -> errors shown as user-friendly messages, not raw strings -> no credentials in any log output -> server logs structured JSON when DEBUG=1.
 
 ---
 
@@ -1060,12 +1245,12 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 2.5 | Styling & Layout (colors, edge-to-edge, List theming) | ✅ Done |
 | 2.6 | Auth UX, Tab Icon, Session Fixes | ✅ Done |
 | 3 | Add Photos Flow (initial, needs rework) | ✅ Done (basic) |
-| 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | Not started |
+| 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | ✅ Done |
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | Not started |
 | 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | Not started |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |
-| 8 | **Dark Mode & Auth Fixes** (palette, toggle, visual audit, 401 fix, session expiry) | Not started |
+| 8 | **Dark Mode, Auth Fixes & Error Handling** (palette, toggle, visual audit, 401 fix, error/logging overhaul) | Not started |
 | 9 | **iOS-Native Enhancements** (sharing, context menus, shortcuts, Spotlight, widgets, camera, tips, etc.) | Not started |
 | 10 | **Polish & App Store** (errors, accessibility, icon, TestFlight, listing, submission) | Not started |

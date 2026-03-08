@@ -1,6 +1,9 @@
 import AuthenticationServices
 import Foundation
+import os
 import UIKit
+
+private let log = Logger(subsystem: Config.bundleID, category: "Passkey")
 
 /// Handles WebAuthn passkey operations against Better Auth's passkey plugin.
 ///
@@ -10,14 +13,14 @@ import UIKit
 /// URLSession's automatic cookie storage.
 ///
 /// For authenticated endpoints (registration, list, delete) the session token is
-/// sent directly as a `better-auth.session_token` cookie, bypassing the Bearer
-/// header middleware (which only runs for non-auth routes).
+/// sent as an `Authorization: Bearer` header, validated by Better Auth's bearer plugin.
 final class PasskeyService: NSObject, @unchecked Sendable {
 
     // MARK: - Public Types
 
     struct AuthResult {
         let token: String
+        let signedToken: String?
         let userId: String
         let expiresAt: Date?
     }
@@ -37,7 +40,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
     /// 3. Verify the assertion with the server
     /// Returns a session token on success.
     func authenticate() async throws -> AuthResult {
-        // Step 1 - Fetch authentication options
+        // Step 1 - Fetch authentication options (no auth needed - user not signed in yet)
         let optionsURL = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/generate-authenticate-options")
         var optionsRequest = URLRequest(url: optionsURL)
         optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
@@ -50,7 +53,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             throw PasskeyError.serverError("Failed to get authentication options")
         }
 
-        let challengeCookieHeader = extractCookieHeader(from: httpResponse, for: optionsURL)
+        let challengeCookies = AuthenticatedRequest.extractCookies(from: httpResponse, for: optionsURL)
         let options = try JSONDecoder().decode(AuthenticationOptions.self, from: optionsData)
 
         guard let challengeData = Data(base64URLEncoded: options.challenge) else {
@@ -64,16 +67,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             allowCredentials: options.allowCredentials
         )
 
-        // Step 3 - Verify assertion with server
+        // Step 3 - Verify assertion with server (no session token - user authenticating)
         let verifyURL = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/verify-authentication")
-        var verifyRequest = URLRequest(url: verifyURL)
-        verifyRequest.httpMethod = "POST"
-        verifyRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        if let cookies = challengeCookieHeader {
-            verifyRequest.setValue(cookies, forHTTPHeaderField: "Cookie")
-        }
-
         let credentialID = assertion.credentialID.base64URLEncodedString()
         let body: [String: Any] = [
             "response": [
@@ -90,6 +85,13 @@ final class PasskeyService: NSObject, @unchecked Sendable {
                 "clientExtensionResults": [String: Any](),
             ] as [String: Any],
         ]
+        var verifyRequest = URLRequest(url: verifyURL)
+        verifyRequest.httpMethod = "POST"
+        verifyRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        if let cookies = challengeCookies {
+            verifyRequest.setValue(cookies, forHTTPHeaderField: "Cookie")
+        }
         verifyRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
@@ -103,9 +105,15 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         // Response shape: { session: { token, userId, expiresAt, ... } }
         guard let json = try JSONSerialization.jsonObject(with: verifyData) as? [String: Any],
               let session = json["session"] as? [String: Any],
-              let token = session["token"] as? String,
               let userId = session["userId"] as? String
         else {
+            throw PasskeyError.invalidResponse
+        }
+
+        // Raw token for Bearer auth, signed token for cookie auth on passkey endpoints
+        let rawToken = session["token"] as? String
+        let signedToken = verifyHttp.value(forHTTPHeaderField: "set-auth-token")
+        guard let resolvedToken = rawToken ?? signedToken else {
             throw PasskeyError.invalidResponse
         }
 
@@ -114,15 +122,21 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             expiresAt = ISO8601DateFormatter().date(from: expiresAtString)
         }
 
-        return AuthResult(token: token, userId: userId, expiresAt: expiresAt)
+        return AuthResult(token: resolvedToken, signedToken: signedToken, userId: userId, expiresAt: expiresAt)
     }
 
     // MARK: - Registration (Add Passkey)
 
     /// Register a new passkey for the currently authenticated user.
-    /// Requires a valid session token.
-    func register(name: String, token: String) async throws {
-        // Step 1 - Fetch registration options
+    /// - signedToken: HMAC-signed token for cookie auth on passkey verify endpoint
+    func register(name: String, signedToken: String?) async throws {
+        guard let signed = signedToken else {
+            throw PasskeyError.serverError("Missing signed session token for passkey registration")
+        }
+
+        // Step 1 - Fetch registration options (cookie-only, no Bearer)
+        // Passkey plugin endpoints use internal cookie session validation.
+        // Mixing Bearer + cookies causes 401 on HTTPS.
         var components = URLComponents(
             url: Config.apiBaseURL.appendingPathComponent("api/auth/passkey/generate-register-options"),
             resolvingAgainstBaseURL: false
@@ -131,20 +145,20 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             URLQueryItem(name: "authenticatorAttachment", value: "platform"),
         ]
         let optionsURL = components.url!
-
-        var optionsRequest = URLRequest(url: optionsURL)
-        optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        optionsRequest.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        let optionsRequest = AuthenticatedRequest.withCookieOnly(url: optionsURL, signedToken: signed)
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
         guard let httpResponse = optionsResponse as? HTTPURLResponse,
               httpResponse.statusCode == 200
         else {
-            throw PasskeyError.serverError("Failed to get registration options")
+            let status = (optionsResponse as? HTTPURLResponse)?.statusCode ?? -1
+            log.error("Registration options failed: HTTP \(status)")
+            throw PasskeyError.serverError("Failed to get registration options (HTTP \(status))")
         }
 
-        let challengeCookieHeader = extractCookieHeader(from: httpResponse, for: optionsURL)
+        let challengeCookies = AuthenticatedRequest.extractCookies(from: httpResponse, for: optionsURL)
+        log.info("Registration options received, challenge cookie: \(challengeCookies != nil)")
         let options = try JSONDecoder().decode(RegistrationOptions.self, from: optionsData)
 
         guard let challengeData = Data(base64URLEncoded: options.challenge) else {
@@ -162,20 +176,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             userID: userIDData
         )
 
-        // Step 3 - Verify registration with server
+        // Step 3 - Verify registration (cookie-only + challenge cookie)
         let verifyURL = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/verify-registration")
-        var verifyRequest = URLRequest(url: verifyURL)
-        verifyRequest.httpMethod = "POST"
-        verifyRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        verifyRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-
-        // Merge session token with challenge cookies from step 1
-        var cookieParts = ["better-auth.session_token=\(token)"]
-        if let challengeCookies = challengeCookieHeader {
-            cookieParts.append(challengeCookies)
-        }
-        verifyRequest.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
-
         let credentialID = registration.credentialID.base64URLEncodedString()
         let registrationBody: [String: Any] = [
             "response": [
@@ -192,23 +194,34 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             ] as [String: Any],
             "name": name,
         ]
-        verifyRequest.httpBody = try JSONSerialization.data(withJSONObject: registrationBody)
+        let verifyRequest = AuthenticatedRequest.withCookieOnly(
+            url: verifyURL,
+            signedToken: signed,
+            additionalCookies: challengeCookies,
+            method: "POST",
+            body: try JSONSerialization.data(withJSONObject: registrationBody),
+            contentType: "application/json"
+        )
+        log.debug("Verify request: challenge=\(challengeCookies != nil)")
 
-        let (_, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
+        let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
 
         guard let verifyHttp = verifyResponse as? HTTPURLResponse,
               verifyHttp.statusCode == 200
         else {
-            throw PasskeyError.registrationFailed
+            let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: verifyData, encoding: .utf8) ?? ""
+            log.error("Registration verify failed: HTTP \(status) - \(body)")
+            throw PasskeyError.serverError("Passkey registration failed (HTTP \(status))")
         }
+        log.info("Passkey registration succeeded")
     }
 
     // MARK: - List Passkeys
 
-    func listPasskeys(token: String) async throws -> [PasskeyInfo] {
+    func listPasskeys(signedToken: String) async throws -> [PasskeyInfo] {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/list-user-passkeys")
-        var request = URLRequest(url: url)
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        let request = AuthenticatedRequest.withCookieOnly(url: url, signedToken: signedToken)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -223,13 +236,15 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
     // MARK: - Delete Passkey
 
-    func deletePasskey(id: String, token: String) async throws {
+    func deletePasskey(id: String, signedToken: String) async throws {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/delete-passkey")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["id": id])
+        let request = AuthenticatedRequest.withCookieOnly(
+            url: url,
+            signedToken: signedToken,
+            method: "POST",
+            body: try JSONSerialization.data(withJSONObject: ["id": id]),
+            contentType: "application/json"
+        )
 
         let (_, response) = try await URLSession.shared.data(for: request)
 
@@ -307,16 +322,6 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - Cookie Helpers
-
-    /// Extract Set-Cookie values from a response as a single Cookie header string.
-    private func extractCookieHeader(from response: HTTPURLResponse, for url: URL) -> String? {
-        guard let headerFields = response.allHeaderFields as? [String: String] else { return nil }
-        let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
-        guard !cookies.isEmpty else { return nil }
-        return cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-    }
-
     // MARK: - Decodable Models
 
     private struct AuthenticationOptions: Decodable {
@@ -376,8 +381,8 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
 
 extension PasskeyService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        return scene?.keyWindow ?? UIWindow(frame: .zero)
+        let scene = UIApplication.shared.connectedScenes.first as! UIWindowScene
+        return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
 

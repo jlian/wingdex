@@ -5,12 +5,10 @@ import SwiftUI
 struct AddPhotosFlow: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = AddPhotosViewModel()
 
     var body: some View {
-        NavigationStack {
-            Group {
+        Group {
                 switch viewModel.currentStep {
                 case .selectPhotos:
                     PhotoSelectionView(viewModel: viewModel)
@@ -28,11 +26,6 @@ struct AddPhotosFlow: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color.pageBg.ignoresSafeArea())
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    if viewModel.currentStep != .done && viewModel.currentStep != .saving {
-                        Button("Cancel") { dismiss() }
-                    }
-                }
                 ToolbarItem(placement: .primaryAction) {
                     switch viewModel.currentStep {
                     case .review:
@@ -51,8 +44,6 @@ struct AddPhotosFlow: View {
                     }
                 }
             }
-        }
-        .interactiveDismissDisabled(viewModel.currentStep == .saving)
         .onAppear {
             viewModel.configure(
                 dataService: DataService(auth: auth),

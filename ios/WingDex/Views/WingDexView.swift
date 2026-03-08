@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct WingDexView: View {
+    @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.showSettings) private var showSettings
     @State private var searchText = ""
     @State private var sortField: DexSortField = .date
     @State private var sortAscending = false
+    @State private var contextMenuSpecies: DexEntry?
 
     enum DexSortField: String, CaseIterable {
         case date, count, name
@@ -51,71 +54,94 @@ struct WingDexView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if store.dex.isEmpty {
-                    VStack(spacing: 24) {
-                        Spacer()
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.1))
-                                .frame(width: 80, height: 80)
-                            Image("BirdLogo")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 40, height: 40)
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        VStack(spacing: 8) {
-                            Text("No Species Yet")
-                                .font(.system(size: 22, weight: .semibold, design: .serif))
-                                .foregroundStyle(Color.foregroundText)
-                            Text("Species will appear here as you identify birds.")
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.mutedText)
-                                .multilineTextAlignment(.center)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 24)
-                } else {
-                    speciesList
-                }
-            }
-            .navigationTitle("WingDex")
-            .searchable(text: $searchText, prompt: "Search species")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Picker("Sort by", selection: $sortField) {
-                            ForEach(DexSortField.allCases, id: \.self) { field in
-                                Label(field.label, systemImage: field.icon)
-                                    .tag(field)
+            rootContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.pageBg.ignoresSafeArea())
+                .navigationTitle("WingDex")
+                .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack {
+                            Menu {
+                                Picker("Sort by", selection: $sortField) {
+                                    ForEach(DexSortField.allCases, id: \.self) { field in
+                                        Label(field.label, systemImage: field.icon)
+                                            .tag(field)
+                                    }
+                                }
+
+                                Divider()
+
+                                Button {
+                                    sortAscending.toggle()
+                                } label: {
+                                    Label(
+                                        sortAscending ? "Ascending" : "Descending",
+                                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                                    )
+                                }
+                            } label: {
+                                Label("Sort", systemImage: "arrow.up.arrow.down")
+                            }
+                            .glassEffect(.regular.interactive())
+
+                            Button { showSettings() } label: {
+                                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
                         }
-
-                        Divider()
-
-                        Button {
-                            sortAscending.toggle()
-                        } label: {
-                            Label(
-                                sortAscending ? "Ascending" : "Descending",
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                        .padding(.trailing, -20)
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
-            }
-            .refreshable {
-                await store.loadAll()
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.pageBg.ignoresSafeArea())
+                .refreshable {
+                    await store.loadAll()
+                }
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .automatic),
+                    prompt: "Search species"
+                )
+                .navigationDestination(for: DexEntry.self) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+                .navigationDestination(item: $contextMenuSpecies) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
         }
-        .background(Color.pageBg.ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if store.dex.isEmpty {
+            VStack(spacing: 24) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image("BirdLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .foregroundStyle(Color.accentColor)
+                }
+                VStack(spacing: 8) {
+                    Text("No Species Yet")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("Species will appear here as you identify birds.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 24)
+        } else {
+            speciesList
+        }
     }
 
     private var speciesList: some View {
@@ -127,12 +153,27 @@ struct WingDexView: View {
                     subtitle: "\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))"
                 )
             }
+            .contextMenu {
+                Button {
+                    contextMenuSpecies = entry
+                } label: {
+                    Label("View Species", systemImage: "bird")
+                }
+                Button {
+                    UIPasteboard.general.string = entry.speciesName
+                } label: {
+                    Label("Copy Name", systemImage: "doc.on.doc")
+                }
+            } preview: {
+                NavigationStack {
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+                .environment(store)
+            }
         }
         .listStyle(.plain)
+        .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
-        .navigationDestination(for: DexEntry.self) { entry in
-            SpeciesDetailView(speciesName: entry.speciesName)
-        }
     }
 }
 

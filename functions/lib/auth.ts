@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { anonymous } from 'better-auth/plugins'
+import { anonymous, bearer } from 'better-auth/plugins'
 import { passkey } from '@better-auth/passkey'
 import { Kysely } from 'kysely'
 import { D1Dialect } from 'kysely-d1'
@@ -38,8 +38,9 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   })()
 
   // Single source of truth for public app origin:
-  // 1) explicit env override, 2) local two-port mapping, 3) request origin.
-  const baseURL = env.BETTER_AUTH_URL || inferredLocalAppOrigin || requestOrigin
+  // Local loopback wins so passkey RP ID matches localhost during dev/e2e,
+  // even when BETTER_AUTH_URL points at a hosted domain.
+  const baseURL = inferredLocalAppOrigin || env.BETTER_AUTH_URL || requestOrigin
   if (!baseURL) throw new Error('Unable to determine a valid base URL for authentication')
 
   const useSecureCookies = baseURL.startsWith('https://')
@@ -93,7 +94,11 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     socialProviders.github = { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }
   }
   if (env.APPLE_CLIENT_ID && env.APPLE_CLIENT_SECRET) {
-    socialProviders.apple = { clientId: env.APPLE_CLIENT_ID, clientSecret: env.APPLE_CLIENT_SECRET }
+    socialProviders.apple = {
+      clientId: env.APPLE_CLIENT_ID,
+      clientSecret: env.APPLE_CLIENT_SECRET,
+      appBundleIdentifier: 'app.wingdex',
+    }
   }
   if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     socialProviders.google = { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
@@ -125,6 +130,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     },
     plugins: [
       anonymous(),
+      bearer(),
       passkey({
         rpName: 'WingDex',
         rpID: new URL(passkeyOrigin).hostname,

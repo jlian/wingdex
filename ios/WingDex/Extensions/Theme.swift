@@ -22,16 +22,16 @@ extension Color {
 
     // MARK: - Text
 
-    /// Muted secondary text - darker than web's oklch(0.55 0.04 240) for readability on beige
-    static let mutedText = Color(red: 70/255, green: 90/255, blue: 105/255)
+    /// Muted secondary text - adapts to light/dark mode
+    static let mutedText = Color("MutedText")
 
-    /// Foreground text - oklch(0.25 0.02 155) -> rgb(26, 37, 29)
-    static let foregroundText = Color(red: 26/255, green: 37/255, blue: 29/255)
+    /// Foreground text - adapts to light/dark mode
+    static let foregroundText = Color("ForegroundText")
 
     // MARK: - Borders
 
-    /// Warm border - oklch(0.80 0.02 85) -> rgb(196, 189, 176)
-    static let warmBorder = Color(red: 196/255, green: 189/255, blue: 176/255)
+    /// Warm border - adapts to light/dark mode
+    static let warmBorder = Color("WarmBorder")
 }
 
 // MARK: - List Cell Appearance
@@ -63,12 +63,43 @@ extension UICollectionViewListCell {
     }
 }
 
-// MARK: - View Modifiers
+// MARK: - Environment Keys
 
-extension View {
-    /// Apply the warm cream page background that fills edge-to-edge.
-    func warmBackground() -> some View {
-        self
-            .background(Color.pageBg)
+/// Environment action for triggering the Add Photos flow from any view.
+private struct ShowAddPhotosKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+/// Environment action for opening the Settings sheet.
+private struct ShowSettingsKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+/// Environment action for switching to the WingDex tab.
+private struct ShowWingDexKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+/// Environment action for switching to the Outings tab.
+private struct ShowOutingsKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+extension EnvironmentValues {
+    var showAddPhotos: () -> Void {
+        get { self[ShowAddPhotosKey.self] }
+        set { self[ShowAddPhotosKey.self] = newValue }
+    }
+    var showSettings: () -> Void {
+        get { self[ShowSettingsKey.self] }
+        set { self[ShowSettingsKey.self] = newValue }
+    }
+    var showWingDex: () -> Void {
+        get { self[ShowWingDexKey.self] }
+        set { self[ShowWingDexKey.self] = newValue }
+    }
+    var showOutings: () -> Void {
+        get { self[ShowOutingsKey.self] }
+        set { self[ShowOutingsKey.self] = newValue }
     }
 }

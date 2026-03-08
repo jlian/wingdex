@@ -3,10 +3,11 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteConfirmation = false
-    @State private var showingSignOutConfirmation = false
     @State private var isLoadingDemo = false
     @State private var demoError: String?
+    @State private var showingDemoConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -60,16 +61,7 @@ struct SettingsView: View {
                 #if DEBUG
                 Section("Development") {
                     Button {
-                        isLoadingDemo = true
-                        demoError = nil
-                        Task {
-                            do {
-                                try await store.loadDemoData()
-                            } catch {
-                                demoError = error.localizedDescription
-                            }
-                            isLoadingDemo = false
-                        }
+                        showingDemoConfirmation = true
                     } label: {
                         if isLoadingDemo {
                             ProgressView()
@@ -78,6 +70,26 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isLoadingDemo)
+                    .confirmationDialog(
+                        "Load Demo Data?",
+                        isPresented: $showingDemoConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Replace All Data", role: .destructive) {
+                            isLoadingDemo = true
+                            demoError = nil
+                            Task {
+                                do {
+                                    try await store.loadDemoData()
+                                } catch {
+                                    demoError = error.localizedDescription
+                                }
+                                isLoadingDemo = false
+                            }
+                        }
+                    } message: {
+                        Text("This will replace all your current outings, observations, and WingDex entries with demo data. This cannot be undone.")
+                    }
 
                     if let demoError {
                         Text(demoError)
@@ -91,26 +103,27 @@ struct SettingsView: View {
                     Button("Delete All Data", role: .destructive) {
                         showingDeleteConfirmation = true
                     }
-                    Button("Sign Out", role: .destructive) {
-                        showingSignOutConfirmation = true
+                    .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                        Button("Delete Everything", role: .destructive) {
+                            Task {
+                                try? await store.clearAll()
+                            }
+                        }
+                    } message: {
+                        Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
+                    }
+
+                    Button("Log Out", role: .destructive) {
+                        auth.signOut()
                     }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
             .navigationTitle("Settings")
-            .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-                Button("Delete Everything", role: .destructive) {
-                    Task {
-                        try? await store.clearAll()
-                    }
-                }
-            } message: {
-                Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
-            }
-            .confirmationDialog("Sign Out?", isPresented: $showingSignOutConfirmation, titleVisibility: .visible) {
-                Button("Sign Out", role: .destructive) {
-                    auth.signOut()
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
         }

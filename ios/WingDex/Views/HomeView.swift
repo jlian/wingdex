@@ -1,36 +1,59 @@
 import SwiftUI
+import UIKit
 
 struct HomeView: View {
-    @Binding var showingAddPhotos: Bool
+    @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.showAddPhotos) private var showAddPhotos
+    @Environment(\.showWingDex) private var showWingDex
+    @Environment(\.showOutings) private var showOutings
+    @Environment(\.showSettings) private var showSettings
+    @State private var committedSpeciesEntry: DexEntry?
+    @State private var contextMenuOuting: Outing?
 
     var body: some View {
         NavigationStack {
-            Group {
-                if store.isLoading && store.dex.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if store.dex.isEmpty {
-                    emptyState
-                } else {
-                    dataView
-                }
-            }
-            .navigationTitle("Home")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAddPhotos = true
-                    } label: {
-                        Label("Add Photos", systemImage: "plus.circle.fill")
+            rootContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.pageBg.ignoresSafeArea())
+                .navigationTitle("Home")
+                .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showSettings() } label: {
+                            AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                        }
+                        .padding(.trailing, -20)
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
-            }
-            .refreshable {
-                await store.loadAll()
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.pageBg.ignoresSafeArea())
+                .refreshable {
+                    await store.loadAll()
+                }
+                .navigationDestination(for: DexEntry.self) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+                .navigationDestination(for: Outing.self) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
+                .navigationDestination(item: $contextMenuOuting) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
+                .navigationDestination(item: $committedSpeciesEntry) { entry in
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if store.isLoading && store.dex.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if store.dex.isEmpty {
+            emptyState
+        } else {
+            dataView
         }
     }
 
@@ -66,7 +89,7 @@ struct HomeView: View {
             }
 
             Button {
-                showingAddPhotos = true
+                showAddPhotos()
             } label: {
                 Label {
                     Text("Upload & Identify")
@@ -92,7 +115,7 @@ struct HomeView: View {
         List {
             // Hero stats
             Section {
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(store.dex.count)")
                         .font(.system(size: 48, weight: .semibold, design: .serif))
                         .foregroundStyle(Color.foregroundText)
@@ -108,10 +131,21 @@ struct HomeView: View {
             let recentSpecies = store.recentSpecies()
             if !recentSpecies.isEmpty {
                 Section {
-                    Text("Recent Species")
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                    Button {
+                        showWingDex()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text("Recent Species")
+                                .font(.system(size: 18, weight: .semibold, design: .serif))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
                         .foregroundStyle(Color.foregroundText)
-                        .listRowSeparator(.hidden)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowSeparator(.hidden)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open WingDex")
 
                     GeometryReader { geo in
                         let spacing: CGFloat = 10
@@ -120,10 +154,20 @@ struct HomeView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: spacing) {
                                 ForEach(recentSpecies) { entry in
-                                    NavigationLink(value: entry) {
+                                    PeekPopContextMenu(
+                                        menu: speciesContextMenu(for: entry),
+                                        onTap: {
+                                            committedSpeciesEntry = entry
+                                        }
+                                    ) {
                                         SpeciesCard(entry: entry, size: cardSize)
+                                    } preview: {
+                                        NavigationStack {
+                                            SpeciesDetailView(speciesName: entry.speciesName)
+                                        }
+                                        .environment(store)
                                     }
-                                    .buttonStyle(.plain)
+                                    .frame(width: cardSize, height: cardSize)
                                 }
                             }
                             .padding(.horizontal, padding)
@@ -140,14 +184,44 @@ struct HomeView: View {
             let recentOutings = store.recentOutings()
             if !recentOutings.isEmpty {
                 Section {
-                    Text("Recent Outings")
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                    Button {
+                        showOutings()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text("Recent Outings")
+                                .font(.system(size: 18, weight: .semibold, design: .serif))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
                         .foregroundStyle(Color.foregroundText)
-                        .listRowSeparator(.hidden)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowSeparator(.hidden)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open Outings")
 
                     ForEach(recentOutings) { outing in
                         NavigationLink(value: outing) {
                             OutingRow(outing: outing, store: store)
+                        }
+                        .contextMenu {
+                            Button {
+                                contextMenuOuting = outing
+                            } label: {
+                                Label("View Outing", systemImage: "binoculars")
+                            }
+                            if let lat = outing.lat, let lon = outing.lon {
+                                Button {
+                                    openInMaps(outing: outing, lat: lat, lon: lon)
+                                } label: {
+                                    Label("View in Maps", systemImage: "map")
+                                }
+                            }
+                        } preview: {
+                            NavigationStack {
+                                OutingDetailView(outingId: outing.id)
+                            }
+                            .environment(store)
                         }
                     }
                 }
@@ -155,17 +229,25 @@ struct HomeView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .listSectionSeparator(.hidden)
-        .navigationDestination(for: DexEntry.self) { entry in
-            SpeciesDetailView(speciesName: entry.speciesName)
-        }
-        .navigationDestination(for: Outing.self) { outing in
-            OutingDetailView(outingId: outing.id)
-        }
+        .listSectionSeparator(.hidden, edges: .top)
+    }
+
+    private func speciesContextMenu(for entry: DexEntry) -> UIMenu {
+        var actions: [UIMenuElement] = []
+
+        actions.append(UIAction(title: "View Species", image: UIImage(systemName: "bird")) { _ in
+            committedSpeciesEntry = entry
+        })
+
+        actions.append(UIAction(title: "Copy Name", image: UIImage(systemName: "doc.on.doc")) { _ in
+            UIPasteboard.general.string = entry.speciesName
+        })
+
+        return UIMenu(children: actions)
     }
 }
 
 #Preview {
-    HomeView(showingAddPhotos: .constant(false))
+    HomeView()
         .environment(DataStore(service: DataService(auth: AuthService())))
 }

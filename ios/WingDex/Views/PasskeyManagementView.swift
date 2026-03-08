@@ -64,7 +64,7 @@ struct PasskeyManagementView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Add", systemImage: "plus") {
-                    newPasskeyName = ""
+                    newPasskeyName = Self.defaultPasskeyName(displayName: auth.userName)
                     showAddSheet = true
                 }
                 .disabled(isAdding)
@@ -118,7 +118,8 @@ struct PasskeyManagementView: View {
         isAdding = true
         errorMessage = nil
         do {
-            try await auth.registerPasskey(name: name.isEmpty ? "Passkey" : name)
+            let finalName = name.isEmpty ? Self.defaultPasskeyName(displayName: auth.userName) : name
+            try await auth.registerPasskey(name: finalName)
             await loadPasskeys()
         } catch {
             // Don't show error for user cancellation
@@ -127,6 +128,25 @@ struct PasskeyManagementView: View {
             }
         }
         isAdding = false
+    }
+
+    /// Generate a default passkey name matching the web app's pattern: "Device (DisplayName)".
+    /// Web uses buildPasskeyName() from passkey-label.ts.
+    private static func defaultPasskeyName(displayName: String? = nil) -> String {
+        var deviceName = "iPhone"
+        #if targetEnvironment(simulator)
+        deviceName = "Simulator"
+        #else
+        let model = UIDevice.current.model
+        if model.contains("iPad") {
+            deviceName = "iPad"
+        }
+        #endif
+        let name = (displayName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty {
+            return deviceName
+        }
+        return "\(deviceName) (\(name))"
     }
 
     private func removePasskey(id: String) async {

@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct OutingsView: View {
+    @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.showSettings) private var showSettings
     @State private var searchText = ""
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
+    @State private var contextMenuOuting: Outing?
 
     enum OutingSortField: String, CaseIterable {
         case date, species, name
@@ -53,68 +56,91 @@ struct OutingsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if store.outings.isEmpty {
-                    VStack(spacing: 24) {
-                        Spacer()
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.1))
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "binoculars.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        VStack(spacing: 8) {
-                            Text("No Outings Yet")
-                                .font(.system(size: 22, weight: .semibold, design: .serif))
-                                .foregroundStyle(Color.foregroundText)
-                            Text("Upload photos to create your first outing.")
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.mutedText)
-                                .multilineTextAlignment(.center)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 24)
-                } else {
-                    outingsList
-                }
-            }
-            .navigationTitle("Outings")
-            .searchable(text: $searchText, prompt: "Search outings")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Picker("Sort by", selection: $sortField) {
-                            ForEach(OutingSortField.allCases, id: \.self) { field in
-                                Label(field.label, systemImage: field.icon)
-                                    .tag(field)
+            rootContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.pageBg.ignoresSafeArea())
+                .navigationTitle("Outings")
+                .toolbarTitleDisplayMode(.inlineLarge)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack {
+                            Menu {
+                                Picker("Sort by", selection: $sortField) {
+                                    ForEach(OutingSortField.allCases, id: \.self) { field in
+                                        Label(field.label, systemImage: field.icon)
+                                            .tag(field)
+                                    }
+                                }
+
+                                Divider()
+
+                                Button {
+                                    sortAscending.toggle()
+                                } label: {
+                                    Label(
+                                        sortAscending ? "Ascending" : "Descending",
+                                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                                    )
+                                }
+                            } label: {
+                                Label("Sort", systemImage: "arrow.up.arrow.down")
+                            }
+                            .glassEffect(.regular.interactive())
+
+                            Button { showSettings() } label: {
+                                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
                         }
-
-                        Divider()
-
-                        Button {
-                            sortAscending.toggle()
-                        } label: {
-                            Label(
-                                sortAscending ? "Ascending" : "Descending",
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                        .padding(.trailing, -20)
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
-            }
-            .refreshable {
-                await store.loadAll()
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.pageBg.ignoresSafeArea())
+                .refreshable {
+                    await store.loadAll()
+                }
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .automatic),
+                    prompt: "Search outings"
+                )
+                .navigationDestination(for: Outing.self) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
+                .navigationDestination(item: $contextMenuOuting) { outing in
+                    OutingDetailView(outingId: outing.id)
+                }
         }
-        .background(Color.pageBg.ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if store.outings.isEmpty {
+            VStack(spacing: 24) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "binoculars.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.accentColor)
+                }
+                VStack(spacing: 8) {
+                    Text("No Outings Yet")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("Upload photos to create your first outing.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 24)
+        } else {
+            outingsList
+        }
     }
 
     private var outingsList: some View {
@@ -122,12 +148,29 @@ struct OutingsView: View {
             NavigationLink(value: outing) {
                 OutingRow(outing: outing, store: store)
             }
+            .contextMenu {
+                Button {
+                    contextMenuOuting = outing
+                } label: {
+                    Label("View Outing", systemImage: "binoculars")
+                }
+                if let lat = outing.lat, let lon = outing.lon {
+                    Button {
+                        openInMaps(outing: outing, lat: lat, lon: lon)
+                    } label: {
+                        Label("View in Maps", systemImage: "map")
+                    }
+                }
+            } preview: {
+                NavigationStack {
+                    OutingDetailView(outingId: outing.id)
+                }
+                .environment(store)
+            }
         }
         .listStyle(.plain)
+        .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
-        .navigationDestination(for: Outing.self) { outing in
-            OutingDetailView(outingId: outing.id)
-        }
     }
 }
 

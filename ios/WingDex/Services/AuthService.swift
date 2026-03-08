@@ -22,14 +22,20 @@ final class AuthService: @unchecked Sendable {
     var userImage: String?
 
     private var sessionToken: String?
+    /// Signed session token (includes HMAC suffix) for cookie-based auth.
+    /// Needed by passkey plugin endpoints which use internal cookie validation.
+    private(set) var signedSessionToken: String?
     private var sessionExpiry: Date?
     private let keychain = Keychain(service: Config.bundleID)
+        .accessibility(.whenPasscodeSetThisDeviceOnly)
 
     private static let tokenKey = "session_token"
+    private static let signedTokenKey = "signed_session_token"
     private static let expiryKey = "session_expires_at"
     private static let userIdKey = "user_id"
     private static let userNameKey = "user_name"
     private static let userEmailKey = "user_email"
+    private static let userImageKey = "user_image"
 
     init() {
         restoreSession()
@@ -42,6 +48,12 @@ final class AuthService: @unchecked Sendable {
     @MainActor
     func signInWithGitHub() async throws {
         try await signInWithProvider("github")
+    }
+
+    /// Sign in with Google via ASWebAuthenticationSession.
+    @MainActor
+    func signInWithGoogle() async throws {
+        try await signInWithProvider("google")
     }
 
     /// Sign in with Apple using the native ASAuthorizationAppleIDProvider.
@@ -158,6 +170,7 @@ final class AuthService: @unchecked Sendable {
     func signOut() {
         log.info("Signing out")
         sessionToken = nil
+        signedSessionToken = nil
         sessionExpiry = nil
         isAuthenticated = false
         userId = nil
@@ -177,6 +190,7 @@ final class AuthService: @unchecked Sendable {
         let result = try await service.authenticate()
 
         sessionToken = result.token
+        signedSessionToken = result.signedToken
         sessionExpiry = result.expiresAt ?? Date.now.addingTimeInterval(7 * 24 * 60 * 60)
         userId = result.userId
 
@@ -190,29 +204,47 @@ final class AuthService: @unchecked Sendable {
     /// Register a new passkey for the current user.
     func registerPasskey(name: String) async throws {
         let token = try validToken()
+        // Ensure we have the signed token for passkey cookie auth
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
         let service = PasskeyService()
-        try await service.register(name: name, token: token)
+        try await service.register(name: name, signedToken: signedSessionToken)
     }
 
     /// List the current user's passkeys.
     func listPasskeys() async throws -> [PasskeyService.PasskeyInfo] {
         let token = try validToken()
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
+        guard let signedToken = signedSessionToken else {
+            throw AuthError.notAuthenticated
+        }
         let service = PasskeyService()
-        return try await service.listPasskeys(token: token)
+        return try await service.listPasskeys(signedToken: signedToken)
     }
 
     /// Delete a passkey by ID.
     func deletePasskey(id: String) async throws {
         let token = try validToken()
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: token)
+        }
+        guard let signedToken = signedSessionToken else {
+            throw AuthError.notAuthenticated
+        }
         let service = PasskeyService()
-        try await service.deletePasskey(id: id, token: token)
+        try await service.deletePasskey(id: id, signedToken: signedToken)
     }
 
     /// Fetch user info from Better Auth's get-session endpoint.
+    /// Uses Bearer token auth via the bearer() plugin.
+    /// Also captures the signed session token for passkey endpoint cookies.
     private func fetchUserInfo(token: String) async throws {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
-        request.setValue("better-auth.session_token=\(token)", forHTTPHeaderField: "Cookie")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -226,6 +258,12 @@ final class AuthService: @unchecked Sendable {
         userName = user["name"] as? String
         userEmail = user["email"] as? String
         userImage = user["image"] as? String
+
+        // Capture signed token for passkey cookie auth
+        if let signed = httpResponse.value(forHTTPHeaderField: "set-auth-token") {
+            signedSessionToken = signed
+            keychain[Self.signedTokenKey] = signed
+        }
     }
 
     /// Get a valid session token for API requests.
@@ -272,8 +310,19 @@ final class AuthService: @unchecked Sendable {
 
     // MARK: - Callback Processing
 
+    /// Parsed result from an OAuth callback URL.
+    struct CallbackResult {
+        let token: String
+        let expiry: Date
+        let userId: String?
+        let userName: String?
+        let userEmail: String?
+        let userImage: String?
+    }
+
     /// Parse the wingdex://auth/callback?token=...&user_id=... redirect URL.
-    private func processAuthCallback(url: URL) throws {
+    /// Extracted as a static method for testability.
+    static func parseCallbackURL(_ url: URL) throws -> CallbackResult {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw AuthError.oauthFailed("Invalid callback URL")
         }
@@ -294,66 +343,71 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Missing token in callback")
         }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        // Try with fractional seconds first, then without
-        let expiry = formatter.date(from: expiresAt) ?? {
-            let basic = ISO8601DateFormatter()
-            return basic.date(from: expiresAt)
-        }()
-        guard let expiry else {
+        guard let expiry = Self.parseISO8601(expiresAt) else {
             throw AuthError.oauthFailed("Invalid expiry date")
         }
 
-        sessionToken = token
-        sessionExpiry = expiry
-        userId = params["user_id"]
-        userName = params["user_name"]
-        userEmail = params["user_email"]
-        userImage = params["user_image"]
+        return CallbackResult(
+            token: token,
+            expiry: expiry,
+            userId: params["user_id"],
+            userName: params["user_name"],
+            userEmail: params["user_email"],
+            userImage: params["user_image"]
+        )
+    }
+
+    /// Parse an ISO 8601 date string, trying with fractional seconds first.
+    static func parseISO8601(_ string: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) { return date }
+        let basic = ISO8601DateFormatter()
+        return basic.date(from: string)
+    }
+
+    private func processAuthCallback(url: URL) throws {
+        log.info("Processing callback (\(url.host ?? "?"))")
+        let result = try Self.parseCallbackURL(url)
+        log.info("Got token (\(result.token.count) chars)")
+
+        sessionToken = result.token
+        sessionExpiry = result.expiry
+        userId = result.userId
+        userName = result.userName
+        userEmail = result.userEmail
+        userImage = result.userImage
         isAuthenticated = true
 
         persistSession()
+        clearAPICookies()
     }
 
     /// Parse Better Auth's JSON response from sign-in/social with idToken.
     /// Response shape: { token: string, user: { id, name, email, image, ... } }
+    ///
+    /// With the bearer() plugin, the server also sets a `set-auth-token` response
+    /// header containing the session token. We prefer that, falling back to the
+    /// raw `token` field from the JSON body.
     private func processTokenResponse(data: Data, response: URLResponse? = nil) throws {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw AuthError.oauthFailed("Invalid token response")
         }
 
-        // Prefer the full signed session token from Set-Cookie header,
-        // which includes the HMAC signature Better Auth needs for validation.
-        // Fallback to the raw "token" field from the JSON body.
-        var token: String?
-        if let httpResponse = response as? HTTPURLResponse,
-           let cookies = httpResponse.value(forHTTPHeaderField: "Set-Cookie")
-        {
-            // Parse "better-auth.session_token=VALUE; ..." from Set-Cookie
-            for part in cookies.components(separatedBy: ",") {
-                let trimmed = part.trimmingCharacters(in: .whitespaces)
-                if trimmed.contains("session_token=") {
-                    if let range = trimmed.range(of: "session_token=") {
-                        let afterEquals = trimmed[range.upperBound...]
-                        let tokenValue = String(afterEquals.prefix(while: { $0 != ";" }))
-                        if !tokenValue.isEmpty {
-                            token = tokenValue.removingPercentEncoding ?? tokenValue
-                        }
-                    }
-                }
-            }
-        }
-        if token == nil {
-            token = json["token"] as? String
-        }
-        guard let resolvedToken = token else {
+        // Raw token from JSON body - used for Bearer auth
+        guard let rawToken = json["token"] as? String else {
             throw AuthError.oauthFailed("No session token in response")
+        }
+
+        // Signed token from set-auth-token header - used for cookie auth on passkey endpoints
+        if let httpResponse = response as? HTTPURLResponse,
+           let signed = httpResponse.value(forHTTPHeaderField: "set-auth-token") {
+            signedSessionToken = signed
         }
 
         let user = json["user"] as? [String: Any]
 
-        self.sessionToken = resolvedToken
+        self.sessionToken = rawToken
         // Better Auth sessions default to 7 days; use that as expiry
         sessionExpiry = Date.now.addingTimeInterval(7 * 24 * 60 * 60)
         userId = user?["id"] as? String
@@ -363,16 +417,21 @@ final class AuthService: @unchecked Sendable {
         isAuthenticated = true
 
         persistSession()
+        // Clear cookies set by sign-in so URLSession doesn't send them
+        // alongside Bearer headers on subsequent API requests.
+        clearAPICookies()
     }
 
     // MARK: - Keychain Persistence
 
     private func persistSession() {
         keychain[Self.tokenKey] = sessionToken
+        keychain[Self.signedTokenKey] = signedSessionToken
         keychain[Self.expiryKey] = sessionExpiry?.ISO8601Format()
         keychain[Self.userIdKey] = userId
         keychain[Self.userNameKey] = userName
         keychain[Self.userEmailKey] = userEmail
+        keychain[Self.userImageKey] = userImage
     }
 
     private func restoreSession() {
@@ -389,19 +448,28 @@ final class AuthService: @unchecked Sendable {
         }
 
         sessionToken = token
+        signedSessionToken = keychain[Self.signedTokenKey]
         sessionExpiry = expiry
         userId = keychain[Self.userIdKey]
         userName = keychain[Self.userNameKey]
         userEmail = keychain[Self.userEmailKey]
+        userImage = keychain[Self.userImageKey]
         isAuthenticated = true
+
+        // Clear stale cookies so URLSession doesn't send them alongside
+        // the Bearer header. Stale cookies can cause 401 if Better Auth
+        // checks them before the Bearer token.
+        clearAPICookies()
     }
 
     private func clearKeychain() {
         keychain[Self.tokenKey] = nil
+        keychain[Self.signedTokenKey] = nil
         keychain[Self.expiryKey] = nil
         keychain[Self.userIdKey] = nil
         keychain[Self.userNameKey] = nil
         keychain[Self.userEmailKey] = nil
+        keychain[Self.userImageKey] = nil
     }
 
     /// Remove cookies for the API domain so URLSession doesn't send stale session cookies.
@@ -416,8 +484,8 @@ final class AuthService: @unchecked Sendable {
 /// Provides the presentation anchor for ASWebAuthenticationSession.
 private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        return scene?.keyWindow ?? UIWindow(frame: .zero)
+        let scene = UIApplication.shared.connectedScenes.first as! UIWindowScene
+        return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
 
@@ -430,7 +498,7 @@ enum AuthError: LocalizedError {
         case .notAuthenticated:
             "Not authenticated"
         case .oauthFailed(let message):
-            "Sign-in failed: \(message)"
+            "Log in failed: \(message)"
         }
     }
 }

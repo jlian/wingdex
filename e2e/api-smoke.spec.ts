@@ -225,4 +225,230 @@ test.describe('API smoke (request context)', () => {
 
     await api.dispose()
   })
+
+  test('bearer token auth - CRUD without cookies', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    // Sign in anonymously to get a session token
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    // Use the signed token from set-auth-token header (bearer plugin)
+    const token = signIn.headers()['set-auth-token']
+    expect(token).toBeTruthy()
+
+    // New context without cookies to ensure we're testing Bearer-only auth
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
+    const bearerHeader = { Authorization: `Bearer ${token}` }
+
+    // GET /api/data/all with Bearer token (no cookies)
+    const data = await bearerApi.get('/api/data/all', { headers: bearerHeader })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    // POST to create an outing with Bearer token
+    const outingId = `bearer-smoke-${Date.now()}`
+    const createOuting = await bearerApi.post('/api/data/outings', {
+      headers: { ...bearerHeader, 'Content-Type': 'application/json' },
+      data: {
+        id: outingId,
+        startTime: '2026-03-07T08:00:00.000Z',
+        endTime: '2026-03-07T09:00:00.000Z',
+        locationName: 'Bearer Smoke Park',
+        createdAt: '2026-03-07T09:00:00.000Z',
+      },
+    })
+    expect(createOuting.status()).toBe(200)
+
+    // Verify outing was created
+    const postCreate = await bearerApi.get('/api/data/all', { headers: bearerHeader })
+    const postCreateJson = await postCreate.json()
+    expect(postCreateJson.outings.some((o: { id: string }) => o.id === outingId)).toBe(true)
+
+    // DELETE the outing with Bearer token
+    const deleteOuting = await bearerApi.delete(`/api/data/outings/${outingId}`, { headers: bearerHeader })
+    expect(deleteOuting.status()).toBe(200)
+
+    // Invalid token returns 401
+    const badToken = await bearerApi.get('/api/data/all', {
+      headers: { Authorization: 'Bearer invalid-token-12345' },
+    })
+    expect(badToken.status()).toBe(401)
+
+    await bearerApi.dispose()
+    await api.dispose()
+  })
+
+  test('bearer token auth - get-session returns user info', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+    const token = signIn.headers()['set-auth-token']
+    expect(token).toBeTruthy()
+
+    // get-session should work with Bearer token (used by iOS fetchUserInfo)
+    // Use a fresh context to avoid cookie interference
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
+    const session = await bearerApi.get('/api/auth/get-session', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(session.status()).toBe(200)
+    const sessionJson = await session.json()
+    expect(sessionJson?.user?.id).toBeTruthy()
+
+    await bearerApi.dispose()
+    await api.dispose()
+  })
+
+  test('passkey endpoints require signed session cookie for auth', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    // Sign in to get both raw and signed tokens
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+    const signInJson = await signIn.json()
+    const rawToken = signInJson?.token
+    const signedToken = signIn.headers()['set-auth-token']
+    expect(rawToken).toBeTruthy()
+    expect(signedToken).toBeTruthy()
+    expect(rawToken).not.toBe(signedToken) // signed has HMAC suffix
+
+    const freshApi = await request.newContext({ baseURL: API_BASE })
+
+    // list-user-passkeys works with Bearer only (read endpoint)
+    const listBearer = await freshApi.get('/api/auth/passkey/list-user-passkeys', {
+      headers: { Authorization: `Bearer ${rawToken}` },
+    })
+    expect(listBearer.status()).toBe(200)
+
+    // generate-register-options works with Bearer only
+    const opts = await freshApi.get(
+      '/api/auth/passkey/generate-register-options?authenticatorAttachment=platform',
+      { headers: { Authorization: `Bearer ${rawToken}`, Origin: API_BASE } },
+    )
+    expect(opts.status()).toBe(200)
+
+    // Extract challenge cookie from options response
+    const challengeCookie = opts
+      .headersArray()
+      .filter(h => h.name.toLowerCase() === 'set-cookie')
+      .map(h => h.value.split(';')[0])
+      .find(c => c.includes('passkey'))
+    expect(challengeCookie).toBeTruthy()
+
+    // verify-registration with Bearer + raw token cookie = 401 (raw token rejected as cookie)
+    const verifyRaw = await freshApi.post('/api/auth/passkey/verify-registration', {
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Origin: API_BASE,
+        'Content-Type': 'application/json',
+        Cookie: `better-auth.session_token=${rawToken}; ${challengeCookie}`,
+      },
+      data: {
+        response: { id: 'test', rawId: 'test', type: 'public-key',
+          response: { clientDataJSON: 'test', attestationObject: 'test' },
+          authenticatorAttachment: 'platform', clientExtensionResults: {} },
+        name: 'test',
+      },
+    })
+    expect(verifyRaw.status()).toBe(401)
+
+    // verify-registration with Bearer + signed token cookie = 400 (auth passes, fake data rejected)
+    const verifySigned = await freshApi.post('/api/auth/passkey/verify-registration', {
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Origin: API_BASE,
+        'Content-Type': 'application/json',
+        Cookie: `better-auth.session_token=${signedToken}; __Secure-better-auth.session_token=${signedToken}; ${challengeCookie}`,
+      },
+      data: {
+        response: { id: 'test', rawId: 'test', type: 'public-key',
+          response: { clientDataJSON: 'test', attestationObject: 'test' },
+          authenticatorAttachment: 'platform', clientExtensionResults: {} },
+        name: 'test',
+      },
+    })
+    // 400 or 500 = auth passed (bad WebAuthn data), NOT 401
+    expect(verifySigned.status()).not.toBe(401)
+
+    await freshApi.dispose()
+    await api.dispose()
+  })
+
+  test('mobile callback returns token that works as Bearer', async () => {
+    // Sign in via cookies first (simulating web OAuth flow)
+    const api = await request.newContext({ baseURL: API_BASE })
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(h => h.name.toLowerCase() === 'set-cookie')
+        .map(h => h.value),
+    )
+
+    // Hit the mobile callback endpoint with the session cookie
+    // This simulates what happens after OAuth redirect completes
+    const callback = await api.get('/api/auth/mobile/callback', {
+      headers: { cookie: authCookie },
+      maxRedirects: 0,
+    })
+    // Should redirect to wingdex:// scheme
+    expect([301, 302]).toContain(callback.status())
+    const location = callback.headers()['location']
+    expect(location).toContain('wingdex://')
+    expect(location).toContain('token=')
+
+    // Extract the token from the redirect URL
+    const callbackURL = new URL(location!)
+    const token = callbackURL.searchParams.get('token')
+    expect(token).toBeTruthy()
+
+    // The extracted token should work as a Bearer token
+    const bearerApi = await request.newContext({ baseURL: API_BASE })
+    const data = await bearerApi.get('/api/data/all', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    await bearerApi.dispose()
+    await api.dispose()
+  })
+
+  test('cookie auth still works for protected endpoints', async () => {
+    const api = await request.newContext({ baseURL: API_BASE })
+
+    const signIn = await api.post('/api/auth/sign-in/anonymous', { data: {} })
+    expect(signIn.status()).toBe(200)
+
+    const authCookie = buildCookieHeader(
+      signIn
+        .headersArray()
+        .filter(h => h.name.toLowerCase() === 'set-cookie')
+        .map(h => h.value),
+    )
+
+    // Cookie auth should work for data endpoints (web app uses cookies)
+    const data = await api.get('/api/data/all', {
+      headers: { cookie: authCookie },
+    })
+    expect(data.status()).toBe(200)
+    const dataJson = await data.json()
+    expect(Array.isArray(dataJson.outings)).toBe(true)
+
+    // Cookie auth should work for get-session
+    const session = await api.get('/api/auth/get-session', {
+      headers: { cookie: authCookie },
+    })
+    expect(session.status()).toBe(200)
+    const sessionJson = await session.json()
+    expect(sessionJson?.user?.id).toBeTruthy()
+
+    await api.dispose()
+  })
 })

@@ -497,21 +497,12 @@ function SpeciesDetail({
               eBird
             </a>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href={`https://www.allaboutbirds.org/guide/${encodeURIComponent(displayName.replace(/ /g, '_'))}`}
-              target="_blank" rel="noopener noreferrer"
-            >
-              <ArrowSquareOut size={14} className="mr-1.5" />
-              All About Birds
-            </a>
-          </Button>
         </div>
 
         {/* Sighting history */}
         {sightings.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <h3 className="font-semibold text-foreground">
               Sightings ({sightings.length})
             </h3>
             <div>
@@ -539,7 +530,7 @@ function SpeciesDetail({
         {/* Notes */}
         {entry.notes && (
           <div className="space-y-1.5">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h3>
+            <h3 className="font-semibold text-foreground">Notes</h3>
             <p className="text-sm text-muted-foreground italic">{entry.notes}</p>
           </div>
         )}
