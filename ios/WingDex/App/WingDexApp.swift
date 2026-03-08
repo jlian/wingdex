@@ -91,6 +91,8 @@ struct MainTabView: View {
         }
         .environment(\.showAddPhotos) { selectedTab = .add }
         .environment(\.showSettings) { showingSettings = true }
+        .environment(\.showWingDex) { selectedTab = .wingdex }
+        .environment(\.showOutings) { selectedTab = .outings }
     }
 }
 

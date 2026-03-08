@@ -96,6 +96,16 @@ private struct ShowSettingsKey: EnvironmentKey {
     nonisolated(unsafe) static let defaultValue: () -> Void = {}
 }
 
+/// Environment action for switching to the WingDex tab.
+private struct ShowWingDexKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
+/// Environment action for switching to the Outings tab.
+private struct ShowOutingsKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
 extension EnvironmentValues {
     var showAddPhotos: () -> Void {
         get { self[ShowAddPhotosKey.self] }
@@ -104,5 +114,13 @@ extension EnvironmentValues {
     var showSettings: () -> Void {
         get { self[ShowSettingsKey.self] }
         set { self[ShowSettingsKey.self] = newValue }
+    }
+    var showWingDex: () -> Void {
+        get { self[ShowWingDexKey.self] }
+        set { self[ShowWingDexKey.self] = newValue }
+    }
+    var showOutings: () -> Void {
+        get { self[ShowOutingsKey.self] }
+        set { self[ShowOutingsKey.self] = newValue }
     }
 }

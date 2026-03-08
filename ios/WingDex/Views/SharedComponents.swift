@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 /// In-memory image cache shared across all thumbnails to avoid re-downloads on scroll.
 @MainActor
@@ -136,6 +137,141 @@ struct SpeciesCard: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+/// UIKit-backed context menu host that supports preview commit, i.e. tapping the
+/// peeked content to navigate to the destination.
+struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerRepresentable {
+    let content: Content
+    let preview: Preview
+    let menu: UIMenu
+    let onTap: () -> Void
+    let onCommit: () -> Void
+
+    init(
+        menu: UIMenu,
+        onTap: @escaping () -> Void,
+        onCommit: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder preview: () -> Preview
+    ) {
+        self.content = content()
+        self.preview = preview()
+        self.menu = menu
+        self.onTap = onTap
+        self.onCommit = onCommit ?? onTap
+    }
+
+    func makeUIViewController(context: Context) -> ContainerViewController {
+        let controller = ContainerViewController()
+        controller.update(
+            content: AnyView(content),
+            preview: AnyView(preview),
+            menu: menu,
+            onTap: onTap,
+            onCommit: onCommit
+        )
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: ContainerViewController, context: Context) {
+        uiViewController.update(
+            content: AnyView(content),
+            preview: AnyView(preview),
+            menu: menu,
+            onTap: onTap,
+            onCommit: onCommit
+        )
+    }
+
+    @MainActor
+    final class ContainerViewController: UIViewController, UIContextMenuInteractionDelegate {
+        private let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
+        private lazy var tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        private lazy var contextMenuInteraction = UIContextMenuInteraction(delegate: self)
+
+        private var previewView = AnyView(EmptyView())
+        private var contextMenu = UIMenu(children: [])
+        private var onTapAction: (() -> Void)?
+        private var onCommitAction: (() -> Void)?
+        private var didSetup = false
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            setupIfNeeded()
+        }
+
+        func update(
+            content: AnyView,
+            preview: AnyView,
+            menu: UIMenu,
+            onTap: @escaping () -> Void,
+            onCommit: @escaping () -> Void
+        ) {
+            setupIfNeeded()
+            hostingController.rootView = content
+            previewView = preview
+            contextMenu = menu
+            onTapAction = onTap
+            onCommitAction = onCommit
+        }
+
+        private func setupIfNeeded() {
+            guard !didSetup else { return }
+            didSetup = true
+
+            view.backgroundColor = .clear
+            hostingController.view.backgroundColor = .clear
+
+            addChild(hostingController)
+            hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(hostingController.view)
+            NSLayoutConstraint.activate([
+                hostingController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                hostingController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                hostingController.view.topAnchor.constraint(equalTo: view.topAnchor),
+                hostingController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            ])
+            hostingController.didMove(toParent: self)
+
+            tapGesture.cancelsTouchesInView = false
+            view.addGestureRecognizer(tapGesture)
+            view.addInteraction(contextMenuInteraction)
+        }
+
+        @objc
+        private func handleTap() {
+            onTapAction?()
+        }
+
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            configurationForMenuAtLocation location: CGPoint
+        ) -> UIContextMenuConfiguration? {
+            UIContextMenuConfiguration(
+                identifier: nil,
+                previewProvider: { [previewView] in
+                    let controller = UIHostingController(rootView: previewView)
+                    controller.view.backgroundColor = .clear
+                    return controller
+                },
+                actionProvider: { [contextMenu] _ in contextMenu }
+            )
+        }
+
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration,
+            animator: any UIContextMenuInteractionCommitAnimating
+        ) {
+            animator.preferredCommitStyle = .pop
+            animator.addCompletion { [weak self] in
+                self?.onCommitAction?()
+            }
+        }
     }
 }
 
