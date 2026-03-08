@@ -84,7 +84,7 @@ struct WingDexView: View {
             .navigationTitle("WingDex")
             .searchable(text: $searchText, prompt: "Search species")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Sort by", selection: $sortField) {
                             ForEach(DexSortField.allCases, id: \.self) { field in
