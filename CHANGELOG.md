@@ -1,3 +1,62 @@
+# [1.16.0](https://github.com/jlian/wingdex/compare/v1.15.1...v1.16.0) (2026-03-08)
+
+
+### Bug Fixes
+
+* **Auth:** add appBundleIdentifier for native Apple Sign-In ([536f85e](https://github.com/jlian/wingdex/commit/536f85e14696dcda7f5907963c50840278f7b032))
+* **Auth:** inject both cookie name variants for bearer token auth ([5aed505](https://github.com/jlian/wingdex/commit/5aed505ec2b92b07bfd13326f3a27d339d59f9f8))
+* **Auth:** use encodeURIComponent instead of URLSearchParams in mobile callback ([d0b3e15](https://github.com/jlian/wingdex/commit/d0b3e15da6f720add643bd249307b4f769104dea))
+* **iOS:** add confirmation dialog before loading demo data ([d2f7403](https://github.com/jlian/wingdex/commit/d2f740329e309cbb80c76661f0447a1a0aef5880))
+* **iOS:** adjust dark mode colors to match web oklch palette ([fe702a8](https://github.com/jlian/wingdex/commit/fe702a87225447838f24640de044787d06d854df))
+* **iOS:** auto-generate passkey device label, add passkey debug logging ([14dda36](https://github.com/jlian/wingdex/commit/14dda367cdb908716214291e8fb2984c42763381))
+* **iOS:** avatar glass follows avatar shape via .interactive() ([1152de0](https://github.com/jlian/wingdex/commit/1152de0c43c4e9877053914b54804efd4617c30c))
+* **iOS:** avatar rightmost in toolbar, sort to its left ([423acda](https://github.com/jlian/wingdex/commit/423acda13feacac1f3168502d9d6c5849281f2b5))
+* **iOS:** config, fonts, context menus, log out, confirmations ([14099a5](https://github.com/jlian/wingdex/commit/14099a576066c21abd229d336696f1ea2d3f0723))
+* **iOS:** demo data loading, detached add button, plain avatar ([c7a3d68](https://github.com/jlian/wingdex/commit/c7a3d6862bff8cb3098b564ea83343a0413f4d12))
+* **iOS:** ensure signed token is captured before passkey registration ([1b3cd35](https://github.com/jlian/wingdex/commit/1b3cd35d32983c4e730c38644cff8920dfbcae5e))
+* **iOS:** exact oklch dark mode colors, circle avatar shape ([7c40cae](https://github.com/jlian/wingdex/commit/7c40cae70fcc4df8a1804082033cad209c8a68ff))
+* **iOS:** fix 401 after sign-in, use TabSection for add button ([1506ab6](https://github.com/jlian/wingdex/commit/1506ab640c343a3bd6fb75d8b25b9b9c7be48be6))
+* **iOS:** fix passkey sign-in showing guest account ([21bb930](https://github.com/jlian/wingdex/commit/21bb9309af42530cceba2b0318e23ec9631967a6))
+* **iOS:** fix UIWindow deprecation warnings and improve sign-in error handling ([fb60d8e](https://github.com/jlian/wingdex/commit/fb60d8eb553bb422be26f9d169203f19542be728))
+* **iOS:** flat avatar overlay, sort buttons moved to leading ([d08f2a2](https://github.com/jlian/wingdex/commit/d08f2a28093bb4c1bdd1af92d1c6737c10133648))
+* **iOS:** inline titles, separate toolbar items with glass ([d874b8a](https://github.com/jlian/wingdex/commit/d874b8a739c166276dd19919e6fba2ea8fc8fb66))
+* **iOS:** large left-justified titles, grouped sort+avatar toolbar ([fb50d80](https://github.com/jlian/wingdex/commit/fb50d800b65029f67e1c349bdd7150383808ca75))
+* **iOS:** move 'species observed' to right of count on Home ([4450b0a](https://github.com/jlian/wingdex/commit/4450b0aa8ed83ec6b4f381c4c584b09cf9fad8d9))
+* **iOS:** move avatar back to toolbar, sort button to its left ([8ee3bda](https://github.com/jlian/wingdex/commit/8ee3bdaf9b136be6078c0974f282bd101b09f6e2))
+* **iOS:** move avatar to overlay, fix emoji in preview ([301db9d](https://github.com/jlian/wingdex/commit/301db9df547ebfced65758da8bb4baaedae86aef))
+* **iOS:** persist userImage, camera icon, fix AddPhotosFlow for tab ([4dc1653](https://github.com/jlian/wingdex/commit/4dc1653653d6d25ceea81781b014713b7c8cb683))
+* **iOS:** Phase 3.5 polish - avatar, scroll, add button, demo ([699603d](https://github.com/jlian/wingdex/commit/699603d81d9c299c4b6ee405c28f1cf30ef55a64))
+* **iOS:** remove Group wrapper from all views, proper List pattern ([f57323a](https://github.com/jlian/wingdex/commit/f57323a7347ba320105b1d3433fca99dccfea80e))
+* **iOS:** remove log out confirmation, add dev domain for passkeys ([9d6ed64](https://github.com/jlian/wingdex/commit/9d6ed6425b2d1dd2be9dc9260fc583d7682731a3))
+* **iOS:** remove navigationSurface to fix search bar flash ([3a1e3da](https://github.com/jlian/wingdex/commit/3a1e3da080a7b4366295755dc7e3e16b104cebb2))
+* **iOS:** rename 'Sign-in failed' error to 'Log in failed' ([b6f6380](https://github.com/jlian/wingdex/commit/b6f638017b367bf58ab9553829414ce6f2a593eb))
+* **iOS:** restore .background(Color.pageBg) on List views ([9f53447](https://github.com/jlian/wingdex/commit/9f534478fc44da79c2b0abb0940d0eda971d9095))
+* **iOS:** revert options step to Bearer-only, keep cookies for verify only ([b41f986](https://github.com/jlian/wingdex/commit/b41f986b1af13bd2b9ab34882f9019db50600d69))
+* **iOS:** send session cookie alongside Bearer for passkey endpoints ([cd629ae](https://github.com/jlian/wingdex/commit/cd629ae05667507d9d508e4afc32f075cbf95c1e))
+* **iOS:** store signed session token for passkey cookie auth ([415e40e](https://github.com/jlian/wingdex/commit/415e40e6200344e890a1138f3e66aebba475ac3f))
+* **iOS:** use bundled taxonomy for eBird URLs ([0461e1a](https://github.com/jlian/wingdex/commit/0461e1a41312476370b87a770b3cd7e43b4c0562))
+* **iOS:** use cookie-only auth for passkey registration (no Bearer) ([1233ee2](https://github.com/jlian/wingdex/commit/1233ee2823fc34d7615f47d31a6906fc141cdb95))
+* **iOS:** use session cookies on passkey options step too ([ee82265](https://github.com/jlian/wingdex/commit/ee82265f2ac94aba81db1b55523d551bffa632c1))
+* **iOS:** warnings, inline titles, circle glass, list separators ([4f1c08b](https://github.com/jlian/wingdex/commit/4f1c08b78d2d839c0888516e13d0c1ef2d208986))
+* **iOS:** wrap context menu previews in NavigationStack ([7d0ca03](https://github.com/jlian/wingdex/commit/7d0ca03575a798f57f21082004c5116884fb1451))
+* **test:** use set-auth-token header and fresh context for Bearer auth tests ([a122079](https://github.com/jlian/wingdex/commit/a1220795fa4cbf6d0a97fa4297821f1612e21c05))
+* **Web:** align species detail headers, remove All About Birds ([c49df49](https://github.com/jlian/wingdex/commit/c49df49c82969cfc6859aac7dca83943cb471536))
+
+
+### Features
+
+* **Auth:** migrate to Better Auth bearer plugin, remove cookie translation hack ([3abd975](https://github.com/jlian/wingdex/commit/3abd9751ea0b52f9aca3d2cbe59dabeadfd28c66))
+* **iOS:** add associated domain for dev passkey testing ([4b0387a](https://github.com/jlian/wingdex/commit/4b0387af294f56d3fe60f3541b90eb97c066b7c2))
+* **iOS:** add context menus to detail view rows ([598d1c4](https://github.com/jlian/wingdex/commit/598d1c432dc0a953d9d435cdc49bbc33da4854bd))
+* **iOS:** add Continue with Google sign-in button ([b145b27](https://github.com/jlian/wingdex/commit/b145b27da99bd7234bbef70a594fcad388c3940f))
+* **iOS:** add View Species/View Outing to context menus ([51c474b](https://github.com/jlian/wingdex/commit/51c474b162d451366caba1815eea8f93fee4ffc7))
+* **iOS:** home chevrons, peek-pop previews, context menus ([1010769](https://github.com/jlian/wingdex/commit/1010769c6784700613a98d228814ef8e7b3df527))
+* **iOS:** Phase 3.5 - navigation rework and SignInView update ([7f1bd3f](https://github.com/jlian/wingdex/commit/7f1bd3f14e24ed277fdb5fd222440bde3af28122))
+* **iOS:** Phase 3.5.3 - empty state fix, context menus, plan update ([dba9703](https://github.com/jlian/wingdex/commit/dba9703cac830de9404c83ec7654cc9786998095))
+* **iOS:** Phase 3.6 - dark mode support ([f62a97b](https://github.com/jlian/wingdex/commit/f62a97b99d97d3d5e08f6d87468cfd088a640598))
+* **iOS:** replace Phosphor bird icons with custom SF Symbols ([d887d47](https://github.com/jlian/wingdex/commit/d887d47ec4bc1a6aa6c0d4a8aaf553a2786586bd))
+* **iOS:** tap outing map to open Apple Maps ([ea279ea](https://github.com/jlian/wingdex/commit/ea279ea3fca409cd4b34763ad18c096304d06d70))
+
 ## [1.15.1](https://github.com/jlian/wingdex/compare/v1.15.0...v1.15.1) (2026-03-07)
 
 
