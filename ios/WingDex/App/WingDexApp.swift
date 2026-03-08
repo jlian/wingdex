@@ -60,11 +60,12 @@ struct ContentView: View {
 struct MainTabView: View {
     @Environment(AuthService.self) private var auth
     @State private var selectedTab = AppTab.home
+    @State private var previousTab = AppTab.home
     @State private var showingAddPhotos = false
     @State private var showingSettings = false
 
     enum AppTab: Hashable {
-        case home, outings, wingdex
+        case home, outings, wingdex, add
     }
 
     var body: some View {
@@ -87,14 +88,20 @@ struct MainTabView: View {
                         .toolbar { avatarToolbarItem }
                 }
             }
-        }
-        .tabViewBottomAccessory {
-            Button {
-                showingAddPhotos = true
+
+            Tab(value: AppTab.add) {
+                // Empty - never actually shown
+                Color.clear
             } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
+                Label("Add", systemImage: "plus.circle.fill")
+            }
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            if newTab == .add {
+                selectedTab = previousTab
+                showingAddPhotos = true
+            } else {
+                previousTab = newTab
             }
         }
         .sheet(isPresented: $showingAddPhotos) {
@@ -111,26 +118,76 @@ struct MainTabView: View {
             Button {
                 showingSettings = true
             } label: {
-                if let image = auth.userImage, !image.isEmpty,
-                   let url = URL(string: image) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable()
-                                .scaledToFill()
-                                .frame(width: 28, height: 28)
-                                .clipShape(Circle())
-                        default:
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(Color.mutedText)
-                        }
-                    }
-                } else {
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Color.mutedText)
+                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 28)
+            }
+        }
+    }
+}
+
+/// Renders a user avatar - emoji (from SVG data URL), remote image, or fallback initial.
+struct AvatarView: View {
+    let imageURL: String?
+    let name: String?
+    let size: CGFloat
+
+    private var emojiInfo: (emoji: String, color: Color)? {
+        guard let url = imageURL,
+              url.hasPrefix("data:image/svg+xml") else { return nil }
+        let decoded = url.removingPercentEncoding ?? url
+        let emojiMap: [(String, Color)] = [
+            ("🐦", Color(red: 0.88, green: 0.95, blue: 1.0)),
+            ("🦉", Color(red: 1.0, green: 0.95, blue: 0.88)),
+            ("🦜", Color(red: 0.88, green: 1.0, blue: 0.93)),
+            ("🐧", Color(red: 0.93, green: 0.94, blue: 0.96)),
+            ("🦆", Color(red: 0.88, green: 0.98, blue: 0.96)),
+            ("🦩", Color(red: 1.0, green: 0.91, blue: 0.95)),
+            ("🦅", Color(red: 1.0, green: 0.95, blue: 0.90)),
+            ("🐤", Color(red: 1.0, green: 0.98, blue: 0.88)),
+        ]
+        for (emoji, color) in emojiMap {
+            if decoded.contains(emoji) { return (emoji, color) }
+        }
+        return nil
+    }
+
+    var body: some View {
+        if let info = emojiInfo {
+            Text(info.emoji)
+                .font(.system(size: size * 0.55))
+                .frame(width: size, height: size)
+                .background(info.color)
+                .clipShape(Circle())
+        } else if let image = imageURL, !image.isEmpty,
+                  let url = URL(string: image) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let img):
+                    img.resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                default:
+                    fallbackView
                 }
+            }
+        } else {
+            fallbackView
+        }
+    }
+
+    private var fallbackView: some View {
+        Group {
+            if let initial = name?.first {
+                Text(String(initial).uppercased())
+                    .font(.system(size: size * 0.45, weight: .medium))
+                    .foregroundStyle(Color.mutedText)
+                    .frame(width: size, height: size)
+                    .background(Color.mutedText.opacity(0.15))
+                    .clipShape(Circle())
+            } else {
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: size * 0.8))
+                    .foregroundStyle(Color.mutedText)
             }
         }
     }

@@ -9,16 +9,10 @@ struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @State private var isSigningIn = false
     @State private var errorMessage: String?
-    #if DEBUG
-    @Environment(DataStore.self) private var store
-    @State private var demoDataEnabled = false
-    #endif
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 24)
+        VStack(spacing: 0) {
+            Spacer()
 
                     // Bird icon
                     Image("BirdLogo")
@@ -155,33 +149,23 @@ struct SignInView: View {
                         }
 
                         #if DEBUG
-                        // Demo data toggle
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Demo data")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(Color.foregroundText)
-                                Text("Preview WingDex with sample sightings")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.mutedText)
+                        // Demo data button
+                        Button {
+                            signIn {
+                                try await auth.signInAnonymously()
                             }
-                            Spacer()
-                            Toggle("", isOn: $demoDataEnabled)
-                                .labelsHidden()
-                                .onChange(of: demoDataEnabled) { _, enabled in
-                                    if enabled {
-                                        signIn {
-                                            try await auth.signInAnonymously()
-                                            try await store.loadDemoData()
-                                        }
-                                    }
-                                }
+                        } label: {
+                            Label {
+                                Text("Try with Demo Data")
+                                    .font(.system(size: 14, weight: .medium))
+                            } icon: {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 14))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 36)
                         }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.warmBorder, lineWidth: 1)
-                        )
+                        .buttonStyle(.bordered)
+                        .tint(Color.mutedText)
                         #endif
                     }
                     .padding(.horizontal, 24)
@@ -192,11 +176,8 @@ struct SignInView: View {
                             .padding(.top, 16)
                     }
 
-                    Spacer(minLength: 24)
+                    Spacer()
                 }
-                .frame(minHeight: geometry.size.height)
-            }
-        }
         .background(Color.pageBg.ignoresSafeArea())
     }
 
@@ -224,8 +205,6 @@ struct SignInView: View {
 }
 
 #Preview {
-    let auth = AuthService()
     SignInView()
-        .environment(auth)
-        .environment(DataStore(service: DataService(auth: auth)))
+        .environment(AuthService())
 }
