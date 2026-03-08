@@ -104,8 +104,23 @@ struct SettingsView: View {
                     Button("Delete All Data", role: .destructive) {
                         showingDeleteConfirmation = true
                     }
-                    Button("Sign Out", role: .destructive) {
+                    .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                        Button("Delete Everything", role: .destructive) {
+                            Task {
+                                try? await store.clearAll()
+                            }
+                        }
+                    } message: {
+                        Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
+                    }
+
+                    Button("Log Out", role: .destructive) {
                         showingSignOutConfirmation = true
+                    }
+                    .confirmationDialog("Log Out?", isPresented: $showingSignOutConfirmation, titleVisibility: .visible) {
+                        Button("Log Out", role: .destructive) {
+                            auth.signOut()
+                        }
                     }
                 }
             }
@@ -115,20 +130,6 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                }
-            }
-            .confirmationDialog("Delete All Data?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-                Button("Delete Everything", role: .destructive) {
-                    Task {
-                        try? await store.clearAll()
-                    }
-                }
-            } message: {
-                Text("This will permanently delete all your outings, photos, and sightings. This cannot be undone.")
-            }
-            .confirmationDialog("Sign Out?", isPresented: $showingSignOutConfirmation, titleVisibility: .visible) {
-                Button("Sign Out", role: .destructive) {
-                    auth.signOut()
                 }
             }
         }

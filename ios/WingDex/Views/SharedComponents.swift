@@ -76,13 +76,13 @@ struct BirdRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(getDisplayName(speciesName))
-                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.foregroundText)
                     .lineLimit(1)
 
                 if let sci = getScientificName(speciesName) {
                     Text(sci)
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .italic()
                         .foregroundStyle(Color.mutedText)
                         .lineLimit(1)
@@ -90,8 +90,8 @@ struct BirdRow: View {
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.mutedText.opacity(0.7))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.mutedText.opacity(0.85))
                         .lineLimit(1)
                 }
 
@@ -154,12 +154,12 @@ struct OutingRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.foregroundText)
                     .lineLimit(1)
 
                 Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .foregroundStyle(Color.mutedText)
 
                 if !speciesNames.isEmpty {
@@ -167,8 +167,8 @@ struct OutingRow: View {
                         speciesNames.prefix(4).map { getDisplayName($0) }.joined(separator: ", ")
                         + (speciesNames.count > 4 ? " +\(speciesNames.count - 4) more" : "")
                     )
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.mutedText.opacity(0.7))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.mutedText.opacity(0.85))
                     .lineLimit(1)
                 }
             }
