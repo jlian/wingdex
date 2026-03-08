@@ -352,9 +352,9 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] **Remove Settings tab**: Deleted 4th tab. Three content tabs remain: Home, WingDex, Outings
 - [x] **Cluster tabs left**: Three tabs grouped in `TabSection`, clustered left
 - [x] **Add detached camera button**: `Tab(role: .search)` with `camera.fill` icon, visually detached on the right (Apple Music Search button pattern). Opens AddPhotosFlow as a tab destination
-- [x] **Avatar button in nav bar**: 28pt circular avatar in toolbar (`.primaryAction`), renders emoji avatars from SVG data URLs with colored backgrounds, falls back to name initial then person icon. `.buttonStyle(.plain)` removes liquid glass. Tapping presents SettingsView as `.sheet`
+- [x] **Avatar button in nav bar**: 34pt circular avatar in toolbar (`.topBarTrailing`), renders emoji avatars from SVG data URLs with colored backgrounds, falls back to name initial then person icon. `.glassEffect(.regular.interactive())` hugs circular shape. Sort button stacks to its left. Tapping presents SettingsView as `.sheet` via `showSettings` environment action
 - [x] **NavigationStack moved to MainTabView**: Each tab wraps its content in NavigationStack; removed from child views (HomeView, WingDexView, OutingsView, AddPhotosFlow)
-- [ ] **Update BirdLogo and BirdTab assets**: Replace the current Phosphor-style bird SVGs with the new app icon artwork
+- [x] **Custom SF Symbols**: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
 
 **Files**: `WingDexApp.swift`, `SettingsView.swift`, `AddPhotosFlow.swift`, `HomeView.swift`, `WingDexView.swift`, `OutingsView.swift`, `Theme.swift`
 
@@ -377,8 +377,14 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 
 - [x] Custom SF Symbols: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
 - [x] Empty state views: added `frame(maxWidth: .infinity, maxHeight: .infinity)` to fix white bars on empty WingDex/Outings views
-- [x] Context menus: species rows show preview + Open in eBird/Wikipedia/Copy Name; outing rows show preview + Delete Outing
-- [ ] Font size and weight adjustments to better match the web app's typography hierarchy (deferred - minor polish)
+- [x] Context menus: species rows show preview + Open in eBird/Wikipedia/Copy Name; outing rows show preview + Delete Outing; detail view rows also have context menus
+- [x] Font size: bumped species/outing row text from 14/12px to 16/13px, darkened subtitle opacity
+- [x] Home: species count + "species observed" in horizontal layout
+- [x] Settings: "Log Out" (no confirmation), "Delete All Data" (with confirmation attached to button)
+- [x] Associated domains: added `dev.wingdex.pages.dev` for passkeys on dev preview
+- [x] Apple Sign-In: added `appBundleIdentifier` to server config for native iOS identity token verification
+- [x] Config: restored simulator vs physical device URL split
+- [ ] Font weight adjustments (deferred - minor polish)
 
 ---
 
