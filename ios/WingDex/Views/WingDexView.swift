@@ -78,6 +78,7 @@ struct WingDexView: View {
                         }
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 24)
                 } else {
                     speciesList
@@ -131,6 +132,28 @@ struct WingDexView: View {
                     thumbnailUrl: entry.thumbnailUrl,
                     subtitle: "\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s") \u{00B7} \(entry.totalCount) seen \u{00B7} \(DateFormatting.formatDate(entry.firstSeenDate, style: .medium))"
                 )
+            }
+            .contextMenu {
+                if let ebirdName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                   let url = URL(string: "https://ebird.org/species/\(ebirdName.lowercased().replacingOccurrences(of: "%20", with: "_"))") {
+                    Link(destination: url) {
+                        Label("Open in eBird", systemImage: "bird")
+                    }
+                }
+                if let wikiName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                   let url = URL(string: "https://en.wikipedia.org/wiki/\(wikiName)") {
+                    Link(destination: url) {
+                        Label("Open in Wikipedia", systemImage: "book")
+                    }
+                }
+                Button {
+                    UIPasteboard.general.string = entry.speciesName
+                } label: {
+                    Label("Copy Name", systemImage: "doc.on.doc")
+                }
+            } preview: {
+                SpeciesDetailView(speciesName: entry.speciesName)
+                    .environment(store)
             }
         }
         .listStyle(.plain)

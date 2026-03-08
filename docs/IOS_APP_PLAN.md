@@ -373,13 +373,12 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 
 **Files**: `SignInView.swift`, `AuthService.swift`
 
-## 3.5.3 - Polish & Parity
+## 3.5.3 - Polish & Parity ✅
 
-- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design
-- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design
-- [ ] Weird white bars on the left and right for the empty wingdex and outings views suggest non-standard hacky approach, investigate and fix
-- [ ] Make sure 3D touch / context menus work for previewing species and outings
-- [ ] Font size and weight adjustments to better match the web app's typography hierarchy
+- [x] Custom SF Symbols: `wingdex.bird.fill` (BirdTab) and `wingdex.bird` (BirdLogo) exported from SF Symbols app, replacing old Phosphor bird SVGs
+- [x] Empty state views: added `frame(maxWidth: .infinity, maxHeight: .infinity)` to fix white bars on empty WingDex/Outings views
+- [x] Context menus: species rows show preview + Open in eBird/Wikipedia/Copy Name; outing rows show preview + Delete Outing
+- [ ] Font size and weight adjustments to better match the web app's typography hierarchy (deferred - minor polish)
 
 ---
 
@@ -1206,7 +1205,7 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 2.5 | Styling & Layout (colors, edge-to-edge, List theming) | ✅ Done |
 | 2.6 | Auth UX, Tab Icon, Session Fixes | ✅ Done |
 | 3 | Add Photos Flow (initial, needs rework) | ✅ Done (basic) |
-| 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | Not started |
+| 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | ✅ Done |
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | Not started |
 | 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | Not started |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |

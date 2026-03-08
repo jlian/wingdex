@@ -77,6 +77,7 @@ struct OutingsView: View {
                         }
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 24)
                 } else {
                     outingsList
@@ -126,6 +127,16 @@ struct OutingsView: View {
         List(sortedOutings) { outing in
             NavigationLink(value: outing) {
                 OutingRow(outing: outing, store: store)
+            }
+            .contextMenu {
+                Button(role: .destructive) {
+                    Task { try? await store.deleteOuting(id: outing.id) }
+                } label: {
+                    Label("Delete Outing", systemImage: "trash")
+                }
+            } preview: {
+                OutingDetailView(outingId: outing.id)
+                    .environment(store)
             }
         }
         .listStyle(.plain)
