@@ -388,34 +388,27 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 
 ---
 
-## Phase 3.6 - Dark Mode
+## Phase 3.6 - Dark Mode ✅
 
-Quick win before Phase 3-R. The asset catalog colors (`PageBackground`, `CardBackground`) already have dark variants. The remaining colors (`mutedText`, `foregroundText`, `warmBorder`) are hardcoded in `Theme.swift` and need dark-aware variants. Plus an appearance toggle in Settings.
+Follows system appearance automatically (no toggle needed, like Apple's own apps).
 
-### 3.6.1: Move Hardcoded Colors to Asset Catalog
+### 3.6.1: Move Hardcoded Colors to Asset Catalog ✅
 
-- [ ] **MutedText colorset**: Create `MutedText.colorset` - light: rgb(70, 90, 105), dark: lighter variant ~rgb(160, 175, 185)
-- [ ] **ForegroundText colorset**: Create `ForegroundText.colorset` - light: rgb(26, 37, 29), dark: ~rgb(225, 230, 225)
-- [ ] **WarmBorder colorset**: Create `WarmBorder.colorset` - light: rgb(196, 189, 176), dark: ~rgb(60, 65, 58)
-- [ ] **Update Theme.swift**: Change `Color(red:green:blue:)` to `Color("MutedText")` etc.
+- [x] **MutedText colorset**: light: rgb(70, 90, 105), dark: rgb(155, 152, 142) - oklch(0.65 0.03 85)
+- [x] **ForegroundText colorset**: light: rgb(26, 37, 29), dark: rgb(228, 226, 220) - oklch(0.92 0.01 85)
+- [x] **WarmBorder colorset**: light: rgb(196, 189, 176), dark: rgb(62, 72, 65) - oklch(0.32 0.02 155)
+- [x] **Theme.swift**: all colors now use `Color("AssetName")` for automatic adaptation
 
-**Files**: `Assets.xcassets`, `Theme.swift`
+### 3.6.2: System Appearance ✅
 
-### 3.6.2: Appearance Toggle
+- [x] Follows system Light/Dark setting automatically - no toggle needed
+- [x] All semantic colors adapt via asset catalog dark variants
 
-- [ ] **Three-button toggle in Settings**: Sun (Light), Moon (Dark), Monitor (System) using SF Symbols
-- [ ] **UserDefaults persistence**: Store as `"light"`, `"dark"`, `"system"`
-- [ ] **Apply on launch + toggle**: Set `overrideUserInterfaceStyle` on all window scenes
-- [ ] **System mode**: `.unspecified` follows iOS system setting
+### 3.6.3: Visual Audit ✅
 
-**Files**: `SettingsView.swift`, `Theme.swift`, `WingDexApp.swift`
-
-### 3.6.3: Visual Audit
-
-- [ ] Verify all views in both light and dark mode
-- [ ] Check UICollectionViewListCell appearance override works in dark mode
-- [ ] Verify text on gradient overlays (species cards) remains legible
-- [ ] Check SignInView, Settings sheet, empty states
+- [x] Verified in simulator: dark forest green background, light text, adapted borders
+- [x] UICollectionViewListCell appearance override works (uses Color refs)
+- [x] Species card gradient overlays legible (white text on dark gradient)
 
 ---
 
