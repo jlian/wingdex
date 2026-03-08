@@ -384,7 +384,38 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Associated domains: added `dev.wingdex.pages.dev` for passkeys on dev preview
 - [x] Apple Sign-In: added `appBundleIdentifier` to server config for native iOS identity token verification
 - [x] Config: restored simulator vs physical device URL split
-- [ ] Font weight adjustments (deferred - minor polish)
+- [x] Font weight adjustments (deferred - minor polish)
+
+---
+
+## Phase 3.6 - Dark Mode
+
+Quick win before Phase 3-R. The asset catalog colors (`PageBackground`, `CardBackground`) already have dark variants. The remaining colors (`mutedText`, `foregroundText`, `warmBorder`) are hardcoded in `Theme.swift` and need dark-aware variants. Plus an appearance toggle in Settings.
+
+### 3.6.1: Move Hardcoded Colors to Asset Catalog
+
+- [ ] **MutedText colorset**: Create `MutedText.colorset` - light: rgb(70, 90, 105), dark: lighter variant ~rgb(160, 175, 185)
+- [ ] **ForegroundText colorset**: Create `ForegroundText.colorset` - light: rgb(26, 37, 29), dark: ~rgb(225, 230, 225)
+- [ ] **WarmBorder colorset**: Create `WarmBorder.colorset` - light: rgb(196, 189, 176), dark: ~rgb(60, 65, 58)
+- [ ] **Update Theme.swift**: Change `Color(red:green:blue:)` to `Color("MutedText")` etc.
+
+**Files**: `Assets.xcassets`, `Theme.swift`
+
+### 3.6.2: Appearance Toggle
+
+- [ ] **Three-button toggle in Settings**: Sun (Light), Moon (Dark), Monitor (System) using SF Symbols
+- [ ] **UserDefaults persistence**: Store as `"light"`, `"dark"`, `"system"`
+- [ ] **Apply on launch + toggle**: Set `overrideUserInterfaceStyle` on all window scenes
+- [ ] **System mode**: `.unspecified` follows iOS system setting
+
+**Files**: `SettingsView.swift`, `Theme.swift`, `WingDexApp.swift`
+
+### 3.6.3: Visual Audit
+
+- [ ] Verify all views in both light and dark mode
+- [ ] Check UICollectionViewListCell appearance override works in dark mode
+- [ ] Verify text on gradient overlays (species cards) remains legible
+- [ ] Check SignInView, Settings sheet, empty states
 
 ---
 
