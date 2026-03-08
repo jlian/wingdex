@@ -5,7 +5,6 @@ struct SettingsView: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteConfirmation = false
-    @State private var showingSignOutConfirmation = false
     @State private var isLoadingDemo = false
     @State private var demoError: String?
     @State private var showingDemoConfirmation = false
@@ -115,12 +114,7 @@ struct SettingsView: View {
                     }
 
                     Button("Log Out", role: .destructive) {
-                        showingSignOutConfirmation = true
-                    }
-                    .confirmationDialog("Log Out?", isPresented: $showingSignOutConfirmation, titleVisibility: .visible) {
-                        Button("Log Out", role: .destructive) {
-                            auth.signOut()
-                        }
+                        auth.signOut()
                     }
                 }
             }
