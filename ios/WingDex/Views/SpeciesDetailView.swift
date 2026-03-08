@@ -38,6 +38,18 @@ struct SpeciesDetailView: View {
                     NavigationLink(value: item.outing) {
                         OutingRow(outing: item.outing, store: store)
                     }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            Task { try? await store.deleteOuting(id: item.outing.id) }
+                        } label: {
+                            Label("Delete Outing", systemImage: "trash")
+                        }
+                    } preview: {
+                        NavigationStack {
+                            OutingDetailView(outingId: item.outing.id)
+                        }
+                        .environment(store)
+                    }
                 }
             } header: {
                 Text("Sightings (\(sightings.count))")

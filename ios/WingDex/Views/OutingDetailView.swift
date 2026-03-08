@@ -181,6 +181,18 @@ struct OutingDetailView: View {
                             count: totalCount
                         )
                     }
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = speciesName
+                        } label: {
+                            Label("Copy Name", systemImage: "doc.on.doc")
+                        }
+                    } preview: {
+                        NavigationStack {
+                            SpeciesDetailView(speciesName: speciesName)
+                        }
+                        .environment(store)
+                    }
                 }
             }
         } header: {
@@ -208,6 +220,18 @@ struct OutingDetailView: View {
                             thumbnailUrl: entry?.thumbnailUrl,
                             count: totalCount
                         )
+                    }
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = speciesName
+                        } label: {
+                            Label("Copy Name", systemImage: "doc.on.doc")
+                        }
+                    } preview: {
+                        NavigationStack {
+                            SpeciesDetailView(speciesName: speciesName)
+                        }
+                        .environment(store)
                     }
                 }
             } header: {
