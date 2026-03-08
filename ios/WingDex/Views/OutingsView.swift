@@ -135,8 +135,10 @@ struct OutingsView: View {
                     Label("Delete Outing", systemImage: "trash")
                 }
             } preview: {
-                OutingDetailView(outingId: outing.id)
-                    .environment(store)
+                NavigationStack {
+                    OutingDetailView(outingId: outing.id)
+                }
+                .environment(store)
             }
         }
         .listStyle(.plain)

@@ -152,8 +152,10 @@ struct WingDexView: View {
                     Label("Copy Name", systemImage: "doc.on.doc")
                 }
             } preview: {
-                SpeciesDetailView(speciesName: entry.speciesName)
-                    .environment(store)
+                NavigationStack {
+                    SpeciesDetailView(speciesName: entry.speciesName)
+                }
+                .environment(store)
             }
         }
         .listStyle(.plain)
