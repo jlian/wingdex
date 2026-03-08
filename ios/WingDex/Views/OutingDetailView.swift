@@ -178,8 +178,8 @@ struct OutingDetailView: View {
     }
 
     private func openInMaps(for outing: Outing, coordinate: CLLocationCoordinate2D) {
-        let placemark = MKPlacemark(coordinate: coordinate)
-        let mapItem = MKMapItem(placemark: placemark)
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let mapItem = MKMapItem(location: location, address: nil)
         mapItem.name = outing.locationName.isEmpty ? "Outing" : outing.locationName
         mapItem.openInMaps(launchOptions: [
             MKLaunchOptionsMapCenterKey: NSValue(mkCoordinate: coordinate),

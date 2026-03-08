@@ -275,6 +275,14 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
     }
 }
 
+/// Open an outing's location in Apple Maps.
+func openInMaps(outing: Outing, lat: Double, lon: Double) {
+    let location = CLLocation(latitude: lat, longitude: lon)
+    let mapItem = MKMapItem(location: location, address: nil)
+    mapItem.name = outing.locationName.isEmpty ? "Outing" : outing.locationName
+    mapItem.openInMaps()
+}
+
 /// Reusable outing row with mini map (when coordinates available) or subtle pin icon.
 /// Used in HomeView, OutingsView, and SpeciesDetailView sightings.
 struct OutingRow: View {

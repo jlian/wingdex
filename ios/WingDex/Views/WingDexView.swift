@@ -159,17 +159,6 @@ struct WingDexView: View {
                 } label: {
                     Label("View Species", systemImage: "bird")
                 }
-                if let url = getEbirdURL(for: entry.speciesName) {
-                    Link(destination: url) {
-                        Label("Open in eBird", systemImage: "globe")
-                    }
-                }
-                if let wikiName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                   let url = URL(string: "https://en.wikipedia.org/wiki/\(wikiName)") {
-                    Link(destination: url) {
-                        Label("Open in Wikipedia", systemImage: "book")
-                    }
-                }
                 Button {
                     UIPasteboard.general.string = entry.speciesName
                 } label: {

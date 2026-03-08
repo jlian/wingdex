@@ -210,10 +210,12 @@ struct HomeView: View {
                             } label: {
                                 Label("View Outing", systemImage: "binoculars")
                             }
-                            Button(role: .destructive) {
-                                Task { await store.deleteOuting(id: outing.id) }
-                            } label: {
-                                Label("Delete Outing", systemImage: "trash")
+                            if let lat = outing.lat, let lon = outing.lon {
+                                Button {
+                                    openInMaps(outing: outing, lat: lat, lon: lon)
+                                } label: {
+                                    Label("View in Maps", systemImage: "map")
+                                }
                             }
                         } preview: {
                             NavigationStack {
@@ -233,18 +235,9 @@ struct HomeView: View {
     private func speciesContextMenu(for entry: DexEntry) -> UIMenu {
         var actions: [UIMenuElement] = []
 
-        if let url = getEbirdURL(for: entry.speciesName) {
-            actions.append(UIAction(title: "Open in eBird", image: UIImage(systemName: "bird")) { _ in
-                UIApplication.shared.open(url)
-            })
-        }
-
-        if let wikiName = entry.speciesName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-           let url = URL(string: "https://en.wikipedia.org/wiki/\(wikiName)") {
-            actions.append(UIAction(title: "Open in Wikipedia", image: UIImage(systemName: "book")) { _ in
-                UIApplication.shared.open(url)
-            })
-        }
+        actions.append(UIAction(title: "View Species", image: UIImage(systemName: "bird")) { _ in
+            committedSpeciesEntry = entry
+        })
 
         actions.append(UIAction(title: "Copy Name", image: UIImage(systemName: "doc.on.doc")) { _ in
             UIPasteboard.general.string = entry.speciesName

@@ -154,10 +154,12 @@ struct OutingsView: View {
                 } label: {
                     Label("View Outing", systemImage: "binoculars")
                 }
-                Button(role: .destructive) {
-                    Task { await store.deleteOuting(id: outing.id) }
-                } label: {
-                    Label("Delete Outing", systemImage: "trash")
+                if let lat = outing.lat, let lon = outing.lon {
+                    Button {
+                        openInMaps(outing: outing, lat: lat, lon: lon)
+                    } label: {
+                        Label("View in Maps", systemImage: "map")
+                    }
                 }
             } preview: {
                 NavigationStack {

@@ -45,10 +45,12 @@ struct SpeciesDetailView: View {
                         } label: {
                             Label("View Outing", systemImage: "binoculars")
                         }
-                        Button(role: .destructive) {
-                            Task { await store.deleteOuting(id: item.outing.id) }
-                        } label: {
-                            Label("Delete Outing", systemImage: "trash")
+                        if let lat = item.outing.lat, let lon = item.outing.lon {
+                            Button {
+                                openInMaps(outing: item.outing, lat: lat, lon: lon)
+                            } label: {
+                                Label("View in Maps", systemImage: "map")
+                            }
                         }
                     } preview: {
                         NavigationStack {
