@@ -7,36 +7,14 @@ struct HomeView: View {
     @Environment(\.showSettings) private var showSettings
 
     var body: some View {
-        Group {
-            if store.isLoading && store.dex.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.dex.isEmpty {
-                emptyState
-            } else {
-                dataView
-            }
+        if store.isLoading && store.dex.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if store.dex.isEmpty {
+            emptyState
+        } else {
+            dataView
         }
-        .navigationTitle("Home")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showSettings()
-                } label: {
-                    AvatarView(
-                        imageURL: auth.userImage,
-                        name: auth.userName,
-                        size: 32)
-                }
-            }
-            .sharedBackgroundVisibility(.hidden)
-        }
-        .refreshable {
-            await store.loadAll()
-        }
-        .scrollContentBackground(.hidden)
-        .background(Color.pageBg.ignoresSafeArea())
     }
 
     // MARK: - Empty State
@@ -172,7 +150,20 @@ struct HomeView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .listSectionSeparator(.hidden)
+        .listSectionSeparator(.hidden, edges: .top)
+        .navigationTitle("Home")
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showSettings() } label: {
+                    AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                }
+            }
+            .sharedBackgroundVisibility(.hidden)
+        }
+        .refreshable {
+            await store.loadAll()
+        }
         .navigationDestination(for: DexEntry.self) { entry in
             SpeciesDetailView(speciesName: entry.speciesName)
         }

@@ -54,74 +54,33 @@ struct OutingsView: View {
     }
 
     var body: some View {
-        Group {
-                if store.outings.isEmpty {
-                    VStack(spacing: 24) {
-                        Spacer()
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.1))
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "binoculars.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        VStack(spacing: 8) {
-                            Text("No Outings Yet")
-                                .font(.system(size: 22, weight: .semibold, design: .serif))
-                                .foregroundStyle(Color.foregroundText)
-                            Text("Upload photos to create your first outing.")
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.mutedText)
-                                .multilineTextAlignment(.center)
-                        }
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
-                } else {
-                    outingsList
+        if store.outings.isEmpty {
+            VStack(spacing: 24) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "binoculars.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.accentColor)
                 }
-            }
-            .navigationTitle("Outings")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search outings")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("Sort by", selection: $sortField) {
-                            ForEach(OutingSortField.allCases, id: \.self) { field in
-                                Label(field.label, systemImage: field.icon)
-                                    .tag(field)
-                            }
-                        }
-
-                        Divider()
-
-                        Button {
-                            sortAscending.toggle()
-                        } label: {
-                            Label(
-                                sortAscending ? "Ascending" : "Descending",
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
-                    }
+                VStack(spacing: 8) {
+                    Text("No Outings Yet")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("Upload photos to create your first outing.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showSettings() } label: {
-                        AvatarView(imageURL: auth.userImage, name: auth.userName, size: 32)
-                    }
-                }
-                .sharedBackgroundVisibility(.hidden)
+                Spacer()
             }
-            .refreshable {
-                await store.loadAll()
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.pageBg.ignoresSafeArea())
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 24)
+        } else {
+            outingsList
+        }
     }
 
     private var outingsList: some View {
@@ -143,8 +102,48 @@ struct OutingsView: View {
             }
         }
         .listStyle(.plain)
-        .listSectionSeparator(.hidden)
+        .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
+        .navigationTitle("Outings")
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .searchable(text: $searchText, prompt: "Search outings")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack {
+                    Menu {
+                        Picker("Sort by", selection: $sortField) {
+                            ForEach(OutingSortField.allCases, id: \.self) { field in
+                                Label(field.label, systemImage: field.icon)
+                                    .tag(field)
+                            }
+                        }
+
+                        Divider()
+
+                        Button {
+                            sortAscending.toggle()
+                        } label: {
+                            Label(
+                                sortAscending ? "Ascending" : "Descending",
+                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                            )
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                    .glassEffect(.regular.interactive())
+
+                    Button { showSettings() } label: {
+                        AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                    }
+                }
+                .padding(.trailing, -20)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        }
+        .refreshable {
+            await store.loadAll()
+        }
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
         }
