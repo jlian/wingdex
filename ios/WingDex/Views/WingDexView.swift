@@ -56,7 +56,7 @@ struct WingDexView: View {
         NavigationStack {
             rootContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .navigationSurface()
+                .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("WingDex")
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {

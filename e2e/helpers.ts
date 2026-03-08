@@ -100,7 +100,20 @@ export async function promoteAnonymousUser(page: Page) {
     return
   }
 
-  await registerVirtualPasskey(page)
+  try {
+    await registerVirtualPasskey(page)
+  } catch (error) {
+    const msg = String(error)
+    // Surface RP ID mismatches clearly so the fix is obvious
+    if (msg.includes('RP ID') || msg.includes('Settings')) {
+      throw new Error(
+        'E2E passkey promotion failed (likely RP ID mismatch). '
+        + 'Ensure BETTER_AUTH_URL is not overriding the loopback origin in .dev.vars. '
+        + `Original: ${msg}`,
+      )
+    }
+    throw error
+  }
 
   const sessionAfter = await getSessionState(page)
   if (sessionAfter.hasUser && !sessionAfter.isAnonymous) {

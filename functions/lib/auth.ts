@@ -38,8 +38,9 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
   })()
 
   // Single source of truth for public app origin:
-  // 1) explicit env override, 2) local two-port mapping, 3) request origin.
-  const baseURL = env.BETTER_AUTH_URL || inferredLocalAppOrigin || requestOrigin
+  // Local loopback wins so passkey RP ID matches localhost during dev/e2e,
+  // even when BETTER_AUTH_URL points at a hosted domain.
+  const baseURL = inferredLocalAppOrigin || env.BETTER_AUTH_URL || requestOrigin
   if (!baseURL) throw new Error('Unable to determine a valid base URL for authentication')
 
   const useSecureCookies = baseURL.startsWith('https://')

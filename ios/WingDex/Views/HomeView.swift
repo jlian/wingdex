@@ -15,7 +15,7 @@ struct HomeView: View {
         NavigationStack {
             rootContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .navigationSurface()
+                .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("Home")
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {

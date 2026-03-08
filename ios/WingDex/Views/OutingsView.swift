@@ -58,7 +58,7 @@ struct OutingsView: View {
         NavigationStack {
             rootContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .navigationSurface()
+                .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("Outings")
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {

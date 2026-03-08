@@ -63,27 +63,6 @@ extension UICollectionViewListCell {
     }
 }
 
-// MARK: - View Modifiers
-
-extension View {
-    /// Apply the warm cream page background that fills edge-to-edge.
-    func warmBackground() -> some View {
-        self
-            .background(Color.pageBg)
-    }
-
-    /// Apply the app page background and navigation bar styling to a stack root view.
-    func navigationSurface() -> some View {
-        ZStack {
-            Color.pageBg
-                .ignoresSafeArea()
-            self
-        }
-        .toolbarBackground(Color.pageBg, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-    }
-}
-
 // MARK: - Environment Keys
 
 /// Environment action for triggering the Add Photos flow from any view.

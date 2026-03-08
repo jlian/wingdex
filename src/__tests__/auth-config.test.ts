@@ -113,4 +113,16 @@ describe('auth config', () => {
     ) ?? []
     expect(pluginIds).toContain('bearer')
   })
+
+  it('uses localhost baseURL when request is loopback even if BETTER_AUTH_URL is a remote domain', () => {
+    const req = new Request('http://localhost:8788/api/auth/get-session', {
+      headers: { origin: 'http://localhost:5000' },
+    })
+
+    const auth = createAuth(
+      { ...mockEnv, BETTER_AUTH_URL: 'https://wingdev.example.net' },
+      { request: req },
+    )
+    expect(auth.options.baseURL).toBe('http://localhost:5000')
+  })
 })
