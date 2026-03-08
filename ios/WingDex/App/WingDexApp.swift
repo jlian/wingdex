@@ -60,8 +60,6 @@ struct ContentView: View {
 struct MainTabView: View {
     @Environment(AuthService.self) private var auth
     @State private var selectedTab = AppTab.home
-    @State private var previousTab = AppTab.home
-    @State private var showingAddPhotos = false
     @State private var showingSettings = false
 
     enum AppTab: Hashable {
@@ -70,47 +68,38 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Home", systemImage: "house", value: AppTab.home) {
-                NavigationStack {
-                    HomeView()
-                        .toolbar { avatarToolbarItem }
+            TabSection {
+                Tab("Home", systemImage: "house", value: AppTab.home) {
+                    NavigationStack {
+                        HomeView()
+                            .toolbar { avatarToolbarItem }
+                    }
                 }
-            }
-            Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
-                NavigationStack {
-                    WingDexView()
-                        .toolbar { avatarToolbarItem }
+                Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
+                    NavigationStack {
+                        WingDexView()
+                            .toolbar { avatarToolbarItem }
+                    }
                 }
-            }
-            Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
-                NavigationStack {
-                    OutingsView()
-                        .toolbar { avatarToolbarItem }
+                Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
+                    NavigationStack {
+                        OutingsView()
+                            .toolbar { avatarToolbarItem }
+                    }
                 }
             }
 
-            Tab(value: AppTab.add) {
-                // Empty - never actually shown
-                Color.clear
-            } label: {
-                Label("Add", systemImage: "plus.circle.fill")
+            Tab("Add", systemImage: "plus.circle.fill", value: AppTab.add) {
+                NavigationStack {
+                    AddPhotosFlow()
+                        .toolbar { avatarToolbarItem }
+                }
             }
-        }
-        .onChange(of: selectedTab) { _, newTab in
-            if newTab == .add {
-                selectedTab = previousTab
-                showingAddPhotos = true
-            } else {
-                previousTab = newTab
-            }
-        }
-        .sheet(isPresented: $showingAddPhotos) {
-            AddPhotosFlow()
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .environment(\.showAddPhotos) { showingAddPhotos = true }
+        .environment(\.showAddPhotos) { selectedTab = .add }
     }
 
     private var avatarToolbarItem: some ToolbarContent {

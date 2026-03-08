@@ -379,6 +379,7 @@ final class AuthService: @unchecked Sendable {
         isAuthenticated = true
 
         persistSession()
+        clearAPICookies()
     }
 
     /// Parse Better Auth's JSON response from sign-in/social with idToken.
@@ -415,6 +416,9 @@ final class AuthService: @unchecked Sendable {
         isAuthenticated = true
 
         persistSession()
+        // Clear cookies set by sign-in so URLSession doesn't send them
+        // alongside Bearer headers on subsequent API requests.
+        clearAPICookies()
     }
 
     // MARK: - Keychain Persistence
