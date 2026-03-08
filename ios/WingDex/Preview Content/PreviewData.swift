@@ -231,10 +231,43 @@ enum PreviewData {
         return obs
     }()
 
+    // MARK: - Taxonomy Lookup
+
+    /// Loads wikiTitle and thumbnailUrl from the bundled taxonomy.json for any species.
+    /// taxonomy.json entries are: [commonName, scientificName, ebirdCode, wikiTitle, thumbPath]
+    /// Thumbnail paths are relative to the Wikimedia Commons prefix.
+    private static let wikiLookup: [String: (title: String, thumb: String)] = {
+        let commonsPrefix = "https://upload.wikimedia.org/wikipedia/commons/"
+        guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
+        else { return [:] }
+
+        var lookup: [String: (String, String)] = [:]
+        for entry in entries {
+            guard entry.count > 4,
+                  let common = entry[0] as? String,
+                  let wikiTitle = entry[3] as? String, !wikiTitle.isEmpty,
+                  let thumbPath = entry[4] as? String, !thumbPath.isEmpty
+            else { continue }
+            lookup[common.lowercased()] = (wikiTitle, commonsPrefix + thumbPath)
+        }
+        return lookup
+    }()
+
+    /// Look up wiki metadata for a species name in "Common Name (Scientific Name)" format.
+    private static func wikiMetadata(for speciesName: String) -> (title: String, thumb: String)? {
+        let common = speciesName.replacingOccurrences(
+            of: #"\s*\(.*\)$"#, with: "", options: .regularExpression
+        ).lowercased()
+        return wikiLookup[common]
+    }
+
     // MARK: - Dex Entries
 
     /// Life list entries computed from the observations above.
-    /// Includes Wikipedia thumbnail URLs for species with well-known articles.
+    /// Wikipedia thumbnail URLs are resolved from the bundled taxonomy.json so every
+    /// species gets an image in previews without hardcoding URLs.
     static let dex: [DexEntry] = {
         // Build from observations: unique confirmed species with stats
         let confirmed = observations.filter { $0.certainty == .confirmed }
@@ -254,27 +287,8 @@ enum PreviewData {
             }
         }
 
-        // Wikipedia thumbnails for common species (subset for fast preview rendering)
-        let wikiThumbs: [String: (title: String, thumb: String)] = [
-            "Bald Eagle (Haliaeetus leucocephalus)": ("Bald_eagle", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/About_to_Launch_%2826075320352%29.jpg/320px-About_to_Launch_%2826075320352%29.jpg"),
-            "Northern Cardinal (Cardinalis cardinalis)": ("Northern_cardinal", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Cardinal_-_3679055844.jpg/320px-Cardinal_-_3679055844.jpg"),
-            "Blue Jay (Cyanocitta cristata)": ("Blue_jay", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Blue_jay_in_PP_%2830960%29.jpg/320px-Blue_jay_in_PP_%2830960%29.jpg"),
-            "Great Blue Heron (Ardea herodias)": ("Great_blue_heron", "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Great_blue_heron_-_nanswer.jpg/320px-Great_blue_heron_-_nAnswer.jpg"),
-            "Mallard (Anas platyrhynchos)": ("Mallard", "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Anas_platyrhynchos_male_female_quadrat.jpg/320px-Anas_platyrhynchos_male_female_quadrat.jpg"),
-            "Song Sparrow (Melospiza melodia)": ("Song_sparrow", "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Song_Sparrow-27527-2.jpg/320px-Song_Sparrow-27527-2.jpg"),
-            "Sandhill Crane (Antigone canadensis)": ("Sandhill_crane", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Grus_canadensis_-George_C._Reifel_Migratory_Bird_Sanctuary%2C_British_Columbia%2C_Canada-8.jpg/320px-Grus_canadensis.jpg"),
-            "Anhinga (Anhinga anhinga)": ("Anhinga", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Anhinga_anhinga_-Everglades_National_Park%2C_Florida%2C_USA-8.jpg/320px-Anhinga_anhinga.jpg"),
-            "Anna's Hummingbird (Calypte anna)": ("Anna%27s_hummingbird", "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Calypte_anna_-San_Luis_Obispo%2C_California%2C_USA-8.jpg/320px-Calypte_anna.jpg"),
-            "American Robin (Turdus migratorius)": ("American_robin", "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Turdus-migratorius-002.jpg/320px-Turdus-migratorius-002.jpg"),
-            "European Robin (Erithacus rubecula)": ("European_robin", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Erithacus_rubecula_with_cocked_head.jpg/320px-Erithacus_rubecula_with_cocked_head.jpg"),
-            "Great Kiskadee (Pitangus sulphuratus)": ("Great_kiskadee", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Pitangus_sulphuratus_-Iguazu_Falls%2C_Misiones%2C_Argentina-8.jpg/320px-Pitangus_sulphuratus.jpg"),
-            "Osprey (Pandion haliaetus)": ("Osprey", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Pandion_haliaetus_-_Sanibel_Island%2C_Florida%2C_USA_-flying-8.jpg/320px-Pandion_haliaetus.jpg"),
-            "Snow Goose (Anser caerulescens)": ("Snow_goose", "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Chen_caerulescens_30018.jpg/320px-Chen_caerulescens_30018.jpg"),
-            "Red-tailed Hawk (Buteo jamaicensis)": ("Red-tailed_hawk", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Red-tailed_Hawk_Buteo_jamaicensis_Full_Body_1880px.jpg/320px-Red-tailed_Hawk_Buteo_jamaicensis.jpg"),
-        ]
-
         return speciesMap.map { species, stats in
-            let wiki = wikiThumbs[species]
+            let wiki = wikiMetadata(for: species)
             return DexEntry(
                 speciesName: species,
                 firstSeenDate: stats.firstDate,
