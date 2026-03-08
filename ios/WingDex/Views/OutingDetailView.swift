@@ -24,6 +24,7 @@ struct OutingDetailView: View {
         }
         .navigationTitle(outing?.locationName ?? "Outing")
         .navigationBarTitleDisplayMode(.inline)
+        // WHY: see SpeciesDetailView - hide system list background, apply our own.
         .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
         .confirmationDialog("Delete this outing?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {

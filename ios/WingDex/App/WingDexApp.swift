@@ -31,6 +31,12 @@ struct ContentView: View {
     @Environment(DataStore.self) private var store
 
     var body: some View {
+        // WHY ZStack with Color.pageBg here (but NOT in tab content views):
+        // The auth gate transition needs a stable background behind both SignInView
+        // and MainTabView during the opacity crossfade. Without it, the system
+        // background (white/black) flashes during the transition. Tab content views
+        // use .background() instead of ZStack to avoid a separate flash issue with
+        // NavigationStack push/pop transitions (see HomeView).
         ZStack {
             Color.pageBg.ignoresSafeArea()
 
@@ -89,6 +95,9 @@ struct MainTabView: View {
                 }
             }
 
+            // WHY role: .search: iOS 26 TabView visually detaches the .search tab
+            // to the right side of the tab bar (like Apple Music's search/create button),
+            // which is the layout we want for the "+" camera button.
             Tab(value: AppTab.add, role: .search) {
                 AddPhotosFlow()
             } label: {

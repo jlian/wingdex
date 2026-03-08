@@ -66,6 +66,10 @@ struct SpeciesDetailView: View {
             }
         }
         .listStyle(.plain)
+        // WHY .scrollContentBackground(.hidden) + .background(): SwiftUI List has an
+        // opaque system background that covers any ZStack-based background. We hide it
+        // and apply our own pageBg so the warm beige shows through. This two-step
+        // pattern is used on every plain List in the app.
         .scrollContentBackground(.hidden)
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
@@ -82,6 +86,9 @@ struct SpeciesDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
+        // WHY GeometryReader: AsyncImage with .scaledToFill() will overflow its
+        // parent frame in a List row. GeometryReader constrains the width to the
+        // actual available space so .clipped() works correctly on the hero image.
         GeometryReader { geo in
             ZStack(alignment: .bottomLeading) {
                 Group {

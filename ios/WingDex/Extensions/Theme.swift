@@ -38,6 +38,13 @@ extension Color {
 
 /// Override UICollectionViewListCell to set custom background + highlight colors.
 /// Only applies to plain-style lists; Forms/grouped lists keep their default look.
+///
+/// WHY: SwiftUI List with .listRowBackground() or .scrollContentBackground(.hidden)
+/// removes the native press-highlight effect entirely. The only way to get BOTH a
+/// custom background color AND the native tap highlight (the subtle gray flash when
+/// a row is pressed) is to override UICollectionViewListCell at the UIKit level.
+/// The isPlainListCell guard prevents this from breaking Form/grouped list styling
+/// (e.g., Settings) which has inset rows that don't span full width.
 extension UICollectionViewListCell {
     private var isPlainListCell: Bool {
         // Walk up to find the UICollectionView, then check if cell spans full width

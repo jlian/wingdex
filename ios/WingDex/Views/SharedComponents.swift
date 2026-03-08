@@ -152,8 +152,16 @@ struct SpeciesCard: View {
 
 // MARK: - Context Menu
 
-/// UIKit-backed context menu host that supports preview commit, i.e. tapping the
-/// peeked content to navigate to the destination.
+/// UIKit-backed context menu host that supports preview commit (tap preview to navigate).
+///
+/// WHY UIKit instead of SwiftUI .contextMenu:
+/// 1. SwiftUI .contextMenu on a ForEach inside a ScrollView targets the entire scroll
+///    container, not individual items. Each species card in the Home carousel needs its
+///    own independent long-press hit target.
+/// 2. SwiftUI .contextMenu has no preview commit callback - when the user taps the
+///    peeked preview, there is no way to trigger navigation. UIContextMenuInteraction's
+///    willPerformPreviewAction delegate method provides this.
+/// 3. SwiftUI .contextMenu does not support UIMenu, limiting action organization.
 struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerRepresentable {
     let content: Content
     let preview: Preview

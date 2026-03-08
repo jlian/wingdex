@@ -14,6 +14,9 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             rootContent
+                // WHY .frame + .background instead of ZStack: wrapping content in a ZStack
+                // with Color.pageBg causes a white flash during push/pop transitions when
+                // the nav bar collapses. Using .background() on the content directly avoids this.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("Home")
@@ -23,8 +26,15 @@ struct HomeView: View {
                         Button { showSettings() } label: {
                             AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                         }
+                        // WHY negative padding: shifts the avatar closer to the trailing edge
+                        // to match Apple Music's profile button position. Without this, the
+                        // system toolbar inset leaves too much gap on the right.
                         .padding(.trailing, -12)
                     }
+                    // WHY .sharedBackgroundVisibility(.hidden): removes the default liquid glass
+                    // pill from behind the avatar button so it renders flat (like Apple Music's
+                    // profile icon). HomeView has no sort button, so no explicit .glassEffect
+                    // is needed here.
                     .sharedBackgroundVisibility(.hidden)
                 }
                 .refreshable {
@@ -153,6 +163,13 @@ struct HomeView: View {
                         let cardSize = (geo.size.width - padding * 2 - spacing * 2) / 2.25
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: spacing) {
+                                // WHY PeekPopContextMenu (UIKit) instead of SwiftUI .contextMenu:
+                                // SwiftUI's .contextMenu on a ScrollView applies to the entire
+                                // scroll container, not individual cards. There's no way to attach
+                                // a per-card context menu + preview commit (tap-to-navigate) with
+                                // pure SwiftUI. This UIKit wrapper gives each card its own
+                                // UIContextMenuInteraction so long-press targets the right species
+                                // and tapping the preview pushes to the detail view.
                                 ForEach(recentSpecies) { entry in
                                     PeekPopContextMenu(
                                         menu: speciesContextMenu(for: entry),

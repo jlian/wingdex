@@ -142,7 +142,11 @@ struct SignInView: View {
                                 .stroke(Color.warmBorder.opacity(0.7), lineWidth: 1)
                         )
 
-                        // Error - always in layout to prevent content shift
+                        // WHY invisible placeholder text instead of conditional:
+                        // If we use `if let errorMessage` to conditionally show this Text,
+                        // the VStack re-layouts when errors appear/clear, causing the entire
+                        // sign-in form to visually jump. By always rendering the Text with
+                        // a space placeholder and toggling opacity, the layout stays stable.
                         Text(errorMessage ?? " ")
                             .font(.system(size: 12))
                             .foregroundStyle(.red)
@@ -173,6 +177,9 @@ struct SignInView: View {
                     }
                     .padding(.horizontal, 24)
                     .disabled(isSigningIn)
+                    // WHY overlay instead of inline ProgressView: placing the spinner
+                    // inside the VStack pushes content down and causes layout jank.
+                    // An overlay floats on top without affecting the form's position.
                     .overlay {
                         if isSigningIn {
                             ProgressView()

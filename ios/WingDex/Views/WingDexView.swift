@@ -67,6 +67,10 @@ struct WingDexView: View {
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
+                        // WHY HStack inside a single ToolbarItem instead of separate ToolbarItems:
+                        // Multiple .topBarTrailing ToolbarItems have excessive system spacing
+                        // between them (~16pt). An HStack lets us control the gap (5pt) to keep
+                        // the sort button and avatar visually grouped like Apple Music.
                         HStack(spacing: 5) {
                             Menu {
                                 Picker("Sort by", selection: $sortField) {
@@ -89,15 +93,26 @@ struct WingDexView: View {
                             } label: {
                                 Label("Sort", systemImage: "arrow.up.arrow.down")
                             }
+                            // WHY explicit .glassEffect on sort: .sharedBackgroundVisibility(.hidden)
+                            // below removes the default glass from ALL items in the ToolbarItem.
+                            // We add it back on the sort button only so it gets the liquid glass
+                            // pill while the avatar stays flat.
                             .glassEffect(.clear.interactive())
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
+                            // WHY .glassEffect(.identity): renders the avatar with no visible glass
+                            // effect (flat circle like Apple Music's profile button), while still
+                            // participating in the shared glass layout system.
                             .glassEffect(.identity)
                         }
                         .padding(.trailing, -12)
                     }
+                    // WHY .sharedBackgroundVisibility(.hidden): the default behavior gives both
+                    // the sort button and avatar a SHARED glass pill background. We want them
+                    // independent - sort gets its own pill, avatar is flat - so we disable the
+                    // shared background and add individual .glassEffect modifiers above.
                     .sharedBackgroundVisibility(.hidden)
                 }
                 .refreshable {
@@ -146,6 +161,9 @@ struct WingDexView: View {
                 }
                 Spacer()
             }
+            // WHY .frame(maxWidth/maxHeight .infinity): without this, the empty-state
+            // VStack only takes its intrinsic content size, leaving white bars on the sides
+            // and bottom that don't match the pageBg set on the parent NavigationStack.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 24)
         } else {
@@ -176,6 +194,11 @@ struct WingDexView: View {
                     Label("Copy Name", systemImage: "doc.on.doc")
                 }
             } preview: {
+                // WHY NavigationStack + .environment(store): context menu previews render
+                // in an isolated view hierarchy outside the parent NavigationStack. Without
+                // wrapping in NavigationStack, navigation titles and toolbars are missing.
+                // Without .environment(store), the preview crashes because child views
+                // (e.g., SpeciesDetailView) can't find the DataStore in the environment.
                 NavigationStack {
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }

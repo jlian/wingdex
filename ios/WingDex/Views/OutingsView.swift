@@ -69,6 +69,7 @@ struct OutingsView: View {
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
+                        // WHY HStack: see WingDexView - keeps sort + avatar tightly grouped.
                         HStack(spacing: 5) {
                             Menu {
                                 Picker("Sort by", selection: $sortField) {
@@ -91,15 +92,18 @@ struct OutingsView: View {
                             } label: {
                                 Label("Sort", systemImage: "arrow.up.arrow.down")
                             }
+                            // WHY: see WingDexView - re-add glass on sort only.
                             .glassEffect(.clear.interactive())
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
+                            // WHY: flat avatar, no glass pill.
                             .glassEffect(.identity)
                         }
                         .padding(.trailing, -12)
                     }
+                    // WHY: see WingDexView - independent glass per button.
                     .sharedBackgroundVisibility(.hidden)
                 }
                 .refreshable {
@@ -145,6 +149,7 @@ struct OutingsView: View {
                 }
                 Spacer()
             }
+            // WHY: see WingDexView - prevents white bars on empty state.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 24)
         } else {
