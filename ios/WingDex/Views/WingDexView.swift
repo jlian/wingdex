@@ -121,6 +121,7 @@ struct WingDexView: View {
         .listStyle(.plain)
         .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
+        .background(Color.pageBg)
         .navigationTitle("WingDex")
         .toolbarTitleDisplayMode(.inlineLarge)
         .searchable(text: $searchText, prompt: "Search species")

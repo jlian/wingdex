@@ -150,6 +150,7 @@ struct HomeView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .background(Color.pageBg)
         .listSectionSeparator(.hidden, edges: .top)
         .navigationTitle("Home")
         .toolbarTitleDisplayMode(.inlineLarge)
@@ -158,6 +159,7 @@ struct HomeView: View {
                 Button { showSettings() } label: {
                     AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                 }
+                .padding(.trailing, -20)
             }
             .sharedBackgroundVisibility(.hidden)
         }

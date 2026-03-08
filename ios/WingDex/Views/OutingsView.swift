@@ -104,6 +104,7 @@ struct OutingsView: View {
         .listStyle(.plain)
         .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
+        .background(Color.pageBg)
         .navigationTitle("Outings")
         .toolbarTitleDisplayMode(.inlineLarge)
         .searchable(text: $searchText, prompt: "Search outings")
