@@ -72,19 +72,16 @@ struct MainTabView: View {
                 Tab("Home", systemImage: "house", value: AppTab.home) {
                     NavigationStack {
                         HomeView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
                 Tab("WingDex", image: "BirdTab", value: AppTab.wingdex) {
                     NavigationStack {
                         WingDexView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
                 Tab("Outings", systemImage: "binoculars", value: AppTab.outings) {
                     NavigationStack {
                         OutingsView()
-                            .toolbar { avatarToolbarItem }
                     }
                 }
             }
@@ -95,23 +92,22 @@ struct MainTabView: View {
                 Label("Add", systemImage: "camera.fill")
             }
         }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                showingSettings = true
+            } label: {
+                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 34)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 16)
+            .padding(.top, 4)
+        }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
         .environment(\.showAddPhotos) { selectedTab = .add }
     }
 
-    private var avatarToolbarItem: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                showingSettings = true
-            } label: {
-                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 28)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-        }
-    }
 }
 
 /// Renders a user avatar - emoji (from SVG data URL), remote image, or fallback initial.
@@ -143,7 +139,8 @@ struct AvatarView: View {
     var body: some View {
         if let info = emojiInfo {
             Text(info.emoji)
-                .font(.system(size: size * 0.55))
+                .font(.system(size: size * 0.6))
+                .minimumScaleFactor(0.5)
                 .frame(width: size, height: size)
                 .background(info.color)
                 .clipShape(Circle())
