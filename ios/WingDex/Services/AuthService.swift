@@ -498,7 +498,7 @@ enum AuthError: LocalizedError {
         case .notAuthenticated:
             "Not authenticated"
         case .oauthFailed(let message):
-            "Sign-in failed: \(message)"
+            "Log in failed: \(message)"
         }
     }
 }
