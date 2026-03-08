@@ -305,7 +305,7 @@ All critical issues resolved. Remaining items deferred or skipped.
 - [~] **Passkey name/label mismatch**: Deferred - current behavior acceptable, may be affected by merged account situations
 - [x] **Apple Sign-In not configured locally**: Skipped for local dev - works on deployed environments
 - [x] **Load demo data - add confirmation**: Done - `.confirmationDialog` added
-- [ ] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub
+- [x] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub. Note: Google OAuth fails on local dev (`wingdev.johnspecificproblems.net`) because the redirect URI is not in Google Cloud Console's authorized list. Add `https://wingdev.johnspecificproblems.net/api/auth/callback/google` to authorized redirect URIs in Google Cloud Console, or test on deployed environment only
 
 ### 3.1.8: Automated Tests
 
@@ -347,42 +347,39 @@ The current iOS app uses a 4-tab layout (Home, WingDex, Outings, Settings) with 
 
 ### 3.5.1: Tab Bar & Navigation Migration
 
-Migrate from the current 4-tab layout to the new architecture: 3 tabs left + detached "+" button right + avatar settings sheet.
+Migrate from the current 4-tab layout to the new architecture: 3 tabs left + detached add button right + avatar settings sheet.
 
-- [ ] **Remove Settings tab**: Delete the 4th tab from `TabView`. Three content tabs remain: Home, WingDex, Outings
-- [ ] **Cluster tabs left**: Position the three tabs on the left side of the tab bar
-- [ ] **Add detached "+" button**: Place an "Upload & Identify" action button on the right side of the tab bar, visually separated from the three tabs (Apple Music-style). Tapping opens the AddPhotos flow as a `.sheet`. This replaces the current top-right nav bar upload button
-- [ ] **Avatar button in nav bar**: Add a small circular avatar button (~28pt) to the top-right of the navigation bar, visible on all tabs. Shows user's emoji avatar or social provider photo; falls back to `person.circle.fill` SF Symbol. Tapping presents `SettingsView` in a card-style sheet with `.presentationDetents([.medium, .large])`
-- [ ] **Update BirdLogo and BirdTab assets**: Replace the current Phosphor-style bird SVGs with the new app icon artwork (updated March 2026 on web: `public/favicon.svg`, `public/icon-192.png`, `public/icon-512.png`). Ensure the tab icon and sign-in logo use the new design
+- [x] **Remove Settings tab**: Deleted 4th tab. Three content tabs remain: Home, WingDex, Outings
+- [x] **Cluster tabs left**: Three tabs grouped in `TabSection`, clustered left
+- [x] **Add detached camera button**: `Tab(role: .search)` with `camera.fill` icon, visually detached on the right (Apple Music Search button pattern). Opens AddPhotosFlow as a tab destination
+- [x] **Avatar button in nav bar**: 28pt circular avatar in toolbar (`.primaryAction`), renders emoji avatars from SVG data URLs with colored backgrounds, falls back to name initial then person icon. `.buttonStyle(.plain)` removes liquid glass. Tapping presents SettingsView as `.sheet`
+- [x] **NavigationStack moved to MainTabView**: Each tab wraps its content in NavigationStack; removed from child views (HomeView, WingDexView, OutingsView, AddPhotosFlow)
+- [ ] **Update BirdLogo and BirdTab assets**: Replace the current Phosphor-style bird SVGs with the new app icon artwork
 
-**Files**: `WingDexApp.swift`, `SettingsView.swift`, `Assets.xcassets` (BirdLogo, BirdTab image sets)
+**Files**: `WingDexApp.swift`, `SettingsView.swift`, `AddPhotosFlow.swift`, `HomeView.swift`, `WingDexView.swift`, `OutingsView.swift`, `Theme.swift`
 
-### 3.5.2: SignInView Rework
+### 3.5.2: SignInView Rework ✅
 
-The current iOS SignInView is a full-screen `ScrollView` with a single passkey button that changes label based on signup/login mode. The web's auth modal has a different structure that should be matched:
+- [x] **Remove ScrollView**: Centered VStack layout, no scroll
+- [x] **Title**: "Start your WingDex" (static, matching web)
+- [x] **Social buttons**: GitHub, Apple, Google at top (all working)
+- [x] **Passkey section with border**: Bordered container with muted fill, key icon header
+- [x] **Two passkey buttons side-by-side**: "Log in" (filled) + "Sign up" (outlined)
+- [x] **Remove mode toggle**: Removed entirely
+- [x] **Error display**: Red error text below passkey section
+- [x] **Demo data button** (DEBUG only): "Try with Demo Data" button that signs in anonymously and loads demo data
+- [x] **Loading state**: ProgressView + disabled buttons when signing in
+- [x] **Perf**: userImage now persisted in Keychain; session restores instantly without network
 
-- [ ] **Remove unnecessary ScrollView**: The sign-in content should not be scrollable on normal device sizes. Use a centered `VStack` within a `GeometryReader` without wrapping in `ScrollView`. Only allow scrolling if Dynamic Type pushes content beyond the viewport
-- [ ] **Title**: Change from "Sign up" / "Log in" to "Start your WingDex" (matching web's `DialogTitle`)
-- [ ] **Social buttons first**: GitHub, Apple, and Google buttons at the top (matching web order: social providers above passkey). Google Sign-In uses the same `ASWebAuthenticationSession` OAuth flow as GitHub - the server already has the Google provider configured. Add `signInWithGoogle()` to `AuthService` (calls `signInWithProvider("google")`), add a Google button to `SignInView` with the Google icon (SF Symbol `globe` or a custom Google logo asset)
-- [ ] **Passkey section with border**: Wrap the passkey area in a bordered, lightly tinted container (matching web's `rounded-lg border border-border/70 bg-muted/20 px-3 py-3`). Show a centered header: Key icon + "Continue with a Passkey"
-- [ ] **Two passkey buttons side-by-side**: Replace the single mode-switching passkey button with two buttons in a horizontal grid (matching web's `grid-cols-2`): "Log in" (primary/filled) and "Sign up" (outlined). Both always visible regardless of mode
-- [ ] **Remove mode toggle**: Since the passkey section now has both Log in and Sign up buttons, the "Already have a WingDex? Log in" / "New to WingDex? Sign up" toggle is no longer needed. Remove it entirely
-- [ ] **Error display**: Keep the red error text below the passkey section
-- [ ] **Demo data toggle** (DEBUG only): Add a toggle switch matching web's demo data toggle: label "Demo data", subtitle "Preview WingDex with sample sightings", bordered container
-- [ ] **Loading state**: Show `ProgressView` overlay and disable all buttons when `isSigningIn` is true
-- [ ] **Naming**: Align with web app naming to use "Sign up" and "Log in" terminology in both UI and file names. The current `SignInView` should be renamed to `AuthView` or `SignInSignUpView` to reflect that it now contains both actions, and the passkey buttons should be labeled "Log in" and "Sign up" respectively
-- [ ] **Perf**: The auth gate seems very slow to load, and the log out button in settings is also slow (and usually needs to be pressed twice??). Profile data is fetched on every app launch to populate the avatar and name, but this should be cached in Keychain and only refreshed on demand or after a certain time interval to speed up app startup and logout
-
-**Files**: `SignInView.swift`
-**Reference**: `src/hooks/use-auth-gate.tsx` (auth modal JSX)
+**Files**: `SignInView.swift`, `AuthService.swift`
 
 ## 3.5.3 - Polish & Parity
 
-- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design, ensuring they render well in all contexts (tab bar, sign-in screen, etc.)
-- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design, replacing the current custom bird icon. Ensure it renders well in the tab bar
-- [ ] Weird white bars on the left and right for the empty wingdex and outiings views suggest non-standard hacky approach, investigate and fix to ensure proper edge-to-edge layout with themed backgrounds
-- [ ] Make sure 3D touch works wherever appropriate, like pressing a bird in the WingDex to peek at the SpeciesDetailView, or pressing an outing in the Outings list to preview the OutingDetailView
-- [ ] Font size and weight adjustments to better match the web app's typography hierarchy, while still using native system fonts and styles
+- [ ] Web app has a new logo, but the iOS app still uses the old Phosphor-style bird icon. Update the app icon and all in-app logo assets to match the new design
+- [ ] Use new SF symbol for the tab bar icon (BirdTab) that matches the new logo design
+- [ ] Weird white bars on the left and right for the empty wingdex and outings views suggest non-standard hacky approach, investigate and fix
+- [ ] Make sure 3D touch / context menus work for previewing species and outings
+- [ ] Font size and weight adjustments to better match the web app's typography hierarchy
 
 ---
 
