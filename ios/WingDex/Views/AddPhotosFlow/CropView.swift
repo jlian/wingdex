@@ -57,33 +57,62 @@ struct CropView: View {
         self._paddedInitialCrop = State(initialValue: padded)
     }
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let cropInset: CGFloat = 8
+
     var body: some View {
         GeometryReader { geo in
             if let uiImage = normalizedImage(from: imageData) {
-                let squareSide = geo.size.width
+                let squareSide = geo.size.width - cropInset * 2
                 let fillInfo = fillImageInfo(for: uiImage, squareSide: squareSide)
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
+                ZStack {
+                    // The actual photo fills the entire view, matching user's
+                    // current pan/zoom. Visible through the glass chrome areas.
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .frame(width: fillInfo.renderedW, height: fillInfo.renderedH)
+                        .scaleEffect(photoScale)
+                        .offset(photoOffset)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .ignoresSafeArea()
 
-                    ZStack {
-                        Color.pageBg
+                    VStack(spacing: 0) {
+                        // Top glass chrome
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .frame(maxWidth: .infinity)
 
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .frame(width: fillInfo.renderedW, height: fillInfo.renderedH)
-                            .scaleEffect(photoScale)
-                            .offset(photoOffset)
+                        // Crop row: glass sides + clear cutout center
+                        HStack(spacing: 0) {
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: cropInset)
+
+                            // Clear cutout - photo shows through unobstructed
+                            Color.clear
+                                .frame(width: squareSide, height: squareSide)
+                                .overlay {
+                                    Rectangle()
+                                        .stroke(colorScheme == .dark ? Color.white : Color.black, lineWidth: 1)
+                                }
+
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: cropInset)
+                        }
+                        .contentShape(Rectangle())
+                        .gesture(photoManipulationGesture(fillInfo: fillInfo))
+
+                        // Bottom glass chrome
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .frame(maxWidth: .infinity)
                     }
-                    .frame(width: squareSide, height: squareSide)
-                    .clipped()
-                    .contentShape(Rectangle())
-                    .gesture(photoManipulationGesture(fillInfo: fillInfo))
-
-                    Spacer(minLength: 0)
+                    .ignoresSafeArea()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.pageBg)
                 .overlay(alignment: .top) {
                     Text(reason)
                         .font(.body)
@@ -97,7 +126,7 @@ struct CropView: View {
                     configureInitialTransformIfNeeded(fillInfo: fillInfo)
                 }
                 .onChange(of: geo.size.width) {
-                    self.squareSide = geo.size.width
+                    self.squareSide = geo.size.width - cropInset * 2
                     didInitializeTransform = false
                     configureInitialTransformIfNeeded(fillInfo: fillInfo)
                 }
@@ -110,10 +139,10 @@ struct CropView: View {
                     }
             }
         }
-        .background(Color.pageBg.ignoresSafeArea())
+        .background(Color.clear)
         .navigationTitle("Crop Bird Photo")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.pageBg, for: .navigationBar, .bottomBar)
+        .toolbarBackground(.hidden, for: .navigationBar, .bottomBar)
         .toolbarBackground(.visible, for: .navigationBar, .bottomBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
