@@ -420,25 +420,10 @@ struct PhotoProgressDots: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
-                vm.clusters = [PhotoCluster(
-                    photos: [
-                        ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                       exifTime: Date().addingTimeInterval(-600),
-                                       gpsLat: 47.6, gpsLon: -122.4,
-                                       fileHash: "abc1", fileName: "eagle1.jpg"),
-                        ProcessedPhoto(id: "p2", image: Data(), thumbnail: Data(),
-                                       exifTime: Date(), gpsLat: 47.6, gpsLon: -122.4,
-                                       fileHash: "abc2", fileName: "eagle2.jpg"),
-                        ProcessedPhoto(id: "p3", image: Data(), thumbnail: Data(),
-                                       exifTime: Date(), gpsLat: 47.6, gpsLon: -122.4,
-                                       fileHash: "abc3", fileName: "sparrow.jpg"),
-                    ],
-                    startTime: Date().addingTimeInterval(-600), endTime: Date(),
-                    centerLat: 47.6, centerLon: -122.4
-                )]
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 3)]
                 vm.currentPhotoIndex = 1
                 vm.photoResults = [PhotoResult(
-                    photoId: "p1", species: "Bald Eagle (Haliaeetus leucocephalus)",
+                    photoId: "preview-0", species: "Bald Eagle (Haliaeetus leucocephalus)",
                     confidence: 0.95, status: .confirmed, count: 1
                 )]
                 vm.currentCandidates = [
@@ -454,17 +439,11 @@ struct PhotoProgressDots: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
-                vm.clusters = [PhotoCluster(
-                    photos: [ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                            exifTime: Date(), gpsLat: nil, gpsLon: nil,
-                                            fileHash: "abc", fileName: "red_bird.jpg")],
-                    startTime: Date(), endTime: Date(),
-                    centerLat: nil, centerLon: nil
-                )]
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 1, lat: nil, lon: nil)]
                 vm.currentCandidates = [
-                    IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: nil),
-                    IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: nil),
-                    IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: nil),
+                    IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: "Northern_cardinal"),
+                    IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: "Vermilion_flycatcher"),
+                    IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: "Summer_tanager"),
                 ]
             }
     }
@@ -475,18 +454,7 @@ struct PhotoProgressDots: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
-                vm.clusters = [PhotoCluster(
-                    photos: [
-                        ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                       exifTime: nil, gpsLat: nil, gpsLon: nil,
-                                       fileHash: "abc", fileName: "unknown.jpg"),
-                        ProcessedPhoto(id: "p2", image: Data(), thumbnail: Data(),
-                                       exifTime: nil, gpsLat: nil, gpsLon: nil,
-                                       fileHash: "def", fileName: "tree.jpg"),
-                    ],
-                    startTime: Date(), endTime: Date(),
-                    centerLat: nil, centerLon: nil
-                )]
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 2, lat: nil, lon: nil)]
                 vm.currentCandidates = []
             }
     }

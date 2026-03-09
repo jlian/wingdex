@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import UIKit
 
 // MARK: - Preview Helpers
 
@@ -313,5 +314,67 @@ enum PreviewData {
 
     /// The Everglades outing - good for previewing rich species lists.
     static let richOutingId = "outing-005"
+
+    // MARK: - Preview Photo Helpers
+
+    /// Generate a visible placeholder thumbnail (SF Symbol rendered to JPEG data).
+    /// Produces actual image data so previews show visible photos instead of empty squares.
+    static func placeholderImageData(systemName: String = "bird.fill", size: CGFloat = 200) -> Data {
+        let config = UIImage.SymbolConfiguration(pointSize: size * 0.4, weight: .light)
+        let symbol = UIImage(systemName: systemName, withConfiguration: config)?
+            .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+        let image = renderer.image { ctx in
+            UIColor(red: 0.92, green: 0.90, blue: 0.85, alpha: 1).setFill() // warm beige bg
+            ctx.fill(CGRect(x: 0, y: 0, width: size, height: size))
+            if let symbol {
+                let symbolSize = symbol.size
+                let origin = CGPoint(x: (size - symbolSize.width) / 2, y: (size - symbolSize.height) / 2)
+                symbol.draw(at: origin)
+            }
+        }
+        return image.jpegData(compressionQuality: 0.8) ?? Data()
+    }
+
+    /// Create a sample ProcessedPhoto with visible placeholder image data.
+    static func samplePhoto(
+        id: String = UUID().uuidString,
+        exifTime: Date? = Date(),
+        lat: Double? = 47.6587,
+        lon: Double? = -122.4050,
+        symbol: String = "bird.fill"
+    ) -> ProcessedPhoto {
+        let imageData = placeholderImageData(systemName: symbol)
+        return ProcessedPhoto(
+            id: id, image: imageData, thumbnail: imageData,
+            exifTime: exifTime, gpsLat: lat, gpsLon: lon,
+            fileHash: "preview_\(id)", fileName: "preview_\(id).jpg"
+        )
+    }
+
+    /// Create a sample cluster with multiple visible photos.
+    static func sampleCluster(
+        photoCount: Int = 3,
+        lat: Double? = 47.6587,
+        lon: Double? = -122.4050
+    ) -> PhotoCluster {
+        let symbols = ["bird.fill", "leaf.fill", "camera.fill", "binoculars.fill", "sun.max.fill"]
+        let photos = (0..<photoCount).map { i in
+            samplePhoto(
+                id: "preview-\(i)",
+                exifTime: Date().addingTimeInterval(Double(-i) * 300),
+                lat: lat, lon: lon,
+                symbol: symbols[i % symbols.count]
+            )
+        }
+        return PhotoCluster(
+            photos: photos,
+            startTime: Date().addingTimeInterval(Double(-photoCount) * 300),
+            endTime: Date(),
+            centerLat: lat,
+            centerLon: lon
+        )
+    }
 }
 #endif

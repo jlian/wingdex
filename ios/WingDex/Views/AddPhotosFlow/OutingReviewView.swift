@@ -76,49 +76,76 @@ struct OutingReviewView: View {
     // MARK: - Body
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Cluster indicator for multi-cluster uploads
-                if viewModel.clusters.count > 1 {
-                    Text("Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.mutedText)
+        Form {
+            // Cluster indicator for multi-cluster uploads
+            if viewModel.clusters.count > 1 {
+                Section {
+                    Label("Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)", systemImage: "rectangle.stack")
                 }
-
-                // Date/time display with optional edit
-                dateTimeSection
-
-                // GPS status indicator
-                gpsStatusSection
-
-                // Existing outing match toggle
-                if let existing = matchingOuting {
-                    existingOutingSection(existing)
-                }
-
-                // Location name and place search (only when not using existing outing)
-                if !useExistingOuting {
-                    locationSection
-                }
-
-                // Photo thumbnails grid
-                photoGridSection
-
-                // Continue button
-                Button {
-                    handleConfirm()
-                } label: {
-                    Text(isLoadingLocation ? "Loading..." : "Continue to Species Identification")
-                        .font(.system(size: 16, weight: .medium))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
-                .disabled(isLoadingLocation)
             }
-            .padding()
+
+            // Date/time
+            Section {
+                dateTimeSection
+                gpsStatusSection
+            }
+
+            // Existing outing match toggle
+            if let existing = matchingOuting {
+                existingOutingSection(existing)
+            }
+
+            // Location name and place search (only when not using existing outing)
+            if !useExistingOuting {
+                Section("Location") {
+                    if isLoadingLocation {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Identifying location from GPS...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        TextField("Location name", text: $locationName, prompt: Text("e.g., Central Park, NYC"))
+
+                        if !suggestedLocation.isEmpty && suggestedLocation != locationName {
+                            Button("Use: \(suggestedLocation)") {
+                                locationName = suggestedLocation
+                            }
+                            .font(.subheadline)
+                        }
+                    }
+                }
+
+                Section("Search for a Place") {
+                    placeSearchSection
+                }
+            }
+
+            // Photo thumbnails grid
+            Section("Photos (\(cluster?.photos.count ?? 0))") {
+                photoGridSection
+            }
         }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            // Continue button pinned at bottom
+            Button {
+                handleConfirm()
+            } label: {
+                Text(isLoadingLocation ? "Loading..." : "Continue to Species Identification")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .font(.headline)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.accentColor)
+            .disabled(isLoadingLocation)
+            .padding()
+            .background(.regularMaterial)
+        }
         .onAppear { initializeIfNeeded() }
     }
 
@@ -134,29 +161,29 @@ struct OutingReviewView: View {
             ),
             displayedComponents: [.date, .hourAndMinute]
         )
-        .datePickerStyle(.compact)
     }
 
     // MARK: - GPS Status
 
     private var gpsStatusSection: some View {
-        HStack(spacing: 6) {
+        HStack {
             if hasGps {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text("GPS detected")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.green)
-                if let lat = cluster?.centerLat, let lon = cluster?.centerLon {
-                    Text("(\(lat, specifier: "%.4f"), \(lon, specifier: "%.4f"))")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mutedText)
+                Label {
+                    HStack(spacing: 4) {
+                        Text("GPS detected")
+                        if let lat = cluster?.centerLat, let lon = cluster?.centerLon {
+                            Text("(\(lat, specifier: "%.4f"), \(lon, specifier: "%.4f"))")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "location.fill")
+                        .foregroundStyle(.green)
                 }
+                .font(.subheadline)
             } else {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.orange)
-                Text("No GPS data in photos")
-                    .font(.subheadline.weight(.medium))
+                Label("No GPS data in photos", systemImage: "location.slash")
+                    .font(.subheadline)
                     .foregroundStyle(.orange)
             }
         }
@@ -165,52 +192,16 @@ struct OutingReviewView: View {
     // MARK: - Existing Outing Match
 
     private func existingOutingSection(_ outing: Outing) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        Section {
             Toggle(isOn: $useExistingOuting) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Add to existing outing?")
-                        .font(.subheadline.weight(.medium))
                     Text("\(outing.locationName) - \(DateFormatting.formatDate(outing.startTime))")
                         .font(.caption)
-                        .foregroundStyle(Color.mutedText)
-                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
                 }
             }
             .tint(Color.accentColor)
-        }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    // MARK: - Location Section
-
-    private var locationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Location Name")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.foregroundText)
-
-            if isLoadingLocation {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Identifying location from GPS...")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mutedText)
-                }
-            } else {
-                TextField("e.g., Central Park, NYC", text: $locationName)
-                    .textFieldStyle(.roundedBorder)
-
-                if !suggestedLocation.isEmpty && suggestedLocation != locationName {
-                    Text("Suggested: \(suggestedLocation)")
-                        .font(.caption)
-                        .foregroundStyle(Color.mutedText)
-                }
-
-                // Place search
-                placeSearchSection
-            }
         }
     }
 
@@ -219,37 +210,29 @@ struct OutingReviewView: View {
     private var placeSearchSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("Search for a place...", text: $placeQuery)
-                .textFieldStyle(.roundedBorder)
                 .onChange(of: placeQuery) {
                     placeCompleter.search(query: placeQuery)
                 }
 
-            // Native MapKit autocomplete results
+            // Native MapKit autocomplete results rendered inline in Form
             if !placeCompleter.results.isEmpty && !placeQuery.isEmpty {
-                List(placeCompleter.results) { item in
+                ForEach(placeCompleter.results) { item in
                     Button {
                         selectCompletion(item)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.title)
                                 .font(.subheadline)
-                                .foregroundStyle(Color.foregroundText)
                             if !item.subtitle.isEmpty {
                                 Text(item.subtitle)
                                     .font(.caption)
-                                    .foregroundStyle(Color.mutedText)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
-                    .listRowBackground(Color.cardBg)
                 }
-                .listStyle(.plain)
-                .frame(maxHeight: 180)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .scrollContentBackground(.hidden)
             }
 
-            // Override confirmation
             if let coords = overriddenCoords {
                 Label(
                     "\(coords.latitude, specifier: "%.4f"), \(coords.longitude, specifier: "%.4f")",
@@ -264,26 +247,24 @@ struct OutingReviewView: View {
     // MARK: - Photo Grid
 
     private var photoGridSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Photos (\(cluster?.photos.count ?? 0))")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.foregroundText)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 4), spacing: 4) {
-                ForEach(cluster?.photos ?? [], id: \.id) { photo in
-                    if let uiImage = UIImage(data: photo.thumbnail) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .aspectRatio(1, contentMode: .fill)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.cardBg)
-                            .aspectRatio(1, contentMode: .fill)
-                    }
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 4), spacing: 4) {
+            ForEach(cluster?.photos ?? [], id: \.id) { photo in
+                if let uiImage = UIImage(data: photo.thumbnail) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fill)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                } else {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.1))
+                        .aspectRatio(1, contentMode: .fill)
+                        .overlay {
+                            Image(systemName: "photo")
+                                .foregroundStyle(.tertiary)
+                        }
                 }
             }
         }
@@ -745,27 +726,7 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
             .environment(AuthService())
             .environment(previewStore())
             .onAppear {
-                // Simulate a cluster with GPS data at Discovery Park, Seattle
-                vm.clusters = [PhotoCluster(
-                    photos: [
-                        ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                       exifTime: Date().addingTimeInterval(-3600),
-                                       gpsLat: 47.6587, gpsLon: -122.4050,
-                                       fileHash: "abc1", fileName: "eagle.jpg"),
-                        ProcessedPhoto(id: "p2", image: Data(), thumbnail: Data(),
-                                       exifTime: Date().addingTimeInterval(-3000),
-                                       gpsLat: 47.6590, gpsLon: -122.4055,
-                                       fileHash: "abc2", fileName: "heron.jpg"),
-                        ProcessedPhoto(id: "p3", image: Data(), thumbnail: Data(),
-                                       exifTime: Date().addingTimeInterval(-2400),
-                                       gpsLat: 47.6585, gpsLon: -122.4048,
-                                       fileHash: "abc3", fileName: "sparrow.jpg"),
-                    ],
-                    startTime: Date().addingTimeInterval(-3600),
-                    endTime: Date(),
-                    centerLat: 47.6587,
-                    centerLon: -122.4050
-                )]
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 5, lat: 47.6587, lon: -122.4050)]
             }
     }
 }
@@ -777,17 +738,7 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
             .environment(AuthService())
             .environment(previewStore())
             .onAppear {
-                vm.clusters = [PhotoCluster(
-                    photos: [
-                        ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                       exifTime: Date(), gpsLat: nil, gpsLon: nil,
-                                       fileHash: "abc1", fileName: "bird1.jpg"),
-                    ],
-                    startTime: Date(),
-                    endTime: Date(),
-                    centerLat: nil,
-                    centerLon: nil
-                )]
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 2, lat: nil, lon: nil)]
             }
     }
 }
@@ -799,30 +750,9 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
             .environment(AuthService())
             .environment(previewStore())
             .onAppear {
-                // Two clusters from different locations/times
                 vm.clusters = [
-                    PhotoCluster(
-                        photos: [
-                            ProcessedPhoto(id: "p1", image: Data(), thumbnail: Data(),
-                                           exifTime: Date().addingTimeInterval(-7200),
-                                           gpsLat: 47.6587, gpsLon: -122.4050,
-                                           fileHash: "abc1", fileName: "morning.jpg"),
-                        ],
-                        startTime: Date().addingTimeInterval(-7200),
-                        endTime: Date().addingTimeInterval(-3600),
-                        centerLat: 47.6587, centerLon: -122.4050
-                    ),
-                    PhotoCluster(
-                        photos: [
-                            ProcessedPhoto(id: "p2", image: Data(), thumbnail: Data(),
-                                           exifTime: Date(),
-                                           gpsLat: 40.6155, gpsLon: -73.8227,
-                                           fileHash: "abc2", fileName: "afternoon.jpg"),
-                        ],
-                        startTime: Date(),
-                        endTime: Date(),
-                        centerLat: 40.6155, centerLon: -73.8227
-                    ),
+                    PreviewData.sampleCluster(photoCount: 3, lat: 47.6587, lon: -122.4050),
+                    PreviewData.sampleCluster(photoCount: 2, lat: 40.6155, lon: -73.8227),
                 ]
             }
     }
