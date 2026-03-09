@@ -10,6 +10,15 @@ struct AddPhotosFlow: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = AddPhotosViewModel()
+    @State private var showCloseConfirm = false
+
+    /// Whether the current step needs a close confirmation (user has unsaved progress).
+    private var needsCloseConfirmation: Bool {
+        switch viewModel.currentStep {
+        case .selectPhotos, .done: return false
+        default: return true
+        }
+    }
 
     var body: some View {
         Group {
@@ -36,8 +45,22 @@ struct AddPhotosFlow: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button {
+                    if needsCloseConfirmation {
+                        showCloseConfirm = true
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                }
             }
+        }
+        .confirmationDialog("Discard progress?", isPresented: $showCloseConfirm, titleVisibility: .visible) {
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Continue Uploading", role: .cancel) {}
+        } message: {
+            Text("Your upload is still in progress. If you close now, any unsaved changes will be lost.")
         }
         .background(Color.pageBg.ignoresSafeArea())
         .onAppear {
@@ -127,18 +150,13 @@ struct AddPhotosFlow: View {
         VStack(spacing: 20) {
             Spacer()
 
-            // Thumbnail of the photo being identified
+            // Show the full current image aspect-fit, not a square crop.
             if let photo = viewModel.currentPhoto,
-               let uiImage = UIImage(data: photo.thumbnail) {
+               let uiImage = UIImage(data: photo.croppedImage ?? photo.image) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFill()
-                    .frame(width: 160, height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.warmBorder, lineWidth: 2)
-                    )
+                    .scaledToFit()
+                    .frame(maxWidth: 320, maxHeight: 260)
             }
 
             // Exponential progress bar (matching web's `1 - e^(-t/tau)` curve)
@@ -147,6 +165,7 @@ struct AddPhotosFlow: View {
                 tauMs: viewModel.photoProgressTauMs,
                 runKey: viewModel.photoProgressRunKey
             )
+            .id(viewModel.photoProgressRunKey)
             .frame(height: 6)
             .padding(.horizontal, 40)
 
@@ -168,20 +187,16 @@ struct AddPhotosFlow: View {
     @ViewBuilder
     private var manualCropDestination: some View {
         if let photo = viewModel.currentPhoto {
-            let reason: String = {
-                if viewModel.currentCandidates.isEmpty {
-                    return "No bird detected - try cropping to the bird"
-                } else if viewModel.currentCandidates.count > 0 {
-                    // Candidates present means multi-bird or user-initiated re-crop
-                    return "Multiple birds detected - crop to one bird"
-                }
-                return "Crop to the bird you want to identify"
-            }()
-
             CropView(
                 imageData: photo.image,
                 initialCropBox: photo.aiCropBox,
-                reason: reason,
+                reason: viewModel.cropPromptContext.reasonText,
+                onBack: {
+                    viewModel.cancelCrop()
+                },
+                onSkip: {
+                    viewModel.skipCurrentPhoto()
+                },
                 onApply: { cropResult in
                     // Generate cropped image data from the crop box
                     if let croppedData = generateCroppedImageData(from: photo.image, cropBox: cropResult) {
@@ -191,13 +206,6 @@ struct AddPhotosFlow: View {
                     }
                 }
             )
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        viewModel.cancelCrop()
-                    }
-                }
-            }
         } else {
             // Shouldn't happen, but handle gracefully
             Text("No photo available")

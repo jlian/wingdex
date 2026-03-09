@@ -31,6 +31,12 @@
 	<string>1</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>WingDex uses the camera so you can take bird photos for identification.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>WingDex may save captured bird photos to your library when you choose to keep them.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WingDex uses your photo library so you can choose bird photos to identify.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

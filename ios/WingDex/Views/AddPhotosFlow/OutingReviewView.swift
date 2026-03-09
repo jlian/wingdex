@@ -126,17 +126,11 @@ struct OutingReviewView: View {
         .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle(viewModel.clusters.count > 1
             ? "Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)"
-            : "Review Outing")
+            : "Your Outing")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Bottom bar: dots (left) | (center empty) | Continue (right)
-            ToolbarItemGroup(placement: .bottomBar) {
-                if viewModel.clusters.count > 1 {
-                    PhotoProgressDots(current: viewModel.currentClusterIndex, total: viewModel.clusters.count)
-                }
-
-                Spacer()
-
+            // Primary action top-right
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     handleConfirm()
                 } label: {
@@ -250,23 +244,80 @@ struct OutingReviewView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(cluster?.photos ?? [], id: \.id) { photo in
-                    if let uiImage = UIImage(data: photo.thumbnail) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(width: 80, height: 80)
-                            .overlay {
-                                Image(systemName: "photo")
-                                    .foregroundStyle(.tertiary)
-                            }
-                    }
+                    photoThumbnail(photo)
+                        .frame(width: 150, height: 150)
                 }
             }
+        }
+    }
+
+    /// Single photo thumbnail with per-item 3D Touch preview and context menu.
+    /// Uses PeekPopContextMenu (UIKit) because SwiftUI's .contextMenu on items
+    /// inside a ScrollView targets the entire scroll container, not individual items.
+    private func photoThumbnail(_ photo: ProcessedPhoto) -> some View {
+        let previewSize = previewSize(for: photo)
+        let removeMenu = UIMenu(children: [
+            UIAction(title: "Remove Photo", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                removePhoto(photo)
+            }
+        ])
+
+        return PeekPopContextMenu(
+            menu: removeMenu,
+            previewSize: previewSize,
+            onTap: { /* no-op, photos aren't navigable */ }
+        ) {
+            Group {
+                if let uiImage = UIImage(data: photo.thumbnail) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 150, height: 150)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(width: 150, height: 150)
+                        .overlay {
+                            Image(systemName: "photo")
+                                .foregroundStyle(.tertiary)
+                        }
+                }
+            }
+        } preview: {
+            if let uiImage = UIImage(data: photo.image) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: previewSize.width, height: previewSize.height)
+                    .clipped()
+            }
+        }
+    }
+
+    private func previewSize(for photo: ProcessedPhoto) -> CGSize {
+        guard let uiImage = UIImage(data: photo.image) else {
+            return CGSize(width: 320, height: 320)
+        }
+        let maxWidth = min(UIScreen.main.bounds.width - 40, 360)
+        let maxHeight = min(UIScreen.main.bounds.height * 0.58, 560)
+        let aspect = max(uiImage.size.width, 1) / max(uiImage.size.height, 1)
+
+        var width = maxWidth
+        var height = width / aspect
+        if height > maxHeight {
+            height = maxHeight
+            width = height * aspect
+        }
+        return CGSize(width: max(180, width), height: max(180, height))
+    }
+
+    /// Remove a photo from the current cluster.
+    private func removePhoto(_ photo: ProcessedPhoto) {
+        guard var cluster = cluster else { return }
+        cluster.photos.removeAll { $0.id == photo.id }
+        if viewModel.currentClusterIndex < viewModel.clusters.count {
+            viewModel.clusters[viewModel.currentClusterIndex] = cluster
         }
     }
 

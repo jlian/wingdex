@@ -166,11 +166,13 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
     let content: Content
     let preview: Preview
     let menu: UIMenu
+    let previewSize: CGSize?
     let onTap: () -> Void
     let onCommit: () -> Void
 
     init(
         menu: UIMenu,
+        previewSize: CGSize? = nil,
         onTap: @escaping () -> Void,
         onCommit: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content,
@@ -179,6 +181,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
         self.content = content()
         self.preview = preview()
         self.menu = menu
+        self.previewSize = previewSize
         self.onTap = onTap
         self.onCommit = onCommit ?? onTap
     }
@@ -189,6 +192,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             content: AnyView(content),
             preview: AnyView(preview),
             menu: menu,
+            previewSize: previewSize,
             onTap: onTap,
             onCommit: onCommit
         )
@@ -200,6 +204,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             content: AnyView(content),
             preview: AnyView(preview),
             menu: menu,
+            previewSize: previewSize,
             onTap: onTap,
             onCommit: onCommit
         )
@@ -213,6 +218,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
 
         private var previewView = AnyView(EmptyView())
         private var contextMenu = UIMenu(children: [])
+        private var preferredPreviewSize: CGSize?
         private var onTapAction: (() -> Void)?
         private var onCommitAction: (() -> Void)?
         private var didSetup = false
@@ -226,6 +232,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             content: AnyView,
             preview: AnyView,
             menu: UIMenu,
+            previewSize: CGSize?,
             onTap: @escaping () -> Void,
             onCommit: @escaping () -> Void
         ) {
@@ -233,6 +240,7 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             hostingController.rootView = content
             previewView = preview
             contextMenu = menu
+            preferredPreviewSize = previewSize
             onTapAction = onTap
             onCommitAction = onCommit
         }
@@ -271,13 +279,37 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
         ) -> UIContextMenuConfiguration? {
             UIContextMenuConfiguration(
                 identifier: nil,
-                previewProvider: { [previewView] in
+                previewProvider: { [previewView, preferredPreviewSize] in
                     let controller = UIHostingController(rootView: previewView)
                     controller.view.backgroundColor = .clear
+                    controller.sizingOptions = [.preferredContentSize]
+                    if let preferredPreviewSize {
+                        controller.preferredContentSize = preferredPreviewSize
+                    }
                     return controller
                 },
                 actionProvider: { [contextMenu] _ in contextMenu }
             )
+        }
+
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration
+        ) -> UITargetedPreview? {
+            let parameters = UIPreviewParameters()
+            parameters.backgroundColor = .clear
+            parameters.visiblePath = UIBezierPath(roundedRect: view.bounds, cornerRadius: 12)
+            return UITargetedPreview(view: view, parameters: parameters)
+        }
+
+        func contextMenuInteraction(
+            _ interaction: UIContextMenuInteraction,
+            previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+        ) -> UITargetedPreview? {
+            let parameters = UIPreviewParameters()
+            parameters.backgroundColor = .clear
+            parameters.visiblePath = UIBezierPath(roundedRect: view.bounds, cornerRadius: 12)
+            return UITargetedPreview(view: view, parameters: parameters)
         }
 
         func contextMenuInteraction(

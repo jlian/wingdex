@@ -301,7 +301,7 @@ All critical issues resolved. Remaining items deferred or skipped.
 
 - [x] **Passkey registration**: Fixed - all passkey endpoints now use `AuthenticatedRequest.withCookieOnly()` with signed session token. Challenge cookie properly forwarded between options and verify steps
 - [x] **Passkey management list/delete**: Fixed - also switched to cookie-only auth
-- [~] **Passkey name/label mismatch**: Deferred - current behavior acceptable, may be affected by merged account situations
+- [ ] **Passkey name/label mismatch**: Deferred - current behavior acceptable, may be affected by merged account situations
 - [x] **Apple Sign-In not configured locally**: Skipped for local dev - works on deployed environments
 - [x] **Load demo data - add confirmation**: Done - `.confirmationDialog` added
 - [x] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub. Note: Google OAuth fails on local dev (`wingdev.johnspecificproblems.net`) because the redirect URI is not in Google Cloud Console's authorized list. Add `https://wingdev.johnspecificproblems.net/api/auth/callback/google` to authorized redirect URIs in Google Cloud Console, or test on deployed environment only
@@ -535,6 +535,15 @@ SHA-256 file hash computation exists in `PhotoService`, but there is no UI to ha
 
 **Updates**: `AddPhotosViewModel.swift`, `DataStore.swift` (lookup by file hash)
 
+### Phase 3-R Bug Bash
+
+- [x] When the progress bar happens, use the full image aspect-fit instead of a square crop of the user photo
+- [ ] The liquid glass buttons let's not have them be tinted, just default color is ok - same with the sort button on the list views
+- [ ] Immediately start the wizard after photo selection instead of waiting for user to click "continue" - the web app starts processing immediately and users expect fast feedback
+- [ ] Make the candidate list in the per-photo confirm view bigger text and more spacious, and make each row selectable not just the checkbox/name
+- [ ] The upload tab should just be a real tab and not like a sheet that slides up - the tab exit return to the previous tab still a bit janky
+- [ ] After outing saved , maybe there should be a quick notice or a toast that outing has been saved, even just a little spinner?
+
 ### 3-R Verification
 
 Select 5+ photos from library -> see outing review with reverse-geocoded location and date -> AI identifies one-at-a-time with fast model, escalates to strong when uncertain -> per-photo confirm shows user photo alongside Wikipedia reference image with confidence bar -> can tap Back to revisit previous photo -> crop & retry auto-prompts on multi-bird and works manually -> certainty selection (Confirm/Possible/Skip) -> GPS toggle works -> duplicates detected -> save creates correct outings with state/country codes and proper certainty values.
@@ -584,19 +593,6 @@ Does not exist on iOS. The web has a row of 8 emoji buttons.
 **Files**: `SettingsView.swift`, port avatar utilities from `src/lib/fun-names.ts`
 **Reference**: `SettingsPage.tsx` (avatar section)
 
-### 4.4: Appearance Toggle (Light/Dark/System)
-
-Does not exist on iOS. The web uses `next-themes` with three buttons.
-
-- [ ] **Three-button toggle**: Sun icon (Light), Moon icon (Dark), Monitor icon (System) using SF Symbols (`sun.max`, `moon`, `desktopcomputer`)
-- [ ] **Selected state**: Selected button uses default/filled variant; unselected buttons use outline variant
-- [ ] **Persistence**: Store preference in `UserDefaults` (key: `appearance`)
-- [ ] **Apply**: Override all window scenes' `overrideUserInterfaceStyle` via `UIApplication.shared.connectedScenes`
-- [ ] **"System" mode**: Sets `overrideUserInterfaceStyle = .unspecified`, following the iOS system preference
-- [ ] **Immediate effect**: Changing the toggle applies instantly without requiring app restart
-
-**Files**: `SettingsView.swift`, `Theme.swift` (appearance management), `WingDexApp.swift` (restore on launch)
-
 ### 4.5: eBird CSV Import with Timezone Picker
 
 Stub exists (button present, marked TODO). Needs full implementation matching the web's import flow.
@@ -632,7 +628,7 @@ Does not exist on iOS.
   - **Photos**: "Your photos are not retained. Compressed images are sent to AI for identification, then discarded. A file hash is stored for duplicate detection."
   - **Records**: "Birding records are saved to a Cloudflare-backed database, scoped to your account."
   - **Third-party**: "Location lookups via OpenStreetMap Nominatim. Species images from Wikimedia Commons."
-  - **Links**: Tappable links to Privacy Policy and Terms of Use (already served at `public/privacy.html` and `public/terms.html`)
+  - **Links**: Tappable links to Privacy Policy and Terms of Use (already served at `public/privacy.html` and `public/terms.html`, but maybe also may them available as in-app web views for better UX)
 
 **Files**: `SettingsView.swift`
 
@@ -644,6 +640,7 @@ iOS only has "Delete All Data" (single confirmation). The web has a separate "De
 - [ ] **Second confirmation**: Alert titled "Are you absolutely sure?" with destructive button "Delete my account forever"
 - [ ] **Execution**: Call account deletion API, clear all local state (DataStore, Keychain), sign out, dismiss settings sheet
 - [ ] **Feedback**: Toast "Account deleted"
+- [ ] **Placement**: Instead of the delete account and delete all data buttons both visible in the settings, make it a single "Delete Data..." button that opens a new tab, with the two options inside: "Delete All Data" (single confirmation) and "Delete Account & All Data" (two-stage confirmation) laid out with explanations of what each does under neat each button.
 
 **Files**: `SettingsView.swift`, `DataService.swift`, `AuthService.swift`
 

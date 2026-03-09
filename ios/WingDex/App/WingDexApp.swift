@@ -75,6 +75,7 @@ struct ContentView: View {
 struct MainTabView: View {
     @Environment(AuthService.self) private var auth
     @State private var selectedTab = AppTab.home
+    @State private var lastStandardTab = AppTab.home
     @State private var showingSettings = false
     @State private var showingAddPhotos = false
 
@@ -107,7 +108,16 @@ struct MainTabView: View {
                 Label("Add", systemImage: "camera.fill")
             }
         }
-        .fullScreenCover(isPresented: $showingAddPhotos) {
+        .onChange(of: selectedTab) {
+            if selectedTab != .add {
+                lastStandardTab = selectedTab
+            }
+        }
+        .fullScreenCover(isPresented: $showingAddPhotos, onDismiss: {
+            if selectedTab == .add {
+                selectedTab = lastStandardTab
+            }
+        }) {
             NavigationStack {
                 AddPhotosFlow()
             }

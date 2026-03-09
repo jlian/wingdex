@@ -40,16 +40,17 @@ enum CropService {
         let pw = percentCrop.width / 100.0 * naturalWidth
         let ph = percentCrop.height / 100.0 * naturalHeight
 
+        let padX = pw * padRatio
+        let padY = ph * padRatio
+        let cropSize = max(pw + padX * 2, ph + padY * 2)
+        let clampedSize = min(cropSize, naturalWidth, naturalHeight)
         let centerX = px + pw / 2
         let centerY = py + ph / 2
-        let side = max(pw, ph)
-        let padded = side * (1 + padRatio)
-        let finalSide = min(padded, min(naturalWidth, naturalHeight))
 
-        let x = max(0, min(centerX - finalSide / 2, naturalWidth - finalSide))
-        let y = max(0, min(centerY - finalSide / 2, naturalHeight - finalSide))
+        let x = max(0, min(centerX - clampedSize / 2, naturalWidth - clampedSize))
+        let y = max(0, min(centerY - clampedSize / 2, naturalHeight - clampedSize))
 
-        return CropBox(x: x, y: y, width: finalSide, height: finalSide)
+        return CropBox(x: x, y: y, width: clampedSize, height: clampedSize)
     }
 
     /// Compute the rendered image rectangle within a container (aspect-fit).

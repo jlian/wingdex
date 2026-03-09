@@ -18,6 +18,23 @@ private let log = Logger(subsystem: "app.wingdex", category: "AddPhotos")
 @Observable
 final class AddPhotosViewModel {
 
+    enum CropPromptContext: Equatable {
+        case manualRecrop
+        case noDetection
+        case multipleBirds
+
+        var reasonText: String {
+            switch self {
+            case .manualRecrop:
+                return "For best results, crop to one bird"
+            case .noDetection:
+                return "No bird species identified, crop to the bird"
+            case .multipleBirds:
+                return "Multiple birds detected, crop to one"
+            }
+        }
+    }
+
     // MARK: - Step State Machine
 
     /// All possible steps in the add-photos wizard.
@@ -67,6 +84,10 @@ final class AddPhotosViewModel {
 
     /// AI candidates for the photo currently being confirmed.
     var currentCandidates: [IdentifiedCandidate] = []
+
+    /// Why the crop UI is being shown. This is driven by the same AI response
+    /// conditions as the web flow rather than inferred from currentCandidates.
+    var cropPromptContext: CropPromptContext = .manualRecrop
 
     /// Per-photo results accumulated during the per-photo confirmation loop.
     var photoResults: [PhotoResult] = []
@@ -294,6 +315,7 @@ final class AddPhotosViewModel {
         currentOutingId = outingId
         photoResults = []
         currentCandidates = []
+        cropPromptContext = .manualRecrop
         currentPhotoIndex = 0
 
         // Save photo metadata to server BEFORE AI identification starts.
@@ -344,12 +366,13 @@ final class AddPhotosViewModel {
         let photo = photos[photoIndex]
 
         currentPhotoIndex = photoIndex
+        photoProgress = 0
         currentStep = .photoProcessing
         photoProgressTauMs = 1200
         photoProgressRunKey += 1
 
-        let isCropped = croppedImageData != nil
-        let imageToSend = croppedImageData ?? photo.image
+        let isCropped = croppedImageData != nil || photo.croppedImage != nil
+        let imageToSend = croppedImageData ?? photo.croppedImage ?? photo.image
         processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Identifying species..."
 
         do {
@@ -378,7 +401,7 @@ final class AddPhotosViewModel {
                 request.lon = lon
             }
             if useGeoContext, let date = photo.exifTime {
-                request.month = Calendar.current.component(.month, from: date)
+                request.month = Calendar.current.component(.month, from: date) - 1
             }
             if useGeoContext, !lastLocationName.isEmpty {
                 request.locationName = lastLocationName
@@ -405,9 +428,11 @@ final class AddPhotosViewModel {
                 if fastResult.multipleBirds ?? false {
                     log.info("Multiple birds detected, asking user to crop")
                     currentCandidates = fastCandidates
+                    cropPromptContext = .multipleBirds
                 } else {
                     log.info("No species identified, asking user to crop")
                     currentCandidates = []
+                    cropPromptContext = .noDetection
                 }
                 currentStep = .manualCrop
                 return
@@ -421,9 +446,11 @@ final class AddPhotosViewModel {
 
             var finalCandidates = fastCandidates
             var finalCropBox = fastCropBox
+            var finalMultipleBirds = fastResult.multipleBirds ?? false
 
             if shouldEscalate {
                 processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Re-analyzing with enhanced model..."
+                photoProgress = 0
                 photoProgressTauMs = 4400
                 photoProgressRunKey += 1
 
@@ -438,7 +465,7 @@ final class AddPhotosViewModel {
                     request.lon = lon
                 }
                 if useGeoContext, let date = photo.exifTime {
-                    request.month = Calendar.current.component(.month, from: date)
+                    request.month = Calendar.current.component(.month, from: date) - 1
                 }
                 if useGeoContext, !lastLocationName.isEmpty {
                     request.locationName = lastLocationName
@@ -448,6 +475,7 @@ final class AddPhotosViewModel {
                 finalCandidates = (strongResult.candidates ?? []).map {
                     IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle)
                 }
+                finalMultipleBirds = strongResult.multipleBirds ?? false
                 if let box = strongResult.cropBox {
                     finalCropBox = CropBoxResult(x: box.x, y: box.y, width: box.width, height: box.height)
                     storeCropBox(photoId: photo.id, cropBox: finalCropBox!)
@@ -460,12 +488,15 @@ final class AddPhotosViewModel {
 
             if finalCandidates.isEmpty && !isCropped {
                 currentCandidates = []
+                cropPromptContext = .noDetection
                 currentStep = .manualCrop
-            } else if (fastResult.multipleBirds ?? false) && !isCropped {
+            } else if finalMultipleBirds && !isCropped {
                 currentCandidates = finalCandidates
+                cropPromptContext = .multipleBirds
                 currentStep = .manualCrop
             } else {
                 currentCandidates = finalCandidates
+                cropPromptContext = .manualRecrop
                 currentStep = .perPhotoConfirm
             }
         } catch {
@@ -508,11 +539,13 @@ final class AddPhotosViewModel {
 
     /// Trigger manual crop, then re-identify with the cropped image.
     func requestManualCrop() {
+        cropPromptContext = .manualRecrop
         currentStep = .manualCrop
     }
 
     /// After user crops, re-identify the cropped image.
     func handleCropComplete(croppedImageData: Data) {
+        storeCroppedImage(photoId: currentPhoto?.id, imageData: croppedImageData)
         Task { await runSpeciesId(photoIndex: currentPhotoIndex, croppedImageData: croppedImageData) }
     }
 
@@ -528,6 +561,7 @@ final class AddPhotosViewModel {
         let nextIdx = currentPhotoIndex + 1
         if nextIdx < clusterPhotos.count {
             currentCandidates = []
+            cropPromptContext = .manualRecrop
             Task { await runSpeciesId(photoIndex: nextIdx) }
         } else {
             Task { await saveCurrentCluster() }
@@ -616,6 +650,7 @@ final class AddPhotosViewModel {
                 currentPhotoIndex = 0
                 photoResults = []
                 currentCandidates = []
+                cropPromptContext = .manualRecrop
                 currentStep = .outingReview
             } else {
                 await store.loadAll()
@@ -659,6 +694,23 @@ final class AddPhotosViewModel {
         }
     }
 
+    private func storeCroppedImage(photoId: String?, imageData: Data) {
+        guard let photoId else { return }
+        let thumbnail = PhotoService.generateThumbnail(from: imageData, maxDimension: 200) ?? imageData
+
+        if let idx = processedPhotos.firstIndex(where: { $0.id == photoId }) {
+            processedPhotos[idx].croppedImage = imageData
+            processedPhotos[idx].thumbnail = thumbnail
+        }
+
+        for ci in clusters.indices {
+            for pi in clusters[ci].photos.indices where clusters[ci].photos[pi].id == photoId {
+                clusters[ci].photos[pi].croppedImage = imageData
+                clusters[ci].photos[pi].thumbnail = thumbnail
+            }
+        }
+    }
+
     /// SHA-256 of first 64KB + size (matches web's computeFileHash approach).
     private func computeFileHash(_ data: Data) -> String {
         let prefix = data.prefix(65536)
@@ -676,7 +728,7 @@ final class AddPhotosViewModel {
 struct ProcessedPhoto: Identifiable {
     let id: String
     let image: Data        // Compressed JPEG for API submission
-    let thumbnail: Data    // Small thumbnail for display
+    var thumbnail: Data    // Small thumbnail for display
     let exifTime: Date?
     let gpsLat: Double?
     let gpsLon: Double?
@@ -684,6 +736,8 @@ struct ProcessedPhoto: Identifiable {
     let fileName: String
     /// AI-suggested crop box (percentage coordinates), stored after identification.
     var aiCropBox: CropBoxResult?
+    /// User-confirmed cropped image used for re-analysis and preview, matching web croppedDataUrl.
+    var croppedImage: Data? = nil
 }
 
 /// A group of photos clustered into a single outing by time and GPS proximity.

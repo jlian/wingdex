@@ -8,19 +8,33 @@ import SwiftUI
 struct CropView: View {
     let imageData: Data
     let initialCropBox: CropBoxResult?
-    var reason: String = "Crop to the bird you want to identify"
+    var reason: String = "For best results, crop to one bird"
+    let onBack: () -> Void
+    let onSkip: () -> Void
     let onApply: (CropBoxResult) -> Void
 
-    @Environment(\.dismiss) private var dismiss
-    @State private var cropBox: CropBoxResult
     @State private var paddedInitialCrop: CropBoxResult
-    @State private var dragStartCrop: CropBoxResult?
-    @State private var pinchScale: CGFloat = 1.0
+    @State private var photoScale: CGFloat = 1.0
+    @State private var committedScale: CGFloat = 1.0
+    @State private var photoOffset: CGSize = .zero
+    @State private var committedOffset: CGSize = .zero
+    @State private var initialScale: CGFloat = 1.0
+    @State private var initialOffset: CGSize = .zero
+    @State private var didInitializeTransform = false
 
-    init(imageData: Data, initialCropBox: CropBoxResult?, reason: String = "Crop to the bird you want to identify", onApply: @escaping (CropBoxResult) -> Void) {
+    init(
+        imageData: Data,
+        initialCropBox: CropBoxResult?,
+        reason: String = "For best results, crop to one bird",
+        onBack: @escaping () -> Void,
+        onSkip: @escaping () -> Void,
+        onApply: @escaping (CropBoxResult) -> Void
+    ) {
         self.imageData = imageData
         self.initialCropBox = initialCropBox
         self.reason = reason
+        self.onBack = onBack
+        self.onSkip = onSkip
         self.onApply = onApply
 
         let defaultCrop = CropBoxResult(x: 15, y: 15, width: 70, height: 70)
@@ -39,86 +53,49 @@ struct CropView: View {
         } else {
             padded = defaultCrop
         }
-        self._cropBox = State(initialValue: padded)
         self._paddedInitialCrop = State(initialValue: padded)
     }
 
     var body: some View {
-        // Image with crop overlay - pageBg background for consistent chrome
         GeometryReader { geo in
-            if let uiImage = UIImage(data: imageData) {
-                let imageRect = CropService.renderedImageRect(
-                    containerW: geo.size.width, containerH: geo.size.height,
-                    naturalW: uiImage.size.width, naturalH: uiImage.size.height
-                )
+            if let uiImage = normalizedImage(from: imageData) {
+                let squareSide = geo.size.width
+                let fillInfo = fillImageInfo(for: uiImage, squareSide: squareSide)
 
-                ZStack {
-                    // Page background fills the whole area
-                    Color.pageBg
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
 
-                    // Full image
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
+                    Text(reason)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 32)
 
-                    // Dimmed overlay outside crop area
-                    let cropX = imageRect.offsetX + imageRect.renderedW * cropBox.x / 100
-                    let cropY = imageRect.offsetY + imageRect.renderedH * cropBox.y / 100
-                    let cropW = imageRect.renderedW * cropBox.width / 100
-                    let cropH = imageRect.renderedH * cropBox.height / 100
+                    ZStack {
+                        Color.pageBg
 
-                    Canvas { context, size in
-                        context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.4)))
-                        context.blendMode = .destinationOut
-                        context.fill(Path(CGRect(x: cropX, y: cropY, width: cropW, height: cropH)), with: .color(.white))
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .frame(width: fillInfo.renderedW, height: fillInfo.renderedH)
+                            .scaleEffect(photoScale)
+                            .offset(photoOffset)
                     }
-                    .allowsHitTesting(false)
+                    .frame(width: squareSide, height: squareSide)
+                    .clipped()
+                    .contentShape(Rectangle())
+                    .gesture(photoManipulationGesture(fillInfo: fillInfo))
 
-                    // Crop border + corner handles
-                    Rectangle()
-                        .stroke(Color.white, lineWidth: 2)
-                        .frame(width: cropW, height: cropH)
-                        .position(x: cropX + cropW / 2, y: cropY + cropH / 2)
-
-                    let corners: [(CGFloat, CGFloat)] = [
-                        (cropX, cropY), (cropX + cropW, cropY),
-                        (cropX, cropY + cropH), (cropX + cropW, cropY + cropH),
-                    ]
-                    ForEach(0..<4, id: \.self) { i in
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 16, height: 16)
-                            .shadow(radius: 2)
-                            .position(x: corners[i].0, y: corners[i].1)
-                    }
-
-                    // Drag to move + pinch to resize
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let start = dragStartCrop ?? cropBox
-                                    if dragStartCrop == nil { dragStartCrop = cropBox }
-                                    let dx = value.translation.width / imageRect.renderedW * 100
-                                    let dy = value.translation.height / imageRect.renderedH * 100
-                                    cropBox = CropBoxResult(
-                                        x: max(0, min(100 - cropBox.width, start.x + dx)),
-                                        y: max(0, min(100 - cropBox.height, start.y + dy)),
-                                        width: cropBox.width, height: cropBox.height
-                                    )
-                                }
-                                .onEnded { _ in dragStartCrop = nil }
-                        )
-                        .simultaneousGesture(
-                            MagnificationGesture()
-                                .onChanged { scale in
-                                    let delta = scale / pinchScale
-                                    pinchScale = scale
-                                    resizeCrop(by: delta)
-                                }
-                                .onEnded { _ in pinchScale = 1.0 }
-                        )
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.pageBg)
+                .onAppear {
+                    configureInitialTransformIfNeeded(fillInfo: fillInfo)
+                }
+                .onChange(of: geo.size.width) {
+                    didInitializeTransform = false
+                    configureInitialTransformIfNeeded(fillInfo: fillInfo)
                 }
             } else {
                 Color.pageBg
@@ -130,53 +107,167 @@ struct CropView: View {
             }
         }
         .background(Color.pageBg.ignoresSafeArea())
-        .navigationTitle("Crop Photo")
+        .navigationTitle("Crop Bird Photo")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.pageBg, for: .navigationBar, .bottomBar)
+        .toolbarBackground(.visible, for: .navigationBar, .bottomBar)
         .toolbar {
-            // Bottom bar: (left empty) | Reset (center) | Apply (right)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    if let cropResult = currentCropResult() {
+                        onApply(cropResult)
+                    }
+                } label: {
+                    Image(systemName: "checkmark")
+                }
+            }
             ToolbarItemGroup(placement: .bottomBar) {
-                Spacer()
-
-                // Reason text + reset in center
-                Text(reason)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Button("Reset", systemImage: "arrow.counterclockwise") {
-                    cropBox = paddedInitialCrop
+                Button {
+                    onBack()
+                } label: {
+                    Image(systemName: "chevron.left")
                 }
 
                 Spacer()
 
-                // Apply (right)
-                Button {
-                    onApply(cropBox)
-                    dismiss()
+                Button("Skip", role: .destructive) {
+                    onSkip()
+                }
+
+                Spacer()
+
+                Button() {
+                    photoScale = initialScale
+                    committedScale = initialScale
+                    photoOffset = initialOffset
+                    committedOffset = initialOffset
                 } label: {
-                    Label("Apply", systemImage: "chevron.right")
-                        .labelStyle(.titleAndIcon)
+                    Image(systemName: "arrow.counterclockwise")
                 }
             }
         }
     }
 
-    private func resizeCrop(by factor: CGFloat) {
-        let centerX = cropBox.x + cropBox.width / 2
-        let centerY = cropBox.y + cropBox.height / 2
-        let newW = max(15, min(100, cropBox.width * factor))
-        let newH = max(15, min(100, cropBox.height * factor))
-        cropBox = CropBoxResult(
-            x: max(0, min(100 - newW, centerX - newW / 2)),
-            y: max(0, min(100 - newH, centerY - newH / 2)),
-            width: newW, height: newH
+    private struct FillImageInfo {
+        let squareSide: CGFloat
+        let naturalW: CGFloat
+        let naturalH: CGFloat
+        let baseScale: CGFloat
+        let renderedW: CGFloat
+        let renderedH: CGFloat
+    }
+
+    private func normalizedImage(from data: Data) -> UIImage? {
+        guard let image = UIImage(data: data) else { return nil }
+        if image.imageOrientation == .up { return image }
+        return UIGraphicsImageRenderer(size: image.size).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+    }
+
+    private func fillImageInfo(for image: UIImage, squareSide: CGFloat) -> FillImageInfo {
+        let naturalW = image.size.width
+        let naturalH = image.size.height
+        let baseScale = max(squareSide / naturalW, squareSide / naturalH)
+        return FillImageInfo(
+            squareSide: squareSide,
+            naturalW: naturalW,
+            naturalH: naturalH,
+            baseScale: baseScale,
+            renderedW: naturalW * baseScale,
+            renderedH: naturalH * baseScale
+        )
+    }
+
+    private func configureInitialTransformIfNeeded(fillInfo: FillImageInfo) {
+        guard !didInitializeTransform else { return }
+
+        let cropWidthPx = fillInfo.naturalW * CGFloat(paddedInitialCrop.width / 100)
+        let cropCenterX = fillInfo.naturalW * CGFloat((paddedInitialCrop.x + paddedInitialCrop.width / 2) / 100)
+        let cropCenterY = fillInfo.naturalH * CGFloat((paddedInitialCrop.y + paddedInitialCrop.height / 2) / 100)
+
+        let desiredScale = max(1, min(6, fillInfo.squareSide / max(cropWidthPx, 1) / fillInfo.baseScale))
+        let proposedOffset = CGSize(
+            width: -(cropCenterX - fillInfo.naturalW / 2) * fillInfo.baseScale * desiredScale,
+            height: -(cropCenterY - fillInfo.naturalH / 2) * fillInfo.baseScale * desiredScale
+        )
+        let clamped = clampedOffset(proposedOffset, fillInfo: fillInfo, scale: desiredScale)
+
+        initialScale = desiredScale
+        initialOffset = clamped
+        photoScale = desiredScale
+        committedScale = desiredScale
+        photoOffset = clamped
+        committedOffset = clamped
+        didInitializeTransform = true
+    }
+
+    private func clampedOffset(_ proposed: CGSize, fillInfo: FillImageInfo, scale: CGFloat) -> CGSize {
+        let scaledW = fillInfo.renderedW * scale
+        let scaledH = fillInfo.renderedH * scale
+        let maxX = max(0, (scaledW - fillInfo.squareSide) / 2)
+        let maxY = max(0, (scaledH - fillInfo.squareSide) / 2)
+        return CGSize(
+            width: min(max(proposed.width, -maxX), maxX),
+            height: min(max(proposed.height, -maxY), maxY)
+        )
+    }
+
+    private func photoManipulationGesture(fillInfo: FillImageInfo) -> some Gesture {
+        SimultaneousGesture(
+            DragGesture()
+                .onChanged { value in
+                    let proposed = CGSize(
+                        width: committedOffset.width + value.translation.width,
+                        height: committedOffset.height + value.translation.height
+                    )
+                    photoOffset = clampedOffset(proposed, fillInfo: fillInfo, scale: photoScale)
+                }
+                .onEnded { _ in
+                    committedOffset = photoOffset
+                },
+            MagnificationGesture()
+                .onChanged { value in
+                    let newScale = max(1, min(6, committedScale * value))
+                    photoScale = newScale
+                    photoOffset = clampedOffset(photoOffset, fillInfo: fillInfo, scale: newScale)
+                }
+                .onEnded { _ in
+                    committedScale = photoScale
+                    committedOffset = clampedOffset(committedOffset, fillInfo: fillInfo, scale: photoScale)
+                    photoOffset = committedOffset
+                }
+        )
+    }
+
+    private func currentCropResult() -> CropBoxResult? {
+        guard let uiImage = normalizedImage(from: imageData) else { return nil }
+        let side = UIScreen.main.bounds.width
+        let fillInfo = fillImageInfo(for: uiImage, squareSide: side)
+        let totalScale = fillInfo.baseScale * photoScale
+        let visibleSidePx = side / totalScale
+        let centerX = fillInfo.naturalW / 2 - photoOffset.width / totalScale
+        let centerY = fillInfo.naturalH / 2 - photoOffset.height / totalScale
+        let xPx = max(0, min(fillInfo.naturalW - visibleSidePx, centerX - visibleSidePx / 2))
+        let yPx = max(0, min(fillInfo.naturalH - visibleSidePx, centerY - visibleSidePx / 2))
+
+        return CropBoxResult(
+            x: Double(xPx / fillInfo.naturalW * 100),
+            y: Double(yPx / fillInfo.naturalH * 100),
+            width: Double(visibleSidePx / fillInfo.naturalW * 100),
+            height: Double(visibleSidePx / fillInfo.naturalH * 100)
         )
     }
 }
 
 #Preview("Default") {
     NavigationStack {
-        CropView(imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400), initialCropBox: nil) { _ in }
+        CropView(
+            imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400),
+            initialCropBox: nil,
+            onBack: {},
+            onSkip: {}
+        ) { _ in }
     }
 }
 
@@ -185,7 +276,9 @@ struct CropView: View {
         CropView(
             imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400),
             initialCropBox: CropBoxResult(x: 20, y: 30, width: 40, height: 40),
-            reason: "Multiple birds - crop to one"
+            reason: "Multiple birds detected, crop to one",
+            onBack: {},
+            onSkip: {}
         ) { _ in }
     }
 }
