@@ -8,10 +8,8 @@ import SwiftUI
 struct AddPhotosFlow: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.showWingDex) private var showWingDex
     @State private var viewModel = AddPhotosViewModel()
-
-    /// Controls the CropView sheet presentation for manual cropping.
-    @State private var showCropSheet = false
 
     var body: some View {
         Group {
@@ -161,12 +159,24 @@ struct AddPhotosFlow: View {
     // MARK: - Manual Crop Destination
 
     /// Shows the CropView for the current photo, passing the AI crop box if available.
+    /// Displays a context-specific reason (multi-bird, no detection, or manual re-crop).
     @ViewBuilder
     private var manualCropDestination: some View {
         if let photo = viewModel.currentPhoto {
+            let reason: String = {
+                if viewModel.currentCandidates.isEmpty {
+                    return "No bird detected - try cropping to the bird"
+                } else if viewModel.currentCandidates.count > 0 {
+                    // Candidates present means multi-bird or user-initiated re-crop
+                    return "Multiple birds detected - crop to one bird"
+                }
+                return "Crop to the bird you want to identify"
+            }()
+
             CropView(
                 imageData: photo.image,
                 initialCropBox: photo.aiCropBox,
+                reason: reason,
                 onApply: { cropResult in
                     // Generate cropped image data from the crop box
                     if let croppedData = generateCroppedImageData(from: photo.image, cropBox: cropResult) {
@@ -203,6 +213,7 @@ struct AddPhotosFlow: View {
                 .foregroundStyle(Color.mutedText)
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.pageBg.ignoresSafeArea())
     }
 
@@ -262,7 +273,7 @@ struct AddPhotosFlow: View {
 
             // Done button
             Button {
-                // Dismiss the AddPhotos flow
+                showWingDex()
             } label: {
                 Text("Done")
                     .font(.system(size: 16, weight: .medium))
@@ -332,6 +343,7 @@ struct AddPhotosFlow: View {
 
 /// Animated progress bar that follows `90 * (1 - e^(-t/tau))`, matching web behavior.
 ///
+/// Uses SwiftUI's TimelineView for smooth updates that respect the view lifecycle.
 /// Resets whenever `runKey` changes (e.g., when escalating from fast to strong model).
 struct ExponentialProgressBar: View {
     @Binding var progress: Double
@@ -339,43 +351,33 @@ struct ExponentialProgressBar: View {
     let runKey: Int
 
     @State private var startDate = Date()
-    @State private var timer: Timer?
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.mutedText.opacity(0.15))
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.accentColor)
-                    .frame(width: geo.size.width * min(progress / 100, 1))
-                    .animation(.easeOut(duration: 0.1), value: progress)
+        TimelineView(.animation(minimumInterval: 0.08)) { timeline in
+            let elapsed = timeline.date.timeIntervalSince(startDate) * 1000
+            let computed = 90 * (1 - exp(-elapsed / tauMs))
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.mutedText.opacity(0.15))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.accentColor)
+                        .frame(width: geo.size.width * min(max(computed, progress) / 100, 1))
+                }
+            }
+            .onChange(of: computed) {
+                // Keep the binding in sync for external reads
+                progress = max(progress, min(90, computed))
             }
         }
-        .onAppear { startTimer() }
-        .onDisappear { stopTimer() }
         .onChange(of: runKey) {
             startDate = Date()
             progress = 0
-            startTimer()
         }
-    }
-
-    private func startTimer() {
-        stopTimer()
-        startDate = Date()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { _ in
-            let elapsed = Date().timeIntervalSince(startDate) * 1000
-            let next = 90 * (1 - exp(-elapsed / tauMs))
-            Task { @MainActor in
-                progress = max(progress, min(90, next))
-            }
+        .onAppear {
+            startDate = Date()
         }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
     }
 }
 

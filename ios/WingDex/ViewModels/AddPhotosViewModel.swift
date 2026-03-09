@@ -253,6 +253,8 @@ final class AddPhotosViewModel {
     // MARK: - Step 2: Outing Confirmed -> Start Per-Photo Loop
 
     /// Called when the user confirms the outing in OutingReviewView.
+    /// Creates photo metadata on the server immediately (matching web flow),
+    /// then starts the per-photo AI identification loop.
     func outingConfirmed(outingId: String, locationName: String) {
         let normalizedName = locationName.trimmingCharacters(in: .whitespacesAndNewlines)
         lastLocationName = normalizedName
@@ -261,8 +263,38 @@ final class AddPhotosViewModel {
         currentCandidates = []
         currentPhotoIndex = 0
 
-        // Start identifying the first photo
-        Task { await runSpeciesId(photoIndex: 0) }
+        // Save photo metadata to server BEFORE AI identification starts.
+        // The observation table has a FK to photo(id), so photos must exist first.
+        Task {
+            await createPhotoMetadata(outingId: outingId)
+            await runSpeciesId(photoIndex: 0)
+        }
+    }
+
+    /// Persist photo metadata for the current cluster to the server.
+    /// Must be called before creating observations (FK constraint on representativePhotoId).
+    private func createPhotoMetadata(outingId: String) async {
+        guard let service = dataService else { return }
+        let photos = clusterPhotos
+        let formatter = ISO8601DateFormatter()
+        let payloads = photos.map { photo in
+            DataService.PhotoPayload(
+                id: photo.id,
+                outingId: outingId,
+                exifTime: photo.exifTime.map { formatter.string(from: $0) },
+                gps: (photo.gpsLat != nil && photo.gpsLon != nil)
+                    ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
+                    : nil,
+                fileHash: photo.fileHash,
+                fileName: photo.fileName
+            )
+        }
+        do {
+            try await service.createPhotos(payloads)
+            log.info("Saved \(payloads.count) photo metadata records for outing \(outingId)")
+        } catch {
+            log.error("Failed to save photo metadata: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Step 3: Species Identification (Two-Tier AI)
@@ -511,22 +543,7 @@ final class AddPhotosViewModel {
                 }
             }
 
-            // Create photo metadata
-            let clusterPhotosData = clusterPhotos
-            let formatter = ISO8601DateFormatter()
-            let photoPayloads = clusterPhotosData.map { photo in
-                DataService.PhotoPayload(
-                    id: photo.id,
-                    outingId: currentOutingId,
-                    exifTime: photo.exifTime.map { formatter.string(from: $0) },
-                    gps: (photo.gpsLat != nil && photo.gpsLon != nil)
-                        ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
-                        : nil,
-                    fileHash: photo.fileHash,
-                    fileName: photo.fileName
-                )
-            }
-            try await service.createPhotos(photoPayloads)
+            // Photo metadata was already created in outingConfirmed() before AI started
 
             // Count new species
             var clusterNewSpecies = 0

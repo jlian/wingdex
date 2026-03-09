@@ -324,8 +324,14 @@ struct OutingReviewView: View {
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFill()
-                            .frame(minHeight: 70)
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .aspectRatio(1, contentMode: .fill)
+                            .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.cardBg)
+                            .aspectRatio(1, contentMode: .fill)
                     }
                 }
             }
