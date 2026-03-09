@@ -8,7 +8,7 @@ import SwiftUI
 struct AddPhotosFlow: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
-    @Environment(\.showWingDex) private var showWingDex
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = AddPhotosViewModel()
 
     var body: some View {
@@ -34,6 +34,11 @@ struct AddPhotosFlow: View {
         }
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
         .background(Color.pageBg.ignoresSafeArea())
         .onAppear {
             viewModel.configure(
@@ -269,7 +274,7 @@ struct AddPhotosFlow: View {
 
             // Done button
             Button {
-                showWingDex()
+                dismiss()
             } label: {
                 Text("Done")
                     .font(.system(size: 16, weight: .medium))

@@ -39,6 +39,9 @@ final class AddPhotosViewModel {
     var selectedItems: [PhotosPickerItem] = []
     var processedPhotos: [ProcessedPhoto] = []
 
+    /// Photos captured via the camera (UIImage, not from PhotosPicker).
+    var cameraPhotos: [UIImage] = []
+
     // MARK: - Clustering
 
     var clusters: [PhotoCluster] = []
@@ -133,15 +136,22 @@ final class AddPhotosViewModel {
         return photos[currentPhotoIndex]
     }
 
+    // MARK: - Camera Support
+
+    /// Add a photo captured from the camera.
+    func addCameraPhoto(_ image: UIImage) {
+        cameraPhotos.append(image)
+    }
+
     // MARK: - Step 1: Process Selected Photos
 
-    /// Load photos from the picker, extract EXIF, generate thumbnails, cluster.
+    /// Load photos from the picker and camera, extract EXIF, generate thumbnails, cluster.
     func processSelectedPhotos() async {
-        guard !selectedItems.isEmpty else { return }
+        guard !selectedItems.isEmpty || !cameraPhotos.isEmpty else { return }
         isProcessing = true
         error = nil
         currentStep = .extracting
-        totalCount = selectedItems.count
+        totalCount = selectedItems.count + cameraPhotos.count
         processedCount = 0
         extractionProgress = 0
         processingMessage = "Reading photo data..."
@@ -190,6 +200,29 @@ final class AddPhotosViewModel {
             processedCount += 1
             extractionProgress = Double(processedCount) / Double(totalCount) * 100
         }
+
+        // Process camera-captured photos (no EXIF GPS, use capture time as now)
+        for (i, uiImage) in cameraPhotos.enumerated() {
+            let id = UUID().uuidString
+            let compressed = PhotoService.compressImage(uiImage, quality: 0.7) ?? Data()
+            let thumbnail = PhotoService.generateThumbnail(from: compressed, maxDimension: 200) ?? compressed
+            let fileHash = computeFileHash(compressed)
+
+            let photo = ProcessedPhoto(
+                id: id,
+                image: compressed,
+                thumbnail: thumbnail,
+                exifTime: Date(),
+                gpsLat: nil,
+                gpsLon: nil,
+                fileHash: fileHash,
+                fileName: "camera_\(id).jpg"
+            )
+            newPhotos.append(photo)
+            processedCount += 1
+            extractionProgress = Double(processedCount) / Double(totalCount) * 100
+        }
+        cameraPhotos = []
 
         if newPhotos.isEmpty && duplicatePhotos.isEmpty {
             error = "No photos to process"

@@ -3,134 +3,158 @@ import SwiftUI
 
 /// Photo selection step in the Add Photos flow.
 ///
-/// Displays a photo picker and a GPS context toggle. Once photos are selected,
-/// the user taps Continue to extract EXIF data and begin the identification flow.
+/// Offers both photo library picker and camera capture - the standard iOS
+/// pattern for image input. Camera-captured photos feed into the same
+/// extraction -> clustering -> identification pipeline as library photos.
 struct PhotoSelectionView: View {
     @Bindable var viewModel: AddPhotosViewModel
+    @State private var showCamera = false
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Spacer()
 
-            // Camera icon
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(Color.accentColor)
-            }
+            Image(systemName: "camera.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.accentColor)
 
-            // Header text
-            VStack(spacing: 8) {
-                Text("Select Photos")
-                    .font(.system(size: 22, weight: .semibold, design: .serif))
+            VStack(spacing: 6) {
+                Text("Add Photos")
+                    .font(.title2.weight(.semibold))
                     .foregroundStyle(Color.foregroundText)
-                Text("Choose bird photos to identify and add to your WingDex.")
-                    .font(.system(size: 15))
+                Text("Take or choose bird photos to identify.")
+                    .font(.subheadline)
                     .foregroundStyle(Color.mutedText)
-                    .multilineTextAlignment(.center)
             }
 
-            // Photo picker button
-            PhotosPicker(
-                selection: $viewModel.selectedItems,
-                maxSelectionCount: 50,
-                matching: .images
-            ) {
-                Label {
-                    Text("Choose Photos")
-                        .font(.system(size: 16, weight: .medium))
-                } icon: {
-                    Image(systemName: "photo.on.rectangle.angled")
+            // Two input options side by side - standard iOS pattern
+            HStack(spacing: 12) {
+                // Camera capture
+                Button {
+                    showCamera = true
+                } label: {
+                    Label("Take Photo", systemImage: "camera")
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
-            .tint(Color.foregroundText)
-            .padding(.horizontal, 32)
+                .buttonStyle(.bordered)
+                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
 
-            // GPS context toggle - matching web's "Use GPS & date for better ID"
+                // Photo library picker
+                PhotosPicker(
+                    selection: $viewModel.selectedItems,
+                    maxSelectionCount: 50,
+                    matching: .images
+                ) {
+                    Label("Library", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal, 24)
+
+            // GPS context toggle
             Toggle(isOn: $viewModel.useGeoContext) {
-                Label {
-                    Text("Use GPS & date for better ID")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mutedText)
-                } icon: {
-                    Image(systemName: "location.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor.opacity(0.7))
-                }
+                Label("Use GPS & date for better ID", systemImage: "location.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.mutedText)
             }
             .tint(Color.accentColor)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 8)
-            .background(Color.mutedText.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 24)
 
             // Selection count and Continue button
-            if !viewModel.selectedItems.isEmpty {
-                Text("\(viewModel.selectedItems.count) photo\(viewModel.selectedItems.count == 1 ? "" : "s") selected")
+            if !viewModel.selectedItems.isEmpty || !viewModel.cameraPhotos.isEmpty {
+                let totalCount = viewModel.selectedItems.count + viewModel.cameraPhotos.count
+                Text("\(totalCount) photo\(totalCount == 1 ? "" : "s") selected")
                     .font(.subheadline)
                     .foregroundStyle(Color.mutedText)
 
                 Button {
                     Task { await viewModel.processSelectedPhotos() }
                 } label: {
-                    Label {
-                        Text("Continue")
-                            .font(.system(size: 16, weight: .medium))
-                    } icon: {
-                        Image(systemName: "arrow.right")
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Continue")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.accentColor)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 24)
             }
 
             // Tips
             HStack(spacing: 12) {
-                tipCard("Close-ups and side profiles ID best")
-                tipCard("One bird per photo for accuracy")
+                tipCard("Close-ups and side profiles ID best", icon: "sparkle")
+                tipCard("One bird per photo for accuracy", icon: "sparkle")
             }
             .padding(.horizontal, 16)
 
             Spacer()
         }
-        .padding(.horizontal, 24)
         .background(Color.pageBg.ignoresSafeArea())
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraCaptureView { image in
+                viewModel.addCameraPhoto(image)
+            }
+            .ignoresSafeArea()
+        }
     }
 
-    /// A small tip card matching the web's photo tips.
-    private func tipCard(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            Text("\u{2726}")
-                .font(.caption)
-                .foregroundStyle(Color.accentColor)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(Color.mutedText)
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mutedText.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+    private func tipCard(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption)
+            .foregroundStyle(Color.mutedText)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
+
+// MARK: - Camera Capture View
+
+/// UIKit camera wrapper for SwiftUI. Uses UIImagePickerController which is
+/// the standard iOS camera interface with built-in photo capture UI.
+struct CameraCaptureView: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture, dismiss: dismiss)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage) -> Void
+        let dismiss: DismissAction
+
+        init(onCapture: @escaping (UIImage) -> Void, dismiss: DismissAction) {
+            self.onCapture = onCapture
+            self.dismiss = dismiss
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                onCapture(image)
+            }
+            dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Previews
 
 #Preview {
     NavigationStack {
         PhotoSelectionView(viewModel: AddPhotosViewModel())
-    }
-}
-
-#Preview("With Selection") {
-    NavigationStack {
-        let vm = AddPhotosViewModel()
-        PhotoSelectionView(viewModel: vm)
     }
 }

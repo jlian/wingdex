@@ -76,6 +76,7 @@ struct MainTabView: View {
     @Environment(AuthService.self) private var auth
     @State private var selectedTab = AppTab.home
     @State private var showingSettings = false
+    @State private var showingAddPhotos = false
 
     enum AppTab: Hashable {
         case home, outings, wingdex, add
@@ -97,17 +98,24 @@ struct MainTabView: View {
 
             // WHY role: .search: iOS 26 TabView visually detaches the .search tab
             // to the right side of the tab bar (like Apple Music's search/create button),
-            // which is the layout we want for the "+" camera button.
+            // which gives us the "+" camera button layout we want.
+            // Tapping it presents AddPhotosFlow as a full-screen sheet.
             Tab(value: AppTab.add, role: .search) {
-                AddPhotosFlow()
+                Color.clear
+                    .onAppear { showingAddPhotos = true }
             } label: {
                 Label("Add", systemImage: "camera.fill")
+            }
+        }
+        .fullScreenCover(isPresented: $showingAddPhotos) {
+            NavigationStack {
+                AddPhotosFlow()
             }
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .environment(\.showAddPhotos) { selectedTab = .add }
+        .environment(\.showAddPhotos) { showingAddPhotos = true }
         .environment(\.showSettings) { showingSettings = true }
         .environment(\.showWingDex) { selectedTab = .wingdex }
         .environment(\.showOutings) { selectedTab = .outings }
