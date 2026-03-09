@@ -44,13 +44,19 @@
           "fill-specializations" : [
             {
               "value" : {
-                "automatic-gradient" : "extended-gray:1.00000,1.00000"
+                "solid" : "display-p3:0.94942,0.93291,0.88751,1.00000"
               }
             },
             {
               "appearance" : "dark",
               "value" : {
                 "automatic-gradient" : "srgb:0.09020,0.22353,0.14118,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:0.00000,1.00000"
               }
             }
           ],
@@ -94,10 +100,7 @@
           "fill-specializations" : [
             {
               "value" : {
-                "linear-gradient" : [
-                  "display-p3:0.60310,0.79746,0.63604,1.00000",
-                  "display-p3:0.46667,0.69804,0.50588,1.00000"
-                ],
+                "automatic-gradient" : "display-p3:0.46667,0.69804,0.50588,1.00000",
                 "orientation" : {
                   "start" : {
                     "x" : 0.5,
