@@ -128,10 +128,9 @@ ios/
       PasskeyManagementView.swift
       AddPhotosFlow/        <- Multi-step wizard (sheet)
         PhotoSelectionView.swift
-        OutingReviewView.swift  <- NEW: reverse geocode, place search, outing matching
-        PerPhotoConfirmView.swift <- NEW: per-photo confirm with Wikipedia ref
+        OutingReviewView.swift  <- reverse geocode, place search, outing matching
+        PerPhotoConfirmView.swift <- per-photo confirm with Wikipedia ref
         CropView.swift
-        ConfirmView.swift
     ViewModels/
       AddPhotosViewModel.swift
     Models/
@@ -222,9 +221,9 @@ Basic flow implemented, but needs significant rework to match web app (see Phase
 
 - [x] `PhotoSelectionView` - `PhotosPicker` multi-select, load images
 - [x] `PhotoService` - EXIF extraction (date/GPS), JPEG compression, thumbnail generation, SHA-256 hash, Haversine clustering (2hr/3km)
-- [x] `ReviewView` - AI identification results per photo, confirm/reject
+- [x] `ReviewView` - AI identification results per photo, confirm/reject (removed in Phase 3-R, replaced by PerPhotoConfirmView)
 - [x] `CropView` - crop interaction with `CropService` math
-- [x] `ConfirmView` - final review + save to API
+- [x] `ConfirmView` - final review + save to API (removed in Phase 3-R, done screen moved to AddPhotosFlow)
 - [x] `AddPhotosViewModel` - orchestrate flow, manage state between steps
 
 ---
@@ -434,7 +433,7 @@ The iOS flow is ~60% feature-complete vs the web app. The web wizard is a 9-step
 
 **Current iOS flow**: selectPhotos -> processing -> review (batch) -> confirm -> done
 
-**Target iOS flow**: selectPhotos -> processing -> outingReview -> photoProcessing -> perPhotoConfirm (with crop-retry loop) -> confirm -> done
+**Target iOS flow**: selectPhotos -> extracting -> outingReview -> photoProcessing -> perPhotoConfirm (with crop-retry loop) -> save -> done
 
 ### 3-R.1: Outing Review Step
 
@@ -442,14 +441,14 @@ Does not exist on iOS. This is a NEW step inserted after photo extraction/cluste
 
 After photos are extracted and clustered, the user reviews each cluster as a potential outing:
 
-- [ ] **Reverse geocoding**: Call Nominatim API with cluster center coordinates to detect location name (priority: parks/reserves -> natural features -> neighborhoods -> cities)
-- [ ] **Location display**: Show detected location name with GPS coordinates, or "Unknown Location" if no GPS
-- [ ] **Date/time display**: Show cluster start time extracted from EXIF, formatted with timezone
-- [ ] **Manual date/time override**: User can tap date/time to edit via native `DatePicker`
-- [ ] **Place search**: Nominatim autocomplete - user can search for any location name, select from suggestions to override coordinates and location name
-- [ ] **State/country extraction**: Automatically extract ISO 3166-2 state/province code and country code from geocoding result (stored on the outing for eBird compatibility)
-- [ ] **Existing outing matching**: Check if cluster overlaps an existing outing (time +/-2 hours, distance <=3 km; relaxed to 50 km if times nearly match <=30 min). If match found, show "Add to existing outing?" toggle. If adding to existing, expand outing's time range and fill missing fields
-- [ ] **Per-cluster navigation**: If multiple clusters, navigate between them (e.g., "Outing 1 of 3" with next/prev)
+- [x] **Reverse geocoding**: Call Nominatim API with cluster center coordinates to detect location name (priority: parks/reserves -> natural features -> neighborhoods -> cities)
+- [x] **Location display**: Show detected location name with GPS coordinates, or "Unknown Location" if no GPS
+- [x] **Date/time display**: Show cluster start time extracted from EXIF, formatted with timezone
+- [x] **Manual date/time override**: User can tap date/time to edit via native `DatePicker`
+- [x] **Place search**: Nominatim autocomplete - user can search for any location name, select from suggestions to override coordinates and location name
+- [x] **State/country extraction**: Automatically extract ISO 3166-2 state/province code and country code from geocoding result (stored on the outing for eBird compatibility)
+- [x] **Existing outing matching**: Check if cluster overlaps an existing outing (time +/-2 hours, distance <=3 km; relaxed to 50 km if times nearly match <=30 min). If match found, show "Add to existing outing?" toggle. If adding to existing, expand outing's time range and fill missing fields
+- [x] **Per-cluster navigation**: If multiple clusters, navigate between them (e.g., "Outing 1 of 3" with next/prev)
 
 **New file**: `OutingReviewView.swift` in `AddPhotosFlow/`
 **Updates**: `AddPhotosViewModel.swift` - new step in flow state machine, Nominatim API calls, `findMatchingOuting` logic
@@ -459,10 +458,10 @@ After photos are extracted and clustered, the user reviews each cluster as a pot
 
 iOS currently sends one `model: "fast"` request per photo. The web uses a fast-then-strong escalation strategy.
 
-- [ ] **Fast model first**: Send each photo to `POST /api/identify-bird` with `model: "fast"` (~1.2s timeout)
-- [ ] **Escalation logic**: If confidence of top candidate < 0.75, OR gap between top-2 candidates < 0.15, re-send the same photo with `model: "strong"` (~4.4s timeout)
-- [ ] **User feedback**: Show status messages during processing - "Identifying species..." for fast model, "Re-analyzing with enhanced model..." when escalating to strong
-- [ ] **Progress**: Show "Photo X of N" counter with progress bar (exponential animation to ~90% before completion)
+- [x] **Fast model first**: Send each photo to `POST /api/identify-bird` with `model: "fast"` (~1.2s timeout)
+- [x] **Escalation logic**: If confidence of top candidate < 0.75, OR gap between top-2 candidates < 0.15, re-send the same photo with `model: "strong"` (~4.4s timeout)
+- [x] **User feedback**: Show status messages during processing - "Identifying species..." for fast model, "Re-analyzing with enhanced model..." when escalating to strong
+- [x] **Progress**: Show "Photo X of N" counter with progress bar (exponential animation to ~90% before completion)
 
 **Updates**: `AddPhotosViewModel.swift` - `identifySpecies` method needs escalation logic
 **Reference**: `src/lib/ai-inference.ts` (`identifyBirdInPhoto` function with fast/strong model switching)
@@ -473,14 +472,14 @@ iOS currently batch-confirms all photos. The web does per-photo confirmation wit
 
 Replace the current batch `ReviewView` with a sequential per-photo confirmation flow:
 
-- [ ] **Side-by-side comparison**: Display the user's photo next to a Wikipedia reference image of the identified species (fetched via Wikimedia Summary API). This lets users visually verify the AI's suggestion
-- [ ] **Color-coded confidence bar**: Horizontal progress bar showing AI confidence percentage. Green (>=80%), yellow (50-79%), red (<50%)
-- [ ] **High confidence (>=80%)**: Auto-select the top candidate. Show "Confirm" (primary) and "Possible" (secondary) buttons. User can tap "Confirm" to mark as confirmed, or "Possible" if uncertain
-- [ ] **Low confidence (<80%)**: Show all candidates as a tappable list. No auto-selection. User must choose a candidate or skip
-- [ ] **"Back" button**: Navigate to the previous photo's decision to revise it (undo previous confirmation and re-show that photo)
-- [ ] **"Crop & Retry" button**: Opens `CropView` for manual cropping, then re-submits the cropped image to the AI. Use AI-suggested `cropBox` as the initial crop position when available
-- [ ] **"Skip" button**: Reject this photo entirely (certainty = "rejected", excluded from final save)
-- [ ] **Alternative candidates**: List of all AI candidates with confidence percentages. Tap any candidate to select it instead of the top suggestion
+- [x] **Side-by-side comparison**: Display the user's photo next to a Wikipedia reference image of the identified species (fetched via Wikimedia Summary API). This lets users visually verify the AI's suggestion
+- [x] **Color-coded confidence bar**: Horizontal progress bar showing AI confidence percentage. Green (>=80%), yellow (50-79%), red (<50%)
+- [x] **High confidence (>=80%)**: Auto-select the top candidate. Show "Confirm" (primary) and "Possible" (secondary) buttons. User can tap "Confirm" to mark as confirmed, or "Possible" if uncertain
+- [x] **Low confidence (<80%)**: Show all candidates as a tappable list. No auto-selection. User must choose a candidate or skip
+- [x] **"Back" button**: Navigate to the previous photo's decision to revise it (undo previous confirmation and re-show that photo)
+- [x] **"Crop & Retry" button**: Opens `CropView` for manual cropping, then re-submits the cropped image to the AI. Use AI-suggested `cropBox` as the initial crop position when available
+- [x] **"Skip" button**: Reject this photo entirely (certainty = "rejected", excluded from final save)
+- [x] **Alternative candidates**: List of all AI candidates with confidence percentages. Tap any candidate to select it instead of the top suggestion
 - [ ] **Count field**: Allow user to adjust observation count (default 1) if multiple individuals of same species visible
 
 **New file**: `PerPhotoConfirmView.swift` in `AddPhotosFlow/`
@@ -493,11 +492,11 @@ Replace the current batch `ReviewView` with a sequential per-photo confirmation 
 
 Wire the existing crop UI into the identification retry flow:
 
-- [ ] **Auto-prompt on multi-bird**: When AI returns `multipleBirds: true`, automatically open `CropView` and prompt: "Multiple birds detected - crop to one bird"
-- [ ] **Auto-prompt on no detection**: When AI returns 0 candidates from the full image, automatically open `CropView` and prompt: "No bird detected - try cropping to the bird"
-- [ ] **Manual crop from confirm UI**: "Crop & Retry" button in `PerPhotoConfirmView` opens `CropView` at any time
-- [ ] **AI cropBox as initial position**: When the AI response includes a `cropBox` (percentage coordinates), use it as the initial crop rectangle position with padding (0.65x ratio, matching web's `paddedSquareCrop`)
-- [ ] **Re-identification after crop**: After user confirms crop, generate a new compressed JPEG from the cropped region and re-submit to `POST /api/identify-bird`. Do NOT re-prompt for crop after a user-initiated crop (prevent infinite loop)
+- [x] **Auto-prompt on multi-bird**: When AI returns `multipleBirds: true`, automatically open `CropView` and prompt: "Multiple birds detected - crop to one bird"
+- [x] **Auto-prompt on no detection**: When AI returns 0 candidates from the full image, automatically open `CropView` and prompt: "No bird detected - try cropping to the bird"
+- [x] **Manual crop from confirm UI**: "Crop & Retry" button in `PerPhotoConfirmView` opens `CropView` at any time
+- [x] **AI cropBox as initial position**: When the AI response includes a `cropBox` (percentage coordinates), use it as the initial crop rectangle position with padding (0.65x ratio, matching web's `paddedSquareCrop`)
+- [x] **Re-identification after crop**: After user confirms crop, generate a new compressed JPEG from the cropped region and re-submit to `POST /api/identify-bird`. Do NOT re-prompt for crop after a user-initiated crop (prevent infinite loop)
 
 **Updates**: Wire `CropView.swift` and `CropService.swift` into the `PerPhotoConfirmView` flow
 **Reference**: `src/components/flows/ImageCropDialog.tsx`
@@ -506,10 +505,10 @@ Wire the existing crop UI into the identification retry flow:
 
 iOS currently marks ALL confirmed photos as `certainty: "confirmed"`.
 
-- [ ] **"Confirm" button**: Sets observation `certainty` to `"confirmed"` - species is added to WingDex
-- [ ] **"Possible" button**: Sets observation `certainty` to `"possible"` - species is recorded but NOT added to WingDex (matches web behavior where only confirmed species appear in the dex)
-- [ ] **"Skip" button**: Sets `certainty` to `"rejected"` or excludes the photo entirely from the final save
-- [ ] **Auto-selection rule**: Only auto-select the top candidate when confidence >= 0.80 - but the user must still tap "Confirm" or "Possible" to proceed (no silent auto-confirmation)
+- [x] **"Confirm" button**: Sets observation `certainty` to `"confirmed"` - species is added to WingDex
+- [x] **"Possible" button**: Sets observation `certainty` to `"possible"` - species is recorded but NOT added to WingDex (matches web behavior where only confirmed species appear in the dex)
+- [x] **"Skip" button**: Sets `certainty` to `"rejected"` or excludes the photo entirely from the final save
+- [x] **Auto-selection rule**: Only auto-select the top candidate when confidence >= 0.80 - but the user must still tap "Confirm" or "Possible" to proceed (no silent auto-confirmation)
 
 **Updates**: `AddPhotosViewModel.swift`, `PerPhotoConfirmView.swift`
 
@@ -517,10 +516,10 @@ iOS currently marks ALL confirmed photos as `certainty: "confirmed"`.
 
 The web has a "Use GPS & date for better ID" toggle that controls whether location context is sent to the AI.
 
-- [ ] **Toggle location**: Add a toggle to the photo selection step or the outing review step
-- [ ] **When enabled**: Send `lat`, `lon`, `month`, and `locationName` fields in the `POST /api/identify-bird` request body alongside the image
-- [ ] **When disabled**: Send only the `imageDataUrl`, `imageWidth`, `imageHeight` fields (no location context)
-- [ ] **Default**: Enabled (GPS context improves accuracy significantly)
+- [x] **Toggle location**: Add a toggle to the photo selection step or the outing review step
+- [x] **When enabled**: Send `lat`, `lon`, `month`, and `locationName` fields in the `POST /api/identify-bird` request body alongside the image
+- [x] **When disabled**: Send only the `imageDataUrl`, `imageWidth`, `imageHeight` fields (no location context)
+- [x] **Default**: Enabled (GPS context improves accuracy significantly)
 
 **Updates**: `PhotoSelectionView.swift` or `AddPhotosViewModel.swift`
 
@@ -528,11 +527,11 @@ The web has a "Use GPS & date for better ID" toggle that controls whether locati
 
 SHA-256 file hash computation exists in `PhotoService`, but there is no UI to handle detected duplicates.
 
-- [ ] **Hash comparison**: After extracting EXIF and computing file hashes, compare each hash against existing photos in `DataStore.photos`
-- [ ] **Duplicate found**: Show a confirmation dialog: "This photo was previously uploaded. Reimport or skip?"
-- [ ] **"Reimport"**: Process the photo normally (creates new observation)
-- [ ] **"Skip"**: Exclude the photo from the current batch
-- [ ] **Batch handling**: If multiple duplicates found, show them together or one-by-one with a "Skip All Duplicates" option
+- [x] **Hash comparison**: After extracting EXIF and computing file hashes, compare each hash against existing photos in `DataStore.photos`
+- [x] **Duplicate found**: Show a confirmation dialog: "This photo was previously uploaded. Reimport or skip?"
+- [x] **"Reimport"**: Process the photo normally (creates new observation)
+- [x] **"Skip"**: Exclude the photo from the current batch
+- [x] **Batch handling**: If multiple duplicates found, show them together or one-by-one with a "Skip All Duplicates" option
 
 **Updates**: `AddPhotosViewModel.swift`, `DataStore.swift` (lookup by file hash)
 
@@ -1221,10 +1220,11 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | `WingDexApp.swift` | Modify | Restructure: 3 tabs + detached "+" button + avatar toolbar button (Phase 3.5) |
 | `SignInView.swift` | Rework | Match web auth modal: title, two passkey buttons, remove mode toggle (Phase 3.5) |
 | `SettingsView.swift` | Modify | Adapt for sheet presentation; add all Phase 4 features |
-| `AddPhotosViewModel.swift` | Major rework | Two-tier AI, per-photo flow, outing review step, crop retry, certainty |
-| `AddPhotosFlow/OutingReviewView.swift` | New | Nominatim geocoding, place search, existing outing matching |
-| `AddPhotosFlow/PerPhotoConfirmView.swift` | New | Per-photo confirm with Wikipedia ref, confidence bar, crop retry |
-| `AddPhotosFlow/ReviewView.swift` | Rework | Replace batch review with per-photo flow orchestration |
+| `AddPhotosViewModel.swift` | ✅ Done | Two-tier AI, per-photo flow, outing review step, crop retry, certainty |
+| `AddPhotosFlow/OutingReviewView.swift` | ✅ Done | Nominatim geocoding, place search, existing outing matching |
+| `AddPhotosFlow/PerPhotoConfirmView.swift` | ✅ Done | Per-photo confirm with Wikipedia ref, confidence bar, crop retry |
+| `AddPhotosFlow/ReviewView.swift` | ✅ Deleted | Replaced by PerPhotoConfirmView (per-photo flow) |
+| `AddPhotosFlow/ConfirmView.swift` | ✅ Deleted | Done/summary screen moved into AddPhotosFlow |
 | `OutingDetailView.swift` | Modify | Edit location, add species, delete species, export CSV, map link |
 | `SpeciesDetailView.swift` | Modify | eBird API lookup, certainty badges, count, notes |
 | `WingDexView.swift` | Modify | Family sort option |
@@ -1250,7 +1250,7 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 2.6 | Auth UX, Tab Icon, Session Fixes | ✅ Done |
 | 3 | Add Photos Flow (initial, needs rework) | ✅ Done (basic) |
 | 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | ✅ Done |
-| 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | Not started |
+| 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | ⏳ In Progress |
 | 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | Not started |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |

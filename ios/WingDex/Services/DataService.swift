@@ -98,6 +98,7 @@ final class DataService: Sendable {
         var lat: Double?
         var lon: Double?
         var month: Int?
+        var locationName: String?
         let model: String
     }
 

@@ -9,46 +9,99 @@ private let log = Logger(subsystem: "app.wingdex", category: "AddPhotos")
 
 /// ViewModel for the multi-step Add Photos wizard flow.
 ///
-/// Flow: Select Photos -> Extract EXIF & Cluster -> AI Identify -> Review -> Confirm -> Save
+/// Flow: selectPhotos -> extracting -> outingReview -> photoProcessing ->
+///       perPhotoConfirm -> (manualCrop) -> [next photo or save] -> done
+///
+/// Matches the web app's AddPhotosFlow.tsx state machine. Each photo is
+/// confirmed individually (per-photo) rather than in a batch list.
 @MainActor
 @Observable
 final class AddPhotosViewModel {
-    // Step tracking
+
+    // MARK: - Step State Machine
+
+    /// All possible steps in the add-photos wizard.
     enum Step: Equatable {
         case selectPhotos
-        case processing
-        case review
-        case confirm
+        case extracting
+        case outingReview
+        case photoProcessing
+        case perPhotoConfirm
+        case manualCrop
         case saving
         case done
     }
 
     var currentStep: Step = .selectPhotos
 
-    // Photo selection
+    // MARK: - Photo Selection
+
     var selectedItems: [PhotosPickerItem] = []
     var processedPhotos: [ProcessedPhoto] = []
 
-    // Clustering results
+    // MARK: - Clustering
+
     var clusters: [PhotoCluster] = []
+    var currentClusterIndex = 0
 
-    // AI identification results (keyed by photo ID)
-    var identifications: [String: IdentificationResult] = [:]
+    // MARK: - GPS Context Toggle
 
-    // Per-photo user decisions: photo ID -> chosen species name (nil = skip)
-    var confirmedSpecies: [String: String] = [:]
+    /// When true, send GPS and date context to the AI for better identification.
+    var useGeoContext = true
 
-    // State
+    // MARK: - Outing Review State
+
+    /// Location name from the most recent outing - used as default for new outings.
+    var lastLocationName = ""
+
+    /// The outing ID that the current cluster is being saved into.
+    var currentOutingId = ""
+
+    // MARK: - Per-Photo Identification State
+
+    /// Index of the photo currently being processed/confirmed within the current cluster.
+    var currentPhotoIndex = 0
+
+    /// AI candidates for the photo currently being confirmed.
+    var currentCandidates: [IdentifiedCandidate] = []
+
+    /// Per-photo results accumulated during the per-photo confirmation loop.
+    var photoResults: [PhotoResult] = []
+
+    /// Progress percentage (0-100) for the exponential progress animation.
+    var photoProgress: Double = 0
+
+    /// Time constant (ms) for the exponential progress bar animation.
+    /// Fast model ~1200ms, strong model ~4400ms.
+    var photoProgressTauMs: Double = 1200
+
+    /// Incremented to restart the progress animation timer.
+    var photoProgressRunKey = 0
+
+    // MARK: - Processing State
+
     var isProcessing = false
     var processingMessage = ""
     var processedCount = 0
     var totalCount = 0
+    var extractionProgress: Double = 0
     var error: String?
 
-    // Results after save
+    // MARK: - Duplicate Detection
+
+    var pendingNewPhotos: [ProcessedPhoto] = []
+    var pendingDuplicatePhotos: [ProcessedPhoto] = []
+    var showDuplicateConfirm = false
+
+    // MARK: - Results After Save
+
+    /// Accumulated stats across all clusters in this upload session.
+    var uploadSummary: UploadSummary?
     var savedOutingCount = 0
     var savedObservationCount = 0
     var newSpeciesCount = 0
+
+    // MARK: - Dependencies
 
     private var dataService: DataService?
     private var dataStore: DataStore?
@@ -56,34 +109,61 @@ final class AddPhotosViewModel {
     func configure(dataService: DataService, dataStore: DataStore) {
         self.dataService = dataService
         self.dataStore = dataStore
+        // Initialize lastLocationName from the most recent outing
+        if let mostRecent = dataStore.outings
+            .sorted(by: { DateFormatting.sortDate($0.createdAt) > DateFormatting.sortDate($1.createdAt) })
+            .first
+        {
+            lastLocationName = mostRecent.locationName
+        }
     }
 
-    /// Process selected photos: load data, extract EXIF, generate thumbnails, cluster.
+    // MARK: - Convenience
+
+    /// Photos belonging to the current cluster.
+    var clusterPhotos: [ProcessedPhoto] {
+        guard currentClusterIndex < clusters.count else { return [] }
+        return clusters[currentClusterIndex].photos
+    }
+
+    /// The full ProcessedPhoto for the current photo index.
+    var currentPhoto: ProcessedPhoto? {
+        let photos = clusterPhotos
+        guard currentPhotoIndex < photos.count else { return nil }
+        return photos[currentPhotoIndex]
+    }
+
+    // MARK: - Step 1: Process Selected Photos
+
+    /// Load photos from the picker, extract EXIF, generate thumbnails, cluster.
     func processSelectedPhotos() async {
         guard !selectedItems.isEmpty else { return }
         isProcessing = true
         error = nil
-        currentStep = .processing
+        currentStep = .extracting
         totalCount = selectedItems.count
         processedCount = 0
-        processingMessage = "Loading photos..."
+        extractionProgress = 0
+        processingMessage = "Reading photo data..."
 
-        var photos: [ProcessedPhoto] = []
+        // Reset accumulated stats for this upload session
+        uploadSummary = nil
+
+        var newPhotos: [ProcessedPhoto] = []
+        var duplicatePhotos: [ProcessedPhoto] = []
 
         for item in selectedItems {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { continue }
-
                 let id = UUID().uuidString
                 let (exifDate, lat, lon) = PhotoService.extractEXIF(from: data)
 
                 guard let image = UIImage(data: data) else { continue }
                 let compressed = PhotoService.compressImage(image, quality: 0.7) ?? data
                 let thumbnail = PhotoService.generateThumbnail(from: data, maxDimension: 200) ?? data
-
                 let fileHash = computeFileHash(data)
 
-                photos.append(ProcessedPhoto(
+                let photo = ProcessedPhoto(
                     id: id,
                     image: compressed,
                     thumbnail: thumbnail,
@@ -92,21 +172,69 @@ final class AddPhotosViewModel {
                     gpsLon: lon,
                     fileHash: fileHash,
                     fileName: "photo_\(id).jpg"
-                ))
+                )
+
+                // Check for duplicate against existing data
+                let isDup = dataStore?.photos.contains { existing in
+                    existing.fileHash == fileHash
+                } ?? false
+
+                if isDup {
+                    duplicatePhotos.append(photo)
+                } else {
+                    newPhotos.append(photo)
+                }
             } catch {
                 log.error("Failed to load photo: \(error.localizedDescription)")
             }
             processedCount += 1
+            extractionProgress = Double(processedCount) / Double(totalCount) * 100
         }
 
+        if newPhotos.isEmpty && duplicatePhotos.isEmpty {
+            error = "No photos to process"
+            currentStep = .selectPhotos
+            isProcessing = false
+            return
+        }
+
+        // Handle duplicates
+        if !duplicatePhotos.isEmpty {
+            pendingNewPhotos = newPhotos
+            pendingDuplicatePhotos = duplicatePhotos
+            showDuplicateConfirm = true
+            isProcessing = false
+            return
+        }
+
+        finishExtraction(photos: newPhotos)
+    }
+
+    /// Called after duplicate resolution - finalize extraction with the chosen photos.
+    func handleDuplicateChoice(reimport: Bool) {
+        showDuplicateConfirm = false
+        let finalPhotos = reimport
+            ? pendingNewPhotos + pendingDuplicatePhotos
+            : pendingNewPhotos
+        pendingNewPhotos = []
+        pendingDuplicatePhotos = []
+
+        if finalPhotos.isEmpty {
+            currentStep = .selectPhotos
+            return
+        }
+
+        finishExtraction(photos: finalPhotos)
+    }
+
+    private func finishExtraction(photos: [ProcessedPhoto]) {
         processedPhotos = photos
         processingMessage = "Clustering into outings..."
-
         clusters = PhotoService.clusterPhotos(photos)
 
         // Photos without EXIF time go into a single "Unknown Date" cluster
         let noDate = photos.filter { $0.exifTime == nil }
-        if !noDate.isEmpty {
+        if !noDate.isEmpty && !clusters.contains(where: { $0.photos.contains(where: { $0.exifTime == nil }) }) {
             clusters.append(PhotoCluster(
                 photos: noDate,
                 startTime: Date(),
@@ -118,202 +246,331 @@ final class AddPhotosViewModel {
 
         log.info("Processed \(photos.count) photos into \(self.clusters.count) clusters")
         isProcessing = false
-        currentStep = .review
+        currentClusterIndex = 0
+        currentStep = .outingReview
     }
 
-    /// Send each photo to the AI identification endpoint.
-    func identifyBirds() async {
-        guard let service = dataService else {
-            log.error("identifyBirds: dataService is nil")
-            await MainActor.run { currentStep = .review }
-            return
-        }
-        isProcessing = true
-        processingMessage = "Identifying birds..."
-        processedCount = 0
-        totalCount = processedPhotos.count
-        log.info("Starting bird identification for \(self.processedPhotos.count) photos")
+    // MARK: - Step 2: Outing Confirmed -> Start Per-Photo Loop
 
-        for photo in processedPhotos {
-            do {
-                guard let image = UIImage(data: photo.image) else {
-                    log.warning("Skipping photo \(photo.id): could not create UIImage")
-                    processedCount += 1
-                    continue
+    /// Called when the user confirms the outing in OutingReviewView.
+    func outingConfirmed(outingId: String, locationName: String) {
+        let normalizedName = locationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        lastLocationName = normalizedName
+        currentOutingId = outingId
+        photoResults = []
+        currentCandidates = []
+        currentPhotoIndex = 0
+
+        // Start identifying the first photo
+        Task { await runSpeciesId(photoIndex: 0) }
+    }
+
+    // MARK: - Step 3: Species Identification (Two-Tier AI)
+
+    /// Send a single photo to the AI for identification.
+    ///
+    /// Implements the web app's two-tier escalation strategy:
+    /// 1. Send with `model: "fast"` (~1.2s)
+    /// 2. If confidence < 0.75 OR gap between top-2 < 0.15, re-send with `model: "strong"` (~4.4s)
+    func runSpeciesId(photoIndex: Int, croppedImageData: Data? = nil) async {
+        guard let service = dataService else { return }
+        let photos = clusterPhotos
+        guard photoIndex < photos.count else { return }
+        let photo = photos[photoIndex]
+
+        currentPhotoIndex = photoIndex
+        currentStep = .photoProcessing
+        photoProgressTauMs = 1200
+        photoProgressRunKey += 1
+
+        let isCropped = croppedImageData != nil
+        let imageToSend = croppedImageData ?? photo.image
+        processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Identifying species..."
+
+        do {
+            // Compress to 640px max dimension
+            guard let uiImage = UIImage(data: imageToSend) else {
+                log.warning("Could not create UIImage for photo \(photo.id)")
+                currentCandidates = []
+                currentStep = .perPhotoConfirm
+                return
+            }
+
+            let dataUrl = compressAndEncode(uiImage)
+            let width = Int(uiImage.size.width)
+            let height = Int(uiImage.size.height)
+
+            var request = DataService.IdentifyBirdRequest(
+                imageDataUrl: dataUrl,
+                imageWidth: width,
+                imageHeight: height,
+                model: "fast"
+            )
+
+            // Attach GPS context if enabled
+            if useGeoContext, let lat = photo.gpsLat, let lon = photo.gpsLon {
+                request.lat = lat
+                request.lon = lon
+            }
+            if useGeoContext, let date = photo.exifTime {
+                request.month = Calendar.current.component(.month, from: date)
+            }
+            if useGeoContext, !lastLocationName.isEmpty {
+                request.locationName = lastLocationName
+            }
+
+            // Fast model first
+            let fastResult = try await service.identifyBird(request)
+            let fastCandidates = (fastResult.candidates ?? []).map {
+                IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle)
+            }
+            let fastCropBox: CropBoxResult? = fastResult.cropBox.map {
+                CropBoxResult(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
+            }
+
+            // Store AI crop box on photo if available
+            if let cropBox = fastCropBox {
+                storeCropBox(photoId: photo.id, cropBox: cropBox)
+            }
+
+            // If no bird found or multiple birds detected on full image, prompt crop
+            if !isCropped && (fastCandidates.isEmpty || (fastResult.multipleBirds ?? false)) {
+                photoProgress = 100
+                try? await Task.sleep(for: .milliseconds(240))
+                if fastResult.multipleBirds ?? false {
+                    log.info("Multiple birds detected, asking user to crop")
+                    currentCandidates = fastCandidates
+                } else {
+                    log.info("No species identified, asking user to crop")
+                    currentCandidates = []
                 }
+                currentStep = .manualCrop
+                return
+            }
 
-                // Compress to 640px max for the API
-                let maxDim: CGFloat = 640
-                let scale = min(maxDim / max(image.size.width, image.size.height), 1.0)
-                let newSize = CGSize(
-                    width: image.size.width * scale,
-                    height: image.size.height * scale
-                )
-                let renderer = UIGraphicsImageRenderer(size: newSize)
-                let resized = renderer.jpegData(withCompressionQuality: 0.7) { context in
-                    image.draw(in: CGRect(origin: .zero, size: newSize))
-                }
+            // Escalation logic: re-send with strong model if uncertain
+            let topConfidence = fastCandidates.first?.confidence ?? 0
+            let secondConfidence = fastCandidates.count >= 2 ? fastCandidates[1].confidence : 0
+            let shouldEscalate = topConfidence < 0.75
+                || (fastCandidates.count >= 2 && (topConfidence - secondConfidence) < 0.15)
 
-                let base64 = resized.base64EncodedString()
-                let dataUrl = "data:image/jpeg;base64,\(base64)"
+            var finalCandidates = fastCandidates
+            var finalCropBox = fastCropBox
 
-                var request = DataService.IdentifyBirdRequest(
+            if shouldEscalate {
+                processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Re-analyzing with enhanced model..."
+                photoProgressTauMs = 4400
+                photoProgressRunKey += 1
+
+                request = DataService.IdentifyBirdRequest(
                     imageDataUrl: dataUrl,
-                    imageWidth: Int(newSize.width),
-                    imageHeight: Int(newSize.height),
-                    model: "fast"
+                    imageWidth: width,
+                    imageHeight: height,
+                    model: "strong"
                 )
-
-                if let lat = photo.gpsLat, let lon = photo.gpsLon {
+                if useGeoContext, let lat = photo.gpsLat, let lon = photo.gpsLon {
                     request.lat = lat
                     request.lon = lon
                 }
-                if let date = photo.exifTime {
+                if useGeoContext, let date = photo.exifTime {
                     request.month = Calendar.current.component(.month, from: date)
                 }
+                if useGeoContext, !lastLocationName.isEmpty {
+                    request.locationName = lastLocationName
+                }
 
-                let response = try await service.identifyBird(request)
-
-                let candidates = (response.candidates ?? []).map {
+                let strongResult = try await service.identifyBird(request)
+                finalCandidates = (strongResult.candidates ?? []).map {
                     IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle)
                 }
-                let cropBox: CropBoxResult? = response.cropBox.map {
-                    CropBoxResult(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
+                if let box = strongResult.cropBox {
+                    finalCropBox = CropBoxResult(x: box.x, y: box.y, width: box.width, height: box.height)
+                    storeCropBox(photoId: photo.id, cropBox: finalCropBox!)
                 }
-
-                identifications[photo.id] = IdentificationResult(
-                    candidates: candidates,
-                    cropBox: cropBox,
-                    multipleBirds: response.multipleBirds ?? false
-                )
-
-                // Auto-confirm top candidate if confidence is high enough
-                if let top = candidates.first, top.confidence >= 0.75 {
-                    confirmedSpecies[photo.id] = top.species
-                }
-            } catch {
-                log.error("AI identification failed for photo \(photo.id): \(error.localizedDescription)")
             }
-            processedCount += 1
-        }
 
-        log.info("Bird identification complete: \(self.identifications.count) identified, \(self.confirmedSpecies.count) auto-confirmed")
-        isProcessing = false
-        await MainActor.run { currentStep = .review }
+            log.info("Found \(finalCandidates.count) candidates for photo \(photoIndex + 1)")
+            photoProgress = 100
+            try? await Task.sleep(for: .milliseconds(240))
+
+            if finalCandidates.isEmpty && !isCropped {
+                currentCandidates = []
+                currentStep = .manualCrop
+            } else if (fastResult.multipleBirds ?? false) && !isCropped {
+                currentCandidates = finalCandidates
+                currentStep = .manualCrop
+            } else {
+                currentCandidates = finalCandidates
+                currentStep = .perPhotoConfirm
+            }
+        } catch {
+            log.error("Species ID failed for photo \(photoIndex + 1): \(error.localizedDescription)")
+            self.error = error.localizedDescription
+            currentCandidates = []
+            currentStep = .perPhotoConfirm
+        }
     }
 
-    /// Save confirmed outings and observations to the API.
-    func confirmAndSave() async {
+    // MARK: - Step 4: Per-Photo Confirmation
+
+    /// User confirms species for the current photo with a certainty level.
+    func confirmCurrentPhoto(species: String, confidence: Double, status: ObservationStatus, count: Int) {
+        let result = PhotoResult(
+            photoId: currentPhoto?.id ?? "",
+            species: species,
+            confidence: confidence,
+            status: status,
+            count: count
+        )
+        photoResults.append(result)
+        advanceToNextPhoto()
+    }
+
+    /// Skip the current photo (exclude from save).
+    func skipCurrentPhoto() {
+        advanceToNextPhoto()
+    }
+
+    /// Go back to the previous photo, removing its result so the user can re-decide.
+    func goBackToPreviousPhoto() {
+        guard currentPhotoIndex > 0 else { return }
+        if !photoResults.isEmpty {
+            photoResults.removeLast()
+        }
+        currentCandidates = []
+        Task { await runSpeciesId(photoIndex: currentPhotoIndex - 1) }
+    }
+
+    /// Trigger manual crop, then re-identify with the cropped image.
+    func requestManualCrop() {
+        currentStep = .manualCrop
+    }
+
+    /// After user crops, re-identify the cropped image.
+    func handleCropComplete(croppedImageData: Data) {
+        Task { await runSpeciesId(photoIndex: currentPhotoIndex, croppedImageData: croppedImageData) }
+    }
+
+    /// Cancel crop -> go to confirm screen with current (possibly empty) candidates.
+    func cancelCrop() {
+        currentStep = .perPhotoConfirm
+    }
+
+    // MARK: - Advance / Save
+
+    /// Move to the next photo or save when all photos in the cluster are done.
+    private func advanceToNextPhoto() {
+        let nextIdx = currentPhotoIndex + 1
+        if nextIdx < clusterPhotos.count {
+            currentCandidates = []
+            Task { await runSpeciesId(photoIndex: nextIdx) }
+        } else {
+            Task { await saveCurrentCluster() }
+        }
+    }
+
+    /// Save all confirmed observations for the current cluster,
+    /// then advance to the next cluster or finish.
+    private func saveCurrentCluster() async {
         guard let service = dataService, let store = dataStore else { return }
         currentStep = .saving
         isProcessing = true
         processingMessage = "Saving..."
         error = nil
 
-        let existingSpecies: Set<String> = await MainActor.run { Set(store.dex.map(\.speciesName)) }
-        var totalObservations = 0
-        var allNewSpecies = Set<String>()
+        let confirmed = photoResults.filter { $0.status == .confirmed || $0.status == .possible }
+        let existingSpecies = Set(store.dex.map(\.speciesName))
+
+        // Group by species, sum counts
+        var speciesMap: [String: (count: Int, status: ObservationStatus, photoId: String)] = [:]
+        for r in confirmed {
+            if let existing = speciesMap[r.species] {
+                speciesMap[r.species] = (existing.count + r.count, existing.status, existing.photoId)
+            } else {
+                speciesMap[r.species] = (r.count, r.status, r.photoId)
+            }
+        }
+
+        let observations = speciesMap.map { species, info in
+            BirdObservation(
+                id: "obs_\(UUID().uuidString)",
+                outingId: currentOutingId,
+                speciesName: species,
+                count: info.count,
+                certainty: info.status,
+                representativePhotoId: info.photoId,
+                notes: ""
+            )
+        }
 
         do {
-            for cluster in clusters {
-                let photosWithSpecies = cluster.photos.filter { confirmedSpecies[$0.id] != nil }
-                guard !photosWithSpecies.isEmpty else { continue }
-
-                let formatter = ISO8601DateFormatter()
-                let outingId = UUID().uuidString
-
-                // Create outing
-                let outing = Outing(
-                    id: outingId,
-                    userId: "",
-                    startTime: formatter.string(from: cluster.startTime),
-                    endTime: formatter.string(from: cluster.endTime),
-                    locationName: "",
-                    defaultLocationName: nil,
-                    lat: cluster.centerLat,
-                    lon: cluster.centerLon,
-                    stateProvince: nil,
-                    countryCode: nil,
-                    protocol: nil,
-                    numberObservers: nil,
-                    allObsReported: nil,
-                    effortDistanceMiles: nil,
-                    effortAreaAcres: nil,
-                    notes: "",
-                    createdAt: formatter.string(from: Date())
-                )
-
-                let savedOuting = try await service.createOuting(outing)
-                savedOutingCount += 1
-
-                // Create photo metadata
-                let photoPayloads = cluster.photos.map { photo in
-                    DataService.PhotoPayload(
-                        id: photo.id,
-                        outingId: savedOuting.id,
-                        exifTime: photo.exifTime.map { formatter.string(from: $0) },
-                        gps: (photo.gpsLat != nil && photo.gpsLon != nil)
-                            ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
-                            : nil,
-                        fileHash: photo.fileHash,
-                        fileName: photo.fileName
-                    )
-                }
-                try await service.createPhotos(photoPayloads)
-
-                // Group confirmed species by name, count occurrences
-                var speciesCounts: [String: (count: Int, representativePhotoId: String, confidence: Double)] = [:]
-                for photo in photosWithSpecies {
-                    guard let species = confirmedSpecies[photo.id] else { continue }
-                    let confidence = identifications[photo.id]?.candidates.first?.confidence ?? 0
-                    if let existing = speciesCounts[species] {
-                        speciesCounts[species] = (existing.count + 1, existing.representativePhotoId, max(existing.confidence, confidence))
-                    } else {
-                        speciesCounts[species] = (1, photo.id, confidence)
-                    }
-                }
-
-                // Create observations
-                let observations = speciesCounts.map { species, info in
-                    BirdObservation(
-                        id: UUID().uuidString,
-                        outingId: savedOuting.id,
-                        speciesName: species,
-                        count: info.count,
-                        certainty: .confirmed,
-                        representativePhotoId: info.representativePhotoId,
-                        aiConfidence: info.confidence,
-                        speciesComments: "",
-                        notes: ""
-                    )
-                }
-
-                if !observations.isEmpty {
-                    let response = try await service.createObservations(observations)
-                    totalObservations += observations.count
-
-                    for obs in observations {
-                        if !existingSpecies.contains(obs.speciesName) {
-                            allNewSpecies.insert(obs.speciesName)
-                        }
-                    }
-
-                    // Apply dex updates if returned
-                    if let dexUpdates = response.dexUpdates {
-                        await MainActor.run {
-                            store.dex = dexUpdates
-                        }
-                    }
+            if !observations.isEmpty {
+                let response = try await service.createObservations(observations)
+                if let dexUpdates = response.dexUpdates {
+                    store.dex = dexUpdates
                 }
             }
 
-            savedObservationCount = totalObservations
-            newSpeciesCount = allNewSpecies.count
+            // Create photo metadata
+            let clusterPhotosData = clusterPhotos
+            let formatter = ISO8601DateFormatter()
+            let photoPayloads = clusterPhotosData.map { photo in
+                DataService.PhotoPayload(
+                    id: photo.id,
+                    outingId: currentOutingId,
+                    exifTime: photo.exifTime.map { formatter.string(from: $0) },
+                    gps: (photo.gpsLat != nil && photo.gpsLon != nil)
+                        ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
+                        : nil,
+                    fileHash: photo.fileHash,
+                    fileName: photo.fileName
+                )
+            }
+            try await service.createPhotos(photoPayloads)
 
-            // Reload to get full server state
-            await store.loadAll()
+            // Count new species
+            var clusterNewSpecies = 0
+            for obs in observations where !existingSpecies.contains(obs.speciesName) {
+                clusterNewSpecies += 1
+            }
+            newSpeciesCount += clusterNewSpecies
+            savedOutingCount += 1
+            savedObservationCount += observations.count
 
-            currentStep = .done
+            // Accumulate upload summary
+            let outingName = store.outings.first(where: { $0.id == currentOutingId })?.locationName ?? ""
+            let uniqueSpecies = Set(confirmed.map(\.species)).count
+            let totalCount = confirmed.reduce(0) { $0 + $1.count }
+            if var summary = uploadSummary {
+                summary.newSpecies += clusterNewSpecies
+                summary.outings += 1
+                summary.totalSpecies += uniqueSpecies
+                summary.totalCount += totalCount
+                if !outingName.isEmpty && !summary.locationNames.contains(outingName) {
+                    summary.locationNames.append(outingName)
+                }
+                uploadSummary = summary
+            } else {
+                uploadSummary = UploadSummary(
+                    newSpecies: clusterNewSpecies,
+                    outings: 1,
+                    totalSpecies: uniqueSpecies,
+                    totalCount: totalCount,
+                    locationNames: outingName.isEmpty ? [] : [outingName]
+                )
+            }
+
+            // Move to next cluster or finish
+            if currentClusterIndex < clusters.count - 1 {
+                currentClusterIndex += 1
+                currentPhotoIndex = 0
+                photoResults = []
+                currentCandidates = []
+                currentStep = .outingReview
+            } else {
+                await store.loadAll()
+                currentStep = .done
+            }
         } catch {
             self.error = error.localizedDescription
             log.error("Save failed: \(error.localizedDescription)")
@@ -321,7 +578,38 @@ final class AddPhotosViewModel {
         isProcessing = false
     }
 
-    /// Simple hash: SHA-256 of first 64KB + size (matches web's approach).
+    // MARK: - Helpers
+
+    /// Compress a UIImage to 640px max and encode as a data URL for the API.
+    private func compressAndEncode(_ image: UIImage) -> String {
+        let maxDim: CGFloat = 640
+        let scale = min(maxDim / max(image.size.width, image.size.height), 1.0)
+        let newSize = CGSize(
+            width: image.size.width * scale,
+            height: image.size.height * scale
+        )
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.jpegData(withCompressionQuality: 0.7) { context in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        let base64 = resized.base64EncodedString()
+        return "data:image/jpeg;base64,\(base64)"
+    }
+
+    /// Store a crop box on a photo for later use in CropView.
+    private func storeCropBox(photoId: String, cropBox: CropBoxResult) {
+        if let idx = processedPhotos.firstIndex(where: { $0.id == photoId }) {
+            processedPhotos[idx].aiCropBox = cropBox
+        }
+        // Also update within clusters
+        for ci in clusters.indices {
+            for pi in clusters[ci].photos.indices where clusters[ci].photos[pi].id == photoId {
+                clusters[ci].photos[pi].aiCropBox = cropBox
+            }
+        }
+    }
+
+    /// SHA-256 of first 64KB + size (matches web's computeFileHash approach).
     private func computeFileHash(_ data: Data) -> String {
         let prefix = data.prefix(65536)
         var hasher = SHA256()
@@ -332,19 +620,23 @@ final class AddPhotosViewModel {
     }
 }
 
+// MARK: - Supporting Types
+
 /// A photo after EXIF extraction and compression.
 struct ProcessedPhoto: Identifiable {
     let id: String
-    let image: Data
-    let thumbnail: Data
+    let image: Data        // Compressed JPEG for API submission
+    let thumbnail: Data    // Small thumbnail for display
     let exifTime: Date?
     let gpsLat: Double?
     let gpsLon: Double?
     let fileHash: String
     let fileName: String
+    /// AI-suggested crop box (percentage coordinates), stored after identification.
+    var aiCropBox: CropBoxResult?
 }
 
-/// A group of photos clustered into a single outing.
+/// A group of photos clustered into a single outing by time and GPS proximity.
 struct PhotoCluster: Identifiable {
     let id = UUID()
     var photos: [ProcessedPhoto]
@@ -361,15 +653,35 @@ struct IdentificationResult {
     let multipleBirds: Bool
 }
 
+/// A single AI candidate species with confidence score.
 struct IdentifiedCandidate {
     let species: String
     let confidence: Double
     let wikiTitle: String?
 }
 
+/// AI crop box in percentage coordinates (0-100).
 struct CropBoxResult {
     let x: Double
     let y: Double
     let width: Double
     let height: Double
+}
+
+/// Result of per-photo confirmation by the user.
+struct PhotoResult {
+    let photoId: String
+    let species: String
+    let confidence: Double
+    let status: ObservationStatus
+    let count: Int
+}
+
+/// Accumulated stats for the upload summary screen.
+struct UploadSummary {
+    var newSpecies: Int
+    var outings: Int
+    var totalSpecies: Int
+    var totalCount: Int
+    var locationNames: [String]
 }

@@ -1,54 +1,66 @@
 import SwiftUI
 
 /// Container view for the multi-step Add Photos wizard.
-/// Presented as a sheet from MainTabView.
+///
+/// Presented as a sheet from MainTabView. Orchestrates the full flow:
+/// selectPhotos -> extracting -> outingReview -> photoProcessing ->
+/// perPhotoConfirm -> (manualCrop) -> [next photo or save] -> done
 struct AddPhotosFlow: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @State private var viewModel = AddPhotosViewModel()
 
+    /// Controls the CropView sheet presentation for manual cropping.
+    @State private var showCropSheet = false
+
     var body: some View {
         Group {
-                switch viewModel.currentStep {
-                case .selectPhotos:
-                    PhotoSelectionView(viewModel: viewModel)
-                case .processing:
-                    processingView
-                case .review:
-                    ReviewView(viewModel: viewModel)
-                case .confirm, .saving:
-                    ConfirmView(viewModel: viewModel)
-                case .done:
-                    ConfirmView(viewModel: viewModel)
-                }
+            switch viewModel.currentStep {
+            case .selectPhotos:
+                PhotoSelectionView(viewModel: viewModel)
+            case .extracting:
+                extractingView
+            case .outingReview:
+                OutingReviewView(viewModel: viewModel)
+            case .photoProcessing:
+                photoProcessingView
+            case .perPhotoConfirm:
+                PerPhotoConfirmView(viewModel: viewModel)
+            case .manualCrop:
+                manualCropDestination
+            case .saving:
+                savingView
+            case .done:
+                doneView
             }
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .background(Color.pageBg.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    switch viewModel.currentStep {
-                    case .review:
-                        Button("Confirm") {
-                            viewModel.currentStep = .confirm
-                        }
-                        .disabled(viewModel.confirmedSpecies.isEmpty || viewModel.isProcessing)
-                    case .confirm:
-                        Button("Save") {
-                            Task { await viewModel.confirmAndSave() }
-                        }
-                        .fontWeight(.semibold)
-                        .disabled(viewModel.confirmedSpecies.isEmpty)
-                    default:
-                        EmptyView()
-                    }
-                }
-            }
+        }
+        .navigationTitle(navigationTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.pageBg.ignoresSafeArea())
         .onAppear {
             viewModel.configure(
                 dataService: DataService(auth: auth),
                 dataStore: store
             )
+        }
+        // Duplicate photo detection alert
+        .alert("Duplicate photos found", isPresented: $viewModel.showDuplicateConfirm) {
+            Button("Skip duplicates") {
+                viewModel.handleDuplicateChoice(reimport: false)
+            }
+            Button("Re-import") {
+                viewModel.handleDuplicateChoice(reimport: true)
+            }
+        } message: {
+            let dupCount = viewModel.pendingDuplicatePhotos.count
+            let newCount = viewModel.pendingNewPhotos.count
+            if newCount > 0 {
+                Text("\(dupCount) of \(dupCount + newCount) photos have already been imported. Re-importing will add duplicate sightings.")
+            } else {
+                Text(dupCount == 1
+                     ? "This photo has already been imported."
+                     : "All \(dupCount) photos have already been imported.")
+            }
         }
     }
 
@@ -56,23 +68,39 @@ struct AddPhotosFlow: View {
 
     private var navigationTitle: String {
         switch viewModel.currentStep {
-        case .selectPhotos: "Add Photos"
-        case .processing: "Processing"
-        case .review: "Review"
-        case .confirm, .saving: "Confirm"
-        case .done: "Complete"
+        case .selectPhotos:
+            return "Add Photos"
+        case .extracting:
+            return "Reading Photos..."
+        case .outingReview:
+            let clusters = viewModel.clusters
+            if clusters.count > 1 {
+                return "Review Outing \(viewModel.currentClusterIndex + 1) of \(clusters.count)"
+            }
+            return "Review Outing"
+        case .photoProcessing:
+            return "Identifying photo \(viewModel.currentPhotoIndex + 1) of \(viewModel.clusterPhotos.count)..."
+        case .perPhotoConfirm:
+            return "Photo \(viewModel.currentPhotoIndex + 1) of \(viewModel.clusterPhotos.count)"
+        case .manualCrop:
+            return "Crop Photo \(viewModel.currentPhotoIndex + 1)"
+        case .saving:
+            return "Saving..."
+        case .done:
+            return "Upload Complete"
         }
     }
 
-    // MARK: - Processing View
+    // MARK: - Extracting EXIF View
 
-    private var processingView: some View {
+    /// Progress bar while loading and extracting EXIF from selected photos.
+    private var extractingView: some View {
         VStack(spacing: 24) {
             Spacer()
 
-            ProgressView(value: Double(viewModel.processedCount), total: Double(max(viewModel.totalCount, 1)))
-                .progressViewStyle(.circular)
-                .scaleEffect(1.5)
+            ProgressView(value: viewModel.extractionProgress, total: 100)
+                .progressViewStyle(.linear)
+                .padding(.horizontal, 40)
 
             VStack(spacing: 8) {
                 Text(viewModel.processingMessage)
@@ -87,14 +115,277 @@ struct AddPhotosFlow: View {
         }
         .padding(.horizontal, 24)
         .background(Color.pageBg.ignoresSafeArea())
-        .task {
-            await viewModel.identifyBirds()
+    }
+
+    // MARK: - Photo Processing (AI Identification) View
+
+    /// Spinner + exponential progress bar while AI identifies the current photo.
+    private var photoProcessingView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            // Thumbnail of the photo being identified
+            if let photo = viewModel.currentPhoto,
+               let uiImage = UIImage(data: photo.thumbnail) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 160, height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.warmBorder, lineWidth: 2)
+                    )
+            }
+
+            // Exponential progress bar (matching web's `1 - e^(-t/tau)` curve)
+            ExponentialProgressBar(
+                progress: $viewModel.photoProgress,
+                tauMs: viewModel.photoProgressTauMs,
+                runKey: viewModel.photoProgressRunKey
+            )
+            .frame(height: 6)
+            .padding(.horizontal, 40)
+
+            Text(viewModel.processingMessage)
+                .font(.subheadline)
+                .foregroundStyle(Color.mutedText)
+                .multilineTextAlignment(.center)
+
+            Spacer()
         }
+        .padding(.horizontal, 24)
+        .background(Color.pageBg.ignoresSafeArea())
+    }
+
+    // MARK: - Manual Crop Destination
+
+    /// Shows the CropView for the current photo, passing the AI crop box if available.
+    @ViewBuilder
+    private var manualCropDestination: some View {
+        if let photo = viewModel.currentPhoto {
+            CropView(
+                imageData: photo.image,
+                initialCropBox: photo.aiCropBox,
+                onApply: { cropResult in
+                    // Generate cropped image data from the crop box
+                    if let croppedData = generateCroppedImageData(from: photo.image, cropBox: cropResult) {
+                        viewModel.handleCropComplete(croppedImageData: croppedData)
+                    } else {
+                        viewModel.cancelCrop()
+                    }
+                }
+            )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        viewModel.cancelCrop()
+                    }
+                }
+            }
+        } else {
+            // Shouldn't happen, but handle gracefully
+            Text("No photo available")
+                .foregroundStyle(Color.mutedText)
+                .onAppear { viewModel.cancelCrop() }
+        }
+    }
+
+    // MARK: - Saving View
+
+    private var savingView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            ProgressView()
+                .controlSize(.large)
+            Text("Saving observations...")
+                .font(.subheadline)
+                .foregroundStyle(Color.mutedText)
+            Spacer()
+        }
+        .background(Color.pageBg.ignoresSafeArea())
+    }
+
+    // MARK: - Done / Summary View
+
+    /// Upload summary matching the web's summary screen.
+    private var doneView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Success icon
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            // Summary header
+            if let summary = viewModel.uploadSummary {
+                VStack(spacing: 4) {
+                    if !summary.locationNames.isEmpty {
+                        Text(summary.locationNames.joined(separator: ", "))
+                            .font(.system(size: 18, weight: .semibold, design: .serif))
+                            .foregroundStyle(Color.foregroundText)
+                            .multilineTextAlignment(.center)
+                    }
+                    Text("\(summary.outings) \(summary.outings == 1 ? "outing" : "outings") saved")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mutedText)
+                }
+
+                // Stats cards
+                HStack(spacing: 12) {
+                    summaryCard(value: summary.totalSpecies, label: "Species confirmed")
+                    summaryCard(value: summary.totalCount, label: "Total sightings")
+                    summaryCard(value: summary.newSpecies, label: "New to WingDex", highlight: summary.newSpecies > 0)
+                }
+                .padding(.horizontal)
+            } else {
+                VStack(spacing: 8) {
+                    Text("Upload Complete!")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("\(viewModel.savedOutingCount) outing\(viewModel.savedOutingCount == 1 ? "" : "s") created")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mutedText)
+                    if viewModel.newSpeciesCount > 0 {
+                        Text("\(viewModel.newSpeciesCount) new species!")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
+
+            // Done button
+            Button {
+                // Dismiss the AddPhotos flow
+            } label: {
+                Text("Done")
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.accentColor)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .background(Color.pageBg.ignoresSafeArea())
+    }
+
+    /// A summary stat card for the done screen.
+    private func summaryCard(value: Int, label: String, highlight: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.title2.bold().monospacedDigit())
+                .foregroundStyle(highlight ? Color.accentColor : Color.foregroundText)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Color.mutedText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(highlight ? Color.accentColor.opacity(0.05) : Color.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(highlight ? Color.accentColor.opacity(0.3) : Color.warmBorder, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Crop Helpers
+
+    /// Generate cropped image data from the original image and a percentage crop box.
+    private func generateCroppedImageData(from imageData: Data, cropBox: CropBoxResult) -> Data? {
+        guard let uiImage = UIImage(data: imageData),
+              let cgImage = uiImage.cgImage
+        else { return nil }
+
+        let natW = CGFloat(cgImage.width)
+        let natH = CGFloat(cgImage.height)
+
+        // Convert percentage crop to pixel coordinates
+        let cropX = natW * cropBox.x / 100
+        let cropY = natH * cropBox.y / 100
+        let cropW = natW * cropBox.width / 100
+        let cropH = natH * cropBox.height / 100
+
+        let rect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
+            .intersection(CGRect(x: 0, y: 0, width: natW, height: natH))
+
+        guard rect.width > 0, rect.height > 0,
+              let cropped = cgImage.cropping(to: rect)
+        else { return nil }
+
+        let result = UIImage(cgImage: cropped, scale: uiImage.scale, orientation: uiImage.imageOrientation)
+        return result.jpegData(compressionQuality: 0.7)
     }
 }
 
-#Preview {
-    AddPhotosFlow()
-        .environment(AuthService())
-        .environment(previewStore())
+// MARK: - Exponential Progress Bar
+
+/// Animated progress bar that follows `90 * (1 - e^(-t/tau))`, matching web behavior.
+///
+/// Resets whenever `runKey` changes (e.g., when escalating from fast to strong model).
+struct ExponentialProgressBar: View {
+    @Binding var progress: Double
+    let tauMs: Double
+    let runKey: Int
+
+    @State private var startDate = Date()
+    @State private var timer: Timer?
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.mutedText.opacity(0.15))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.accentColor)
+                    .frame(width: geo.size.width * min(progress / 100, 1))
+                    .animation(.easeOut(duration: 0.1), value: progress)
+            }
+        }
+        .onAppear { startTimer() }
+        .onDisappear { stopTimer() }
+        .onChange(of: runKey) {
+            startDate = Date()
+            progress = 0
+            startTimer()
+        }
+    }
+
+    private func startTimer() {
+        stopTimer()
+        startDate = Date()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { _ in
+            let elapsed = Date().timeIntervalSince(startDate) * 1000
+            let next = 90 * (1 - exp(-elapsed / tauMs))
+            Task { @MainActor in
+                progress = max(progress, min(90, next))
+            }
+        }
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
 }
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        AddPhotosFlow()
+            .environment(AuthService())
+            .environment(previewStore())
+    }
+}
+
