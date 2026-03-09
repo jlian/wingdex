@@ -77,13 +77,6 @@ struct OutingReviewView: View {
 
     var body: some View {
         Form {
-            // Cluster indicator for multi-cluster uploads
-            if viewModel.clusters.count > 1 {
-                Section {
-                    Label("Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)", systemImage: "rectangle.stack")
-                }
-            }
-
             // Date/time
             Section {
                 dateTimeSection
@@ -131,20 +124,38 @@ struct OutingReviewView: View {
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom) {
-            // Continue button pinned at bottom
-            Button {
-                handleConfirm()
-            } label: {
-                Text(isLoadingLocation ? "Loading..." : "Continue to Species Identification")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .font(.headline)
+        .navigationTitle(viewModel.clusters.count > 1
+            ? "Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)"
+            : "Review Outing")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Liquid glass bottom bar: Back / cluster dots / Continue
+            ToolbarItemGroup(placement: .bottomBar) {
+                // Back - disabled on first cluster
+                Button {
+                    // Could go back to photo selection
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(true) // First step in the sub-flow
+
+                Spacer()
+
+                if viewModel.clusters.count > 1 {
+                    PhotoProgressDots(current: viewModel.currentClusterIndex, total: viewModel.clusters.count)
+                }
+
+                Spacer()
+
+                // Continue (primary)
+                Button {
+                    handleConfirm()
+                } label: {
+                    Label("Continue", systemImage: "chevron.right")
+                        .labelStyle(.titleAndIcon)
+                }
+                .disabled(isLoadingLocation)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
-            .disabled(isLoadingLocation)
-            .padding()
-            .background(.regularMaterial)
         }
         .onAppear { initializeIfNeeded() }
     }
@@ -244,27 +255,27 @@ struct OutingReviewView: View {
         }
     }
 
-    // MARK: - Photo Grid
+    // MARK: - Photo Grid (horizontal scroll with context menus)
 
     private var photoGridSection: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 4), spacing: 4) {
-            ForEach(cluster?.photos ?? [], id: \.id) { photo in
-                if let uiImage = UIImage(data: photo.thumbnail) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        .aspectRatio(1, contentMode: .fill)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                } else {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.secondary.opacity(0.1))
-                        .aspectRatio(1, contentMode: .fill)
-                        .overlay {
-                            Image(systemName: "photo")
-                                .foregroundStyle(.tertiary)
-                        }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(cluster?.photos ?? [], id: \.id) { photo in
+                    if let uiImage = UIImage(data: photo.thumbnail) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.1))
+                            .frame(width: 80, height: 80)
+                            .overlay {
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.tertiary)
+                            }
+                    }
                 }
             }
         }
@@ -754,6 +765,21 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
                     PreviewData.sampleCluster(photoCount: 3, lat: 47.6587, lon: -122.4050),
                     PreviewData.sampleCluster(photoCount: 2, lat: 40.6155, lon: -73.8227),
                 ]
+            }
+    }
+}
+
+#Preview("Existing Outing Match") {
+    NavigationStack {
+        let vm = AddPhotosViewModel()
+        // Use a store with existing outings so the matcher can find a match
+        let store = previewStore()
+        OutingReviewView(viewModel: vm)
+            .environment(AuthService())
+            .environment(store)
+            .onAppear {
+                // Cluster at Discovery Park with time overlapping outing-001
+                vm.clusters = [PreviewData.sampleCluster(photoCount: 4, lat: 47.6587, lon: -122.4050)]
             }
     }
 }

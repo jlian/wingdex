@@ -51,16 +51,6 @@ struct CropView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Explanation banner
-            Text(reason)
-                .font(.subheadline)
-                .foregroundStyle(Color.mutedText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-                .background(Color.cardBg)
-
             // Image with crop overlay
             GeometryReader { geo in
                 if let uiImage = UIImage(data: imageData) {
@@ -142,47 +132,48 @@ struct CropView: View {
                     }
                 }
             }
-
-            // Bottom action bar
-            HStack(spacing: 16) {
+        }
+        .background(Color.pageBg.ignoresSafeArea())
+        .navigationTitle("Crop Photo")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Reset and zoom controls in nav bar
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    resizeCrop(by: 0.85)
+                } label: {
+                    Image(systemName: "minus.magnifyingglass")
+                }
+                Button {
+                    resizeCrop(by: 1.18)
+                } label: {
+                    Image(systemName: "plus.magnifyingglass")
+                }
+            }
+            // Liquid glass bottom bar matching other views
+            ToolbarItemGroup(placement: .bottomBar) {
                 Button("Reset") {
                     cropBox = paddedInitialCrop
-                }
-                .buttonStyle(.bordered)
-
-                // Size controls for precise adjustment
-                HStack(spacing: 8) {
-                    Button {
-                        resizeCrop(by: 0.85)
-                    } label: {
-                        Image(systemName: "minus.magnifyingglass")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Button {
-                        resizeCrop(by: 1.18)
-                    } label: {
-                        Image(systemName: "plus.magnifyingglass")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
 
                 Spacer()
 
-                Button("Apply Crop") {
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button {
                     onApply(cropBox)
                     dismiss()
+                } label: {
+                    Label("Apply", systemImage: "chevron.right")
+                        .labelStyle(.titleAndIcon)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
             }
-            .padding()
         }
-        .background(Color.pageBg.ignoresSafeArea())
-        .navigationTitle("Crop")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     /// Resize the crop box by a scale factor, keeping it centered and within bounds.
@@ -201,14 +192,14 @@ struct CropView: View {
 
 #Preview("Default") {
     NavigationStack {
-        CropView(imageData: Data(), initialCropBox: nil) { _ in }
+        CropView(imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400), initialCropBox: nil) { _ in }
     }
 }
 
 #Preview("Multi-Bird Reason") {
     NavigationStack {
         CropView(
-            imageData: Data(),
+            imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400),
             initialCropBox: CropBoxResult(x: 20, y: 30, width: 40, height: 40),
             reason: "Multiple birds detected - crop to one bird"
         ) { _ in }

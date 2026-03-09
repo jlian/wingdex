@@ -5,16 +5,14 @@ private let log = Logger(subsystem: "app.wingdex", category: "PerPhotoConfirm")
 
 /// Per-photo species confirmation view in the Add Photos flow.
 ///
-/// Shows the user's photo and a Wikipedia reference side by side for visual
-/// comparison. Species name, confidence bar, and Confirm/Possible actions
-/// in a card below. Secondary actions (crop, skip) in the navigation toolbar.
-/// Bottom toolbar has consistent Back / Dots / Confirm pattern.
+/// Unified layout for all confidence levels: side-by-side photo comparison,
+/// species info card with all candidates listed. Crop/Skip in nav bar,
+/// Back/Dots/Possible/Confirm in liquid glass bottom bar.
 struct PerPhotoConfirmView: View {
     @Bindable var viewModel: AddPhotosViewModel
 
     @State private var selectedSpecies = ""
     @State private var selectedConfidence: Double = 0
-    @State private var showAlternatives = false
     @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
 
@@ -22,17 +20,17 @@ struct PerPhotoConfirmView: View {
     private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
     private var photoIndex: Int { viewModel.currentPhotoIndex }
     private var totalPhotos: Int { viewModel.clusterPhotos.count }
-    private var isHighConfidence: Bool { selectedConfidence >= 0.8 }
     private var confidencePercent: Int { Int(selectedConfidence * 100) }
     private var displayName: String { getDisplayName(selectedSpecies) }
     private var scientificName: String? { getScientificName(selectedSpecies) }
+    private var hasCandidates: Bool { !candidates.isEmpty }
 
     var body: some View {
         Group {
-            if candidates.isEmpty {
-                noCandidatesView
+            if hasCandidates {
+                candidateView
             } else {
-                candidateConfirmView
+                noCandidatesView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -40,21 +38,18 @@ struct PerPhotoConfirmView: View {
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Secondary actions in nav bar
+            // Crop and Skip as separate visible buttons in nav bar
             ToolbarItemGroup(placement: .primaryAction) {
-                Menu {
-                    Button("Re-crop Photo", systemImage: "crop") {
-                        viewModel.requestManualCrop()
-                    }
-                    Button("Skip Photo", systemImage: "forward.fill", role: .destructive) {
-                        viewModel.skipCurrentPhoto()
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                Button("Crop", systemImage: "crop") {
+                    viewModel.requestManualCrop()
+                }
+                Button("Skip", systemImage: "forward.fill") {
+                    viewModel.skipCurrentPhoto()
                 }
             }
-            // Liquid glass bottom bar: Back / Dots / Confirm
+            // Liquid glass bottom bar
             ToolbarItemGroup(placement: .bottomBar) {
+                // Back (left)
                 Button {
                     viewModel.goBackToPreviousPhoto()
                 } label: {
@@ -64,16 +59,37 @@ struct PerPhotoConfirmView: View {
 
                 Spacer()
 
+                // Progress dots (center)
                 PhotoProgressDots(current: photoIndex, total: totalPhotos)
 
                 Spacer()
 
-                Button {
-                    confirmWith(status: .confirmed)
-                } label: {
-                    Label("Confirm", systemImage: "checkmark.circle.fill")
+                if hasCandidates {
+                    // Possible (secondary action)
+                    Button {
+                        confirmWith(status: .possible)
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                    }
+                    .disabled(selectedSpecies.isEmpty)
+
+                    // Confirm with chevron (primary action)
+                    Button {
+                        confirmWith(status: .confirmed)
+                    } label: {
+                        Label("Confirm", systemImage: "chevron.right")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .disabled(selectedSpecies.isEmpty)
+                } else {
+                    // Skip as primary when no candidates
+                    Button {
+                        viewModel.skipCurrentPhoto()
+                    } label: {
+                        Label("Skip", systemImage: "chevron.right")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
-                .disabled(selectedSpecies.isEmpty)
             }
         }
         .onAppear { initializeSelection() }
@@ -123,39 +139,19 @@ struct PerPhotoConfirmView: View {
         }
     }
 
-    // MARK: - Candidate Confirmation
+    // MARK: - Candidate View (unified for all confidence levels)
 
-    private var candidateConfirmView: some View {
+    private var candidateView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Side-by-side photo comparison - equal weight
+                // Side-by-side photo comparison with 4:3 aspect ratio
                 HStack(spacing: 12) {
-                    // User's photo
                     VStack(spacing: 6) {
-                        if let photo, let uiImage = UIImage(data: photo.thumbnail) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(minWidth: 0, maxWidth: .infinity)
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        } else {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.regularMaterial)
-                                .aspectRatio(1, contentMode: .fill)
-                                .overlay {
-                                    Image(systemName: "photo")
-                                        .font(.title2)
-                                        .foregroundStyle(.tertiary)
-                                }
-                        }
+                        userPhotoImage
                         Text("Your photo")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-
-                    // Wikipedia reference
                     VStack(spacing: 6) {
                         wikiReferenceImage
                         Text("Reference")
@@ -165,8 +161,9 @@ struct PerPhotoConfirmView: View {
                 }
                 .padding(.horizontal, 16)
 
-                // Species identification card
+                // Species info + candidates card
                 VStack(alignment: .leading, spacing: 12) {
+                    // Species name + confidence percentage
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(displayName)
@@ -183,14 +180,29 @@ struct PerPhotoConfirmView: View {
                             .foregroundStyle(confidenceColor)
                     }
 
+                    // Confidence bar
                     ProgressView(value: selectedConfidence)
                         .tint(confidenceColor)
 
-                    // Inline actions
-                    if isHighConfidence && !showAlternatives {
-                        highConfidenceInline
-                    } else {
-                        lowConfidenceInline
+                    // Confidence badge
+                    if selectedConfidence >= 0.8 {
+                        Label("High confidence", systemImage: "checkmark.seal.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.green)
+                    }
+
+                    // Always show all candidates when there are alternatives
+                    if candidates.count > 1 {
+                        Divider()
+
+                        Text("All candidates")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        ForEach(candidates, id: \.species) { candidate in
+                            candidateRow(candidate)
+                        }
                     }
                 }
                 .padding(16)
@@ -201,7 +213,47 @@ struct PerPhotoConfirmView: View {
         }
     }
 
-    // MARK: - Wiki Reference Image
+    // MARK: - Candidate Row
+
+    private func candidateRow(_ candidate: IdentifiedCandidate) -> some View {
+        let isSelected = candidate.species == selectedSpecies
+        return Button {
+            selectAlternative(candidate)
+        } label: {
+            HStack {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.4))
+                Text(getDisplayName(candidate.species))
+                Spacer()
+                Text("\(Int(candidate.confidence * 100))%")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .font(.subheadline)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - User Photo (4:3 landscape-aware crop)
+
+    private var userPhotoImage: some View {
+        Group {
+            if let photo, let uiImage = UIImage(data: photo.thumbnail) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .aspectRatio(4/3, contentMode: .fill)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                imagePlaceholder(systemName: "photo")
+            }
+        }
+    }
+
+    // MARK: - Wiki Reference Image (4:3 landscape-aware crop)
 
     private var wikiReferenceImage: some View {
         Group {
@@ -213,108 +265,34 @@ struct PerPhotoConfirmView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(minWidth: 0, maxWidth: .infinity)
-                            .aspectRatio(1, contentMode: .fill)
+                            .aspectRatio(4/3, contentMode: .fill)
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     case .failure:
-                        wikiPlaceholder
+                        imagePlaceholder(systemName: "bird")
                     default:
-                        wikiPlaceholder
+                        imagePlaceholder(systemName: "bird")
                             .overlay { ProgressView() }
                     }
                 }
             } else if isLoadingWikiImage {
-                wikiPlaceholder
+                imagePlaceholder(systemName: "bird")
                     .overlay { ProgressView() }
             } else {
-                wikiPlaceholder
+                imagePlaceholder(systemName: "bird")
             }
         }
     }
 
-    private var wikiPlaceholder: some View {
+    private func imagePlaceholder(systemName: String) -> some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(.regularMaterial)
-            .aspectRatio(1, contentMode: .fill)
+            .aspectRatio(4/3, contentMode: .fill)
             .overlay {
-                Image(systemName: "bird")
+                Image(systemName: systemName)
                     .font(.title2)
                     .foregroundStyle(.tertiary)
             }
-    }
-
-    // MARK: - High Confidence
-
-    private var highConfidenceInline: some View {
-        VStack(spacing: 8) {
-            Label("High confidence", systemImage: "checkmark.seal.fill")
-                .font(.subheadline)
-                .foregroundStyle(.green)
-
-            if candidates.count > 1 {
-                Button("Show \(candidates.count - 1) alternative\(candidates.count > 2 ? "s" : "")") {
-                    showAlternatives = true
-                }
-                .font(.subheadline)
-            }
-
-            // "Possible" for when user isn't sure even if AI is confident
-            Button {
-                confirmWith(status: .possible)
-            } label: {
-                Label("Mark as Possible Instead", systemImage: "questionmark.circle")
-                    .font(.subheadline)
-            }
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Low Confidence
-
-    private var lowConfidenceInline: some View {
-        VStack(spacing: 12) {
-            // Possible button (Confirm is in the bottom bar)
-            Button {
-                confirmWith(status: .possible)
-            } label: {
-                Label("Possible", systemImage: "questionmark.circle")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
-
-            // Candidate alternatives
-            if candidates.count > 1 {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("All candidates")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-
-                    ForEach(candidates, id: \.species) { candidate in
-                        let isSelected = candidate.species == selectedSpecies
-                        Button {
-                            selectAlternative(candidate)
-                        } label: {
-                            HStack {
-                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.4))
-                                Text(getDisplayName(candidate.species))
-                                Spacer()
-                                Text("\(Int(candidate.confidence * 100))%")
-                                    .monospacedDigit()
-                                    .foregroundStyle(.secondary)
-                            }
-                            .font(.subheadline)
-                            .padding(.vertical, 6)
-                        }
-                        .buttonStyle(.plain)
-                        if candidate.species != candidates.last?.species {
-                            Divider()
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -326,7 +304,6 @@ struct PerPhotoConfirmView: View {
     }
 
     private func initializeSelection() {
-        showAlternatives = false
         if let top = candidates.first {
             selectedSpecies = top.species
             selectedConfidence = top.confidence
@@ -345,50 +322,41 @@ struct PerPhotoConfirmView: View {
 
     private func confirmWith(status: ObservationStatus) {
         viewModel.confirmCurrentPhoto(
-            species: selectedSpecies,
-            confidence: selectedConfidence,
-            status: status,
-            count: 1
+            species: selectedSpecies, confidence: selectedConfidence,
+            status: status, count: 1
         )
     }
 
     private func fetchWikiImage() {
         let species = selectedSpecies
         guard !species.isEmpty else { wikiImageURL = nil; return }
-
         let wikiTitle: String
-        if let candidate = candidates.first(where: { $0.species == species }), let title = candidate.wikiTitle {
-            wikiTitle = title
+        if let c = candidates.first(where: { $0.species == species }), let t = c.wikiTitle {
+            wikiTitle = t
         } else {
             wikiTitle = getDisplayName(species).replacingOccurrences(of: " ", with: "_")
         }
-
         isLoadingWikiImage = true
         wikiImageURL = nil
-
         Task {
             defer { isLoadingWikiImage = false }
             do {
-                let encoded = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
-                guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encoded)") else { return }
-                var request = URLRequest(url: url)
-                request.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
-                let (data, _) = try await URLSession.shared.data(for: request)
-                let summary = try JSONDecoder().decode(WikiSummary.self, from: data)
-                if let src = summary.thumbnail?.source, let imgURL = URL(string: src) {
-                    wikiImageURL = imgURL
-                }
+                let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
+                guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(enc)") else { return }
+                var req = URLRequest(url: url)
+                req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
+                let (data, _) = try await URLSession.shared.data(for: req)
+                struct Summary: Codable { let thumbnail: Thumb?; struct Thumb: Codable { let source: String? } }
+                let s = try JSONDecoder().decode(Summary.self, from: data)
+                if let src = s.thumbnail?.source, let u = URL(string: src) { wikiImageURL = u }
             } catch {
-                log.debug("Wiki image fetch failed for \(species): \(error.localizedDescription)")
+                log.debug("Wiki fetch failed: \(error.localizedDescription)")
             }
         }
     }
 }
 
-private struct WikiSummary: Codable {
-    let thumbnail: WikiThumbnail?
-    struct WikiThumbnail: Codable { let source: String? }
-}
+// MARK: - Photo Progress Dots
 
 struct PhotoProgressDots: View {
     let current: Int
