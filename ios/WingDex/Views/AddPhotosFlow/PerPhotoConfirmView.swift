@@ -3,11 +3,13 @@ import os
 
 private let log = Logger(subsystem: "app.wingdex", category: "PerPhotoConfirm")
 
-/// Per-photo species confirmation view in the Add Photos flow.
+/// Per-photo species confirmation view.
 ///
-/// Unified layout for all confidence levels: side-by-side photo comparison,
-/// species info card with all candidates listed. Crop/Skip in nav bar,
-/// Back/Dots/Possible/Confirm in liquid glass bottom bar.
+/// Photos app-style toolbar layout:
+/// - Top left: back, Top right: (from AddPhotosFlow cancel)
+/// - Bottom left: progress dots
+/// - Bottom center: secondary actions (crop, skip, possible)
+/// - Bottom right: primary action (Confirm)
 struct PerPhotoConfirmView: View {
     @Bindable var viewModel: AddPhotosViewModel
 
@@ -38,42 +40,39 @@ struct PerPhotoConfirmView: View {
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Crop and Skip as separate visible buttons in nav bar
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Crop", systemImage: "crop") {
-                    viewModel.requestManualCrop()
-                }
-                Button("Skip", systemImage: "forward.fill") {
-                    viewModel.skipCurrentPhoto()
+            // Back in top-left
+            ToolbarItem(placement: .navigation) {
+                if photoIndex > 0 {
+                    Button {
+                        viewModel.goBackToPreviousPhoto()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
                 }
             }
-            // Liquid glass bottom bar
+            // Bottom bar: dots (left) | tools (center) | primary (right)
             ToolbarItemGroup(placement: .bottomBar) {
-                // Back (left)
-                Button {
-                    viewModel.goBackToPreviousPhoto()
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                .disabled(photoIndex == 0)
-
-                Spacer()
-
-                // Progress dots (center)
+                // Progress dots (left)
                 PhotoProgressDots(current: photoIndex, total: totalPhotos)
 
                 Spacer()
 
                 if hasCandidates {
-                    // Possible (secondary action)
-                    Button {
+                    // Center tools: crop, possible, skip
+                    Button("Crop", systemImage: "crop") {
+                        viewModel.requestManualCrop()
+                    }
+                    Button("Possible", systemImage: "questionmark.circle") {
                         confirmWith(status: .possible)
-                    } label: {
-                        Image(systemName: "questionmark.circle")
                     }
                     .disabled(selectedSpecies.isEmpty)
+                    Button("Skip", systemImage: "forward.fill") {
+                        viewModel.skipCurrentPhoto()
+                    }
 
-                    // Confirm with chevron (primary action)
+                    Spacer()
+
+                    // Primary: Confirm (right)
                     Button {
                         confirmWith(status: .confirmed)
                     } label: {
@@ -82,7 +81,13 @@ struct PerPhotoConfirmView: View {
                     }
                     .disabled(selectedSpecies.isEmpty)
                 } else {
-                    // Skip as primary when no candidates
+                    // No candidates: crop center, skip right
+                    Button("Crop", systemImage: "crop") {
+                        viewModel.requestManualCrop()
+                    }
+
+                    Spacer()
+
                     Button {
                         viewModel.skipCurrentPhoto()
                     } label: {
@@ -107,7 +112,7 @@ struct PerPhotoConfirmView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 40)
             }
@@ -125,45 +130,37 @@ struct PerPhotoConfirmView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
-            Button {
-                viewModel.requestManualCrop()
-            } label: {
-                Label("Crop & Retry", systemImage: "crop")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
-            .padding(.horizontal, 40)
-
             Spacer()
         }
     }
 
-    // MARK: - Candidate View (unified for all confidence levels)
+    // MARK: - Candidate View
 
     private var candidateView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Side-by-side photo comparison with 4:3 aspect ratio
-                HStack(spacing: 12) {
+                // Side-by-side photos - fixed height, not aspect ratio fill
+                HStack(alignment: .top, spacing: 12) {
                     VStack(spacing: 6) {
                         userPhotoImage
                         Text("Your photo")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+
                     VStack(spacing: 6) {
                         wikiReferenceImage
                         Text("Reference")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 16)
 
-                // Species info + candidates card
+                // Species info card
                 VStack(alignment: .leading, spacing: 12) {
-                    // Species name + confidence percentage
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(displayName)
@@ -180,26 +177,21 @@ struct PerPhotoConfirmView: View {
                             .foregroundStyle(confidenceColor)
                     }
 
-                    // Confidence bar
                     ProgressView(value: selectedConfidence)
                         .tint(confidenceColor)
 
-                    // Confidence badge
                     if selectedConfidence >= 0.8 {
                         Label("High confidence", systemImage: "checkmark.seal.fill")
                             .font(.subheadline)
                             .foregroundStyle(.green)
                     }
 
-                    // Always show all candidates when there are alternatives
                     if candidates.count > 1 {
                         Divider()
-
                         Text("All candidates")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-
                         ForEach(candidates, id: \.species) { candidate in
                             candidateRow(candidate)
                         }
@@ -212,8 +204,6 @@ struct PerPhotoConfirmView: View {
             .padding(.top, 8)
         }
     }
-
-    // MARK: - Candidate Row
 
     private func candidateRow(_ candidate: IdentifiedCandidate) -> some View {
         let isSelected = candidate.species == selectedSpecies
@@ -235,25 +225,21 @@ struct PerPhotoConfirmView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - User Photo (4:3 landscape-aware crop)
+    // MARK: - Photos (fixed height, scaledToFit to avoid clipping)
 
     private var userPhotoImage: some View {
         Group {
             if let photo, let uiImage = UIImage(data: photo.thumbnail) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFill()
-                    .frame(minWidth: 0, maxWidth: .infinity)
-                    .aspectRatio(4/3, contentMode: .fill)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 imagePlaceholder(systemName: "photo")
             }
         }
     }
-
-    // MARK: - Wiki Reference Image (4:3 landscape-aware crop)
 
     private var wikiReferenceImage: some View {
         Group {
@@ -263,10 +249,8 @@ struct PerPhotoConfirmView: View {
                     case .success(let image):
                         image
                             .resizable()
-                            .scaledToFill()
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .aspectRatio(4/3, contentMode: .fill)
-                            .clipped()
+                            .scaledToFit()
+                            .frame(height: 160)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     case .failure:
                         imagePlaceholder(systemName: "bird")
@@ -287,7 +271,7 @@ struct PerPhotoConfirmView: View {
     private func imagePlaceholder(systemName: String) -> some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(.regularMaterial)
-            .aspectRatio(4/3, contentMode: .fill)
+            .frame(height: 160)
             .overlay {
                 Image(systemName: systemName)
                     .font(.title2)
@@ -356,8 +340,6 @@ struct PerPhotoConfirmView: View {
     }
 }
 
-// MARK: - Photo Progress Dots
-
 struct PhotoProgressDots: View {
     let current: Int
     let total: Int
@@ -371,8 +353,6 @@ struct PhotoProgressDots: View {
         }
     }
 }
-
-// MARK: - Previews
 
 #Preview("High Confidence") {
     NavigationStack {

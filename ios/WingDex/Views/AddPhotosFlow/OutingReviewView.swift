@@ -129,25 +129,14 @@ struct OutingReviewView: View {
             : "Review Outing")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Liquid glass bottom bar: Back / cluster dots / Continue
+            // Bottom bar: dots (left) | (center empty) | Continue (right)
             ToolbarItemGroup(placement: .bottomBar) {
-                // Back - disabled on first cluster
-                Button {
-                    // Could go back to photo selection
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                .disabled(true) // First step in the sub-flow
-
-                Spacer()
-
                 if viewModel.clusters.count > 1 {
                     PhotoProgressDots(current: viewModel.currentClusterIndex, total: viewModel.clusters.count)
                 }
 
                 Spacer()
 
-                // Continue (primary)
                 Button {
                     handleConfirm()
                 } label: {
