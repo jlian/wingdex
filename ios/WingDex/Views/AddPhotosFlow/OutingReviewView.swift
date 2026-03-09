@@ -27,15 +27,11 @@ struct OutingReviewView: View {
     @State private var inferredCountryCode: String?
 
     /// Manual date/time editing
-    @State private var editingDateTime = false
-    @State private var manualDate = Date()
-    @State private var manualTime = Date()
     @State private var overriddenStartTime: Date?
 
-    /// Place search via Nominatim autocomplete
+    /// Place search via MapKit autocomplete
     @State private var placeQuery = ""
-    @State private var placeResults: [NominatimPlace] = []
-    @State private var isSearchingPlace = false
+    @State private var placeCompleter = PlaceSearchCompleter()
     @State private var overriddenCoords: CLLocationCoordinate2D?
 
     /// Whether to add photos to an existing matching outing
@@ -129,38 +125,16 @@ struct OutingReviewView: View {
     // MARK: - Date/Time Section
 
     private var dateTimeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "calendar")
-                    .foregroundStyle(Color.mutedText)
-                Text(formatClusterDateTime())
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mutedText)
-                Button {
-                    editingDateTime.toggle()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
-            }
-
-            // Manual date/time editor
-            if editingDateTime {
-                HStack(spacing: 12) {
-                    DatePicker("Date", selection: $manualDate, displayedComponents: .date)
-                        .labelsHidden()
-                    DatePicker("Time", selection: $manualTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                    Button("Apply") {
-                        applyManualDateTime()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
-        }
+        // Native compact DatePicker - tappable inline, auto-applies on change
+        DatePicker(
+            "Date & Time",
+            selection: Binding(
+                get: { overriddenStartTime ?? cluster?.startTime ?? Date() },
+                set: { overriddenStartTime = $0 }
+            ),
+            displayedComponents: [.date, .hourAndMinute]
+        )
+        .datePickerStyle(.compact)
     }
 
     // MARK: - GPS Status
@@ -205,12 +179,7 @@ struct OutingReviewView: View {
             .tint(Color.accentColor)
         }
         .padding(12)
-        .background(Color.accentColor.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
-        )
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Location Section
@@ -245,67 +214,49 @@ struct OutingReviewView: View {
         }
     }
 
-    // MARK: - Place Search
+    // MARK: - Place Search (MapKit Autocomplete)
 
     private var placeSearchSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                TextField("Search for a place...", text: $placeQuery)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { searchPlace() }
-
-                Button {
-                    searchPlace()
-                } label: {
-                    Image(systemName: "magnifyingglass")
+            TextField("Search for a place...", text: $placeQuery)
+                .textFieldStyle(.roundedBorder)
+                .onChange(of: placeQuery) {
+                    placeCompleter.search(query: placeQuery)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(isSearchingPlace || placeQuery.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
 
-            if isSearchingPlace {
-                HStack(spacing: 6) {
-                    ProgressView()
-                        .controlSize(.mini)
-                    Text("Searching...")
-                        .font(.caption)
-                        .foregroundStyle(Color.mutedText)
-                }
-            }
-
-            // Search results list
-            if !placeResults.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(placeResults) { place in
-                        Button {
-                            selectPlace(place)
-                        } label: {
-                            Text(place.displayName)
-                                .font(.caption)
+            // Native MapKit autocomplete results
+            if !placeCompleter.results.isEmpty && !placeQuery.isEmpty {
+                List(placeCompleter.results) { item in
+                    Button {
+                        selectCompletion(item)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title)
+                                .font(.subheadline)
                                 .foregroundStyle(Color.foregroundText)
-                                .lineLimit(2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
+                            if !item.subtitle.isEmpty {
+                                Text(item.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.mutedText)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        Divider()
                     }
+                    .listRowBackground(Color.cardBg)
                 }
-                .background(Color.cardBg)
+                .listStyle(.plain)
+                .frame(maxHeight: 180)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.warmBorder, lineWidth: 1)
-                )
+                .scrollContentBackground(.hidden)
             }
 
             // Override confirmation
-            if overriddenCoords != nil {
-                Text("Location set: \(overriddenCoords!.latitude, specifier: "%.4f"), \(overriddenCoords!.longitude, specifier: "%.4f")")
-                    .font(.caption)
-                    .foregroundStyle(.green)
+            if let coords = overriddenCoords {
+                Label(
+                    "\(coords.latitude, specifier: "%.4f"), \(coords.longitude, specifier: "%.4f")",
+                    systemImage: "mappin.circle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(.green)
             }
         }
     }
@@ -344,12 +295,6 @@ struct OutingReviewView: View {
     private func initializeIfNeeded() {
         guard !didInitialize else { return }
         didInitialize = true
-
-        // Set initial date/time from cluster
-        if let c = cluster {
-            manualDate = c.startTime
-            manualTime = c.startTime
-        }
 
         // Pre-fill location name from last outing default
         locationName = viewModel.lastLocationName
@@ -562,87 +507,39 @@ struct OutingReviewView: View {
         return nil
     }
 
-    /// Search for a place by name via Nominatim.
-    private func searchPlace() {
-        let query = placeQuery.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return }
-        isSearchingPlace = true
-
-        Task {
-            defer { isSearchingPlace = false }
-            do {
-                var components = URLComponents(string: "https://nominatim.openstreetmap.org/search")!
-                components.queryItems = [
-                    URLQueryItem(name: "format", value: "jsonv2"),
-                    URLQueryItem(name: "q", value: query),
-                    URLQueryItem(name: "limit", value: "5"),
-                    URLQueryItem(name: "addressdetails", value: "1"),
-                    URLQueryItem(name: "accept-language", value: "en"),
-                ]
-                guard let url = components.url else { return }
-                var request = URLRequest(url: url)
-                request.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
-
-                let (data, _) = try await URLSession.shared.data(for: request)
-                let results = try JSONDecoder().decode([NominatimResult].self, from: data)
-                placeResults = results.map { result in
-                    NominatimPlace(
-                        id: UUID().uuidString,
-                        displayName: result.displayName ?? "",
-                        lat: Double(result.lat ?? "0") ?? 0,
-                        lon: Double(result.lon ?? "0") ?? 0,
-                        address: result.address
-                    )
-                }
-            } catch {
-                log.error("Place search failed: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    /// Select a place from search results.
-    private func selectPlace(_ place: NominatimPlace) {
-        overriddenCoords = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
-        let shortName = place.displayName.split(separator: ",").prefix(3).joined(separator: ",").trimmingCharacters(in: .whitespaces)
-        locationName = shortName
-        suggestedLocation = shortName
-
-        // Extract region from address
-        let fakeResult = NominatimResult(
-            name: nil, displayName: place.displayName,
-            lat: "\(place.lat)", lon: "\(place.lon)",
-            category: nil, type: nil,
-            address: place.address, namedetails: nil
-        )
-        let region = extractRegionCodes(fakeResult)
-        inferredStateProvince = region.stateProvince
-        inferredCountryCode = region.countryCode
-
-        placeResults = []
+    /// Select a place from MapKit autocomplete results.
+    private func selectCompletion(_ item: PlaceSearchCompleter.PlaceResult) {
         placeQuery = ""
-    }
+        placeCompleter.results = []
 
-    /// Apply the manually edited date and time.
-    private func applyManualDateTime() {
-        // Combine the date from manualDate and time from manualTime
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: manualDate)
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: manualTime)
-        components.hour = timeComponents.hour
-        components.minute = timeComponents.minute
-        if let combined = calendar.date(from: components) {
-            overriddenStartTime = combined
+        // Resolve the completion to coordinates via MKLocalSearch
+        Task {
+            guard let mapItem = await placeCompleter.resolve(item) else { return }
+            let coord = mapItem.placemark.coordinate
+            overriddenCoords = coord
+
+            // Build a short display name from the placemark
+            let placemark = mapItem.placemark
+                let parts = [placemark.name, placemark.locality, placemark.administrativeArea]
+                    .compactMap { $0 }
+                let shortName: String
+                var seen = Set<String>()
+                let unique = parts.filter { seen.insert($0).inserted }
+                shortName = unique.prefix(3).joined(separator: ", ")
+
+                locationName = shortName
+                suggestedLocation = shortName
+
+                // Extract region codes from placemark
+                if let isoCode = placemark.isoCountryCode?.uppercased() {
+                    inferredCountryCode = isoCode
+                    if let state = placemark.administrativeArea {
+                        // Try to construct ISO 3166-2 from country + state abbreviation
+                        let stateAbbrev = placemark.subAdministrativeArea ?? state
+                        inferredStateProvince = "\(isoCode)-\(stateAbbrev)"
+                    }
+                }
         }
-        editingDateTime = false
-    }
-
-    /// Format the cluster date/time for display.
-    private func formatClusterDateTime() -> String {
-        let date = effectiveStartTime
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 
     /// Confirm the outing and proceed to species identification.
@@ -747,6 +644,7 @@ private struct NominatimResult: Codable {
 }
 
 /// A place search result from Nominatim.
+/// Still used for reverse geocoding results; place search uses MKLocalSearchCompleter.
 struct NominatimPlace: Identifiable {
     let id: String
     let displayName: String
@@ -760,6 +658,82 @@ private struct GeoResult {
     let name: String
     let stateProvince: String?
     let countryCode: String?
+}
+
+// MARK: - MapKit Place Search Completer
+
+/// Wraps MKLocalSearchCompleter for SwiftUI, providing native place autocomplete.
+///
+/// Replaces the hand-rolled Nominatim search API with Apple's MapKit autocomplete,
+/// which is faster, respects user privacy, and provides proper localized results.
+///
+/// Uses a delegate bridge to handle Swift 6 concurrency since MKLocalSearchCompletion
+/// is not Sendable.
+@MainActor
+@Observable
+final class PlaceSearchCompleter: NSObject {
+    /// Search results displayed in the UI.
+    var results: [PlaceResult] = []
+    private var completer: MKLocalSearchCompleter?
+    private var bridge: CompleterBridge?
+
+    struct PlaceResult: Identifiable {
+        let id = UUID()
+        let title: String
+        let subtitle: String
+        /// Index into the completer's results array for resolving to MKLocalSearch.Request.
+        let index: Int
+    }
+
+    func search(query: String) {
+        if completer == nil {
+            let c = MKLocalSearchCompleter()
+            c.resultTypes = [.address, .pointOfInterest]
+            let b = CompleterBridge { [weak self] completions in
+                Task { @MainActor in
+                    self?.results = completions.enumerated().map { i, c in
+                        PlaceResult(title: c.title, subtitle: c.subtitle, index: i)
+                    }
+                }
+            }
+            c.delegate = b
+            completer = c
+            bridge = b
+        }
+
+        if query.trimmingCharacters(in: .whitespaces).isEmpty {
+            results = []
+            return
+        }
+        completer?.queryFragment = query
+    }
+
+    /// Resolve a search result to coordinates.
+    func resolve(_ result: PlaceResult) async -> MKMapItem? {
+        guard let completer, result.index < completer.results.count else { return nil }
+        let completion = completer.results[result.index]
+        let request = MKLocalSearch.Request(completion: completion)
+        let search = MKLocalSearch(request: request)
+        return try? await search.start().mapItems.first
+    }
+}
+
+/// NSObject delegate bridge that captures results in a closure.
+/// Avoids Swift 6 Sendable issues by keeping MKLocalSearchCompletion on the same thread.
+private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
+    let onResults: ([MKLocalSearchCompletion]) -> Void
+
+    init(onResults: @escaping ([MKLocalSearchCompletion]) -> Void) {
+        self.onResults = onResults
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        onResults(completer.results)
+    }
+
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        onResults([])
+    }
 }
 
 // MARK: - Preview

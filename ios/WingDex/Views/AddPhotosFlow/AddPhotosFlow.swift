@@ -225,14 +225,10 @@ struct AddPhotosFlow: View {
             Spacer()
 
             // Success icon
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.accentColor)
-            }
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Color.accentColor)
+                .symbolEffect(.bounce, value: viewModel.currentStep)
 
             // Summary header
             if let summary = viewModel.uploadSummary {
@@ -302,12 +298,7 @@ struct AddPhotosFlow: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(highlight ? Color.accentColor.opacity(0.05) : Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(highlight ? Color.accentColor.opacity(0.3) : Color.warmBorder, lineWidth: 1)
-        )
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Crop Helpers

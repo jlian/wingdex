@@ -142,18 +142,15 @@ struct PerPhotoConfirmView: View {
                     .scaledToFill()
                     .frame(width: 140, height: 140)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(Color.warmBorder, lineWidth: 2)
-                    )
+                    .border(Color.warmBorder, width: 2)
             } else {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.cardBg)
                     .frame(width: 140, height: 140)
-                    .overlay(
+                    .overlay {
                         Image(systemName: "photo")
                             .foregroundStyle(Color.mutedText)
-                    )
+                    }
             }
         }
     }
@@ -170,20 +167,16 @@ struct PerPhotoConfirmView: View {
                             .scaledToFill()
                             .frame(width: 140, height: 140)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.mutedText.opacity(0.3), lineWidth: 2)
-                            )
                     case .failure:
                         wikiPlaceholder
                     default:
                         wikiPlaceholder
-                            .overlay(ProgressView().controlSize(.small))
+                            .overlay { ProgressView() }
                     }
                 }
             } else if isLoadingWikiImage {
                 wikiPlaceholder
-                    .overlay(ProgressView().controlSize(.small))
+                    .overlay { ProgressView() }
             } else {
                 wikiPlaceholder
             }
@@ -192,17 +185,13 @@ struct PerPhotoConfirmView: View {
 
     private var wikiPlaceholder: some View {
         RoundedRectangle(cornerRadius: 10)
-            .fill(Color.cardBg)
+            .fill(.regularMaterial)
             .frame(width: 140, height: 140)
-            .overlay(
+            .overlay {
                 Image(systemName: "bird")
                     .font(.title2)
                     .foregroundStyle(Color.mutedText.opacity(0.5))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.mutedText.opacity(0.3), lineWidth: 2)
-            )
+            }
     }
 
     // MARK: - Species Result Card
@@ -227,18 +216,9 @@ struct PerPhotoConfirmView: View {
                     .foregroundStyle(confidenceColor)
             }
 
-            // Color-coded confidence bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.mutedText.opacity(0.15))
-                        .frame(height: 8)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(confidenceColor)
-                        .frame(width: geo.size.width * selectedConfidence, height: 8)
-                }
-            }
-            .frame(height: 8)
+            // Color-coded confidence bar (native ProgressView)
+            ProgressView(value: selectedConfidence)
+                .tint(confidenceColor)
 
             // High confidence: auto-selected with Confirm button
             if isHighConfidence && !showAlternatives {
@@ -249,12 +229,7 @@ struct PerPhotoConfirmView: View {
             }
         }
         .padding(16)
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.warmBorder, lineWidth: 1)
-        )
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Action Layouts
@@ -357,12 +332,7 @@ struct PerPhotoConfirmView: View {
                             }
                             .padding(.vertical, 8)
                             .padding(.horizontal, 10)
-                            .background(isSelected ? Color.accentColor.opacity(0.1) : Color.mutedText.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
-                            )
+                            .background(isSelected ? Color.accentColor.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
                     }
