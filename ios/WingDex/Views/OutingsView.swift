@@ -93,7 +93,7 @@ struct OutingsView: View {
                                 Label("Sort", systemImage: "arrow.up.arrow.down")
                             }
                             // WHY: see WingDexView - re-add glass on sort only.
-                            .glassEffect(.clear.interactive())
+                            .glassEffect(.regular.interactive())
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)

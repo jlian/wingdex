@@ -67,7 +67,11 @@ final class AddPhotosViewModel {
     // MARK: - GPS Context Toggle
 
     /// When true, send GPS and date context to the AI for better identification.
-    var useGeoContext = true
+    /// Persisted in UserDefaults so it survives between sessions and is editable from Settings.
+    var useGeoContext: Bool {
+        get { UserDefaults.standard.object(forKey: "useGeoContext") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "useGeoContext") }
+    }
 
     // MARK: - Outing Review State
 
@@ -223,7 +227,7 @@ final class AddPhotosViewModel {
         }
 
         // Process camera-captured photos (no EXIF GPS, use capture time as now)
-        for (i, uiImage) in cameraPhotos.enumerated() {
+        for uiImage in cameraPhotos {
             let id = UUID().uuidString
             let compressed = PhotoService.compressImage(uiImage, quality: 0.7) ?? Data()
             let thumbnail = PhotoService.generateThumbnail(from: compressed, maxDimension: 200) ?? compressed
@@ -643,6 +647,10 @@ final class AddPhotosViewModel {
                     locationNames: outingName.isEmpty ? [] : [outingName]
                 )
             }
+
+            // Brief "saved" notice before advancing
+            processingMessage = "Outing saved!"
+            try? await Task.sleep(for: .milliseconds(1200))
 
             // Move to next cluster or finish
             if currentClusterIndex < clusters.count - 1 {

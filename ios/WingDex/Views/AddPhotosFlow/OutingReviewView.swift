@@ -299,8 +299,8 @@ struct OutingReviewView: View {
         guard let uiImage = UIImage(data: photo.image) else {
             return CGSize(width: 320, height: 320)
         }
-        let maxWidth = min(UIScreen.main.bounds.width - 40, 360)
-        let maxHeight = min(UIScreen.main.bounds.height * 0.58, 560)
+        let maxWidth: CGFloat = 360
+        let maxHeight: CGFloat = 560
         let aspect = max(uiImage.size.width, 1) / max(uiImage.size.height, 1)
 
         var width = maxWidth
@@ -547,31 +547,30 @@ struct OutingReviewView: View {
         // Resolve the completion to coordinates via MKLocalSearch
         Task {
             guard let mapItem = await placeCompleter.resolve(item) else { return }
-            let coord = mapItem.placemark.coordinate
-            overriddenCoords = coord
+            overriddenCoords = mapItem.location.coordinate
 
-            // Build a short display name from the placemark
-            let placemark = mapItem.placemark
-                let parts = [placemark.name, placemark.locality, placemark.administrativeArea]
-                    .compactMap { $0 }
-                let shortName: String
-                var seen = Set<String>()
-                let unique = parts.filter { seen.insert($0).inserted }
-                shortName = unique.prefix(3).joined(separator: ", ")
-
-                locationName = shortName
-                suggestedLocation = shortName
-
-                // Extract region codes from placemark
-                if let isoCode = placemark.isoCountryCode?.uppercased() {
-                    inferredCountryCode = isoCode
-                    if let state = placemark.administrativeArea {
-                        // Try to construct ISO 3166-2 from country + state abbreviation
-                        let stateAbbrev = placemark.subAdministrativeArea ?? state
-                        inferredStateProvince = "\(isoCode)-\(stateAbbrev)"
-                    }
-                }
+            let info = Self.extractPlaceInfo(from: mapItem)
+            locationName = info.shortName
+            suggestedLocation = info.shortName
+            inferredCountryCode = info.countryCode
+            inferredStateProvince = info.stateProvince
         }
+    }
+
+    /// Extract display name and region codes from an MKMapItem using iOS 26 APIs.
+    private static func extractPlaceInfo(from mapItem: MKMapItem) -> (shortName: String, countryCode: String?, stateProvince: String?) {
+        // Use addressRepresentations for display and region info
+        if let reps = mapItem.addressRepresentations {
+            let shortName = reps.cityWithContext(.full)
+                ?? reps.fullAddress(includingRegion: false, singleLine: true)
+                ?? mapItem.name
+                ?? ""
+            let regionCode = reps.region?.identifier
+            return (shortName, regionCode, nil)
+        }
+
+        // Fallback to name
+        return (mapItem.name ?? "", nil, nil)
     }
 
     /// Confirm the outing and proceed to species identification.

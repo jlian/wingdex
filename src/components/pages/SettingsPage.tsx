@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -54,6 +55,10 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [useGeoContext, setUseGeoContext] = useState(() => {
+    const stored = localStorage.getItem('wingdex_useGeoContext')
+    return stored === null ? true : stored === 'true'
+  })
   const [mounted, setMounted] = useState(false)
   const [profileTimezone, setProfileTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
@@ -635,6 +640,34 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       )}
 
       {/* Old Account card removed -- now rendered above Appearance */}
+
+      {/* Data Storage & Privacy */}
+      <Card className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Bird Identification</h3>
+          <p className="text-sm text-muted-foreground">
+            Settings for AI species identification
+          </p>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5 flex-1">
+            <label htmlFor="geo-context-setting" className="text-sm font-medium text-foreground cursor-pointer">
+              Use Location and Time
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Sends photo location and month to the AI for more accurate species identification.
+            </p>
+          </div>
+          <Switch
+            id="geo-context-setting"
+            checked={useGeoContext}
+            onCheckedChange={(checked) => {
+              setUseGeoContext(checked)
+              localStorage.setItem('wingdex_useGeoContext', String(checked))
+            }}
+          />
+        </div>
+      </Card>
 
       {/* Data Storage & Privacy */}
       <Card className="p-4 space-y-4">

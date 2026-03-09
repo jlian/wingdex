@@ -60,6 +60,20 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { UserDefaults.standard.object(forKey: "useGeoContext") as? Bool ?? true },
+                        set: { UserDefaults.standard.set($0, forKey: "useGeoContext") }
+                    )) {
+                        Text("Use Location and Time")
+                    }
+                    .tint(Color.accentColor)
+                } header: {
+                    Text("Bird Identification")
+                } footer: {
+                    Text("Sends photo location and month to the AI for more accurate species identification.")
+                }
+
                 #if DEBUG
                 Section("Development") {
                     Button {
@@ -123,9 +137,12 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
             .navigationTitle("Settings")
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done", systemImage: "xmark") {
+                        dismiss() 
+                    }
                 }
             }
         }

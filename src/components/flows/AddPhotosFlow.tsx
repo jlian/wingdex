@@ -9,10 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Card } from '@/components/ui/card'
 import { Confetti } from '@/components/ui/confetti'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 import {
-  CloudArrowUp, MapPin, CheckCircle, Question,
+  CloudArrowUp, CheckCircle, Question,
   Crop, ArrowRight, ArrowLeft, SkipForward
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
@@ -64,7 +62,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const [photoProgressTauMs, setPhotoProgressTauMs] = useState(1200)
   const [photoProgressRunKey, setPhotoProgressRunKey] = useState(0)
   const [processingMessage, setProcessingMessage] = useState('')
-  const [useGeoContext, setUseGeoContext] = useState(true)
+  const [useGeoContext] = useState(() => {
+    const stored = localStorage.getItem('wingdex_useGeoContext')
+    return stored === null ? true : stored === 'true'
+  })
   const [currentOutingId, setCurrentOutingId] = useState('')
   const [showConfetti, setShowConfetti] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -678,18 +679,6 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 className="hidden"
                 onChange={handleFileSelect}
               />
-
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-                <Label htmlFor="geo-context" className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
-                  <MapPin size={16} className="text-primary/70" />
-                  Use GPS &amp; date for better ID
-                </Label>
-                <Switch
-                  id="geo-context"
-                  checked={useGeoContext}
-                  onCheckedChange={setUseGeoContext}
-                />
-              </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <div className="flex items-start gap-2 rounded-lg bg-muted/20 p-2.5">

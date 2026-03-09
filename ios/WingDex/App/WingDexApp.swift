@@ -18,7 +18,6 @@ struct WingDexApp: App {
             ContentView()
                 .environment(authService)
                 .environment(dataStore)
-                .tint(Color.accentColor)
         }
     }
 }
@@ -74,10 +73,11 @@ struct ContentView: View {
 /// Three-tab main interface with detached "+" and avatar settings sheet.
 struct MainTabView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(DataStore.self) private var store
     @State private var selectedTab = AppTab.home
-    @State private var lastStandardTab = AppTab.home
     @State private var showingSettings = false
-    @State private var showingAddPhotos = false
+    @State private var addPhotosVM = AddPhotosViewModel()
+    @State private var showingWizard = false
 
     enum AppTab: Hashable {
         case home, outings, wingdex, add
@@ -97,37 +97,45 @@ struct MainTabView: View {
                 }
             }
 
-            // WHY role: .search: iOS 26 TabView visually detaches the .search tab
-            // to the right side of the tab bar (like Apple Music's search/create button),
-            // which gives us the "+" camera button layout we want.
-            // Tapping it presents AddPhotosFlow as a full-screen sheet.
             Tab(value: AppTab.add, role: .search) {
-                Color.clear
-                    .onAppear { showingAddPhotos = true }
+                NavigationStack {
+                    PhotoSelectionView(viewModel: addPhotosVM)
+                        .navigationTitle("Add Photos")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .onAppear {
+                            addPhotosVM.configure(
+                                dataService: DataService(auth: auth),
+                                dataStore: store
+                            )
+                        }
+                }
             } label: {
                 Label("Add", systemImage: "camera.fill")
             }
         }
-        .onChange(of: selectedTab) {
-            if selectedTab != .add {
-                lastStandardTab = selectedTab
+        .onChange(of: addPhotosVM.currentStep) {
+            if addPhotosVM.currentStep != .selectPhotos {
+                showingWizard = true
             }
         }
-        .fullScreenCover(isPresented: $showingAddPhotos, onDismiss: {
-            if selectedTab == .add {
-                selectedTab = lastStandardTab
-            }
+        .fullScreenCover(isPresented: $showingWizard, onDismiss: {
+            addPhotosVM = AddPhotosViewModel()
+            addPhotosVM.configure(
+                dataService: DataService(auth: auth),
+                dataStore: store
+            )
         }) {
             NavigationStack {
-                AddPhotosFlow()
+                AddPhotosFlow(viewModel: addPhotosVM)
             }
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .environment(\.showAddPhotos) { showingAddPhotos = true }
+        .environment(\.showAddPhotos) { selectedTab = .add }
         .environment(\.showSettings) { showingSettings = true }
         .environment(\.showWingDex) { selectedTab = .wingdex }
+        .environment(\.showHome) { selectedTab = .home }
         .environment(\.showOutings) { selectedTab = .outings }
     }
 }

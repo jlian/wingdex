@@ -97,7 +97,7 @@ struct WingDexView: View {
                             // below removes the default glass from ALL items in the ToolbarItem.
                             // We add it back on the sort button only so it gets the liquid glass
                             // pill while the avatar stays flat.
-                            .glassEffect(.clear.interactive())
+                            .glassEffect(.regular.interactive())
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)

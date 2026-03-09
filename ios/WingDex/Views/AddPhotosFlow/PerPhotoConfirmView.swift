@@ -299,15 +299,18 @@ struct PerPhotoConfirmView: View {
         } label: {
             HStack {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.body)
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.4))
                 Text(getDisplayName(candidate.species))
+                    .font(.body)
                 Spacer()
                 Text("\(Int(candidate.confidence * 100))%")
-                    .monospacedDigit()
+                    .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            .font(.subheadline)
-            .padding(.vertical, 4)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 4)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

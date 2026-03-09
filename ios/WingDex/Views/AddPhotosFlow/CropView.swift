@@ -21,6 +21,7 @@ struct CropView: View {
     @State private var initialScale: CGFloat = 1.0
     @State private var initialOffset: CGSize = .zero
     @State private var didInitializeTransform = false
+    @State private var squareSide: CGFloat = 0
 
     init(
         imageData: Data,
@@ -65,13 +66,6 @@ struct CropView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
 
-                    Text(reason)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 32)
-
                     ZStack {
                         Color.pageBg
 
@@ -90,10 +84,20 @@ struct CropView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.pageBg)
+                .overlay(alignment: .top) {
+                    Text(reason)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 60)
+                }
                 .onAppear {
+                    self.squareSide = squareSide
                     configureInitialTransformIfNeeded(fillInfo: fillInfo)
                 }
                 .onChange(of: geo.size.width) {
+                    self.squareSide = geo.size.width
                     didInitializeTransform = false
                     configureInitialTransformIfNeeded(fillInfo: fillInfo)
                 }
@@ -241,8 +245,9 @@ struct CropView: View {
     }
 
     private func currentCropResult() -> CropBoxResult? {
+        guard squareSide > 0 else { return nil }
         guard let uiImage = normalizedImage(from: imageData) else { return nil }
-        let side = UIScreen.main.bounds.width
+        let side = squareSide
         let fillInfo = fillImageInfo(for: uiImage, squareSide: side)
         let totalScale = fillInfo.baseScale * photoScale
         let visibleSidePx = side / totalScale

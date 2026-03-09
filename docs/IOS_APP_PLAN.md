@@ -538,11 +538,12 @@ SHA-256 file hash computation exists in `PhotoService`, but there is no UI to ha
 ### Phase 3-R Bug Bash
 
 - [x] When the progress bar happens, use the full image aspect-fit instead of a square crop of the user photo
-- [ ] The liquid glass buttons let's not have them be tinted, just default color is ok - same with the sort button on the list views
-- [ ] Immediately start the wizard after photo selection instead of waiting for user to click "continue" - the web app starts processing immediately and users expect fast feedback
-- [ ] Make the candidate list in the per-photo confirm view bigger text and more spacious, and make each row selectable not just the checkbox/name
-- [ ] The upload tab should just be a real tab and not like a sheet that slides up - the tab exit return to the previous tab still a bit janky
-- [ ] After outing saved , maybe there should be a quick notice or a toast that outing has been saved, even just a little spinner?
+- [x] The liquid glass buttons use default system color, not accent tint - removed global `.tint(Color.accentColor)` from WindowGroup
+- [x] Immediately start the wizard after photo selection - removed "Continue" button, processing starts on `.onChange(of: selectedItems)`
+- [x] Candidate list rows use bigger text (`.body` instead of `.subheadline`), more spacing, and full-row tap target via `.contentShape(Rectangle())`
+- [x] The upload tab is now a real tab destination, not a sheet - uses `showHome()` environment action instead of `dismiss()`
+- [x] Brief "Outing saved!" notice with checkmark shown for ~1.2s between clusters before advancing
+- [ ] After doing real tab, can we have a cool tab expansion animation like Apple Music's search tab where the icon expands to fill the screen as the new view appears? And instead of the search it would morph into the upload button in the principalAction placement
 
 ### 3-R Verification
 

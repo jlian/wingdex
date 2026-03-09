@@ -9,7 +9,7 @@ struct AddPhotosFlow: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var viewModel = AddPhotosViewModel()
+    @Bindable var viewModel: AddPhotosViewModel
     @State private var showCloseConfirm = false
 
     /// Whether the current step needs a close confirmation (user has unsaved progress).
@@ -24,7 +24,8 @@ struct AddPhotosFlow: View {
         Group {
             switch viewModel.currentStep {
             case .selectPhotos:
-                PhotoSelectionView(viewModel: viewModel)
+                // Should not happen - PhotoSelectionView lives in the tab
+                Text("Select photos from the Add tab")
             case .extracting:
                 extractingView
             case .outingReview:
@@ -49,7 +50,7 @@ struct AddPhotosFlow: View {
                     if needsCloseConfirmation {
                         showCloseConfirm = true
                     } else {
-                        dismiss()
+                        dismissWizard()
                     }
                 } label: {
                     Image(systemName: "xmark")
@@ -57,18 +58,12 @@ struct AddPhotosFlow: View {
             }
         }
         .confirmationDialog("Discard progress?", isPresented: $showCloseConfirm, titleVisibility: .visible) {
-            Button("Discard", role: .destructive) { dismiss() }
+            Button("Discard", role: .destructive) { dismissWizard() }
             Button("Continue Uploading", role: .cancel) {}
         } message: {
             Text("Your upload is still in progress. If you close now, any unsaved changes will be lost.")
         }
         .background(Color.pageBg.ignoresSafeArea())
-        .onAppear {
-            viewModel.configure(
-                dataService: DataService(auth: auth),
-                dataStore: store
-            )
-        }
         // Duplicate photo detection alert
         .alert("Duplicate photos found", isPresented: $viewModel.showDuplicateConfirm) {
             Button("Skip duplicates") {
@@ -88,6 +83,13 @@ struct AddPhotosFlow: View {
                      : "All \(dupCount) photos have already been imported.")
             }
         }
+    }
+
+    /// Dismiss the wizard full-screen cover. The onDismiss handler in
+    /// MainTabView resets the view model and returns to the photo selection tab.
+    private func dismissWizard() {
+        viewModel.currentStep = .selectPhotos
+        dismiss()
     }
 
     // MARK: - Navigation Title
@@ -219,9 +221,16 @@ struct AddPhotosFlow: View {
     private var savingView: some View {
         VStack(spacing: 24) {
             Spacer()
-            ProgressView()
-                .controlSize(.large)
-            Text("Saving observations...")
+            if viewModel.processingMessage == "Outing saved!" {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color.accentColor)
+                    .symbolEffect(.bounce, value: viewModel.processingMessage)
+            } else {
+                ProgressView()
+                    .controlSize(.large)
+            }
+            Text(viewModel.processingMessage)
                 .font(.subheadline)
                 .foregroundStyle(Color.mutedText)
             Spacer()
@@ -282,7 +291,7 @@ struct AddPhotosFlow: View {
 
             // Done button
             Button {
-                dismiss()
+                dismissWizard()
             } label: {
                 Text("Done")
                     .font(.system(size: 16, weight: .medium))
@@ -389,7 +398,7 @@ struct ExponentialProgressBar: View {
 
 #Preview {
     NavigationStack {
-        AddPhotosFlow()
+        AddPhotosFlow(viewModel: AddPhotosViewModel())
             .environment(AuthService())
             .environment(previewStore())
     }

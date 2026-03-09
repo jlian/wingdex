@@ -52,34 +52,6 @@ struct PhotoSelectionView: View {
             }
             .padding(.horizontal, 24)
 
-            // GPS context toggle
-            Toggle(isOn: $viewModel.useGeoContext) {
-                Label("Use GPS & date for better ID", systemImage: "location.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mutedText)
-            }
-            .tint(Color.accentColor)
-            .padding(.horizontal, 24)
-
-            // Selection count and Continue button
-            if !viewModel.selectedItems.isEmpty || !viewModel.cameraPhotos.isEmpty {
-                let totalCount = viewModel.selectedItems.count + viewModel.cameraPhotos.count
-                Text("\(totalCount) photo\(totalCount == 1 ? "" : "s") selected")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mutedText)
-
-                Button {
-                    Task { await viewModel.processSelectedPhotos() }
-                } label: {
-                    Text("Continue")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
-                .padding(.horizontal, 24)
-            }
-
             // Tips
             HStack(spacing: 12) {
                 tipCard("Close-ups and side profiles ID best", icon: "sparkle")
@@ -90,6 +62,11 @@ struct PhotoSelectionView: View {
             Spacer()
         }
         .background(Color.pageBg.ignoresSafeArea())
+        .onChange(of: viewModel.selectedItems) {
+            if !viewModel.selectedItems.isEmpty {
+                Task { await viewModel.processSelectedPhotos() }
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraCaptureView { image in
                 viewModel.addCameraPhoto(image)

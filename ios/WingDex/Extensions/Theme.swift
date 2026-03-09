@@ -92,6 +92,11 @@ private struct ShowOutingsKey: EnvironmentKey {
     nonisolated(unsafe) static let defaultValue: () -> Void = {}
 }
 
+/// Environment action for switching to the Home tab.
+private struct ShowHomeKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: () -> Void = {}
+}
+
 extension EnvironmentValues {
     var showAddPhotos: () -> Void {
         get { self[ShowAddPhotosKey.self] }
@@ -108,5 +113,9 @@ extension EnvironmentValues {
     var showOutings: () -> Void {
         get { self[ShowOutingsKey.self] }
         set { self[ShowOutingsKey.self] = newValue }
+    }
+    var showHome: () -> Void {
+        get { self[ShowHomeKey.self] }
+        set { self[ShowHomeKey.self] = newValue }
     }
 }
