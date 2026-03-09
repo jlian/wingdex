@@ -543,7 +543,9 @@ SHA-256 file hash computation exists in `PhotoService`, but there is no UI to ha
 - [x] Candidate list rows use bigger text (`.body` instead of `.subheadline`), more spacing, and full-row tap target via `.contentShape(Rectangle())`
 - [x] The upload tab is now a real tab destination, not a sheet - uses `showHome()` environment action instead of `dismiss()`
 - [x] Brief "Outing saved!" notice with checkmark shown for ~1.2s between clusters before advancing
-- [ ] After doing real tab, can we have a cool tab expansion animation like Apple Music's search tab where the icon expands to fill the screen as the new view appears? And instead of the search it would morph into the upload button in the principalAction placement
+- [ ] After doing real tab, can we have a cool tab expansion animation like Apple Music's search tab where the icon expands to fill the screen as the new view appears? And instead of the search it would morph into two liquid glass big buttons (take photo and library) at the bottom where in apple music the search bar appears
+
+- [ ] (not related to photo upload) for the species/outing detail view can we also have liquid glass controls instead of the tab bar at the bottom? so like for speciies the liquid glass controls could show ebird/wikipedia/copy name, and for outings the liquid glass controls could show edit outing, view on map, delete outing, etc. It would be a nice way to unify the UI and be more ios native instead of embedding those controls in the scroll view (list?) content
 
 ### 3-R Verification
 

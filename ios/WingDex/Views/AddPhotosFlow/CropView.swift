@@ -38,7 +38,7 @@ struct CropView: View {
         self.onSkip = onSkip
         self.onApply = onApply
 
-        let defaultCrop = CropBoxResult(x: 15, y: 15, width: 70, height: 70)
+        let defaultCrop = CropBoxResult(x: 25, y: 25, width: 50, height: 50)
         let padded: CropBoxResult
         if let aiCrop = initialCropBox, let uiImage = UIImage(data: imageData) {
             let natW = uiImage.size.width
@@ -66,53 +66,38 @@ struct CropView: View {
             if let uiImage = normalizedImage(from: imageData) {
                 let squareSide = geo.size.width - cropInset * 2
                 let fillInfo = fillImageInfo(for: uiImage, squareSide: squareSide)
+                // Total height including safe area (since we ignoresSafeArea)
+                let totalHeight = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
+                let cropCenterY = totalHeight / 2
 
                 ZStack {
-                    // The actual photo fills the entire view, matching user's
-                    // current pan/zoom. Visible through the glass chrome areas.
+                    // Full-view photo layer behind everything
                     Image(uiImage: uiImage)
                         .resizable()
                         .frame(width: fillInfo.renderedW, height: fillInfo.renderedH)
                         .scaleEffect(photoScale)
                         .offset(photoOffset)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .ignoresSafeArea()
+                        .position(x: geo.size.width / 2, y: cropCenterY)
 
-                    VStack(spacing: 0) {
-                        // Top glass chrome
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .frame(maxWidth: .infinity)
-
-                        // Crop row: glass sides + clear cutout center
-                        HStack(spacing: 0) {
+                    // Glass overlay with a rectangular cutout for the crop area
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .reverseMask {
                             Rectangle()
-                                .fill(.ultraThinMaterial)
-                                .frame(width: cropInset)
-
-                            // Clear cutout - photo shows through unobstructed
-                            Color.clear
                                 .frame(width: squareSide, height: squareSide)
-                                .overlay {
-                                    Rectangle()
-                                        .stroke(colorScheme == .dark ? Color.white : Color.black, lineWidth: 1)
-                                }
-
-                            Rectangle()
-                                .fill(.ultraThinMaterial)
-                                .frame(width: cropInset)
+                                .position(x: geo.size.width / 2, y: cropCenterY)
                         }
-                        .contentShape(Rectangle())
-                        .gesture(photoManipulationGesture(fillInfo: fillInfo))
 
-                        // Bottom glass chrome
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .ignoresSafeArea()
+                    // Crop border
+                    Rectangle()
+                        .stroke(colorScheme == .dark ? Color.white : Color.black, lineWidth: 1)
+                        .frame(width: squareSide, height: squareSide)
+                        .position(x: geo.size.width / 2, y: cropCenterY)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .gesture(photoManipulationGesture(fillInfo: fillInfo))
                 .overlay(alignment: .top) {
                     Text(reason)
                         .font(.body)
@@ -291,6 +276,23 @@ struct CropView: View {
             width: Double(visibleSidePx / fillInfo.naturalW * 100),
             height: Double(visibleSidePx / fillInfo.naturalH * 100)
         )
+    }
+}
+
+// MARK: - Reverse Mask
+
+extension View {
+    /// Apply a reverse mask: the masked content is cut out (transparent),
+    /// and everything else remains visible.
+    @ViewBuilder
+    func reverseMask<Mask: View>(@ViewBuilder _ mask: () -> Mask) -> some View {
+        self.mask {
+            Rectangle()
+                .overlay {
+                    mask()
+                        .blendMode(.destinationOut)
+                }
+        }
     }
 }
 
