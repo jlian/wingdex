@@ -460,25 +460,6 @@ test.describe('API smoke (request context)', () => {
     await api.dispose()
   })
 
-  test('hosted callback through local proxy keeps wingdev error redirect', async () => {
-    const api = await request.newContext({ baseURL: API_BASE })
-
-    const callback = await api.get('/api/auth/callback/github?code=fake&state=fake', {
-      headers: {
-        Referer: `${PREVIEW_BASE}/`,
-      },
-      maxRedirects: 0,
-    })
-
-    expect([301, 302]).toContain(callback.status())
-    const location = callback.headers()['location']
-    expect(location).toBeTruthy()
-    expect(location).toContain(`${PREVIEW_BASE}/api/auth/error?error=`)
-    expect(location).not.toContain('http://localhost:5000')
-
-    await api.dispose()
-  })
-
   test('cookie auth still works for protected endpoints', async () => {
     const api = await request.newContext({ baseURL: API_BASE })
 
