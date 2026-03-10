@@ -34,7 +34,7 @@ struct EBirdImportView: View {
 
     @State private var selectedTimezone: String = {
         let current = TimeZone.current.identifier
-        let knownIds = timezonePresets.map(\.value)
+        let knownIds = EBirdImportView.timezonePresets.map(\.value)
         return knownIds.contains(current) ? current : knownIds[0]
     }()
     @State private var showFilePicker = false

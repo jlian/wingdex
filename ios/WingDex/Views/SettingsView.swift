@@ -23,7 +23,7 @@ final class ProfileEditor {
         }()
     }
 
-    @Published var saveError: String?
+    var saveError: String?
 
     func save(name: String, image: String) {
         pendingTask?.cancel()
