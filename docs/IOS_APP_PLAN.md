@@ -386,7 +386,7 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Font weight adjustments (deferred - minor polish)
 - [x] Flat circle avatar like Apple Music
 - [x] Left justify the main view headers? I guess big is fine
-- [x] Ebird Links don’t work in details - should check web app we've fixed this bug before
+- [x] Ebird Links don't work in details - should check web app we've fixed this bug before
 - [x] Missing 3D Touch for homepage recent species
 - [x] Missing chevron on homepage to go to Wingdex and outings lists (with sort)
 - [x] Clickable maps? To Apple Maps?
@@ -394,7 +394,7 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Can probably just remove the all about birds link (fix in web app too)
 - [x] Dark tint icon
 - [x] Spacing for avatar and toolbar
-- [x] Manage passkeys doesn’t work when logged in via GitHub and Google weird
+- [x] Manage passkeys doesn't work when logged in via GitHub and Google weird
 - [x] Auth page jank with loading wheel and error messages shifting page content. And also it shifts down when opened via log out
 - [x] Improve `#Preview` data with more realistic data like demo data
 - [x] Comments in the swift UI views

@@ -23,12 +23,19 @@ final class ProfileEditor {
         }()
     }
 
+    @Published var saveError: String?
+
     func save(name: String, image: String) {
         pendingTask?.cancel()
         self.name = name
         self.image = image
+        saveError = nil
         pendingTask = Task {
-            try? await auth.updateProfile(name: name, image: image)
+            do {
+                try await auth.updateProfile(name: name, image: image)
+            } catch {
+                saveError = error.localizedDescription
+            }
         }
     }
 
@@ -57,6 +64,7 @@ struct SettingsView: View {
     @State private var showingDemoConfirmation = false
     @State private var showingEBirdImport = false
     @State private var isExporting = false
+    @State private var exportError: String?
     @State private var exportItem: ExportFileItem?
     @State private var isEditingName = false
     @State private var editedName = ""
@@ -83,6 +91,15 @@ struct SettingsView: View {
         Form {
             accountSection
             avatarSection
+
+            if let saveError = profile.saveError {
+                Section {
+                    Text(saveError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
             importExportSection
             securitySection
             birdIdSection
@@ -226,6 +243,12 @@ struct SettingsView: View {
                 }
             }
             .disabled(store.dex.isEmpty || isExporting)
+
+            if let exportError {
+                Text(exportError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         }
     }
 
@@ -347,6 +370,7 @@ struct SettingsView: View {
 
     private func exportSightings() async {
         isExporting = true
+        exportError = nil
         do {
             let service = DataService(auth: auth)
             let csvData = try await service.exportSightingsCSV()
@@ -356,7 +380,7 @@ struct SettingsView: View {
             try csvData.write(to: tempURL)
             exportItem = ExportFileItem(url: tempURL)
         } catch {
-            // Could show an error, but export failures are rare
+            exportError = error.localizedDescription
         }
         isExporting = false
     }

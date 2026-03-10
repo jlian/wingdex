@@ -27,7 +27,11 @@ struct DataManagementView: View {
                 ) {
                     Button("Delete Everything", role: .destructive) {
                         Task {
-                            try? await store.clearAll()
+                            do {
+                                try await store.clearAll()
+                            } catch {
+                                deleteError = error.localizedDescription
+                            }
                         }
                     }
                 } message: {
