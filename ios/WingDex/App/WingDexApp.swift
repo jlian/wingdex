@@ -209,6 +209,7 @@ struct AvatarView: View {
     }
 }
 
+#if DEBUG
 #Preview("App - Authenticated") {
     ContentView()
         .environment(AuthService())
@@ -220,3 +221,4 @@ struct AvatarView: View {
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+#endif

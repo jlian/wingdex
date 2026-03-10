@@ -246,7 +246,9 @@ struct EBirdImportView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     EBirdImportView(auth: AuthService())
         .environment(previewStore())
 }
+#endif

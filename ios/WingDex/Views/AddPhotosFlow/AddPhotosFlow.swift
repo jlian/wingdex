@@ -395,6 +395,7 @@ struct ExponentialProgressBar: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     NavigationStack {
         AddPhotosFlow(viewModel: AddPhotosViewModel())
@@ -402,4 +403,5 @@ struct ExponentialProgressBar: View {
             .environment(previewStore())
     }
 }
+#endif
 

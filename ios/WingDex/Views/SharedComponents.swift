@@ -439,6 +439,7 @@ private struct MiniMapSnapshot: View {
 
 // MARK: - Previews
 
+#if DEBUG
 #Preview("BirdRow") {
     ScrollView {
         BirdRow(
@@ -485,3 +486,4 @@ private struct MiniMapSnapshot: View {
     .scrollContentBackground(.hidden)
     .background(Color.pageBg)
 }
+#endif

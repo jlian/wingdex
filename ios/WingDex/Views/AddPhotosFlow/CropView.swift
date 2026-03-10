@@ -296,6 +296,7 @@ extension View {
     }
 }
 
+#if DEBUG
 #Preview("Default") {
     NavigationStack {
         CropView(
@@ -318,3 +319,4 @@ extension View {
         ) { _ in }
     }
 }
+#endif

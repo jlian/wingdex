@@ -104,6 +104,7 @@ struct DataManagementView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         DataManagementView()
@@ -111,3 +112,4 @@ struct DataManagementView: View {
             .environment(previewStore())
     }
 }
+#endif

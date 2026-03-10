@@ -320,6 +320,7 @@ struct OutingDetailView: View {
     }
 }
 
+#if DEBUG
 #Preview("Outing Detail - Discovery Park") {
     NavigationStack {
         OutingDetailView(outingId: PreviewData.sampleOutingId)
@@ -340,3 +341,4 @@ struct OutingDetailView: View {
             .environment(previewStore())
     }
 }
+#endif

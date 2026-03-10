@@ -382,8 +382,10 @@ struct ActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
+#if DEBUG
 #Preview {
     SettingsView()
         .environment(AuthService())
         .environment(previewStore())
 }
+#endif

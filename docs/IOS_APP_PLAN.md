@@ -716,9 +716,9 @@ Does not exist on iOS. The web has an "Export eBird CSV" button per outing.
 
 iOS shows an embedded MapKit view but has no external link. The web shows clickable coordinates that open Google Maps.
 
-- [ ] **Tappable coordinates**: Below or alongside the embedded map, show coordinates as tappable text: "(lat, lon)" formatted to 4 decimal places
-- [ ] **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the coordinates, or offer a choice between Apple Maps and Google Maps
-- [ ] **Apple Maps URL**: `maps://?q={lat},{lon}`
+- [x] **Tappable coordinates**: Below or alongside the embedded map, show coordinates as tappable text: "(lat, lon)" formatted to 4 decimal places
+- [x] **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the coordinates, or offer a choice between Apple Maps and Google Maps
+- [x] **Apple Maps URL**: `maps://?q={lat},{lon}`
 
 **Files**: `OutingDetailView.swift`
 
@@ -731,7 +731,6 @@ Tap outing -> edit location name with autocomplete from past outings -> add spec
 ## Phase 6 - Species Detail & WingDex Parity
 
 Five gaps between the iOS and web species/WingDex views.
-
 
 ### 6.2: Certainty Badges in Sightings List
 
@@ -746,7 +745,7 @@ iOS shows sightings without any certainty indicator. The web shows "confirmed" o
 
 iOS doesn't show the count per sighting. The web shows `xN` when count > 1.
 
-- [ ] **Count display**: Show `x{count}` next to the species name in each sighting row when the observation count is greater than 1
+- [x] **Count display**: Show `x{count}` next to the species name in each sighting row when the observation count is greater than 1
 
 **Files**: `SpeciesDetailView.swift`
 

@@ -130,8 +130,10 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 
 // MARK: - Previews
 
+#if DEBUG
 #Preview {
     NavigationStack {
         PhotoSelectionView(viewModel: AddPhotosViewModel())
     }
 }
+#endif

@@ -263,6 +263,7 @@ struct HomeView: View {
     }
 }
 
+#if DEBUG
 #Preview("Home - Populated") {
     HomeView()
         .environment(AuthService())
@@ -274,3 +275,4 @@ struct HomeView: View {
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+#endif

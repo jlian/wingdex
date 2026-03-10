@@ -190,6 +190,7 @@ struct OutingsView: View {
     }
 }
 
+#if DEBUG
 #Preview("Outings - Populated") {
     OutingsView()
         .environment(AuthService())
@@ -201,3 +202,4 @@ struct OutingsView: View {
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+#endif

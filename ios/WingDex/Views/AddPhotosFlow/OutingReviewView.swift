@@ -768,6 +768,7 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("With GPS") {
     NavigationStack {
         let vm = AddPhotosViewModel()
@@ -821,3 +822,4 @@ private class CompleterBridge: NSObject, MKLocalSearchCompleterDelegate {
             }
     }
 }
+#endif

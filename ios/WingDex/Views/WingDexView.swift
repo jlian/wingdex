@@ -211,6 +211,7 @@ struct WingDexView: View {
     }
 }
 
+#if DEBUG
 #Preview("WingDex - Populated") {
     WingDexView()
         .environment(AuthService())
@@ -222,3 +223,4 @@ struct WingDexView: View {
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+#endif

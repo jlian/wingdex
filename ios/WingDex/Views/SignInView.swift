@@ -217,8 +217,10 @@ struct SignInView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     SignInView()
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+#endif

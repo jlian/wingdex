@@ -365,6 +365,7 @@ struct PerPhotoConfirmView: View {
 
 // MARK: - Previews
 
+#if DEBUG
 #Preview("High Confidence") {
     NavigationStack {
         let vm = AddPhotosViewModel()
@@ -426,3 +427,4 @@ struct PerPhotoConfirmView: View {
             ]
         }
 }
+#endif

@@ -174,9 +174,11 @@ struct PasskeyManagementView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         PasskeyManagementView()
             .environment(AuthService())
     }
 }
+#endif

@@ -230,6 +230,7 @@ struct SpeciesDetailView: View {
     }
 }
 
+#if DEBUG
 #Preview("Species Detail - Cardinal") {
     NavigationStack {
         SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
@@ -243,3 +244,4 @@ struct SpeciesDetailView: View {
             .environment(previewStore())
     }
 }
+#endif
