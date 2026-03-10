@@ -81,6 +81,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.wingdex.tests
         DEVELOPMENT_TEAM: Z8LQS5S492
         CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: "YES"
 
 packages:
   swift-openapi-generator:

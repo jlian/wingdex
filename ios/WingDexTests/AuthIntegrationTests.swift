@@ -45,6 +45,11 @@ final class AuthIntegrationTests: XCTestCase {
     }
 
     func testNoBearerTokenReturns401() async throws {
+        // Clear any session cookies from prior tests so this is truly unauthenticated.
+        if let cookies = HTTPCookieStorage.shared.cookies(for: baseURL) {
+            for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
+        }
+
         let url = baseURL.appendingPathComponent("api/data/all")
         let request = URLRequest(url: url)
 
@@ -115,6 +120,13 @@ final class AuthIntegrationTests: XCTestCase {
     /// Sign in anonymously and return the raw session token.
     private func signInAnonymously() async throws -> String {
         let url = baseURL.appendingPathComponent("api/auth/sign-in/anonymous")
+
+        // Clear stale session cookies so Better Auth doesn't reject with
+        // "Anonymous users cannot sign in again anonymously".
+        if let cookies = HTTPCookieStorage.shared.cookies(for: baseURL) {
+            for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -127,6 +139,13 @@ final class AuthIntegrationTests: XCTestCase {
 
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         let token = try XCTUnwrap(json["token"] as? String)
+
+        // Clear cookies set by sign-in so subsequent requests use only the
+        // Bearer header, matching how the app works (AuthService.clearAPICookies).
+        if let cookies = HTTPCookieStorage.shared.cookies(for: baseURL) {
+            for cookie in cookies { HTTPCookieStorage.shared.deleteCookie(cookie) }
+        }
+
         return token
     }
 }
