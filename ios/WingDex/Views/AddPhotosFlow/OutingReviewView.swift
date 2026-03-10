@@ -141,6 +141,10 @@ struct OutingReviewView: View {
             }
         }
         .onAppear { initializeIfNeeded() }
+        .onChange(of: viewModel.currentClusterIndex) {
+            resetClusterState()
+            initializeIfNeeded()
+        }
     }
 
     // MARK: - Date/Time Section
@@ -321,6 +325,21 @@ struct OutingReviewView: View {
     }
 
     // MARK: - Actions
+
+    /// Reset per-cluster state so each cluster re-initializes correctly.
+    private func resetClusterState() {
+        didInitialize = false
+        locationName = ""
+        suggestedLocation = ""
+        inferredStateProvince = nil
+        inferredCountryCode = nil
+        overriddenStartTime = nil
+        overriddenCoords = nil
+        placeQuery = ""
+        matchingOuting = nil
+        useExistingOuting = false
+        isLoadingLocation = false
+    }
 
     /// Initialize location lookup and matching outing detection.
     private func initializeIfNeeded() {
