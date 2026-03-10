@@ -8,13 +8,13 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "cd ios && ./scripts/bump-version.sh set ${nextRelease.version} --quiet"
+        "prepareCmd": "./scripts/bump-version.sh set ${nextRelease.version} --quiet"
       }
     ],
     [
       "@semantic-release/git",
       {
-        "assets": ["ios/project.yml"],
+        "assets": ["ios/project.yml", "ios/package.json"],
         "message": "chore(ios-release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],

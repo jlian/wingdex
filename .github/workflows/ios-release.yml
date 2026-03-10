@@ -7,7 +7,6 @@ name: iOS Release
 #     paths:
 #       - 'ios/**'
 #       - 'openapi.yaml'
-#       - '.releaserc.ios.json'
 #   workflow_dispatch:
 #     inputs:
 #       dry_run:
@@ -82,18 +81,13 @@ jobs:
 
       - name: Run semantic-release (iOS)
         id: semrel
+        working-directory: ios
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Hide the web .releaserc.json so semantic-release only uses the iOS config
-          mv .releaserc.json .releaserc.json.bak
-
           EXIT_CODE=0
-          OUTPUT=$(npx semantic-release -e ./.releaserc.ios.json 2>&1) || EXIT_CODE=$?
+          OUTPUT=$(npx semantic-release 2>&1) || EXIT_CODE=$?
           echo "$OUTPUT"
-
-          # Restore web config
-          mv .releaserc.json.bak .releaserc.json
 
           # Extract new version from output (POSIX-compatible, no grep -P)
           NEW_VERSION=$(echo "$OUTPUT" | grep -oE 'Published release [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
@@ -175,6 +169,17 @@ jobs:
       - name: Clean up API key
         if: always()
         run: rm -rf ~/.appstoreconnect
+
+      - name: Mark pre-1.0 releases as prerelease
+        if: steps.semrel.outputs.released == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.semrel.outputs.new_version }}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          if [ "$MAJOR" = "0" ]; then
+            gh release edit "ios-v${VERSION}" --prerelease
+          fi
 
       - name: Summary
         if: steps.semrel.outputs.released == 'true'
