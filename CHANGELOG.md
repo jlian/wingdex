@@ -1,3 +1,38 @@
+# [1.17.0](https://github.com/jlian/wingdex/compare/v1.16.0...v1.17.0) (2026-03-10)
+
+
+### Bug Fixes
+
+* **AddPhotos:** align iOS flow with web crop and review behavior ([f301265](https://github.com/jlian/wingdex/commit/f3012654b1ed16b562e21b40b87952304d0b5f7a))
+* **AddPhotos:** bug bash polish - untinted glass, auto-start, real tab, GPS toggle to settings ([a86ed38](https://github.com/jlian/wingdex/commit/a86ed387e5b48ff35eb5bca9aa6facbb823bebf6))
+* **AddPhotos:** FK constraint error, crop UX, progress bar, layout bugs ([367144b](https://github.com/jlian/wingdex/commit/367144b3c9b1bcf2b0f3586f6bffff2834bb6c96))
+* **AddPhotos:** restore liquid glass bottom toolbar for per-photo confirm ([d72872f](https://github.com/jlian/wingdex/commit/d72872f65464280be1dc78d82d496ab90de9ab44))
+* **AppIcon:** adjust eye color ([eebee1f](https://github.com/jlian/wingdex/commit/eebee1f85e8c6aa4ff6563f7385fbf3d617362ad))
+* **Auth:** address PR review comments ([60c157e](https://github.com/jlian/wingdex/commit/60c157edc59f4505124558538591650456668b2c))
+* **Auth:** restore hosted social oauth callback handling ([7b62830](https://github.com/jlian/wingdex/commit/7b62830c49d650ca1d762d4c4a46cd3824ebfd82))
+* **ci:** remove broken quoting in xcodebuild authenticationKeyPath ([8463997](https://github.com/jlian/wingdex/commit/846399784bb379bf15c340608be0b99e468ffdf7))
+* **CropView:** center crop square on device, tighter default zoom ([4e58fdf](https://github.com/jlian/wingdex/commit/4e58fdfa643c56bd5a9c5f58d163d382a2d1ea07))
+* **iOS,Settings:** address review - actor isolation and stale comment ([844da7f](https://github.com/jlian/wingdex/commit/844da7f24df463001564e21a54748e6345a5ae54))
+* **iOS:** add @MainActor isolation to AuthService for data-race safety ([6f9214e](https://github.com/jlian/wingdex/commit/6f9214e05fd3b1c46d74172ee904c56cc0a41c20))
+* **iOS:** address second round of PR review comments ([3cd1e72](https://github.com/jlian/wingdex/commit/3cd1e72e2b4537f0975e6085b48c1ca9467852ca))
+* **iOS:** adjust tinted icon shade and toolbar spacing ([0a66060](https://github.com/jlian/wingdex/commit/0a6606084f10a9dca2ecf9bdbe6680d936a5c865))
+* **iOS:** cancel stale wiki image fetches on rapid species selection ([952bbce](https://github.com/jlian/wingdex/commit/952bbcea35d0338a340ee271ce25c92d76817787))
+* **iOS:** fix Swift build errors from review fixes ([9371729](https://github.com/jlian/wingdex/commit/9371729c622f567366096f9681c139afebb7ff82))
+* **iOS:** fix test target plist and cookie leakage in integration tests ([5f1b065](https://github.com/jlian/wingdex/commit/5f1b065cdb4d443709b22245037ecc93f2f7255e))
+* **iOS:** reset per-cluster state in OutingReviewView ([8dac126](https://github.com/jlian/wingdex/commit/8dac126a9d783280a52eb55ad2acd4b7c030eca9))
+* **iOS:** use safe cast for UIWindowScene presentation anchors ([a2dc47d](https://github.com/jlian/wingdex/commit/a2dc47dc736983ebeccb1487a41878956fd13257))
+* **Previews:** resolve all species thumbnails from bundled taxonomy.json ([20b95d8](https://github.com/jlian/wingdex/commit/20b95d87805cb66a4262b1ec28061ed80e32632d))
+* **SignIn:** stabilize layout to prevent jank from loading/error states ([55d25dd](https://github.com/jlian/wingdex/commit/55d25ddd1d07ddea91553112956a6e88e76fd4b0))
+
+
+### Features
+
+* **AddPhotos:** rework flow with per-photo confirm, outing review, two-tier AI ([0105074](https://github.com/jlian/wingdex/commit/01050741bb60728e33900a990b2f65824149214a))
+* **agents:** add Code Review custom agent for static analysis ([38660de](https://github.com/jlian/wingdex/commit/38660de08c73d5a2f7d7414a898117536550c124))
+* **CropView:** Photos-app-style crop with glass chrome and dynamic photo backdrop ([b733526](https://github.com/jlian/wingdex/commit/b73352641884ae7117ac37361e41112da7fa87ec))
+* **Previews:** add realistic demo data to all SwiftUI previews ([634a283](https://github.com/jlian/wingdex/commit/634a28395ae65e8a6f6a347a918254ae58c1ebe2)), closes [#Preview](https://github.com/jlian/wingdex/issues/Preview) [#Preview](https://github.com/jlian/wingdex/issues/Preview)
+* **Settings:** implement Phase 4 - Settings & Profile Parity ([400f0d3](https://github.com/jlian/wingdex/commit/400f0d3a7aeb3ee748bbe2bd3dbf0b0305e1396e))
+
 # [1.16.0](https://github.com/jlian/wingdex/compare/v1.15.1...v1.16.0) (2026-03-08)
 
 
