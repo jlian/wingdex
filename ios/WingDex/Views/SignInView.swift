@@ -153,8 +153,8 @@ struct SignInView: View {
                             .opacity(errorMessage != nil ? 1 : 0)
                             .accessibilityHidden(errorMessage == nil)
 
-                        #if DEBUG
-                        // Demo data button
+                        // Demo data button - available in all builds so App Store
+                        // reviewers (and curious users) can explore without an account.
                         Button {
                             signIn {
                                 try await auth.signInAnonymously()
@@ -171,7 +171,6 @@ struct SignInView: View {
                             .frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.bordered)
-                        #endif
                     }
                     .padding(.horizontal, 24)
                     .disabled(isSigningIn)

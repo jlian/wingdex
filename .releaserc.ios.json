@@ -1,0 +1,29 @@
+{
+  "extends": "semantic-release-monorepo",
+  "branches": ["main"],
+  "tagFormat": "ios-v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "cd ios && ./scripts/bump-version.sh set ${nextRelease.version} --quiet"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["ios/project.yml"],
+        "message": "chore(ios-release): ${nextRelease.version}\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false,
+        "failComment": false
+      }
+    ]
+  ]
+}

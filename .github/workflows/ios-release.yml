@@ -1,0 +1,173 @@
+name: iOS Release
+
+# Start with manual-only trigger. Once validated, uncomment the push trigger:
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'ios/**'
+#       - 'openapi.yaml'
+#       - '.releaserc.ios.json'
+#   workflow_dispatch:
+#     inputs:
+#       dry_run:
+#         description: 'Dry run (skip archive and upload)'
+#         type: boolean
+#         default: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip archive and upload)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  check:
+    name: Check for iOS changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.diff.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for iOS-relevant changes since last tag
+        id: diff
+        run: |
+          LAST_TAG=$(git tag --list 'ios-v*' --sort=-v:refname | head -1)
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous ios-v tag found - first release"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- ios/ openapi.yaml .releaserc.ios.json)
+            if [ -n "$CHANGED" ]; then
+              echo "iOS-relevant changes found since $LAST_TAG"
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No iOS-relevant changes since $LAST_TAG"
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  release:
+    name: Release & Upload to TestFlight
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run semantic-release (iOS)
+        id: semrel
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUTPUT=$(npx semantic-release -e ./.releaserc.ios.json 2>&1) || true
+          echo "$OUTPUT"
+          # Extract new version from output
+          NEW_VERSION=$(echo "$OUTPUT" | grep -oP 'Published release \K[0-9]+\.[0-9]+\.[0-9]+' || true)
+          if [ -n "$NEW_VERSION" ]; then
+            echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new version released"
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install XcodeGen
+        if: steps.semrel.outputs.released == 'true'
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        if: steps.semrel.outputs.released == 'true'
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Resolve SPM dependencies
+        if: steps.semrel.outputs.released == 'true'
+        working-directory: ios
+        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme WingDex
+
+      - name: Write App Store Connect API key
+        if: steps.semrel.outputs.released == 'true' && inputs.dry_run != true
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Archive for App Store
+        if: steps.semrel.outputs.released == 'true' && inputs.dry_run != true
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -archivePath build/WingDex.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/".appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            | tail -30
+
+      - name: Export IPA
+        if: steps.semrel.outputs.released == 'true' && inputs.dry_run != true
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath build/WingDex.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/".appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            | tail -20
+
+      - name: Upload to TestFlight
+        if: steps.semrel.outputs.released == 'true' && inputs.dry_run != true
+        working-directory: ios
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file build/export/WingDex.ipa \
+            --apiKey "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Clean up API key
+        if: always()
+        run: rm -rf ~/.appstoreconnect
+
+      - name: Summary
+        if: steps.semrel.outputs.released == 'true'
+        run: |
+          echo "### iOS Release v${{ steps.semrel.outputs.new_version }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Dry run - archive and upload skipped" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Uploaded to TestFlight" >> "$GITHUB_STEP_SUMMARY"
+          fi
