@@ -1,3 +1,10 @@
+## [1.17.2](https://github.com/jlian/wingdex/compare/v1.17.1...v1.17.2) (2026-03-10)
+
+
+### Bug Fixes
+
+* **ci:** scope iOS releases to ios/ path, exclude ios/ from web releases ([10013f9](https://github.com/jlian/wingdex/commit/10013f901aec616800ef8d990f0e54758979745e))
+
 ## [1.17.1](https://github.com/jlian/wingdex/compare/v1.17.0...v1.17.1) (2026-03-10)
 
 
