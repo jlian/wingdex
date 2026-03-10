@@ -30,7 +30,7 @@ final class ProfileEditor {
         self.name = name
         self.image = image
         saveError = nil
-        pendingTask = Task {
+        pendingTask = Task { @MainActor in
             do {
                 try await auth.updateProfile(name: name, image: image)
             } catch {

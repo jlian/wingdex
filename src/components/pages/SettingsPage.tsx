@@ -641,7 +641,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
 
       {/* Old Account card removed -- now rendered above Appearance */}
 
-      {/* Data Storage & Privacy */}
+      {/* Bird Identification */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">Bird Identification</h3>
