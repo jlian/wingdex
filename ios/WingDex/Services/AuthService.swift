@@ -203,8 +203,9 @@ final class AuthService: @unchecked Sendable {
             throw AuthError.oauthFailed("Profile update failed (\(statusCode)): \(detail)")
         }
 
-        // Persist to Keychain (don't mutate observable properties here -
-        // the caller manages optimistic UI to avoid parent re-renders).
+        // Update in-memory state and persist to Keychain.
+        // The caller (ProfileEditor) also sets these optimistically
+        // before the network call, so this ensures they stay in sync.
         userName = name
         userImage = image
         persistSession()

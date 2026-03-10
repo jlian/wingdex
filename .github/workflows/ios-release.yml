@@ -85,13 +85,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          OUTPUT=$(npx semantic-release -e ./.releaserc.ios.json 2>&1) || true
+          EXIT_CODE=0
+          OUTPUT=$(npx semantic-release -e ./.releaserc.ios.json 2>&1) || EXIT_CODE=$?
           echo "$OUTPUT"
-          # Extract new version from output
-          NEW_VERSION=$(echo "$OUTPUT" | grep -oP 'Published release \K[0-9]+\.[0-9]+\.[0-9]+' || true)
+          # Extract new version from output (POSIX-compatible, no grep -P)
+          NEW_VERSION=$(echo "$OUTPUT" | grep -oE 'Published release [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
           if [ -n "$NEW_VERSION" ]; then
             echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
             echo "released=true" >> "$GITHUB_OUTPUT"
+          elif echo "$OUTPUT" | grep -qiE 'no (new )?release'; then
+            echo "No new version released"
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          elif [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::semantic-release failed with exit code $EXIT_CODE"
+            exit 1
           else
             echo "No new version released"
             echo "released=false" >> "$GITHUB_OUTPUT"

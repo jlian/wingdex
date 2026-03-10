@@ -22,8 +22,12 @@ const AUTH_DEBUG_LOGGED_KEY = '__wingdexAuthDebugLogged__'
 
 function isLoopbackOrigin(value: string | null): value is string {
   if (!value) return false
-  const { hostname } = new URL(value)
-  return hostname === 'localhost' || hostname === '127.0.0.1'
+  try {
+    const { hostname } = new URL(value)
+    return hostname === 'localhost' || hostname === '127.0.0.1'
+  } catch {
+    return false
+  }
 }
 
 function getConfiguredPublicOrigins(env: Env): Set<string> {
@@ -72,9 +76,13 @@ export function resolveConfiguredPublicOrigin(env: Env, request?: Request): stri
     return publicRequestOrigin
   }
   if (refererHeader) {
-    const refererOrigin = new URL(refererHeader).origin
-    if (!isLoopbackOrigin(refererOrigin) && configuredPublicOrigins.has(refererOrigin)) {
-      return refererOrigin
+    try {
+      const refererOrigin = new URL(refererHeader).origin
+      if (!isLoopbackOrigin(refererOrigin) && configuredPublicOrigins.has(refererOrigin)) {
+        return refererOrigin
+      }
+    } catch {
+      // Ignore malformed Referer headers
     }
   }
   if (hasSecureBetterAuthCookie(request) && env.BETTER_AUTH_URL && !isLoopbackOrigin(env.BETTER_AUTH_URL)) {
@@ -156,9 +164,13 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     }
     // Infer from Referer when Origin header is absent (e.g. GET requests)
     if (refererHeader) {
-      const refererOrigin = new URL(refererHeader).origin
-      if (!isLoopbackOrigin(refererOrigin) && trustedOrigins.has(refererOrigin)) {
-        return refererOrigin
+      try {
+        const refererOrigin = new URL(refererHeader).origin
+        if (!isLoopbackOrigin(refererOrigin) && trustedOrigins.has(refererOrigin)) {
+          return refererOrigin
+        }
+      } catch {
+        // Ignore malformed Referer headers
       }
     }
     return baseURL
