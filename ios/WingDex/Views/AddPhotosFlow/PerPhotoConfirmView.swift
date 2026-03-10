@@ -17,6 +17,7 @@ struct PerPhotoConfirmView: View {
     @State private var selectedConfidence: Double = 0
     @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
+    @State private var wikiImageTask: Task<Void, Never>?
 
     private var photo: ProcessedPhoto? { viewModel.currentPhoto }
     private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
@@ -342,23 +343,27 @@ struct PerPhotoConfirmView: View {
     }
 
     private func fetchWikiImage() {
+        wikiImageTask?.cancel()
         let species = selectedSpecies
         guard !species.isEmpty else { wikiImageURL = nil; return }
         let wikiTitle: String
         if let c = candidates.first(where: { $0.species == species }), let t = c.wikiTitle { wikiTitle = t }
         else { wikiTitle = getDisplayName(species).replacingOccurrences(of: " ", with: "_") }
         isLoadingWikiImage = true; wikiImageURL = nil
-        Task {
-            defer { isLoadingWikiImage = false }
+        wikiImageTask = Task {
+            defer { if !Task.isCancelled { isLoadingWikiImage = false } }
             do {
                 let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
                 guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(enc)") else { return }
                 var req = URLRequest(url: url); req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
                 let (data, _) = try await URLSession.shared.data(for: req)
+                try Task.checkCancellation()
                 struct S: Codable { let thumbnail: T?; struct T: Codable { let source: String? } }
                 let s = try JSONDecoder().decode(S.self, from: data)
+                guard !Task.isCancelled else { return }
                 if let src = s.thumbnail?.source, let u = URL(string: src) { wikiImageURL = u }
-            } catch { log.debug("Wiki fetch failed: \(error.localizedDescription)") }
+            } catch is CancellationError { /* expected */ }
+            catch { log.debug("Wiki fetch failed: \(error.localizedDescription)") }
         }
     }
 }
