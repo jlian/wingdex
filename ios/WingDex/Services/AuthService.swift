@@ -533,7 +533,9 @@ final class AuthService: @unchecked Sendable {
 /// Provides the presentation anchor for ASWebAuthenticationSession.
 private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes.first as! UIWindowScene
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            return UIWindow()
+        }
         return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
