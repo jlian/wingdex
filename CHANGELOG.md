@@ -1,3 +1,10 @@
+## [1.17.1](https://github.com/jlian/wingdex/compare/v1.17.0...v1.17.1) (2026-03-10)
+
+
+### Bug Fixes
+
+* **ci:** hide root .releaserc.json during iOS semantic-release run ([037d5f3](https://github.com/jlian/wingdex/commit/037d5f3c0c001297c9737643e9eaee7dadfdb908))
+
 # [1.17.0](https://github.com/jlian/wingdex/compare/v1.16.0...v1.17.0) (2026-03-10)
 
 
