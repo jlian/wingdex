@@ -21,7 +21,9 @@ Guidelines to reduce common LLM coding mistakes. Bias toward caution over speed;
 - Transform tasks into verifiable goals with concrete success criteria.
 - For multi-step tasks, state a brief plan with verification checks.
 
-## Commit Messages
+## Commits
+- Don't commit too optimistically. Always verify correctness first.
+- Don't push without asking.
 - Use Conventional Commit format with a **required** scope: `type(scope): description`.
 - Valid types: `feat`, `fix`, `docs`, `chore`, `perf`, `refactor`, `test`, `ci`, `build`, `revert`.
 - Scope should be a short PascalCase or lowercase label for the area changed, for example: `feat(Outings):`, `fix(Auth):`, `docs(README):`, `test(CSV):`.

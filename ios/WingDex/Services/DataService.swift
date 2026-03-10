@@ -145,20 +145,39 @@ final class DataService: Sendable {
 
     struct ImportPreview: Codable {
         let previewId: String
+        let speciesName: String?
+        let conflict: String? // "new", "duplicate", "update_dates"
     }
 
     struct ImportPreviewResponse: Codable {
         let previews: [ImportPreview]
     }
 
-    func importEBirdCSV(_ csvData: Data) async throws -> [String] {
+    struct ImportConfirmResponse: Codable {
+        let imported: ImportedCounts
+        struct ImportedCounts: Codable {
+            let outings: Int
+            let newSpecies: Int
+        }
+    }
+
+    /// Upload eBird CSV for preview with optional timezone conversion.
+    func importEBirdCSVPreview(_ csvData: Data, profileTimezone: String?) async throws -> [ImportPreview] {
         let boundary = UUID().uuidString
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"import.csv\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: text/csv\r\n\r\n".data(using: .utf8)!)
         body.append(csvData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+
+        if let tz = profileTimezone, tz != "observation-local" {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"profileTimezone\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(tz)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         let url = Config.apiBaseURL.appendingPathComponent("api/import/ebird-csv")
         var request = URLRequest(url: url)
@@ -171,13 +190,20 @@ final class DataService: Sendable {
         try validate(response, data: responseData)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
-        return preview.previews.map(\.previewId)
+        return preview.previews
     }
 
-    func confirmImport(previewIds: [String]) async throws {
+    /// Legacy import without timezone (used by demo data loader).
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] {
+        let previews = try await importEBirdCSVPreview(csvData, profileTimezone: nil)
+        return previews.map(\.previewId)
+    }
+
+    func confirmImport(previewIds: [String]) async throws -> ImportConfirmResponse {
         struct ConfirmBody: Codable { let previewIds: [String] }
         let data = try JSONEncoder().encode(ConfirmBody(previewIds: previewIds))
-        try await post("api/import/ebird-csv/confirm", body: data)
+        let responseData = try await post("api/import/ebird-csv/confirm", body: data)
+        return try JSONDecoder().decode(ImportConfirmResponse.self, from: responseData)
     }
 
     // MARK: - Data Management

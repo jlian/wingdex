@@ -203,7 +203,7 @@ final class DataStore {
         let previewIds = try await service.importEBirdCSV(csvData)
 
         // Confirm all previews
-        try await service.confirmImport(previewIds: previewIds)
+        _ = try await service.confirmImport(previewIds: previewIds)
 
         // Reload all data
         await loadAll()

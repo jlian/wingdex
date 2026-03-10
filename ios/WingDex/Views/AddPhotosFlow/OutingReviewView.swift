@@ -195,7 +195,6 @@ struct OutingReviewView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .tint(Color.accentColor)
         }
     }
 

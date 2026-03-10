@@ -122,7 +122,6 @@ struct SignInView: View {
                                         .frame(maxWidth: .infinity, minHeight: 36)
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .tint(Color.accentColor)
 
                                 Button {
                                     signIn { try await auth.signInWithPasskey() }
@@ -172,7 +171,6 @@ struct SignInView: View {
                             .frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.bordered)
-                        .tint(Color.mutedText)
                         #endif
                     }
                     .padding(.horizontal, 24)

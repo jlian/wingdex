@@ -298,7 +298,6 @@ struct AddPhotosFlow: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
             .padding(.horizontal, 32)
 
             Spacer()

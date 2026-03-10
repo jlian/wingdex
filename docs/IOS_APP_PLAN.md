@@ -553,111 +553,108 @@ Select 5+ photos from library -> see outing review with reverse-geocoded locatio
 
 ---
 
-## Phase 4 - Settings & Profile Parity
+## Phase 4 - Settings & Profile Parity ✅
 
 Settings is now accessed via the avatar button in the navigation bar (not a tab) per Phase 3.5. Content is presented in a card-style sheet (Apple Music-style). All features below match the web's SettingsPage.
 
-### 4.1: Display Name Editing
+### 4.1: Display Name Editing ✅
 
 iOS shows the name read-only. The web has an inline pencil edit button.
 
-- [ ] **Pencil icon**: Show a pencil (SF Symbol `pencil`) button next to the "Welcome, {name}" text
-- [ ] **Edit flow**: Tap pencil -> present an alert with a `TextField` pre-filled with the current name (or use inline editing with Save/Cancel buttons)
-- [ ] **Save**: Call the profile update API with the new name. Immediately refresh the UI including the avatar button in the nav bar
-- [ ] **Validation**: Trim whitespace, reject empty names
+- [x] **Pencil icon**: Show a pencil (SF Symbol `pencil`) button next to the "Welcome, {name}" text
+- [x] **Edit flow**: Tap pencil -> present an alert with a `TextField` pre-filled with the current name (or use inline editing with Save/Cancel buttons)
+- [x] **Save**: Call the profile update API with the new name. Immediately refresh the UI including the avatar button in the nav bar
+- [x] **Validation**: Trim whitespace, reject empty names
 
 **Files**: `SettingsView.swift`
 **Reference**: `SettingsPage.tsx` (name editing section with `window.prompt()`)
 
-### 4.2: Random Bird Nickname Generator
+### 4.2: Random Bird Nickname Generator ✅
 
 Does not exist on iOS. The web has a circular arrows button that generates a bird-themed display name + emoji avatar.
 
-- [ ] **Button**: Circular arrows icon (SF Symbol `arrow.clockwise`) next to the name
-- [ ] **Logic**: Port `generateBirdName()` from `src/lib/fun-names.ts` - combines bird adjectives + species names (e.g., "Cheerful Kingfisher") and picks a random emoji avatar from the 8-emoji set
-- [ ] **Auto-save**: Immediately saves the generated name + emoji avatar to the profile API
-- [ ] **New file**: `FunNames.swift` utility with the bird name/adjective arrays and generation logic
+- [x] **Button**: Circular arrows icon (SF Symbol `arrow.clockwise`) next to the name
+- [x] **Logic**: Port `generateBirdName()` from `src/lib/fun-names.ts` - combines bird adjectives + species names (e.g., "Cheerful Kingfisher") and picks a random emoji avatar from the 8-emoji set
+- [x] **Auto-save**: Immediately saves the generated name + emoji avatar to the profile API
+- [x] **New file**: `FunNames.swift` utility with the bird name/adjective arrays and generation logic
 
 **Files**: `SettingsView.swift`, new `FunNames.swift`
 **Reference**: `src/lib/fun-names.ts` (`generateBirdName`, `BIRD_ADJECTIVES`, `BIRD_NOUNS`, `BIRD_EMOJIS`)
 
-### 4.3: Avatar Emoji Selection
+### 4.3: Avatar Emoji Selection ✅
 
 Does not exist on iOS. The web has a row of 8 emoji buttons.
 
-- [ ] **Emoji grid**: Row of 8 circular buttons: 🐦 🦉 🦜 🐧 🦆 🦩 🦅 🐤
-- [ ] **Selected state**: Currently selected emoji gets a highlighted ring (`ring-2 ring-primary ring-offset-2` equivalent)
-- [ ] **Tap selected emoji**: Restore the original social provider avatar (or clear to default)
-- [ ] **Tap unselected emoji**: Apply that emoji as the avatar + auto-save to profile API
-- [ ] **Avatar format**: Store as emoji data-URL to match web format (the web encodes emojis as small canvas-rendered data URLs)
-- [ ] **Background color**: Port `getEmojiAvatarColor()` from `src/lib/fun-names.ts` - each emoji gets a consistent background color for the avatar circle
-- [ ] **Disabled during save**: All buttons disabled while profile save is in flight
+- [x] **Emoji grid**: Row of 8 circular buttons: 🐦 🦉 🦜 🐧 🦆 🦩 🦅 🐤
+- [x] **Selected state**: Currently selected emoji gets a highlighted ring (accent color border + background)
+- [x] **Tap selected emoji**: Restore the original social provider avatar (or clear to default)
+- [x] **Tap unselected emoji**: Apply that emoji as the avatar + auto-save to profile API
+- [x] **Avatar format**: Store as emoji data-URL to match web format (the web encodes emojis as small canvas-rendered data URLs)
+- [x] **Background color**: AvatarView already renders emoji avatars with per-emoji background colors
+- [x] **Disabled during save**: All buttons disabled while profile save is in flight
 
-**Files**: `SettingsView.swift`, port avatar utilities from `src/lib/fun-names.ts`
+**Files**: `SettingsView.swift`, `FunNames.swift`
 **Reference**: `SettingsPage.tsx` (avatar section)
 
-### 4.5: eBird CSV Import with Timezone Picker
+### 4.5: eBird CSV Import with Timezone Picker ✅
 
 Stub exists (button present, marked TODO). Needs full implementation matching the web's import flow.
 
-- [ ] **Import button**: Opens a sheet with the timezone selection + file picker flow
-- [ ] **Timezone dropdown**: Picker with 15 preset timezones + "None (times already local)" option. Each timezone shows its current DST-aware UTC offset (e.g., "UTC-10:00 - Hawaii", "UTC-05:00 - Eastern"). The timezone list matches the web's `TIMEZONE_PRESETS` array exactly
-- [ ] **Help section**: Collapsible "How to export from eBird" with 3-step instructions: (1) Go to ebird.org/downloadMyData and sign in, (2) Click Submit to request download, (3) Receive email with CSV, upload here. Plus a note: "WingDex will create outings grouped by date and location"
-- [ ] **File picker**: `.fileImporter` with `.csv` UTType. On file selection, read the CSV data
-- [ ] **Preview API**: Call `POST /api/import/ebird-csv` with the CSV content and selected timezone. Server returns preview with conflict detection (new / duplicate / update_dates)
-- [ ] **Conflict display**: Show duplicates from existing data. Auto-select non-duplicate previews. Let user toggle individual items
-- [ ] **Confirm import**: Call `POST /api/import/ebird-csv/confirm` with selected preview IDs and timezone
-- [ ] **Success feedback**: Toast with counts ("Imported eBird data across N outings") + confetti animation if new species were added
+- [x] **Import button**: Opens a sheet with the timezone selection + file picker flow
+- [x] **Timezone dropdown**: Picker with 15 preset timezones + "None (times already local)" option. Each timezone shows its current DST-aware UTC offset (e.g., "UTC-10:00 - Hawaii", "UTC-05:00 - Eastern"). The timezone list matches the web's `TIMEZONE_PRESETS` array exactly
+- [x] **Help section**: Collapsible "How to export from eBird" with 3-step instructions via DisclosureGroup
+- [x] **File picker**: `.fileImporter` with `.csv` UTType. On file selection, read the CSV data
+- [x] **Preview API**: Call `POST /api/import/ebird-csv` with the CSV content and selected timezone. Server returns preview with conflict detection (new / duplicate / update_dates)
+- [x] **Conflict display**: Show duplicates from existing data. Auto-select non-duplicate previews
+- [x] **Confirm import**: Call `POST /api/import/ebird-csv/confirm` with selected preview IDs
+- [ ] **Success feedback**: Toast with counts ("Imported eBird data across N outings") + confetti animation if new species were added (confetti deferred to Phase 7)
 
 **Files**: `SettingsView.swift`, new `EBirdImportView.swift` sheet, `DataService.swift` (import API calls)
 **Reference**: `SettingsPage.tsx` (import section), `functions/api/import/`
 
-### 4.6: Export Sightings CSV
+### 4.6: Export Sightings CSV ✅
 
 Stub exists (button present, marked TODO). Needs implementation.
 
-- [ ] **Export button**: Disabled if `dex.length == 0`. Tap triggers `GET /api/export/sightings`
-- [ ] **Save**: Present `UIActivityViewController` (share sheet) with the downloaded CSV data
-- [ ] **Filename**: `wingdex-sightings-YYYY-MM-DD.csv`
-- [ ] **Feedback**: Toast "Sightings CSV exported" on success
+- [x] **Export button**: Disabled if `dex.length == 0`. Tap triggers `GET /api/export/sightings`
+- [x] **Save**: Present `UIActivityViewController` (share sheet) with the downloaded CSV data
+- [x] **Filename**: `wingdex-sightings-YYYY-MM-DD.csv`
+- [x] **Feedback**: Share sheet presented on success
 
 **Files**: `SettingsView.swift`, `DataService.swift` (export API call)
 
-### 4.7: Data Privacy Card
+### 4.7: Data Privacy Card ✅
 
 Does not exist on iOS.
 
-- **Static informational card** matching the web's "Data Storage & Privacy" section:
-  - **Photos**: "Your photos are not retained. Compressed images are sent to AI for identification, then discarded. A file hash is stored for duplicate detection."
-  - **Records**: "Birding records are saved to a Cloudflare-backed database, scoped to your account."
-  - **Third-party**: "Location lookups via OpenStreetMap Nominatim. Species images from Wikimedia Commons."
-  - **Links**: Tappable links to Privacy Policy and Terms of Use (already served at `public/privacy.html` and `public/terms.html`, but maybe also may them available as in-app web views for better UX)
+- [x] **Static informational section** matching the web's "Data Storage & Privacy" section with photos, records, and third-party disclosures
+- [x] **Links**: Tappable links to Privacy Policy and Terms of Use via native Link views
 
 **Files**: `SettingsView.swift`
 
-### 4.8: Delete Account & All Data (Two-Stage Confirmation)
+### 4.8: Delete Account & All Data (Two-Stage Confirmation) ✅
 
 iOS only has "Delete All Data" (single confirmation). The web has a separate "Delete Account & All Data" with a two-stage confirmation flow.
 
-- [ ] **First confirmation**: Alert titled "Delete your entire account?" with a list of what gets deleted: all outings and observations, entire WingDex species list, passkeys and login credentials, account and profile. Warning: "There is no way to recover your data after this." Secondary button leads to stage 2
-- [ ] **Second confirmation**: Alert titled "Are you absolutely sure?" with destructive button "Delete my account forever"
-- [ ] **Execution**: Call account deletion API, clear all local state (DataStore, Keychain), sign out, dismiss settings sheet
-- [ ] **Feedback**: Toast "Account deleted"
-- [ ] **Placement**: Instead of the delete account and delete all data buttons both visible in the settings, make it a single "Delete Data..." button that opens a new tab, with the two options inside: "Delete All Data" (single confirmation) and "Delete Account & All Data" (two-stage confirmation) laid out with explanations of what each does under neat each button.
+- [x] **Placement**: Single "Delete Data..." NavigationLink in settings opens DataManagementView with both options
+- [x] **First confirmation**: Alert titled "Delete your entire account?" listing what gets deleted
+- [x] **Second confirmation**: Alert titled "Are you absolutely sure?" with destructive button "Delete my account forever"
+- [x] **Execution**: Calls Better Auth's delete-user endpoint, clears all local state, signs out
+- [x] **Feedback**: Auto-signs out and returns to sign-in screen
 
-**Files**: `SettingsView.swift`, `DataService.swift`, `AuthService.swift`
+**Files**: `SettingsView.swift`, new `DataManagementView.swift`, `AuthService.swift`
 
-### 4.9: Remove "Saved Locations" Stub
+### 4.9: Remove "Saved Locations" Stub ✅
 
 iOS has a placeholder "No saved locations" section that references a feature the web app removed.
 
-- Delete the "Saved Locations" section from `SettingsView.swift` entirely
+- [x] Delete the "Saved Locations" section from `SettingsView.swift` entirely
 
 **Files**: `SettingsView.swift`
 
 ### Phase 4 Verification
 
-Edit name (pencil), generate nickname (arrows), pick emoji avatar (8 grid) -> appearance toggle switches between Light/Dark/System immediately -> import eBird CSV with timezone picker works end-to-end with conflict display -> export sightings CSV via share sheet -> privacy card shows correct disclosures -> delete account requires 2 confirmations then signs out -> no "Saved Locations" section.
+Edit name (pencil), generate nickname (arrows), pick emoji avatar (8 grid) -> import eBird CSV with timezone picker works end-to-end with conflict display -> export sightings CSV via share sheet -> privacy card shows correct disclosures -> delete account requires 2 confirmations then signs out -> no "Saved Locations" section.
 
 ---
 
@@ -735,17 +732,6 @@ Tap outing -> edit location name with autocomplete from past outings -> add spec
 
 Five gaps between the iOS and web species/WingDex views.
 
-### 6.1: eBird Code API Lookup
-
-iOS currently constructs the eBird URL by hardcoding the common name into the URL path. The web uses an API call with algorithmic fallback.
-
-- [ ] **API call**: Fetch `GET /api/species/ebird-code?name={speciesName}` to get the accurate eBird species code
-- [ ] **Fallback**: If API call fails, construct the code algorithmically (lowercase, replace spaces with underscores, etc.)
-- [ ] **Cache**: Cache the result per species in memory to avoid repeated API calls
-- [ ] **URL**: Use the code to build the correct eBird URL: `https://ebird.org/species/{ebirdCode}`
-
-**Files**: `SpeciesDetailView.swift`, `DataService.swift` (new API call)
-**Reference**: `WingDexPage.tsx` (`fetchEBirdCode` function)
 
 ### 6.2: Certainty Badges in Sightings List
 
@@ -912,6 +898,8 @@ Toggle appearance Light/Dark/System -> every screen renders correctly in dark mo
 ## Phase 9 - iOS-Native Enhancements
 
 Features leveraging iOS platform APIs that the web cannot access. These go beyond parity - they make the iOS app feel like a first-class citizen on the platform.
+
+- [ ] for the species/outing detail view can we also have liquid glass controls instead of the tab bar at the bottom? so like for speciies the liquid glass controls could show ebird/wikipedia/copy name, and for outings the liquid glass controls could show edit outing, view on map, delete outing, etc. It would be a nice way to unify the UI and be more ios native instead of embedding those controls in the scroll view (list?) content
 
 ### Category A: Sharing & Export
 
@@ -1219,7 +1207,7 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | --- | --- | --- |
 | `WingDexApp.swift` | Modify | Restructure: 3 tabs + detached "+" button + avatar toolbar button (Phase 3.5) |
 | `SignInView.swift` | Rework | Match web auth modal: title, two passkey buttons, remove mode toggle (Phase 3.5) |
-| `SettingsView.swift` | Modify | Adapt for sheet presentation; add all Phase 4 features |
+| `SettingsView.swift` | ✅ Done | All Phase 4 features: name, avatar, import/export, privacy, data management |
 | `AddPhotosViewModel.swift` | ✅ Done | Two-tier AI, per-photo flow, outing review step, crop retry, certainty |
 | `AddPhotosFlow/OutingReviewView.swift` | ✅ Done | Nominatim geocoding, place search, existing outing matching |
 | `AddPhotosFlow/PerPhotoConfirmView.swift` | ✅ Done | Per-photo confirm with Wikipedia ref, confidence bar, crop retry |
@@ -1231,8 +1219,8 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | `Theme.swift` | Modify | Dark mode palette, appearance management |
 | `AuthService.swift` | Modify | Fix 401, session expiry handling |
 | `DataService.swift` | Modify | New API calls: species search, eBird code, import, export |
-| `FunNames.swift` | New | Bird nickname generator ported from web |
-| `EBirdImportView.swift` | New | eBird import sheet with timezone picker |
+| `FunNames.swift` | ✅ Done | Bird nickname generator ported from web |
+| `EBirdImportView.swift` | ✅ Done | eBird import sheet with timezone picker |
 | `ConfettiModifier.swift` | New | Confetti animation modifier |
 | Widget extension | New | WidgetKit extension with species count, recent species, outing widgets |
 | App Intents | New | AppShortcutsProvider, intent definitions |
@@ -1251,7 +1239,7 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 3 | Add Photos Flow (initial, needs rework) | ✅ Done (basic) |
 | 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | ✅ Done |
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | ⏳ In Progress |
-| 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | Not started |
+| 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | ✅ Done |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |

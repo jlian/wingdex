@@ -181,6 +181,56 @@ final class AuthService: @unchecked Sendable {
         clearAPICookies()
     }
 
+    // MARK: - Profile Updates
+
+    /// Send name and image to Better Auth's update-user endpoint and persist on success.
+    func updateProfile(name: String, image: String) async throws {
+        let token = try validToken()
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/update-user")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+
+        let body: [String: String] = ["name": name.trimmingCharacters(in: .whitespacesAndNewlines), "image": image]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let detail = String(data: data, encoding: .utf8) ?? ""
+            throw AuthError.oauthFailed("Profile update failed (\(statusCode)): \(detail)")
+        }
+
+        // Persist to Keychain (don't mutate observable properties here -
+        // the caller manages optimistic UI to avoid parent re-renders).
+        userName = name
+        userImage = image
+        persistSession()
+    }
+
+    /// Delete the user's account via Better Auth's delete-user endpoint.
+    func deleteAccount() async throws {
+        let token = try validToken()
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/delete-user")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        request.httpBody = Data("{}".utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let detail = String(data: data, encoding: .utf8) ?? ""
+            throw AuthError.oauthFailed("Account deletion failed (\(statusCode)): \(detail)")
+        }
+
+        signOut()
+    }
+
     // MARK: - Passkey Flows
 
     /// Sign in with a passkey. Presents the system passkey sheet.

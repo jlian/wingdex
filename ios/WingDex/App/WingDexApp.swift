@@ -11,6 +11,10 @@ struct WingDexApp: App {
         let auth = AuthService()
         _authService = State(initialValue: auth)
         _dataStore = State(initialValue: DataStore(service: DataService(auth: auth)))
+
+        // UIKit-rendered controls (menu popovers, pickers, alerts) don't inherit
+        // the SwiftUI AccentColor asset. Set UIKit's global tint to match.
+        UIView.appearance().tintColor = UIColor(named: "AccentColor")
     }
 
     var body: some Scene {
@@ -30,15 +34,7 @@ struct ContentView: View {
     @Environment(DataStore.self) private var store
 
     var body: some View {
-        // WHY ZStack with Color.pageBg here (but NOT in tab content views):
-        // The auth gate transition needs a stable background behind both SignInView
-        // and MainTabView during the opacity crossfade. Without it, the system
-        // background (white/black) flashes during the transition. Tab content views
-        // use .background() instead of ZStack to avoid a separate flash issue with
-        // NavigationStack push/pop transitions (see HomeView).
-        ZStack {
-            Color.pageBg.ignoresSafeArea()
-
+        Group {
             if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
@@ -64,6 +60,7 @@ struct ContentView: View {
                     #endif
             }
         }
+        .background(Color.pageBg.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
     }
 }
