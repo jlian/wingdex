@@ -13,7 +13,7 @@ private let log = Logger(subsystem: Config.bundleID, category: "Auth")
 /// for Better Auth's passkey endpoints that still validate cookie-based sessions.
 /// Tokens are obtained via ASWebAuthenticationSession (GitHub / Apple OAuth).
 /// The server's mobile callback bridge redirects to wingdex:// with the session token.
-@Observable
+@MainActor @Observable
 final class AuthService: @unchecked Sendable {
     var isAuthenticated = false
     var userId: String?
@@ -45,20 +45,17 @@ final class AuthService: @unchecked Sendable {
     // MARK: - OAuth Flows
 
     /// Sign in with GitHub via ASWebAuthenticationSession.
-    @MainActor
     func signInWithGitHub() async throws {
         try await signInWithProvider("github")
     }
 
     /// Sign in with Google via ASWebAuthenticationSession.
-    @MainActor
     func signInWithGoogle() async throws {
         try await signInWithProvider("google")
     }
 
     /// Sign in with Apple using the native ASAuthorizationAppleIDProvider.
     /// Shows the system Face ID / Touch ID sheet - no web view needed.
-    @MainActor
     func signInWithAppleNative() async throws {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.requestedScopes = [.fullName, .email]
@@ -148,7 +145,6 @@ final class AuthService: @unchecked Sendable {
 
     /// Generic OAuth flow via ASWebAuthenticationSession.
     /// Opens Better Auth's sign-in URL with callbackURL pointed at our mobile bridge.
-    @MainActor
     private func signInWithProvider(_ provider: String) async throws {
         log.info("Starting OAuth flow for provider: \(provider)")
         var components = URLComponents(url: Config.apiBaseURL.appendingPathComponent("api/auth/mobile/start"), resolvingAgainstBaseURL: false)!
@@ -332,7 +328,6 @@ final class AuthService: @unchecked Sendable {
 
     // MARK: - ASWebAuthenticationSession
 
-    @MainActor
     private func performWebAuth(url: URL) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
@@ -374,7 +369,7 @@ final class AuthService: @unchecked Sendable {
 
     /// Parse the wingdex://auth/callback?token=...&user_id=... redirect URL.
     /// Extracted as a static method for testability.
-    static func parseCallbackURL(_ url: URL) throws -> CallbackResult {
+    nonisolated static func parseCallbackURL(_ url: URL) throws -> CallbackResult {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw AuthError.oauthFailed("Invalid callback URL")
         }
@@ -411,7 +406,7 @@ final class AuthService: @unchecked Sendable {
     }
 
     /// Parse an ISO 8601 date string, trying with fractional seconds first.
-    static func parseISO8601(_ string: String) -> Date? {
+    nonisolated static func parseISO8601(_ string: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = formatter.date(from: string) { return date }

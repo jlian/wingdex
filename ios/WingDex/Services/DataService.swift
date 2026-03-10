@@ -184,10 +184,10 @@ final class DataService: Sendable {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        try attachAuth(&request)
+        try await attachAuth(&request)
 
         let (responseData, response) = try await URLSession.shared.data(for: request)
-        try validate(response, data: responseData)
+        try await validate(response, data: responseData)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
         return preview.previews
@@ -222,11 +222,11 @@ final class DataService: Sendable {
     private func getRaw(_ path: String) async throws -> Data {
         let url = Config.apiBaseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
-        try attachAuth(&request)
+        try await attachAuth(&request)
 
         log.debug("GET \(path)")
         let (data, response) = try await URLSession.shared.data(for: request)
-        try validate(response, data: data)
+        try await validate(response, data: data)
         log.debug("GET \(path) -> \(data.count) bytes")
         return data
     }
@@ -238,10 +238,10 @@ final class DataService: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
-        try attachAuth(&request)
+        try await attachAuth(&request)
 
         let (responseData, response) = try await URLSession.shared.data(for: request)
-        try validate(response, data: responseData)
+        try await validate(response, data: responseData)
         return responseData
     }
 
@@ -252,10 +252,10 @@ final class DataService: Sendable {
         request.httpMethod = "PATCH"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
-        try attachAuth(&request)
+        try await attachAuth(&request)
 
         let (responseData, response) = try await URLSession.shared.data(for: request)
-        try validate(response, data: responseData)
+        try await validate(response, data: responseData)
         return responseData
     }
 
@@ -264,15 +264,15 @@ final class DataService: Sendable {
         let url = Config.apiBaseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        try attachAuth(&request)
+        try await attachAuth(&request)
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        try validate(response, data: data)
+        try await validate(response, data: data)
         return data
     }
 
-    private func attachAuth(_ request: inout URLRequest) throws {
-        let token = try auth.validToken()
+    private func attachAuth(_ request: inout URLRequest) async throws {
+        let token = try await auth.validToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         let method = request.httpMethod ?? "?"
@@ -280,7 +280,7 @@ final class DataService: Sendable {
         log.debug("Request: \(method) \(path)")
     }
 
-    private func validate(_ response: URLResponse, data: Data) throws {
+    private func validate(_ response: URLResponse, data: Data) async throws {
         guard let http = response as? HTTPURLResponse else {
             throw DataServiceError.networkError("Invalid response")
         }
@@ -291,7 +291,7 @@ final class DataService: Sendable {
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.
             if http.statusCode == 401 {
-                auth.signOut()
+                await auth.signOut()
             }
             throw DataServiceError.httpError(http.statusCode, body)
         }
