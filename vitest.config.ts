@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config'
-import { resolve } from 'path'
 
 export default defineConfig({
   define: {
@@ -8,9 +7,7 @@ export default defineConfig({
     __GIT_BRANCH__: JSON.stringify('test'),
   },
   resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
+    tsconfigPaths: true,
   },
   test: {
     environment: 'jsdom',

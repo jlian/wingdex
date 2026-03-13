@@ -1,11 +1,9 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig, loadEnv } from "vite";
-import { resolve } from 'path'
 import { execSync } from 'child_process'
 import packageJson from './package.json'
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
 const apiPort = process.env.API_PORT || '8788'
 
 function gitInfo() {
@@ -22,7 +20,7 @@ const git = gitInfo()
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, projectRoot, '')
+  const env = loadEnv(mode, import.meta.dirname, '')
   return {
   define: {
     APP_VERSION: JSON.stringify(packageJson.version),
@@ -36,14 +34,13 @@ export default defineConfig(({ mode }) => {
   server: {
     host: !!env.VITE_SERVER_HOST,
     allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) ?? [],
+    forwardConsole: true,
     proxy: {
       '/api': `http://localhost:${apiPort}`,
     },
   },
   resolve: {
-    alias: {
-      '@': resolve(projectRoot, 'src')
-    }
+    tsconfigPaths: true,
   },
   }
 });
