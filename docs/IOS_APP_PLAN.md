@@ -380,7 +380,7 @@ Migrate from the current 4-tab layout to the new architecture: 3 tabs left + det
 - [x] Font size: bumped species/outing row text from 14/12px to 16/13px, darkened subtitle opacity
 - [x] Home: species count + "species observed" in horizontal layout
 - [x] Settings: "Log Out" (no confirmation), "Delete All Data" (with confirmation attached to button)
-- [x] Associated domains: added `dev.wingdex.pages.dev` for passkeys on dev preview
+- [x] Associated domains: added `dev.wingdex.app` for passkeys on dev preview
 - [x] Apple Sign-In: added `appBundleIdentifier` to server config for native iOS identity token verification
 - [x] Config: restored simulator vs physical device URL split
 - [x] Font weight adjustments (deferred - minor polish)

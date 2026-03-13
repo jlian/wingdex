@@ -4,7 +4,7 @@ import Foundation
 enum Config {
     /// Base URL for the WingDex API.
     /// - Simulator: localhost.wingdex.app (local Mac via DNS, HTTPS)
-    /// - Physical device (DEBUG): dev.wingdex.pages.dev (Cloudflare Pages preview)
+    /// - Physical device (DEBUG): dev.wingdex.app (Cloudflare Pages preview)
     /// - Release: wingdex.app (production)
     static let apiBaseURL: URL = {
         #if DEBUG
@@ -12,7 +12,7 @@ enum Config {
             URL(string: "https://localhost.wingdex.app")!
             #else
             // URL(string: "https://localhost.wingdex.app")!
-            URL(string: "https://dev.wingdex.pages.dev")!
+            URL(string: "https://dev.wingdex.app")!
             #endif
         #else
         URL(string: "https://wingdex.app")!

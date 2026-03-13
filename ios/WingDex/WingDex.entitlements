@@ -10,7 +10,7 @@
 	<array>
 		<string>webcredentials:wingdex.pages.dev</string>
 		<string>webcredentials:wingdex.app</string>
-		<string>webcredentials:dev.wingdex.pages.dev</string>
+		<string>webcredentials:dev.wingdex.app</string>
 		<string>webcredentials:localhost.wingdex.app?mode=developer</string>
 		<string>webcredentials:localhost?mode=developer</string>
 	</array>
