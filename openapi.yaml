@@ -11,8 +11,10 @@ info:
     Both auth mechanisms are accepted by the middleware.
 
 servers:
-  - url: https://wingdex.pages.dev
+  - url: https://wingdex.app
     description: Production
+  - url: https://dev.wingdex.app
+    description: Preview
   - url: http://localhost:5000
     description: Local development
 

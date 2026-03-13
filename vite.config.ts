@@ -20,23 +20,6 @@ function gitInfo() {
 
 const git = gitInfo()
 
-function deployEnv(): 'local' | 'preview' | 'production' {
-  // Cloudflare Pages CI build (most reliable)
-  if (process.env.CF_PAGES === '1') {
-    return process.env.CF_PAGES_BRANCH === 'main' ? 'production' : 'preview'
-  }
-  // Explicit override (DEPLOY_ENV=preview npm run deploy, etc.)
-  const explicit = process.env.DEPLOY_ENV
-  if (explicit === 'production' || explicit === 'preview' || explicit === 'local') {
-    return explicit
-  }
-  // npm run build / wrangler pages deploy locally - treat as production so build
-  // info is never leaked to a deployed site
-  if (process.env.NODE_ENV === 'production') return 'production'
-  // Local dev server
-  return 'local'
-}
-
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, '')
@@ -45,7 +28,6 @@ export default defineConfig(({ mode }) => {
     APP_VERSION: JSON.stringify(packageJson.version),
     __GIT_HASH__: JSON.stringify(git.hash),
     __GIT_BRANCH__: JSON.stringify(git.branch),
-    __DEPLOY_ENV__: JSON.stringify(deployEnv()),
   },
   plugins: [
     react(),

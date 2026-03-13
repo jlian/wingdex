@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref_name }}
-      url: ${{ github.ref == 'refs/heads/main' && 'https://wingdex.app' || format('https://{0}.wingdex.pages.dev', github.ref_name) }}
+      url: ${{ github.ref == 'refs/heads/main' && 'https://wingdex.app' || format('https://{0}.wingdex.app', github.ref_name) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,7 +111,7 @@ jobs:
             DOMAINS="wingdex.app wingdex.pages.dev"
             STRICT_VERIFY=true
           else
-            DOMAINS="${{ github.ref_name }}.wingdex.pages.dev"
+            DOMAINS="${{ github.ref_name }}.wingdex.app"
           fi
 
           MAX_ATTEMPTS=5
