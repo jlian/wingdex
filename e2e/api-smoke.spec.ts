@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const API_BASE = 'http://localhost:5000'
-const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://wingdev.johnspecificproblems.net'
+const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://localhost.wingdex.app'
 const runLivePreviewAuth = process.env.RUN_LIVE_E2E === '1'
 
 function buildCookieHeader(setCookieHeaders: string[]) {

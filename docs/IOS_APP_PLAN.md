@@ -286,7 +286,7 @@ The current auth implementation hand-rolls cookie name management, resulting in 
 
 Test all auth flows end-to-end after migration:
 
-- [x] **GitHub OAuth (physical device)**: Same flow on device pointing to `wingdev.johnspecificproblems.net`
+- [x] **GitHub OAuth (physical device)**: Same flow on device pointing to `localhost.wingdex.app`
 - [x] **Apple Sign-In**: Blocked on local dev - `.dev.vars` does not have `APPLE_CLIENT_ID`/`APPLE_CLIENT_SECRET`. Works on production/preview deployments where Apple credentials are configured in Cloudflare Pages dashboard. Native `ASAuthorizationAppleIDProvider` flow (bypasses web redirect) should work when credentials are present. **Skipped for local dev**
 - [x] **Passkey sign-in**: Existing passkey -> Face ID -> data loads with correct user name/email (not guest)
 - [x] **Passkey registration**: Fixed - passkey plugin endpoints require cookie-only auth (signed session token as cookie, no Bearer header). `AuthenticatedRequest.withCookieOnly()` used for all passkey endpoints
@@ -304,7 +304,7 @@ All critical issues resolved. Remaining items deferred or skipped.
 - [ ] **Passkey name/label mismatch**: Deferred - current behavior acceptable, may be affected by merged account situations
 - [x] **Apple Sign-In not configured locally**: Skipped for local dev - works on deployed environments
 - [x] **Load demo data - add confirmation**: Done - `.confirmationDialog` added
-- [x] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub. Note: Google OAuth fails on local dev (`wingdev.johnspecificproblems.net`) because the redirect URI is not in Google Cloud Console's authorized list. Add `https://wingdev.johnspecificproblems.net/api/auth/callback/google` to authorized redirect URIs in Google Cloud Console, or test on deployed environment only
+- [x] **Google Sign-In button**: Done - added to SignInView using same OAuth flow as GitHub. Note: Google OAuth fails on local dev (`localhost.wingdex.app`) because the redirect URI is not in Google Cloud Console's authorized list. Add `https://localhost.wingdex.app/api/auth/callback/google` to authorized redirect URIs in Google Cloud Console, or test on deployed environment only
 
 ### 3.1.8: Automated Tests
 

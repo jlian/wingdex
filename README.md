@@ -74,7 +74,7 @@ Local auth intentionally uses two different origins depending on the flow:
 Operationally, that means:
 
 1. Local web on `http://localhost:5000` keeps localhost semantics by default.
-2. Hosted web on `https://wingdev.johnspecificproblems.net` uses the hosted domain normally.
+2. Hosted web on `https://localhost.wingdex.app` uses the hosted domain normally.
 3. Mobile social OAuth started through `/api/auth/mobile/start` uses the hosted callback domain from `BETTER_AUTH_URL`, even during local dev.
 
 If GitHub or Google reports an invalid redirect URI during local mobile testing, verify that:

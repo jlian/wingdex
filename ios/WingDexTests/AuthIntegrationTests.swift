@@ -2,7 +2,7 @@
 import XCTest
 
 /// Integration tests that run against the actual API server.
-/// Requires the dev server to be running (wingdev.johnspecificproblems.net or localhost:5000).
+/// Requires the dev server to be running (localhost.wingdex.app or localhost:5000).
 ///
 /// These tests use anonymous sign-in (no OAuth required) to verify
 /// the Bearer token auth flow works end-to-end from Swift code.
