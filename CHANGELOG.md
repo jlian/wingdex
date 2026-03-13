@@ -1,3 +1,11 @@
+## [1.17.3](https://github.com/jlian/wingdex/compare/v1.17.2...v1.17.3) (2026-03-13)
+
+
+### Bug Fixes
+
+* **ci:** fix iOS release git asset paths relative to ios/ working dir ([629a2b5](https://github.com/jlian/wingdex/commit/629a2b5978cdd38a3e73c29d8338dd34b2f1d383))
+* **ci:** reset ios/package.json version to 0.1.0 ([8285f3c](https://github.com/jlian/wingdex/commit/8285f3c616ef5d195d2f34e9fda16bbf224cf9b6))
+
 ## [1.17.2](https://github.com/jlian/wingdex/compare/v1.17.1...v1.17.2) (2026-03-10)
 
 
