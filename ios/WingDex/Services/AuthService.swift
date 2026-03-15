@@ -27,7 +27,7 @@ final class AuthService: @unchecked Sendable {
     private(set) var signedSessionToken: String?
     private var sessionExpiry: Date?
     private let keychain = Keychain(service: Config.bundleID)
-        .accessibility(.afterFirstUnlock)
+        .accessibility(.whenUnlockedThisDeviceOnly)
 
     private static let tokenKey = "session_token"
     private static let signedTokenKey = "signed_session_token"
@@ -636,8 +636,10 @@ final class AuthService: @unchecked Sendable {
 /// Provides the presentation anchor for ASWebAuthenticationSession.
 private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        // connectedScenes always contains the active UIWindowScene on iOS 26+;
+        // the guard is only a defensive fallback that creates a detached window.
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-            fatalError("No UIWindowScene available")
+            return UIWindow()
         }
         return scene.keyWindow ?? UIWindow(windowScene: scene)
     }

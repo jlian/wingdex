@@ -334,7 +334,9 @@ struct AddPhotosFlow: View {
         if rawImage.imageOrientation == .up {
             uiImage = rawImage
         } else {
-            uiImage = UIGraphicsImageRenderer(size: rawImage.size).image { _ in
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = rawImage.scale
+            uiImage = UIGraphicsImageRenderer(size: rawImage.size, format: format).image { _ in
                 rawImage.draw(in: CGRect(origin: .zero, size: rawImage.size))
             }
         }

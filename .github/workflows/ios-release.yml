@@ -109,6 +109,11 @@ jobs:
         if: steps.semrel.outputs.released == 'true'
         run: brew install xcodegen
 
+      - name: Generate GitInfo.swift
+        if: steps.semrel.outputs.released == 'true'
+        working-directory: ios
+        run: scripts/gen-git-info.sh
+
       - name: Generate Xcode project
         if: steps.semrel.outputs.released == 'true'
         working-directory: ios

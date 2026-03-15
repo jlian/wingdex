@@ -24,6 +24,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Generate GitInfo.swift
+        run: scripts/gen-git-info.sh
+
       - name: Generate Xcode project
         run: xcodegen generate
 
@@ -38,8 +41,7 @@ jobs:
             -scheme WingDex \
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
-            CODE_SIGNING_ALLOWED=NO \
-            | tail -20
+            CODE_SIGNING_ALLOWED=NO
 
   validate-openapi:
     name: Validate OpenAPI spec

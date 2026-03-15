@@ -382,8 +382,10 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
 
 extension PasskeyService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        // connectedScenes always contains the active UIWindowScene on iOS 26+;
+        // the guard is only a defensive fallback that creates a detached window.
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-            fatalError("No UIWindowScene available")
+            return UIWindow()
         }
         return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
