@@ -325,10 +325,20 @@ struct AddPhotosFlow: View {
     // MARK: - Crop Helpers
 
     /// Generate cropped image data from the original image and a percentage crop box.
+    /// Normalizes orientation first so crop coordinates match what the user saw in CropView.
     private func generateCroppedImageData(from imageData: Data, cropBox: CropBoxResult) -> Data? {
-        guard let uiImage = UIImage(data: imageData),
-              let cgImage = uiImage.cgImage
-        else { return nil }
+        guard let rawImage = UIImage(data: imageData) else { return nil }
+
+        // Normalize orientation to match CropView's coordinate system
+        let uiImage: UIImage
+        if rawImage.imageOrientation == .up {
+            uiImage = rawImage
+        } else {
+            uiImage = UIGraphicsImageRenderer(size: rawImage.size).image { _ in
+                rawImage.draw(in: CGRect(origin: .zero, size: rawImage.size))
+            }
+        }
+        guard let cgImage = uiImage.cgImage else { return nil }
 
         let natW = CGFloat(cgImage.width)
         let natH = CGFloat(cgImage.height)
@@ -346,7 +356,7 @@ struct AddPhotosFlow: View {
               let cropped = cgImage.cropping(to: rect)
         else { return nil }
 
-        let result = UIImage(cgImage: cropped, scale: uiImage.scale, orientation: uiImage.imageOrientation)
+        let result = UIImage(cgImage: cropped)
         return result.jpegData(compressionQuality: 0.7)
     }
 }

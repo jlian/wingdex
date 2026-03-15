@@ -22,6 +22,7 @@ struct CropView: View {
     @State private var initialOffset: CGSize = .zero
     @State private var didInitializeTransform = false
     @State private var squareSide: CGFloat = 0
+    @State private var cachedImage: UIImage?
 
     init(
         imageData: Data,
@@ -63,7 +64,7 @@ struct CropView: View {
 
     var body: some View {
         GeometryReader { geo in
-            if let uiImage = normalizedImage(from: imageData) {
+            if let uiImage = cachedImage {
                 let squareSide = geo.size.width - cropInset * 2
                 let fillInfo = fillImageInfo(for: uiImage, squareSide: squareSide)
                 // Total height including safe area (since we ignoresSafeArea)
@@ -123,6 +124,9 @@ struct CropView: View {
                             .foregroundStyle(.tertiary)
                     }
             }
+        }
+        .task {
+            cachedImage = normalizedImage(from: imageData)
         }
         .background(Color.clear)
         .navigationTitle("Crop Bird Photo")
@@ -260,7 +264,7 @@ struct CropView: View {
 
     private func currentCropResult() -> CropBoxResult? {
         guard squareSide > 0 else { return nil }
-        guard let uiImage = normalizedImage(from: imageData) else { return nil }
+        guard let uiImage = cachedImage else { return nil }
         let side = squareSide
         let fillInfo = fillImageInfo(for: uiImage, squareSide: side)
         let totalScale = fillInfo.baseScale * photoScale
