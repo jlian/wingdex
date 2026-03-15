@@ -22,25 +22,25 @@ const git = gitInfo()
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, '')
   return {
-  define: {
-    APP_VERSION: JSON.stringify(packageJson.version),
-    __GIT_HASH__: JSON.stringify(git.hash),
-    __GIT_BRANCH__: JSON.stringify(git.branch),
-  },
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
-  server: {
-    host: !!env.VITE_SERVER_HOST,
-    allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) ?? [],
-    forwardConsole: true,
-    proxy: {
-      '/api': `http://localhost:${apiPort}`,
+    define: {
+      APP_VERSION: JSON.stringify(packageJson.version),
+      __GIT_HASH__: JSON.stringify(git.hash),
+      __GIT_BRANCH__: JSON.stringify(git.branch),
     },
-  },
-  resolve: {
-    tsconfigPaths: true,
-  },
+    plugins: [
+      react(),
+      tailwindcss(),
+    ],
+    server: {
+      host: !!env.VITE_SERVER_HOST,
+      allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) ?? [],
+      forwardConsole: true,
+      proxy: {
+        '/api': `http://localhost:${apiPort}`,
+      },
+    },
+    resolve: {
+      tsconfigPaths: true,
+    },
   }
 });
