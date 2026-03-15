@@ -1,4 +1,4 @@
-name: iOS Build
+name: iOS Build & Test
 
 on:
   pull_request:
@@ -36,11 +36,21 @@ jobs:
       - name: Build for Simulator
         run: |
           set -o pipefail
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project WingDex.xcodeproj \
             -scheme WingDex \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -only-testing:WingDexTests \
             CODE_SIGNING_ALLOWED=NO
 
   validate-openapi:
