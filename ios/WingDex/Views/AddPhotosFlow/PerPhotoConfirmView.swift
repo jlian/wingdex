@@ -43,16 +43,18 @@ struct PerPhotoConfirmView: View {
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Primary action top-right (adapts icon by context)
+            // Primary action top-right - only shown when candidates exist
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("Possible", systemImage: "questionmark") {
-                    confirmWith(status: .possible)
+                if hasCandidates {
+                    Button("Possible", systemImage: "questionmark") {
+                        confirmWith(status: .possible)
+                    }
+                    .disabled(selectedSpecies.isEmpty)
+                    Button("Confirm", systemImage: "checkmark") {
+                        confirmWith(status: .confirmed)
+                    }
+                    .disabled(selectedSpecies.isEmpty)
                 }
-                .disabled(selectedSpecies.isEmpty)                    
-                Button("Confirm", systemImage: "checkmark") {
-                    confirmWith(status: .confirmed)
-                }
-                .disabled(selectedSpecies.isEmpty)
             }
             // Bottom bar: back (left) + secondary tools (right of back)
             ToolbarItemGroup(placement: .bottomBar) {
