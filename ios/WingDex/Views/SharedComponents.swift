@@ -113,6 +113,7 @@ struct BirdRow: View {
         }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
+        .frame(minHeight: 56)
     }
 }
 
@@ -373,6 +374,7 @@ struct OutingRow: View {
         }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
+        .frame(minHeight: 56)
     }
 
     @ViewBuilder
@@ -384,7 +386,7 @@ struct OutingRow: View {
             Image(systemName: "mappin")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.mutedText.opacity(0.5))
-                .frame(width: 44, height: 44)
+                .frame(width: 48, height: 48)
                 .background(Color.warmBorder.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
