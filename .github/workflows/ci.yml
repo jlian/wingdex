@@ -104,3 +104,49 @@ jobs:
               state: 'success',
               environment_url: process.env.DEPLOYMENT_URL,
             });
+
+  ios:
+    name: iOS Build & Test
+    runs-on: macos-26
+    # Only run when ios/ or openapi.yaml changed
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'ios') ||
+      github.event.pull_request.head.ref == 'dev'
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate GitInfo.swift
+        run: scripts/gen-git-info.sh
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Resolve SPM dependencies
+        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme WingDex
+
+      - name: Build for Simulator
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -skip-testing:WingDexTests/AuthIntegrationTests \
+            -only-testing:WingDexTests \
+            CODE_SIGNING_ALLOWED=NO
