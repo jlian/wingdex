@@ -129,7 +129,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
     /// Register a new passkey for the currently authenticated user.
     /// - signedToken: HMAC-signed token for cookie auth on passkey verify endpoint
-    func register(name: String, signedToken: String?) async throws {
+    /// - displayName: Override for the Keychain "User Name" field (defaults to server value)
+    func register(name: String, signedToken: String?, displayName: String? = nil) async throws {
         guard let signed = signedToken else {
             throw PasskeyError.serverError("Missing signed session token for passkey registration")
         }
@@ -172,7 +173,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let registration = try await performRegistration(
             challenge: challengeData,
             rpId: options.rp.id,
-            userName: options.user.name,
+            userName: displayName ?? options.user.name,
             userID: userIDData
         )
 
@@ -382,7 +383,7 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
 extension PasskeyService: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-            return UIWindow()
+            fatalError("No UIWindowScene available")
         }
         return scene.keyWindow ?? UIWindow(windowScene: scene)
     }

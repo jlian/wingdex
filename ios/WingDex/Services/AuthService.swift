@@ -248,6 +248,108 @@ final class AuthService: @unchecked Sendable {
         persistSession()
     }
 
+    /// Sign up with a passkey: create anonymous session, register passkey, finalize.
+    /// Does NOT set isAuthenticated until the full flow succeeds, so the sign-in
+    /// screen stays visible throughout.
+    func signUpWithPasskey() async throws {
+        log.info("Starting passkey sign-up flow")
+
+        // 0. Clean slate - clear any stale session
+        clearAPICookies()
+        clearKeychain()
+        sessionToken = nil
+        signedSessionToken = nil
+        sessionExpiry = nil
+        userId = nil
+
+        // 1. Create anonymous session (without setting isAuthenticated)
+        let anonURL = Config.apiBaseURL.appendingPathComponent("api/auth/sign-in/anonymous")
+        var anonRequest = URLRequest(url: anonURL)
+        anonRequest.httpMethod = "POST"
+        anonRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        anonRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        anonRequest.httpBody = Data("{}".utf8)
+
+        let (anonData, anonResponse) = try await URLSession.shared.data(for: anonRequest)
+        guard let anonHttp = anonResponse as? HTTPURLResponse,
+              (200...299).contains(anonHttp.statusCode),
+              let anonJson = try JSONSerialization.jsonObject(with: anonData) as? [String: Any],
+              let rawToken = anonJson["token"] as? String
+        else {
+            throw AuthError.oauthFailed("Failed to create account")
+        }
+
+        // Capture signed token from header for cookie auth
+        let signedToken = anonHttp.value(forHTTPHeaderField: "set-auth-token")
+        sessionToken = rawToken
+        signedSessionToken = signedToken
+        sessionExpiry = Date.now.addingTimeInterval(7 * 24 * 60 * 60)
+        let user = anonJson["user"] as? [String: Any]
+        userId = user?["id"] as? String
+
+        log.info("Anonymous session created for sign-up - userId: \(self.userId ?? "nil")")
+
+        // 2. Fetch full user info to ensure signed token is set
+        if signedSessionToken == nil {
+            try? await fetchUserInfo(token: rawToken)
+        }
+
+        guard let signed = signedSessionToken else {
+            throw AuthError.oauthFailed("Missing session token for passkey registration")
+        }
+
+        // 3. Register a passkey (override Keychain username with bird name)
+        let birdName = FunNames.generateBirdName()
+        let deviceModel = UIDevice.current.model
+        let passkeyName = "\(deviceModel) (\(birdName))"
+        let service = PasskeyService()
+        try await service.register(name: passkeyName, signedToken: signed, displayName: birdName)
+
+        // 4. Finalize: promote anonymous user to real user (cookie auth like web)
+        let finalizeURL = Config.apiBaseURL.appendingPathComponent("api/auth/finalize-passkey")
+        let finalizeRequest = AuthenticatedRequest.withCookieOnly(
+            url: finalizeURL,
+            signedToken: signed,
+            method: "POST",
+            body: try JSONSerialization.data(withJSONObject: ["name": birdName]),
+            contentType: "application/json"
+        )
+
+        let (_, finalizeResponse) = try await URLSession.shared.data(for: finalizeRequest)
+        guard let finalizeHttp = finalizeResponse as? HTTPURLResponse,
+              (200...299).contains(finalizeHttp.statusCode)
+        else {
+            let status = (finalizeResponse as? HTTPURLResponse)?.statusCode ?? -1
+            log.error("Finalize failed: HTTP \(status)")
+            throw AuthError.oauthFailed("Account setup failed")
+        }
+
+        // 5. Clear ALL cookies before any Bearer-authenticated requests.
+        // The finalize response sets new cookies that URLSession would
+        // auto-send alongside Bearer headers, causing 401 conflicts.
+        clearAPICookies()
+
+        // 6. Success - set authenticated and persist
+        let emoji = FunNames.emojiForBirdName(birdName)
+        let avatarDataUrl = FunNames.emojiAvatarDataUrl(emoji)
+        userName = birdName
+        userImage = avatarDataUrl
+        isAuthenticated = true
+        persistSession()
+
+        log.info("Passkey sign-up succeeded - \(birdName)")
+
+        // 7. Push avatar to server in background (off critical path).
+        // This runs after isAuthenticated is set and DataStore.fetchAll
+        // has started, so it won't interfere with the initial data load.
+        Task.detached { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard let self else { return }
+            try? await self.updateProfile(name: birdName, image: avatarDataUrl)
+            await MainActor.run { self.clearAPICookies() }
+        }
+    }
+
     /// Register a new passkey for the current user.
     func registerPasskey(name: String) async throws {
         let token = try validToken()
@@ -534,7 +636,7 @@ final class AuthService: @unchecked Sendable {
 private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-            return UIWindow()
+            fatalError("No UIWindowScene available")
         }
         return scene.keyWindow ?? UIWindow(windowScene: scene)
     }

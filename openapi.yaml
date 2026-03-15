@@ -25,28 +25,6 @@ paths:
   # ---------------------------------------------------------------------------
   # Auth
   # ---------------------------------------------------------------------------
-  /api/auth/providers:
-    get:
-      operationId: getAuthProviders
-      summary: List configured OAuth providers
-      description: Returns the social login providers enabled on the server. Cached for 5 minutes.
-      security: []
-      tags: [Auth]
-      responses:
-        "200":
-          description: Provider list
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [providers]
-                properties:
-                  providers:
-                    type: array
-                    items:
-                      type: string
-                    example: ["github", "apple"]
-
   /api/auth/linked-providers:
     get:
       operationId: getLinkedProviders

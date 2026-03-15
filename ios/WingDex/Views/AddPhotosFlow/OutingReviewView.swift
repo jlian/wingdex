@@ -609,7 +609,7 @@ struct OutingReviewView: View {
             let search = MKLocalSearch(request: searchRequest)
             guard let mapItem = try? await search.start().mapItems.first else { return }
 
-            let coord = mapItem.placemark.coordinate
+            let coord = mapItem.location.coordinate
             if CLLocationCoordinate2DIsValid(coord) {
                 overriddenCoords = coord
             }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Key, GithubLogo, AppleLogo, GoogleChromeLogo } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -85,20 +85,11 @@ function AuthGateModal({
   demoDataEnabled,
   onSetDemoDataEnabled,
 }: AuthGateModalProps) {
+  const dialogContentRef = useRef<HTMLDivElement | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isTogglingDemo, setIsTogglingDemo] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [providers, setProviders] = useState<string[] | null>(null)
-
-  const isLocalVisualAuth = typeof window !== 'undefined'
-    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
-
-  // Keep both social buttons visible in local/dev so modal polish can be done
-  // without depending on provider secrets.
-  const visibleProviders = Array.from(new Set([
-    ...(providers ?? []),
-    ...(isLocalVisualAuth ? ['github', 'apple', 'google'] : []),
-  ]))
+  const visibleProviders = ['github', 'apple', 'google'] as const
 
   const buildSocialCallbackURL = (provider: 'github' | 'apple' | 'google'): string => {
     if (typeof window === 'undefined') return '/'
@@ -107,16 +98,6 @@ function AuthGateModal({
     params.set('auth_source', 'social')
     return `/?${params.toString()}`
   }
-
-  // Fetch providers on first open
-  const fetchedProviders = useRef(false)
-  useEffect(() => {
-    if (!open || fetchedProviders.current) return
-    fetchedProviders.current = true
-    void fetch('/api/auth/providers').then(r => r.ok ? r.json() : null).then(
-      (data: { providers: string[] } | null) => setProviders(data?.providers ?? []),
-    )
-  }, [open])
 
   const handleSignUpWithPasskey = async () => {
     setErrorMessage(null)
@@ -227,7 +208,16 @@ function AuthGateModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        ref={dialogContentRef}
+        className="sm:max-w-md outline-none"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          window.requestAnimationFrame(() => {
+            dialogContentRef.current?.focus({ preventScroll: true })
+          })
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Start your WingDex</DialogTitle>
           <DialogDescription>

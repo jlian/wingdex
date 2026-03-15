@@ -87,7 +87,7 @@ describe('useAuthGate', () => {
     mockGetSession.mockReset()
     mockAddPasskey.mockReset()
     mockSignOut.mockReset()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) }))
+    vi.stubGlobal('fetch', vi.fn())
     mockSignOut.mockResolvedValue({ error: null })
     mockAddPasskey.mockResolvedValue({ error: null })
   })
@@ -95,9 +95,7 @@ describe('useAuthGate', () => {
   it('opens the combined auth modal and signs up with the passkey action', async () => {
     mockAddPasskey.mockResolvedValue({ data: { id: 'pk-test-1' }, error: null })
 
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ providers: [] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchMock)
 
     const onUpgraded = vi.fn()
@@ -105,6 +103,9 @@ describe('useAuthGate', () => {
 
     await userEvent.click(screen.getByText('Open gated action'))
     expect(screen.getByRole('heading', { name: /start your wingdex/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continue with apple/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /sign up/i }))
 
     await waitFor(() => {
@@ -133,8 +134,6 @@ describe('useAuthGate', () => {
         },
       },
     })
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) }))
 
     const onUpgraded = vi.fn()
     render(<Harness onUpgraded={onUpgraded} />)
@@ -168,8 +167,6 @@ describe('useAuthGate', () => {
       error: { code: 'ERROR_CEREMONY_ABORTED', message: 'not allowed by the user agent' },
     })
 
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) }))
-
     const onUpgraded = vi.fn()
     render(<Harness onUpgraded={onUpgraded} />)
 
@@ -189,8 +186,6 @@ describe('useAuthGate', () => {
     mockAddPasskey.mockResolvedValue({
       error: { code: 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED', message: 'Authenticator registered' },
     })
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) }))
 
     const onUpgraded = vi.fn()
     render(<Harness onUpgraded={onUpgraded} />)

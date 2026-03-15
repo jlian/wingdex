@@ -111,6 +111,27 @@ struct SettingsView: View {
             #endif
 
             logOutSection
+
+            // Version info
+            Section {
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+                HStack {
+                    Spacer()
+                    VStack(spacing: 2) {
+                        Text("WingDex v\(version) (\(build))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        #if DEBUG
+                        Text("dev build")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        #endif
+                    }
+                    Spacer()
+                }
+            }
+            .listRowBackground(Color.clear)
         }
         .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())

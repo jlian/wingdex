@@ -92,4 +92,21 @@ describe('computeDex', () => {
     expect(result[0].bestPhotoId).toBeNull()
     expect(result[0].notes).toBe('')
   })
+
+  it('SQL includes both confirmed and possible observations', () => {
+    let capturedSql = ''
+    const db: DexQueryDB = {
+      prepare(sql: string) {
+        capturedSql = sql
+        return {
+          bind() {
+            return { async all() { return { results: [] } } }
+          },
+        }
+      },
+    }
+    void computeDex(db, 'user-1')
+    expect(capturedSql).toContain("IN ('confirmed', 'possible')")
+    expect(capturedSql).not.toContain("certainty = 'confirmed'")
+  })
 })

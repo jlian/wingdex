@@ -124,7 +124,7 @@ struct SignInView: View {
                                 .buttonStyle(.borderedProminent)
 
                                 Button {
-                                    signIn { try await auth.signInWithPasskey() }
+                                    signIn { try await auth.signUpWithPasskey() }
                                 } label: {
                                     Text("Sign up")
                                         .font(.system(size: 14, weight: .medium))

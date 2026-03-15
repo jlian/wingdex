@@ -103,6 +103,14 @@ describe('taxonomy', () => {
       expect(match).not.toBeNull()
       expect(match!.common).toBe('American Robin')
     })
+
+    it('rejects domestic species with only one word overlap', () => {
+      // "Domestic Duck" has 2 words but only "duck" matches taxonomy entries.
+      // The threshold requires at least 2 word matches to prevent false positives.
+      expect(findBestMatch('Domestic Duck')).toBeNull()
+      expect(findBestMatch('Domestic Chicken')).toBeNull()
+      expect(findBestMatch('Pekin Duck')).toBeNull()
+    })
   })
 
   describe('normalizeSpeciesName', () => {

@@ -140,7 +140,6 @@ implemented first. See [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md).
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | POST | `/api/auth/finalize-passkey` | Session | Promote anon to real user (name only) |
-| GET | `/api/auth/providers` | None | List configured social providers |
 
 ## Implementation status
 
