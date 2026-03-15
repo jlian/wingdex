@@ -1,0 +1,93 @@
+name: iOS Build & Test
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'ios/**'
+      - 'openapi.yaml'
+      - 'functions/**'
+      - 'migrations/**'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (iOS Simulator)
+    runs-on: macos-26
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # -- Node + Wrangler server (for auth integration tests) --
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-macos-${{ hashFiles('package-lock.json') }}
+
+      - name: Install npm dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Apply local D1 migrations
+        run: printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local
+
+      - name: Start Wrangler server
+        run: |
+          npx wrangler pages dev dist --port 5000 --show-interactive-dev-session=false &
+          until curl -sf http://localhost:5000 > /dev/null 2>&1; do sleep 1; done
+          echo "Server ready on :5000"
+
+      # -- Xcode build + test --
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate GitInfo.swift
+        working-directory: ios
+        run: scripts/gen-git-info.sh
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Resolve SPM dependencies
+        working-directory: ios
+        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme WingDex
+
+      - name: Build for Simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) CI'
+
+      - name: Run tests
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project WingDex.xcodeproj \
+            -scheme WingDex \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -only-testing:WingDexTests \
+            CODE_SIGNING_ALLOWED=NO

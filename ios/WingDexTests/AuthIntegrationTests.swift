@@ -8,7 +8,13 @@ import XCTest
 /// the Bearer token auth flow works end-to-end from Swift code.
 final class AuthIntegrationTests: XCTestCase {
 
-    private let baseURL = Config.apiBaseURL
+    private let baseURL: URL = {
+        #if CI
+        URL(string: "http://localhost:5000")!
+        #else
+        Config.apiBaseURL
+        #endif
+    }()
     private let timeout: TimeInterval = 10
 
     // MARK: - Anonymous Sign-In + Bearer Auth
