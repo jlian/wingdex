@@ -67,7 +67,11 @@ struct PhotoSelectionView: View {
                 Task { await viewModel.processSelectedPhotos() }
             }
         }
-        .fullScreenCover(isPresented: $showCamera) {
+        .fullScreenCover(isPresented: $showCamera, onDismiss: {
+            if !viewModel.cameraPhotos.isEmpty {
+                Task { await viewModel.processSelectedPhotos() }
+            }
+        }) {
             CameraCaptureView { image in
                 viewModel.addCameraPhoto(image)
             }
