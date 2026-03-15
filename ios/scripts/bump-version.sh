@@ -80,7 +80,7 @@ sed_inplace "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: ${new_build}
 # Regenerate .xcodeproj so pbxproj stays in sync with project.yml
 if command -v xcodegen &> /dev/null; then
   [[ "$QUIET" == false ]] && echo "Running xcodegen..."
-  xcodegen generate > /dev/null 2>&1 || true
+  xcodegen generate
 else
   [[ "$QUIET" == false ]] && echo "Warning: xcodegen not found - run it manually to sync the .xcodeproj"
 fi
