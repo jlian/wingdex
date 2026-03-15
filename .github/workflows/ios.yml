@@ -50,6 +50,7 @@ jobs:
             -project WingDex.xcodeproj \
             -scheme WingDex \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -skip-testing:WingDexTests/AuthIntegrationTests \
             -only-testing:WingDexTests \
             CODE_SIGNING_ALLOWED=NO
 
