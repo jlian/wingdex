@@ -213,18 +213,17 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     .filter(candidate => candidate.species && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.2)
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5)
-    .map(candidate => {
+    .flatMap(candidate => {
       const match = findBestMatch(candidate.species)
-      if (!match) return null
+      if (!match) return []
       const species = `${match.common} (${match.scientific})`
 
-      return {
+      return [{
         species,
         confidence: candidate.confidence,
-        wikiTitle: match ? getWikiTitle(match.common) : undefined,
-      }
+        wikiTitle: getWikiTitle(match.common),
+      }]
     })
-    .filter(c => c != null)
 
   return {
     candidates,
