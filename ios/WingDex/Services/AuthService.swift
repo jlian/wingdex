@@ -27,7 +27,7 @@ final class AuthService: @unchecked Sendable {
     private(set) var signedSessionToken: String?
     private var sessionExpiry: Date?
     private let keychain = Keychain(service: Config.bundleID)
-        .accessibility(.whenPasscodeSetThisDeviceOnly)
+        .accessibility(.afterFirstUnlock)
 
     private static let tokenKey = "session_token"
     private static let signedTokenKey = "signed_session_token"
