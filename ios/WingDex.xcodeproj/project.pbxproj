@@ -528,7 +528,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -650,7 +650,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";

@@ -77,15 +77,16 @@ sed_inplace() {
 sed_inplace "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"${new_version}\"/" "$FILE"
 sed_inplace "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: ${new_build}/" "$FILE"
 
+# Regenerate .xcodeproj so pbxproj stays in sync with project.yml
+if command -v xcodegen &> /dev/null; then
+  [[ "$QUIET" == false ]] && echo "Running xcodegen..."
+  xcodegen generate > /dev/null 2>&1 || true
+else
+  [[ "$QUIET" == false ]] && echo "Warning: xcodegen not found - run it manually to sync the .xcodeproj"
+fi
+
 if [[ "$QUIET" == true ]]; then
   echo "$new_version"
 else
   echo "Updated: v${new_version} (build ${new_build})"
-
-  if command -v xcodegen &> /dev/null; then
-    echo "Running xcodegen..."
-    xcodegen generate
-  else
-    echo "Warning: xcodegen not found - run it manually to sync the .xcodeproj"
-  fi
 fi

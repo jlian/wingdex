@@ -14,7 +14,7 @@
     [
       "@semantic-release/git",
       {
-      "assets": ["project.yml", "package.json"],
+      "assets": ["project.yml", "package.json", "WingDex.xcodeproj/project.pbxproj"],
         "message": "chore(ios-release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],
