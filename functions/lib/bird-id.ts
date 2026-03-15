@@ -215,9 +215,8 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     .slice(0, 5)
     .map(candidate => {
       const match = findBestMatch(candidate.species)
-      const species = match
-        ? `${match.common} (${match.scientific})`
-        : candidate.species
+      if (!match) return null
+      const species = `${match.common} (${match.scientific})`
 
       return {
         species,
@@ -225,6 +224,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
         wikiTitle: match ? getWikiTitle(match.common) : undefined,
       }
     })
+    .filter(c => c != null)
 
   return {
     candidates,

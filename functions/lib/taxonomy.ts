@@ -111,7 +111,7 @@ export function findBestMatch(name: string): TaxonEntry | null {
       if (combined.includes(word)) score++
     }
 
-    if (score > bestScore && score >= Math.ceil(words.length / 2)) {
+    if (score > bestScore && score >= Math.max(2, Math.ceil(words.length / 2))) {
       bestScore = score
       bestEntry = taxonomy[index]
     }
