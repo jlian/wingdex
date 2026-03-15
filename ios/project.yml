@@ -5,7 +5,7 @@ options:
     iOS: "26.0"
   xcodeVersion: "26.0"
   createIntermediateGroups: true
-  postGenCommand: scripts/fix-icon-ref.sh
+  postGenCommand: scripts/fix-icon-ref.sh && scripts/gen-git-info.sh
 
 settings:
   base:

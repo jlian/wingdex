@@ -122,11 +122,9 @@ struct SettingsView: View {
                         Text("WingDex v\(version) (\(build))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        #if DEBUG
-                        Text("dev build")
+                        Text("\(GitInfo.branch)@\(GitInfo.commit)")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
-                        #endif
                     }
                     Spacer()
                 }

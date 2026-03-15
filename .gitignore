@@ -46,3 +46,4 @@ screenshots/
 .playwright-mcp/
 wiki-validation-report.txt
 src/assets/csv/
+ios/WingDex/App/GitInfo.swift

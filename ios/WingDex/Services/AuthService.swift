@@ -345,6 +345,7 @@ final class AuthService: @unchecked Sendable {
         Task.detached { [weak self] in
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
+            await MainActor.run { self.clearAPICookies() }
             try? await self.updateProfile(name: birdName, image: avatarDataUrl)
             await MainActor.run { self.clearAPICookies() }
         }
