@@ -22,7 +22,7 @@ const DEX_QUERY = `
   FROM observation obs
   JOIN outing o ON obs.outingId = o.id
   LEFT JOIN dex_meta dm ON dm.userId = obs.userId AND dm.speciesName = obs.speciesName
-  WHERE obs.userId = ?1 AND obs.certainty = 'confirmed'
+  WHERE obs.userId = ?1 AND obs.certainty IN ('confirmed', 'possible')
   GROUP BY obs.speciesName
   ORDER BY obs.speciesName
 `
