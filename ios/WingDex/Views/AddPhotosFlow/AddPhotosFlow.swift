@@ -57,7 +57,7 @@ struct AddPhotosFlow: View {
                 }
             }
         }
-        .confirmationDialog("Discard progress?", isPresented: $showCloseConfirm, titleVisibility: .visible) {
+        .alert("Discard progress?", isPresented: $showCloseConfirm) {
             Button("Discard", role: .destructive) { dismissWizard() }
             Button("Continue Uploading", role: .cancel) {}
         } message: {

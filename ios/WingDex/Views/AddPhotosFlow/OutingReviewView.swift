@@ -30,8 +30,10 @@ struct OutingReviewView: View {
     @State private var overriddenStartTime: Date?
 
     /// Place search via MapKit autocomplete
-    @State private var placeQuery = ""
     @State private var placeCompleter = PlaceSearchCompleter()
+    @State private var isEditingLocation = false
+    @State private var locationSearchQuery = ""
+    @FocusState private var isLocationFieldFocused: Bool
     @State private var overriddenCoords: CLLocationCoordinate2D?
 
     /// Whether to add photos to an existing matching outing
@@ -88,31 +90,10 @@ struct OutingReviewView: View {
                 existingOutingSection(existing)
             }
 
-            // Location name and place search (only when not using existing outing)
+            // Location name with inline place search
             if !useExistingOuting {
                 Section("Location") {
-                    if isLoadingLocation {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Identifying location from GPS...")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        TextField("Location name", text: $locationName, prompt: Text("e.g., Central Park, NYC"))
-
-                        if !suggestedLocation.isEmpty && suggestedLocation != locationName {
-                            Button("Use: \(suggestedLocation)") {
-                                locationName = suggestedLocation
-                            }
-                            .font(.subheadline)
-                        }
-                    }
-                }
-
-                Section("Search for a Place") {
-                    placeSearchSection
+                    locationSection
                 }
             }
 
@@ -202,43 +183,102 @@ struct OutingReviewView: View {
         }
     }
 
-    // MARK: - Place Search (MapKit Autocomplete)
+    // MARK: - Location Section (unified display + search)
 
-    private var placeSearchSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            TextField("Search for a place...", text: $placeQuery)
-                .onChange(of: placeQuery) {
-                    placeCompleter.search(query: placeQuery)
+    @ViewBuilder
+    private var locationSection: some View {
+        if isLoadingLocation {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Identifying location from GPS...")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else if isEditingLocation {
+            // Inline search field replaces the static display
+            TextField("Search for a place...", text: $locationSearchQuery)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                .focused($isLocationFieldFocused)
+                .onSubmit {
+                    // If user presses return with text, use it as the location name
+                    if !locationSearchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+                        locationName = locationSearchQuery
+                    }
+                    dismissLocationSearch()
+                }
+                .onChange(of: locationSearchQuery) {
+                    placeCompleter.search(query: locationSearchQuery)
+                }
+                .onAppear {
+                    locationSearchQuery = ""
+                }
+                .task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    isLocationFieldFocused = true
                 }
 
-            // Native MapKit autocomplete results rendered inline in Form
-            if !placeCompleter.results.isEmpty && !placeQuery.isEmpty {
-                ForEach(placeCompleter.results) { item in
-                    Button {
-                        selectCompletion(item)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(.subheadline)
-                            if !item.subtitle.isEmpty {
-                                Text(item.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+            // Autocomplete results
+            ForEach(placeCompleter.results) { item in
+                Button {
+                    selectCompletion(item)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        if !item.subtitle.isEmpty {
+                            Text(item.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
+                .tint(.primary)
             }
 
-            if let coords = overriddenCoords {
-                Label(
-                    "\(coords.latitude, specifier: "%.4f"), \(coords.longitude, specifier: "%.4f")",
-                    systemImage: "mappin.circle.fill"
-                )
-                .font(.caption)
-                .foregroundStyle(.green)
+            if !suggestedLocation.isEmpty && suggestedLocation != locationName
+                && suggestedLocation != locationSearchQuery {
+                Button("Use GPS: \(suggestedLocation)") {
+                    locationName = suggestedLocation
+                    dismissLocationSearch()
+                }
+                .font(.subheadline)
+            }
+        } else {
+            // Static display with pencil to edit
+            HStack {
+                Text(locationName.isEmpty ? "Tap to set location" : locationName)
+                    .foregroundStyle(locationName.isEmpty ? .secondary : .primary)
+                Spacer()
+                Button {
+                    isEditingLocation = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isEditingLocation = true
+            }
+
+            if !suggestedLocation.isEmpty && suggestedLocation != locationName {
+                Button("Use GPS: \(suggestedLocation)") {
+                    locationName = suggestedLocation
+                }
+                .font(.subheadline)
             }
         }
+    }
+
+    private func dismissLocationSearch() {
+        isEditingLocation = false
+        locationSearchQuery = ""
+        placeCompleter.results = []
     }
 
     // MARK: - Photo Grid (horizontal scroll with context menus)
@@ -335,7 +375,8 @@ struct OutingReviewView: View {
         inferredCountryCode = nil
         overriddenStartTime = nil
         overriddenCoords = nil
-        placeQuery = ""
+        isEditingLocation = false
+        locationSearchQuery = ""
         matchingOuting = nil
         useExistingOuting = false
         isLoadingLocation = false
@@ -559,12 +600,14 @@ struct OutingReviewView: View {
 
     /// Select a place from MapKit autocomplete results.
     private func selectCompletion(_ item: PlaceSearchCompleter.PlaceResult) {
-        placeQuery = ""
-        placeCompleter.results = []
+        // Build the search request BEFORE dismissing, since dismiss clears the snapshot
+        let searchRequest = placeCompleter.buildRequest(for: item)
+        dismissLocationSearch()
 
-        // Resolve the completion to coordinates via MKLocalSearch
+        guard let searchRequest else { return }
         Task {
-            guard let mapItem = await placeCompleter.resolve(item) else { return }
+            let search = MKLocalSearch(request: searchRequest)
+            guard let mapItem = try? await search.start().mapItems.first else { return }
             overriddenCoords = mapItem.location.coordinate
 
             let info = Self.extractPlaceInfo(from: mapItem)
@@ -725,12 +768,14 @@ final class PlaceSearchCompleter: NSObject {
     var results: [PlaceResult] = []
     private var completer: MKLocalSearchCompleter?
     private var bridge: CompleterBridge?
+    /// Snapshot of completions at the time results were last updated.
+    private var completionSnapshot: [MKLocalSearchCompletion] = []
 
     struct PlaceResult: Identifiable {
         let id = UUID()
         let title: String
         let subtitle: String
-        /// Index into the completer's results array for resolving to MKLocalSearch.Request.
+        /// Index into the snapshot captured when this result was created.
         let index: Int
     }
 
@@ -740,7 +785,9 @@ final class PlaceSearchCompleter: NSObject {
             c.resultTypes = [.address, .pointOfInterest]
             let b = CompleterBridge { [weak self] completions in
                 Task { @MainActor in
-                    self?.results = completions.enumerated().map { i, c in
+                    guard let self else { return }
+                    self.completionSnapshot = completions
+                    self.results = completions.enumerated().map { i, c in
                         PlaceResult(title: c.title, subtitle: c.subtitle, index: i)
                     }
                 }
@@ -752,18 +799,25 @@ final class PlaceSearchCompleter: NSObject {
 
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
             results = []
+            completionSnapshot = []
             return
         }
         completer?.queryFragment = query
     }
 
-    /// Resolve a search result to coordinates.
+    /// Resolve a search result to coordinates using the captured snapshot.
     func resolve(_ result: PlaceResult) async -> MKMapItem? {
-        guard let completer, result.index < completer.results.count else { return nil }
-        let completion = completer.results[result.index]
-        let request = MKLocalSearch.Request(completion: completion)
+        guard let request = buildRequest(for: result) else { return nil }
         let search = MKLocalSearch(request: request)
         return try? await search.start().mapItems.first
+    }
+
+    /// Build an MKLocalSearch.Request from the captured snapshot. Call synchronously
+    /// BEFORE clearing results, since dismiss wipes the snapshot.
+    func buildRequest(for result: PlaceResult) -> MKLocalSearch.Request? {
+        guard result.index < completionSnapshot.count else { return nil }
+        let completion = completionSnapshot[result.index]
+        return MKLocalSearch.Request(completion: completion)
     }
 }
 
