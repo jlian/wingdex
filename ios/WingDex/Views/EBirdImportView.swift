@@ -20,13 +20,26 @@ struct EBirdImportView: View {
         ("America/Chicago", "Central"),
         ("America/New_York", "Eastern"),
         ("America/Puerto_Rico", "Atlantic"),
+        ("America/Sao_Paulo", "Brazil"),
+        ("America/Argentina/Buenos_Aires", "Argentina"),
+        ("America/Bogota", "Colombia"),
+        ("America/Mexico_City", "Mexico"),
         ("Europe/London", "London"),
         ("Europe/Paris", "Central Europe"),
+        ("Europe/Helsinki", "Eastern Europe"),
+        ("Europe/Moscow", "Moscow"),
+        ("Africa/Nairobi", "East Africa"),
+        ("Africa/Lagos", "West Africa"),
+        ("Africa/Johannesburg", "South Africa"),
+        ("Asia/Dubai", "Gulf"),
         ("Asia/Kolkata", "India"),
+        ("Asia/Bangkok", "Southeast Asia"),
         ("Asia/Shanghai", "China"),
         ("Asia/Taipei", "Taipei"),
         ("Asia/Tokyo", "Japan"),
-        ("Australia/Sydney", "Sydney"),
+        ("Asia/Seoul", "Korea"),
+        ("Australia/Perth", "Western Australia"),
+        ("Australia/Sydney", "Eastern Australia"),
         ("Pacific/Auckland", "New Zealand"),
     ]
 
@@ -35,7 +48,7 @@ struct EBirdImportView: View {
     @State private var selectedTimezone: String = {
         let current = TimeZone.current.identifier
         let knownIds = EBirdImportView.timezonePresets.map(\.value)
-        return knownIds.contains(current) ? current : knownIds[0]
+        return knownIds.contains(current) ? current : "observation-local"
     }()
     @State private var showFilePicker = false
     @State private var showHelp = false

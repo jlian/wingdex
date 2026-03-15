@@ -608,11 +608,20 @@ struct OutingReviewView: View {
         Task {
             let search = MKLocalSearch(request: searchRequest)
             guard let mapItem = try? await search.start().mapItems.first else { return }
-            overriddenCoords = mapItem.location.coordinate
+
+            let coord = mapItem.placemark.coordinate
+            if CLLocationCoordinate2DIsValid(coord) {
+                overriddenCoords = coord
+            }
 
             let info = Self.extractPlaceInfo(from: mapItem)
-            locationName = info.shortName
-            suggestedLocation = info.shortName
+            if !info.shortName.isEmpty {
+                locationName = info.shortName
+                suggestedLocation = info.shortName
+            } else if let name = mapItem.name, !name.isEmpty {
+                locationName = name
+                suggestedLocation = name
+            }
             inferredCountryCode = info.countryCode
             inferredStateProvince = info.stateProvince
         }
