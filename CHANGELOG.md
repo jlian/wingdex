@@ -1,3 +1,32 @@
+# [1.18.0](https://github.com/jlian/wingdex/compare/v1.17.3...v1.18.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **BirdId:** drop AI candidates with no taxonomy match ([cd36202](https://github.com/jlian/wingdex/commit/cd36202b8e8af1f13d9548b7a878d6f7a9da1743))
+* **BirdId:** use flatMap instead of map+filter for type-safe candidate filtering ([3e3fa5a](https://github.com/jlian/wingdex/commit/3e3fa5ad9554f54d1237711afe96f0c9bb63031f))
+* **ci:** replace GNU timeout with portable loop for macOS runner ([82fd145](https://github.com/jlian/wingdex/commit/82fd145760eeb782c00a35e8e951fe38cc2d527d))
+* **Deps:** resolve @tailwindcss/vite peer dep conflict for Vite 8 ([573f8a5](https://github.com/jlian/wingdex/commit/573f8a5ca678e1ca2958b0b2bb440afeb20bccee))
+* **Dex:** include possible observations in dex computation ([69e5976](https://github.com/jlian/wingdex/commit/69e5976b8a11a9f4f79ff57407acd1ddcd9600da))
+* **Import:** expand timezone list and fix place search coordinates ([c276c7c](https://github.com/jlian/wingdex/commit/c276c7ca6f8b3f5b12accbb2981a4a9c418e5923))
+* **iOS:** address PR review feedback ([df32a7e](https://github.com/jlian/wingdex/commit/df32a7eacc2f1bc6035be1f01a12cde4b68a7558))
+* **iOS:** auto-process camera photos after capture ([0767d24](https://github.com/jlian/wingdex/commit/0767d240823c86294f78906c03c2d9ae6b052cb4))
+* **iOS:** fix crop lag and orientation mismatch ([cf99f35](https://github.com/jlian/wingdex/commit/cf99f35e03bb6429934cd8643e200c600a3f105c))
+* **iOS:** fix CropView renderer scale, disable apply while loading, check API in CI health ([cc1e1ed](https://github.com/jlian/wingdex/commit/cc1e1ed2683971580a738f63539e4f2aa38ece12))
+* **iOS:** fix place search race condition and improve location UX ([c5b7615](https://github.com/jlian/wingdex/commit/c5b7615219a0d6b70e781caf77931e0b205ea0bd))
+* **iOS:** hide confirm/possible buttons when no species identified ([7d3150b](https://github.com/jlian/wingdex/commit/7d3150b3d6028c6d681e4aff649701e2f3c22108))
+* **iOS:** keep pbxproj version in sync with project.yml ([4a108f5](https://github.com/jlian/wingdex/commit/4a108f5a26f876b161e4de0647e4ff84fe95bf83))
+* **iOS:** match row heights between WingDex and Outings lists ([d223cf9](https://github.com/jlian/wingdex/commit/d223cf986deeaff7a1622d0224d542db28f7370e))
+* **iOS:** remove xcodegen error suppression, use npm run dev in CI ([b8b5528](https://github.com/jlian/wingdex/commit/b8b5528c862157a0ee3fc06911ac3ddbeb28aeef))
+* **iOS:** use afterFirstUnlock keychain accessibility for sessions ([29f718e](https://github.com/jlian/wingdex/commit/29f718e002462dc6b3f31d869aa9123be073e8c7))
+* **Web:** remove old bird icon from boot shell ([a62dd1b](https://github.com/jlian/wingdex/commit/a62dd1b4662a31198103a2006a9444694167c4cd))
+
+
+### Features
+
+* **Auth:** iOS passkey sign-up, session fixes, and test coverage ([9924415](https://github.com/jlian/wingdex/commit/9924415ee3a0bc5512c10625e4632a4f9a1a01d6))
+* **iOS:** show git branch/commit in settings, add FunNames tests ([04a3eb0](https://github.com/jlian/wingdex/commit/04a3eb066520d56888e88d28a31ecc29fb52f162))
+
 ## [1.17.3](https://github.com/jlian/wingdex/compare/v1.17.2...v1.17.3) (2026-03-13)
 
 
