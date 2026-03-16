@@ -2,8 +2,7 @@
   "branches": ["main"],
   "tagFormat": "v${version}",
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
+    "./scripts/sr-filter-ios.cjs",
     [
       "@semantic-release/changelog",
       {
