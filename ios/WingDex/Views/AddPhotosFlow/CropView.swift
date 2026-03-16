@@ -142,6 +142,7 @@ struct CropView: View {
                 } label: {
                     Image(systemName: "checkmark")
                 }
+                .disabled(cachedImage == nil)
             }
             ToolbarItemGroup(placement: .bottomBar) {
                 Button {
@@ -182,7 +183,9 @@ struct CropView: View {
     private func normalizedImage(from data: Data) -> UIImage? {
         guard let image = UIImage(data: data) else { return nil }
         if image.imageOrientation == .up { return image }
-        return UIGraphicsImageRenderer(size: image.size).image { _ in
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
             image.draw(in: CGRect(origin: .zero, size: image.size))
         }
     }
