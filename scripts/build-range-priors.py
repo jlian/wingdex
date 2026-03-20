@@ -33,6 +33,7 @@ Grid reference:
 import gzip
 import json
 import os
+import struct
 import sys
 import time
 from pathlib import Path
@@ -43,6 +44,7 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 GPKG_PATH = WORKSPACE / "tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
 OUTPUT_DIR = WORKSPACE / "tmp" / "range-priors" / "cells"
 MANIFEST_PATH = WORKSPACE / "tmp" / "range-priors" / "manifest.json"
+SCRATCH_DIR = WORKSPACE / "tmp" / "range-priors" / "scratch"
 
 # Grid constants (EPSG:8857 Equal Earth, matching the runtime module)
 GRID_COLS = 1276
@@ -155,26 +157,34 @@ def main():
     print(f"  Matched: {matched}, Unmatched: {unmatched}, Skipped: {skipped}")
     print(f"  Unique species: {len(species_polys)}")
 
-    # Phase 2: Rasterize each species onto the grid
-    print(f"\nRasterizing {len(species_polys)} species...")
+    # Phase 2: Rasterize each species and append records to per-cell scratch files.
+    # This avoids holding all cell data in memory (which can exceed 50 GB).
+    print(f"\nRasterizing {len(species_polys)} species (streaming to disk)...")
     t1 = time.time()
 
-    # cell_data: {(row, col): {code: monthly_array}}
-    cell_data: dict[tuple[int, int], dict[str, np.ndarray]] = {}
+    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
+    # Clean scratch dir from any previous run
+    for old in SCRATCH_DIR.iterdir():
+        old.unlink()
+
+    cells_touched: set[tuple[int, int]] = set()
     processed = 0
 
     for code, polys in species_polys.items():
-        padded_code = code.ljust(8)[:8]
+        padded_code = code.ljust(8)[:8].encode("ascii")
 
         # Group polygons by seasonal type and rasterize each season
         by_season: dict[int, list] = {}
         for proj_geom, seasonal in polys:
             by_season.setdefault(seasonal, []).append(proj_geom)
 
+        # Build a per-species 12-month accumulator only for the cells this species touches.
+        # Key = (row, col), value = bytearray(12)
+        species_cells: dict[tuple[int, int], bytearray] = {}
+
         for seasonal, geoms in by_season.items():
             months = SEASONAL_MONTHS.get(seasonal, SEASONAL_MONTHS[1])
 
-            # Rasterize all polygons for this species+season in one call
             shapes = [(g, 1) for g in geoms]
             try:
                 mask = rasterize(
@@ -188,42 +198,44 @@ def main():
             except Exception:
                 continue
 
-            # Extract cells where species is present
             rows, cols = np.where(mask == 1)
             for r, c in zip(rows.tolist(), cols.tolist()):
                 key = (r, c)
-                if key not in cell_data:
-                    cell_data[key] = {}
-                if padded_code not in cell_data[key]:
-                    cell_data[key][padded_code] = np.zeros(12, dtype=np.uint8)
+                if key not in species_cells:
+                    species_cells[key] = bytearray(12)
                 for m in months:
-                    cell_data[key][padded_code][m] = max(
-                        cell_data[key][padded_code][m], PRESENCE_VALUE
-                    )
+                    species_cells[key][m] = max(species_cells[key][m], PRESENCE_VALUE)
+
+        # Append this species' 20-byte records to per-cell scratch files
+        for (r, c), monthly in species_cells.items():
+            cells_touched.add((r, c))
+            scratch_path = SCRATCH_DIR / f"{r}-{c}.bin"
+            with open(scratch_path, "ab") as f:
+                f.write(padded_code + bytes(monthly))
 
         processed += 1
         if processed % 500 == 0:
             elapsed = time.time() - t1
-            print(f"  {processed}/{len(species_polys)} species rasterized, {len(cell_data)} cells, {elapsed:.0f}s")
+            print(f"  {processed}/{len(species_polys)} species rasterized, {len(cells_touched)} cells, {elapsed:.0f}s")
 
     elapsed = time.time() - t1
     print(f"Rasterized {processed} species in {elapsed:.0f}s")
-    print(f"Grid cells with data: {len(cell_data)}")
+    print(f"Grid cells with data: {len(cells_touched)}")
 
-    # Phase 3: Write per-cell blobs
+    # Phase 3: Compress scratch files into final gzipped blobs
     print(f"\nWriting cell blobs to {OUTPUT_DIR}/...")
     total_bytes = 0
     cells_written = 0
 
-    for (r, c), species_dict in sorted(cell_data.items()):
-        records = []
-        for padded_code, monthly in sorted(species_dict.items()):
-            records.append(padded_code.encode("ascii") + monthly.tobytes())
-        blob = gzip.compress(b"".join(records), compresslevel=6)
+    for (r, c) in sorted(cells_touched):
+        scratch_path = SCRATCH_DIR / f"{r}-{c}.bin"
+        raw = scratch_path.read_bytes()
+        blob = gzip.compress(raw, compresslevel=6)
         out_path = OUTPUT_DIR / f"{r}-{c}.bin.gz"
         out_path.write_bytes(blob)
         total_bytes += len(blob)
         cells_written += 1
+        scratch_path.unlink()  # Free disk space as we go
 
     print(f"Total output: {total_bytes / 1024 / 1024:.1f} MB in {cells_written:,} files")
 

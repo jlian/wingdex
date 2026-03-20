@@ -9,7 +9,7 @@
  * Usage:
  *   node scripts/upload-range-priors-local.mjs
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { createHash } from 'crypto'
@@ -55,11 +55,13 @@ db.exec(`
   )
 `)
 
-// Clear old data
+// Clear old data and stale blob files
 const oldCount = db.prepare('SELECT count(*) as c FROM _mf_objects').get().c
 if (oldCount > 0) {
-  console.log(`  Clearing ${oldCount} old entries...`)
+  console.log(`  Clearing ${oldCount} old entries and stale blob files...`)
   db.exec('DELETE FROM _mf_objects')
+  rmSync(blobDir, { recursive: true, force: true })
+  mkdirSync(blobDir, { recursive: true })
 }
 
 const insert = db.prepare(`
