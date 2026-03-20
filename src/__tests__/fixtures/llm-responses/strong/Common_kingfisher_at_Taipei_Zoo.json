@@ -1,0 +1,54 @@
+{
+  "imageFile": "Common_kingfisher_at_Taipei_Zoo.jpeg",
+  "context": {
+    "lat": 24.998,
+    "lon": 121.581,
+    "month": 11,
+    "locationName": "Taipei Zoo, Taiwan"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.92,\"plumage\":null},{\"species\":\"Blue-eared Kingfisher (Alcedo meninting)\",\"confidence\":0.55,\"plumage\":null},{\"species\":\"Azure Kingfisher (Ceyx azureus)\",\"confidence\":0.5,\"plumage\":null}],\"birdCenter\":[68,52],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Common Kingfisher (Alcedo atthis)",
+        "confidence": 0.92,
+        "plumage": null
+      },
+      {
+        "species": "Blue-eared Kingfisher (Alcedo meninting)",
+        "confidence": 0.55,
+        "plumage": null
+      },
+      {
+        "species": "Azure Kingfisher (Ceyx azureus)",
+        "confidence": 0.5,
+        "plumage": null
+      }
+    ],
+    "birdCenter": [
+      68,
+      52
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5012,
+      "height": 3341
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
+  },
+  "durationMs": 10942,
+  "capturedAt": "2026-03-17T02:50:45.731Z"
+}

@@ -38,10 +38,11 @@ Rules:
 - If no bird is present, return candidates: [].
 
 Candidates:
-- Return 2-5 candidates total, sorted by confidence descending.
-- Always return at least 2 candidates. If genuinely certain, the second candidate can be lower confidence but must be the next most plausible species.
+- Return 3-5 candidates total, sorted by confidence descending.
+- Always return at least 3 candidates. Include plausible look-alikes or confusing species even at low confidence.
 - species format: "Common Name (Scientific name)".
 - Do not return duplicate species names.
+- For each candidate, include a "plumage" string if determinable: e.g. "male", "female", "juvenile", "immature", "male breeding", "female nonbreeding", "eclipse male", "first winter", or null if indeterminate.
 
 Confidence:
 - 0.90-1.00 diagnostic field marks clearly visible
@@ -52,11 +53,11 @@ Confidence:
 - Use the full 0.30-1.00 range. Do not cluster all answers at 0.85-0.95.
 
 Hard constraints:
-- If candidates is non-empty, it must contain 2-5 candidates.
+- If candidates is non-empty, it must contain 3-5 candidates.
 - If candidates is empty, birdCenter and birdSize must be null.
 
 Output JSON only:
-- Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87},{"species":"Alternative Common Name (Scientific name)","confidence":0.51}],"birdCenter":[35,60],"birdSize":"medium","multipleBirds":false}
+- Bird present: {"candidates":[{"species":"Common Name (Scientific name)","confidence":0.87,"plumage":"male"},{"species":"Second Species (Scientific name)","confidence":0.51,"plumage":null},{"species":"Third Species (Scientific name)","confidence":0.30,"plumage":"juvenile"}],"birdCenter":[35,60],"birdSize":"medium","multipleBirds":false}
 - No bird: {"candidates":[],"birdCenter":null,"birdSize":null,"multipleBirds":false}
 
 multipleBirds:

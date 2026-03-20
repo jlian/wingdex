@@ -1,0 +1,54 @@
+{
+  "imageFile": "Black-throated_blue_warbler_in_Chicago_park.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Montrose Point, Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Black-throated Blue Warbler (Setophaga caerulescens)\",\"confidence\":0.8,\"plumage\":\"male\"},{\"species\":\"Black-and-white Warbler (Mniotilta varia)\",\"confidence\":0.4,\"plumage\":null},{\"species\":\"Cerulean Warbler (Setophaga cerulea)\",\"confidence\":0.3,\"plumage\":null}],\"birdCenter\":[55,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Black-throated Blue Warbler (Setophaga caerulescens)",
+        "confidence": 0.8,
+        "plumage": "male"
+      },
+      {
+        "species": "Black-and-white Warbler (Mniotilta varia)",
+        "confidence": 0.4,
+        "plumage": null
+      },
+      {
+        "species": "Cerulean Warbler (Setophaga cerulea)",
+        "confidence": 0.3,
+        "plumage": null
+      }
+    ],
+    "birdCenter": [
+      55,
+      70
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 2062,
+      "height": 3093
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "durationMs": 10158,
+  "capturedAt": "2026-03-17T02:49:11.275Z"
+}

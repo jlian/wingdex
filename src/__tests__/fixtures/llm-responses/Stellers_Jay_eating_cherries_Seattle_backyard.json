@@ -6,37 +6,49 @@
     "month": 5,
     "locationName": "Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Steller's Jay (Cyanocitta stelleri)\",\"confidence\":0.95},{\"species\":\"Blue Jay (Cyanocitta cristata)\",\"confidence\":0.4}],\"birdCenter\":[45,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Steller's Jay (Cyanocitta stelleri)\",\"confidence\":0.95,\"plumage\":null},{\"species\":\"Blue Jay (Cyanocitta cristata)\",\"confidence\":0.4,\"plumage\":null},{\"species\":\"California Scrub-Jay (Aphelocoma californica)\",\"confidence\":0.35,\"plumage\":null}],\"birdCenter\":[40,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Steller's Jay (Cyanocitta stelleri)",
-        "confidence": 0.95
+        "confidence": 0.95,
+        "plumage": null
       },
       {
         "species": "Blue Jay (Cyanocitta cristata)",
-        "confidence": 0.4
+        "confidence": 0.4,
+        "plumage": null
+      },
+      {
+        "species": "California Scrub-Jay (Aphelocoma californica)",
+        "confidence": 0.35,
+        "plumage": null
       }
     ],
     "birdCenter": [
-      45,
-      55
+      40,
+      50
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4957,
+      "height": 3305
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1564,
-  "capturedAt": "2026-02-24T00:41:34.974Z",
-  "promotedAt": "2026-02-24T01:18:06.943Z"
+  "durationMs": 2763,
+  "capturedAt": "2026-03-17T02:41:24.050Z"
 }

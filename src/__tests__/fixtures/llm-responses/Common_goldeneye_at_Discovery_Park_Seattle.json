@@ -6,16 +6,23 @@
     "month": 0,
     "locationName": "Discovery Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.8},{\"species\":\"Common Goldeneye (Bucephala clangula)\",\"confidence\":0.75}],\"birdCenter\":[65,40],\"birdSize\":\"small\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.85,\"plumage\":\"nonbreeding\"},{\"species\":\"Common Goldeneye (Bucephala clangula)\",\"confidence\":0.8,\"plumage\":\"male\"},{\"species\":\"Barrow's Goldeneye (Bucephala islandica)\",\"confidence\":0.5,\"plumage\":\"male\"}],\"birdCenter\":[65,40],\"birdSize\":\"small\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
         "species": "Glaucous-winged Gull (Larus glaucescens)",
-        "confidence": 0.8
+        "confidence": 0.85,
+        "plumage": "nonbreeding"
       },
       {
         "species": "Common Goldeneye (Bucephala clangula)",
-        "confidence": 0.75
+        "confidence": 0.8,
+        "plumage": "male"
+      },
+      {
+        "species": "Barrow's Goldeneye (Bucephala islandica)",
+        "confidence": 0.5,
+        "plumage": "male"
       }
     ],
     "birdCenter": [
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3879,
+      "height": 2586
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1775,
-  "capturedAt": "2026-02-24T01:01:26.800Z",
-  "promotedAt": "2026-02-24T01:18:06.936Z"
+  "durationMs": 3820,
+  "capturedAt": "2026-03-17T02:41:32.785Z"
 }

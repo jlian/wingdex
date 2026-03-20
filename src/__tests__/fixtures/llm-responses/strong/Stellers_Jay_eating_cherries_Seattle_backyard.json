@@ -1,0 +1,59 @@
+{
+  "imageFile": "Stellers_Jay_eating_cherries_Seattle_backyard.jpg",
+  "context": {
+    "lat": 47.6399,
+    "lon": -122.4039,
+    "month": 5,
+    "locationName": "Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Steller's Jay (Cyanocitta stelleri)\",\"confidence\":0.8,\"plumage\":null},{\"species\":\"California Scrub-Jay (Aphelocoma californica)\",\"confidence\":0.5,\"plumage\":null},{\"species\":\"Pinyon Jay (Gymnorhinus cyanocephalus)\",\"confidence\":0.35,\"plumage\":null},{\"species\":\"Blue Jay (Cyanocitta cristata)\",\"confidence\":0.3,\"plumage\":null}],\"birdCenter\":[57,48],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Steller's Jay (Cyanocitta stelleri)",
+        "confidence": 0.8,
+        "plumage": null
+      },
+      {
+        "species": "California Scrub-Jay (Aphelocoma californica)",
+        "confidence": 0.5,
+        "plumage": null
+      },
+      {
+        "species": "Pinyon Jay (Gymnorhinus cyanocephalus)",
+        "confidence": 0.35,
+        "plumage": null
+      },
+      {
+        "species": "Blue Jay (Cyanocitta cristata)",
+        "confidence": 0.3,
+        "plumage": null
+      }
+    ],
+    "birdCenter": [
+      57,
+      48
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4957,
+      "height": 3305
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "durationMs": 12102,
+  "capturedAt": "2026-03-17T02:48:40.000Z"
+}

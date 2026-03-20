@@ -1,0 +1,54 @@
+{
+  "imageFile": "Hairy_woodpecker_on_mossy_tree_Carkeek_Park.jpg",
+  "context": {
+    "lat": 47.7117,
+    "lon": -122.3771,
+    "month": 6,
+    "locationName": "Carkeek Park, Seattle, WA"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Downy Woodpecker (Dryobates pubescens)\",\"confidence\":0.8,\"plumage\":\"female\"},{\"species\":\"Hairy Woodpecker (Dryobates villosus)\",\"confidence\":0.52,\"plumage\":\"female\"},{\"species\":\"Eurasian Three-toed Woodpecker (Picoides tridactylus)\",\"confidence\":0.3,\"plumage\":null}],\"birdCenter\":[33,40],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Downy Woodpecker (Dryobates pubescens)",
+        "confidence": 0.8,
+        "plumage": "female"
+      },
+      {
+        "species": "Hairy Woodpecker (Dryobates villosus)",
+        "confidence": 0.52,
+        "plumage": "female"
+      },
+      {
+        "species": "Eurasian Three-toed Woodpecker (Picoides tridactylus)",
+        "confidence": 0.3,
+        "plumage": null
+      }
+    ],
+    "birdCenter": [
+      33,
+      40
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5083,
+      "height": 3389
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "durationMs": 10204,
+  "capturedAt": "2026-03-17T02:48:10.978Z"
+}

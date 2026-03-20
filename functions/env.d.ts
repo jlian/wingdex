@@ -1,6 +1,7 @@
 interface Env {
   DB: D1Database
   AI: Ai
+  RANGE_PRIORS: R2Bucket
   BETTER_AUTH_URL: string
   BETTER_AUTH_SECRET: string
   GITHUB_CLIENT_ID: string

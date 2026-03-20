@@ -89,6 +89,9 @@ final class AddPhotosViewModel {
     /// AI candidates for the photo currently being confirmed.
     var currentCandidates: [IdentifiedCandidate] = []
 
+    /// Whether range-prior data was used to adjust confidence.
+    var rangeAdjusted = false
+
     /// Why the crop UI is being shown. This is driven by the same AI response
     /// conditions as the web flow rather than inferred from currentCandidates.
     var cropPromptContext: CropPromptContext = .manualRecrop
@@ -319,6 +322,7 @@ final class AddPhotosViewModel {
         currentOutingId = outingId
         photoResults = []
         currentCandidates = []
+        rangeAdjusted = false
         cropPromptContext = .manualRecrop
         currentPhotoIndex = 0
 
@@ -384,6 +388,7 @@ final class AddPhotosViewModel {
             guard let uiImage = UIImage(data: imageToSend) else {
                 log.warning("Could not create UIImage for photo \(photo.id)")
                 currentCandidates = []
+                rangeAdjusted = false
                 currentStep = .perPhotoConfirm
                 return
             }
@@ -414,7 +419,7 @@ final class AddPhotosViewModel {
             // Fast model first
             let fastResult = try await service.identifyBird(request)
             let fastCandidates = (fastResult.candidates ?? []).map {
-                IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle)
+                IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage)
             }
             let fastCropBox: CropBoxResult? = fastResult.cropBox.map {
                 CropBoxResult(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
@@ -439,6 +444,7 @@ final class AddPhotosViewModel {
                     cropPromptContext = .noDetection
                 }
                 currentStep = .manualCrop
+                rangeAdjusted = false
                 return
             }
 
@@ -451,6 +457,7 @@ final class AddPhotosViewModel {
             var finalCandidates = fastCandidates
             var finalCropBox = fastCropBox
             var finalMultipleBirds = fastResult.multipleBirds ?? false
+            var finalRangeAdjusted = fastResult.rangeAdjusted ?? false
 
             if shouldEscalate {
                 processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Re-analyzing with enhanced model..."
@@ -477,9 +484,10 @@ final class AddPhotosViewModel {
 
                 let strongResult = try await service.identifyBird(request)
                 finalCandidates = (strongResult.candidates ?? []).map {
-                    IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle)
+                    IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage)
                 }
                 finalMultipleBirds = strongResult.multipleBirds ?? false
+                finalRangeAdjusted = strongResult.rangeAdjusted ?? false
                 if let box = strongResult.cropBox {
                     finalCropBox = CropBoxResult(x: box.x, y: box.y, width: box.width, height: box.height)
                     storeCropBox(photoId: photo.id, cropBox: finalCropBox!)
@@ -488,6 +496,7 @@ final class AddPhotosViewModel {
 
             log.info("Found \(finalCandidates.count) candidates for photo \(photoIndex + 1)")
             photoProgress = 100
+            rangeAdjusted = finalRangeAdjusted
             try? await Task.sleep(for: .milliseconds(240))
 
             if finalCandidates.isEmpty && !isCropped {
@@ -507,6 +516,7 @@ final class AddPhotosViewModel {
             log.error("Species ID failed for photo \(photoIndex + 1): \(error.localizedDescription)")
             self.error = error.localizedDescription
             currentCandidates = []
+            rangeAdjusted = false
             currentStep = .perPhotoConfirm
         }
     }
@@ -538,6 +548,7 @@ final class AddPhotosViewModel {
             photoResults.removeLast()
         }
         currentCandidates = []
+        rangeAdjusted = false
         Task { await runSpeciesId(photoIndex: currentPhotoIndex - 1) }
     }
 
@@ -555,6 +566,7 @@ final class AddPhotosViewModel {
 
     /// Cancel crop -> go to confirm screen with current (possibly empty) candidates.
     func cancelCrop() {
+        rangeAdjusted = false
         currentStep = .perPhotoConfirm
     }
 
@@ -565,6 +577,7 @@ final class AddPhotosViewModel {
         let nextIdx = currentPhotoIndex + 1
         if nextIdx < clusterPhotos.count {
             currentCandidates = []
+            rangeAdjusted = false
             cropPromptContext = .manualRecrop
             Task { await runSpeciesId(photoIndex: nextIdx) }
         } else {
@@ -658,6 +671,7 @@ final class AddPhotosViewModel {
                 currentPhotoIndex = 0
                 photoResults = []
                 currentCandidates = []
+                rangeAdjusted = false
                 cropPromptContext = .manualRecrop
                 currentStep = .outingReview
             } else {
@@ -770,6 +784,7 @@ struct IdentifiedCandidate {
     let species: String
     let confidence: Double
     let wikiTitle: String?
+    let plumage: String?
 }
 
 /// AI crop box in percentage coordinates (0-100).

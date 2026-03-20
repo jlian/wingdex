@@ -14,6 +14,10 @@ migrations_dir = "migrations"
 binding = "AI"
 remote = true
 
+[[r2_buckets]]
+binding = "RANGE_PRIORS"
+bucket_name = "wingdex-range-priors"
+
 [vars]
 
 [observability]
@@ -32,3 +36,7 @@ migrations_dir = "migrations"
 [env.preview.ai]
 binding = "AI"
 remote = true
+
+[[env.preview.r2_buckets]]
+binding = "RANGE_PRIORS"
+bucket_name = "wingdex-range-priors"

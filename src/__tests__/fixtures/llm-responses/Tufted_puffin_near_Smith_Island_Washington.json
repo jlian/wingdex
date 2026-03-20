@@ -6,37 +6,49 @@
     "month": 7,
     "locationName": "Smith Island, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95},{\"species\":\"Horned Puffin (Fratercula corniculata)\",\"confidence\":0.6}],\"birdCenter\":[35,55],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Tufted Puffin (Fratercula cirrhata)\",\"confidence\":0.95,\"plumage\":\"adult breeding\"},{\"species\":\"Horned Puffin (Fratercula corniculata)\",\"confidence\":0.5,\"plumage\":\"adult breeding\"},{\"species\":\"Pigeon Guillemot (Cepphus columba)\",\"confidence\":0.3,\"plumage\":null}],\"birdCenter\":[35,55],\"birdSize\":\"medium\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Tufted Puffin (Fratercula cirrhata)",
-        "confidence": 0.95
+        "confidence": 0.95,
+        "plumage": "adult breeding"
       },
       {
         "species": "Horned Puffin (Fratercula corniculata)",
-        "confidence": 0.6
+        "confidence": 0.5,
+        "plumage": "adult breeding"
+      },
+      {
+        "species": "Pigeon Guillemot (Cepphus columba)",
+        "confidence": 0.3,
+        "plumage": null
       }
     ],
     "birdCenter": [
       35,
       55
     ],
-    "birdSize": "small",
+    "birdSize": "medium",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3215,
+      "height": 2143
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
   },
-  "durationMs": 1453,
-  "capturedAt": "2026-02-24T00:54:24.720Z",
-  "promotedAt": "2026-02-24T01:18:06.944Z"
+  "durationMs": 2862,
+  "capturedAt": "2026-03-17T02:41:27.935Z"
 }

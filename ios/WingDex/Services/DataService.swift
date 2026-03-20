@@ -106,11 +106,13 @@ final class DataService: Sendable {
         let candidates: [BirdCandidate]?
         let cropBox: CropBox?
         let multipleBirds: Bool?
+        let rangeAdjusted: Bool?
 
         struct BirdCandidate: Codable {
             let species: String
             let confidence: Double
             let wikiTitle: String?
+            let plumage: String?
         }
 
         struct CropBox: Codable {

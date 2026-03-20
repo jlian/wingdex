@@ -6,16 +6,23 @@
     "month": 7,
     "locationName": "Seattle Waterfront, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.88},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.75}],\"birdCenter\":[70,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Western Gull (Larus occidentalis)\",\"confidence\":0.9,\"plumage\":\"adult nonbreeding\"},{\"species\":\"Glaucous-winged Gull (Larus glaucescens)\",\"confidence\":0.75,\"plumage\":\"immature\"},{\"species\":\"California Gull (Larus californicus)\",\"confidence\":0.5,\"plumage\":\"juvenile\"}],\"birdCenter\":[70,75],\"birdSize\":\"medium\",\"multipleBirds\":true}",
   "parsed": {
     "candidates": [
       {
         "species": "Western Gull (Larus occidentalis)",
-        "confidence": 0.88
+        "confidence": 0.9,
+        "plumage": "adult nonbreeding"
       },
       {
         "species": "Glaucous-winged Gull (Larus glaucescens)",
-        "confidence": 0.75
+        "confidence": 0.75,
+        "plumage": "immature"
+      },
+      {
+        "species": "California Gull (Larus californicus)",
+        "confidence": 0.5,
+        "plumage": "juvenile"
       }
     ],
     "birdCenter": [
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5989,
+      "height": 3993
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1986,
-  "capturedAt": "2026-02-24T00:53:51.557Z",
-  "promotedAt": "2026-02-24T01:18:06.940Z"
+  "durationMs": 3477,
+  "capturedAt": "2026-03-17T02:41:08.497Z"
 }

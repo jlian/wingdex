@@ -1,0 +1,54 @@
+{
+  "imageFile": "House_sparrow_bathing_in_mosaic_fountain_Park_Ridge.jpg",
+  "context": {
+    "lat": 42.0089,
+    "lon": -87.831,
+    "month": 8,
+    "locationName": "Park Ridge, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.88,\"plumage\":\"female/juvenile\"},{\"species\":\"Song Sparrow (Melospiza melodia)\",\"confidence\":0.5,\"plumage\":\"juvenile\"},{\"species\":\"Chipping Sparrow (Spizella passerina)\",\"confidence\":0.35,\"plumage\":\"juvenile\"}],\"birdCenter\":[48,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "House Sparrow (Passer domesticus)",
+        "confidence": 0.88,
+        "plumage": "female/juvenile"
+      },
+      {
+        "species": "Song Sparrow (Melospiza melodia)",
+        "confidence": 0.5,
+        "plumage": "juvenile"
+      },
+      {
+        "species": "Chipping Sparrow (Spizella passerina)",
+        "confidence": 0.35,
+        "plumage": "juvenile"
+      }
+    ],
+    "birdCenter": [
+      48,
+      60
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4098,
+      "height": 2732
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
+  },
+  "durationMs": 11779,
+  "capturedAt": "2026-03-17T02:49:34.789Z"
+}
