@@ -31,11 +31,10 @@
 
 - [x] **Refresh the fixture capture README** -- Updated [src/__tests__/fixtures/README.md](../src/__tests__/fixtures/README.md) with matrix-first refresh flow, baseline promotion commands, updated env requirements, and fixture field semantics.
 
-- [x] **Consolidate fixture workflows into one matrix run** -- Added [run-fixture-matrix.mjs](../scripts/run-fixture-matrix.mjs) to capture `LLM + runtime` x `fast + strong` x `N runs` and persist per-image files under [test-results/fixture-matrix/images](../test-results/fixture-matrix/images) plus a single aggregate report at [test-results/fixture-matrix/report.json](../test-results/fixture-matrix/report.json).
-
-- [x] **Add baseline promotion from matrix** -- Added [promote-matrix-baseline.mjs](../scripts/promote-matrix-baseline.mjs) to promote stable fixtures from matrix outputs (default `llm:fast`) into [src/__tests__/fixtures/llm-responses](../src/__tests__/fixtures/llm-responses). Primary refresh flow is now:
-    - `npm run fixtures:matrix`
-    - `npm run fixtures:baseline:promote`
+- [x] **Consolidated fixture workflows into single script** -- [capture-llm-fixtures.mjs](../scripts/capture-llm-fixtures.mjs) handles capture, benchmark (6 variants), analysis, and promotion. Calls CF AI Gateway with production-matching image resize. Refresh flow:
+    - `npm run fixtures:benchmark` (capture all variants)
+    - `npm run fixtures:analyze` (compare results)
+    - `npm run fixtures:promote -- <variant>` (promote to golden baseline)
 
 ---
 
