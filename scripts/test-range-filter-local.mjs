@@ -173,7 +173,7 @@ console.log('=== Range Prior Local Test ===\n')
 
 if (!existsSync(CELLS_DIR)) {
   console.error(`No cell blobs found at ${CELLS_DIR}`)
-  console.error('Run: /tmp/st-test/bin/python3 scripts/build-test-range-priors.py')
+  console.error('Run: /tmp/st-test/bin/python3 scripts/build-range-priors.py')
   process.exit(1)
 }
 

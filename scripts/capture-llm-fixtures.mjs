@@ -407,7 +407,7 @@ async function main() {
   }
 
   for (const model of MODELS) {
-    console.log(`\n── Model: ${model} ──\n`)
+    console.log(`\n-- Model: ${model} --\n`)
     const durations = []
 
     for (const entry of IMAGES) {
