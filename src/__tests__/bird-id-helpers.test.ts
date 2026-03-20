@@ -41,6 +41,25 @@ describe('bird-id helpers', () => {
   })
 
   describe('extractAssistantContent', () => {
+    it('extracts output_text from Responses API payload', () => {
+      const payload = { output_text: '{"candidates":[]}' }
+      expect(extractAssistantContent(payload)).toBe('{"candidates":[]}')
+    })
+
+    it('extracts text from Responses API output items', () => {
+      const payload = {
+        output: [
+          {
+            type: 'message',
+            content: [
+              { type: 'output_text', text: '{"candidates":[{"species":"Robin"}]}' },
+            ],
+          },
+        ],
+      }
+      expect(extractAssistantContent(payload)).toBe('{"candidates":[{"species":"Robin"}]}')
+    })
+
     it('extracts string content from standard OpenAI response', () => {
       const payload = {
         choices: [{

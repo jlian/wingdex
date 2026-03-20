@@ -28,6 +28,22 @@ export function safeParseJSON(text: string): any {
 }
 
 export function extractAssistantContent(payload: any): string {
+  // Responses API: output_text convenience field
+  if (typeof payload?.output_text === 'string') return payload.output_text
+
+  // Responses API: walk output items for message content
+  if (Array.isArray(payload?.output)) {
+    const parts: string[] = []
+    for (const item of payload.output) {
+      if (item?.type !== 'message' || !Array.isArray(item.content)) continue
+      for (const part of item.content) {
+        if (part?.type === 'output_text' && typeof part.text === 'string') parts.push(part.text)
+      }
+    }
+    if (parts.length) return parts.join('\n')
+  }
+
+  // Chat Completions API fallback
   const message = payload?.choices?.[0]?.message
   const content = message?.content
 

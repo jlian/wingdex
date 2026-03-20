@@ -1,5 +1,5 @@
 import { findBestMatch, getWikiTitle } from './taxonomy'
-import { buildBirdIdPrompt } from './bird-id-prompt.js'
+import { buildBirdIdPrompt, BIRD_ID_INSTRUCTIONS, BIRD_ID_SCHEMA } from './bird-id-prompt.js'
 import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 import { getRangePriors, adjustConfidence } from './range-filter'
@@ -8,11 +8,31 @@ import { getRangePriors, adjustConfidence } from './range-filter'
 export const VISION_MODEL = 'gpt-4.1-mini'
 export const VISION_MODEL_STRONG = 'gpt-5-mini'
 
+/** Extract text content from a Responses API payload. */
+function extractResponseText(payload: any): string {
+  // Convenience field returned by Responses API
+  if (typeof payload?.output_text === 'string') return payload.output_text
+
+  // Walk output items for message content
+  if (Array.isArray(payload?.output)) {
+    for (const item of payload.output) {
+      if (item?.type !== 'message' || !Array.isArray(item.content)) continue
+      for (const part of item.content) {
+        if (part?.type === 'output_text' && typeof part.text === 'string') return part.text
+      }
+    }
+  }
+
+  // Fallback: Chat Completions format (for test mocks / gateway compat)
+  return extractAssistantContent(payload)
+}
+
 type Candidate = {
   species: string
   confidence: number
   wikiTitle?: string
   plumage?: string
+  rangeStatus?: 'present' | 'wrong-season' | 'out-of-range' | 'no-data'
 }
 
 type IdentifyBirdResult = {
@@ -42,88 +62,17 @@ async function callOpenAI(env: Env, body: unknown): Promise<string> {
     throw new HttpError(503, 'OPENAI_API_KEY is not configured')
   }
 
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/openai/chat/completions`
+  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY_ID}/openai/responses`
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${env.OPENAI_API_KEY}`,
     ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
   }
-  const requestBody = body as Record<string, unknown>
-
-  const sendRequest = async (payload: Record<string, unknown>) => fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
-
-  const swapTokenParam = (payload: Record<string, unknown>, from: 'max_tokens' | 'max_completion_tokens', to: 'max_tokens' | 'max_completion_tokens') => {
-    if (payload[from] === undefined || payload[to] !== undefined) return null
-
-    const nextPayload = { ...payload }
-    nextPayload[to] = nextPayload[from]
-    delete nextPayload[from]
-    return nextPayload
-  }
-
-  const extractUnsupportedParam = (errorText: string): string | null => {
-    const parsed = safeParseJSON(errorText)
-    if (typeof parsed?.error?.param === 'string' && parsed.error.param.length > 0) {
-      return parsed.error.param
-    }
-
-    const match = errorText.match(/Unsupported (?:parameter|value):\s*'([^']+)'/i)
-    return match?.[1] || null
-  }
-
-  const removeParam = (payload: Record<string, unknown>, param: string) => {
-    if (!(param in payload)) return null
-
-    const nextPayload = { ...payload }
-    delete nextPayload[param]
-    return nextPayload
-  }
-
-  let response: Response | null = null
-  let currentBody = requestBody
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    response = await sendRequest(currentBody)
-    if (response.ok) break
-
-    if (response.status !== 400) {
-      const text = await response.text()
-      throw new HttpError(response.status, `LLM ${response.status}: ${text.substring(0, 300)}`)
-    }
-
-    const errorText = await response.text()
-    const lower = errorText.toLowerCase()
-
-    const tokenSwapFallback = lower.includes('unsupported parameter') && lower.includes('max_tokens')
-      ? swapTokenParam(currentBody, 'max_tokens', 'max_completion_tokens')
-      : lower.includes('unsupported parameter') && lower.includes('max_completion_tokens')
-        ? swapTokenParam(currentBody, 'max_completion_tokens', 'max_tokens')
-        : null
-
-    if (tokenSwapFallback) {
-      currentBody = tokenSwapFallback
-      continue
-    }
-
-    const unsupportedParam = extractUnsupportedParam(errorText)
-    if (unsupportedParam) {
-      const paramFallback = removeParam(currentBody, unsupportedParam)
-      if (paramFallback) {
-        currentBody = paramFallback
-        continue
-      }
-    }
-
-    throw new HttpError(response.status, `LLM ${response.status}: ${errorText.substring(0, 300)}`)
-  }
-
-  if (!response) {
-    throw new HttpError(500, 'LLM request failed before a response was received')
-  }
 
   if (!response.ok) {
     const text = await response.text()
@@ -131,24 +80,16 @@ async function callOpenAI(env: Env, body: unknown): Promise<string> {
   }
 
   const payload = await response.json() as any
-  return extractAssistantContent(payload)
+  return extractResponseText(payload)
 }
 
-function shouldUseMaxCompletionTokens(model: string): boolean {
+function isReasoningModel(model: string): boolean {
   const normalized = model.toLowerCase()
   return normalized.includes('gpt-5') || normalized.startsWith('o1') || normalized.startsWith('o3') || normalized.startsWith('o4')
 }
 
-function withTokenLimit(model: string, maxTokens: number): { max_tokens?: number; max_completion_tokens?: number } {
-  if (shouldUseMaxCompletionTokens(model)) {
-    return { max_completion_tokens: maxTokens }
-  }
-
-  return { max_tokens: maxTokens }
-}
-
 function withSamplingOptions(model: string): { temperature?: number; top_p?: number } {
-  if (shouldUseMaxCompletionTokens(model)) {
+  if (isReasoningModel(model)) {
     return {}
   }
 
@@ -159,41 +100,29 @@ function withSamplingOptions(model: string): { temperature?: number; top_p?: num
 }
 
 export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<IdentifyBirdResult> {
-  const prompt = buildBirdIdPrompt(input.location, input.month, input.locationName)
-
-  const withReasoningOptions = (model: string): { reasoning_effort?: 'low' } => {
-    if (model.toLowerCase().includes('gpt-5')) {
-      return { reasoning_effort: 'low' }
-    }
-
-    return {}
-  }
+  const prompt = buildBirdIdPrompt(input.location, input.month)
 
   const parseIdentifyResponse = async (model: string): Promise<any> => {
-    const buildVisionBody = (strictJsonOnly: boolean) => ({
+    const buildVisionBody = () => ({
       model,
-      ...withReasoningOptions(model),
+      store: false,
       ...withSamplingOptions(model),
-      ...withTokenLimit(model, 1400),
-      response_format: { type: 'json_object' as const },
-      messages: [
-        {
-          role: 'system',
-          content: strictJsonOnly
-            ? 'You are an expert ornithologist assistant. Return exactly one valid JSON object. No markdown, no prose, no extra keys.'
-            : 'You are an expert ornithologist assistant. Return only what is asked.',
-        },
+      ...(isReasoningModel(model) ? { reasoning: { effort: 'low' as const } } : {}),
+      max_output_tokens: 1400,
+      text: { format: BIRD_ID_SCHEMA },
+      instructions: BIRD_ID_INSTRUCTIONS,
+      input: [
         {
           role: 'user',
           content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: input.imageDataUrl, detail: 'auto' } },
+            { type: 'input_text', text: prompt },
+            { type: 'input_image', image_url: input.imageDataUrl, detail: 'auto' },
           ],
         },
       ],
     })
 
-    const content = await callOpenAI(env, buildVisionBody(true))
+    const content = await callOpenAI(env, buildVisionBody())
     const parsed = safeParseJSON(content)
 
     if (!parsed) {
@@ -213,15 +142,19 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
-      species: String(candidate?.species || ''),
+      commonName: String(candidate?.commonName || candidate?.species || ''),
+      scientificName: String(candidate?.scientificName || ''),
       confidence: Number(candidate?.confidence),
       plumage: typeof candidate?.plumage === 'string' && candidate.plumage ? candidate.plumage : undefined,
     }))
-    .filter(candidate => candidate.species && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.2)
+    .filter(candidate => (candidate.commonName || candidate.scientificName) && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.2)
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5)
     .flatMap(candidate => {
-      const match = findBestMatch(candidate.species)
+      const lookupName = candidate.scientificName
+        ? `${candidate.commonName} (${candidate.scientificName})`
+        : candidate.commonName
+      const match = findBestMatch(lookupName)
       if (!match) return []
       const species = `${match.common} (${match.scientific})`
 
@@ -230,7 +163,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
         confidence: candidate.confidence,
         wikiTitle: getWikiTitle(match.common),
         ebirdCode: match.ebirdCode || '',
-        ...(candidate.plumage ? { plumage: candidate.plumage } : {}),
+        plumage: candidate.plumage,
       }]
     })
 
@@ -256,14 +189,17 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
       if (!range) return c
-      return { ...c, confidence: adjustConfidence(c.confidence, range) }
+      return { ...c, confidence: adjustConfidence(c.confidence, range), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
-    if (debug) console.log('[bird-id] After range adjustment:', candidates.map(c => `${c.species} ${c.confidence}`))
+    if (debug) console.log('[bird-id] After range adjustment:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} range=${c.rangeStatus ?? 'n/a'}`))
   }
 
   const result = {
-    candidates: candidates.map(({ ebirdCode: _, ...rest }) => rest),
+    candidates: candidates.map(({ ebirdCode: _, plumage, ...rest }) => ({
+      ...rest,
+      ...(plumage ? { plumage } : {}),
+    })),
     cropBox: buildCropBox(parsed.birdCenter, parsed.birdSize, input.imageWidth, input.imageHeight),
     multipleBirds: parsed.multipleBirds === true,
     ...(rangeAdjusted ? { rangeAdjusted: true } : {}),

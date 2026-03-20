@@ -935,6 +935,9 @@ components:
           $ref: "#/components/schemas/CropBox"
         multipleBirds:
           type: boolean
+        rangeAdjusted:
+          type: boolean
+          description: True when BirdLife range data was available and applied
 
     Candidate:
       type: object
@@ -949,6 +952,13 @@ components:
           maximum: 1
         wikiTitle:
           type: string
+        plumage:
+          type: string
+          description: Plumage descriptor from the vision model (e.g. male, female, juvenile)
+        rangeStatus:
+          type: string
+          enum: [present, wrong-season, out-of-range, no-data]
+          description: BirdLife range status for this species at the query location and month
 
     CropBox:
       type: object
