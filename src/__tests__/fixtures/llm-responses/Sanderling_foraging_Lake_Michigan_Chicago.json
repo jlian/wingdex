@@ -6,37 +6,49 @@
     "month": 8,
     "locationName": "Lake Michigan, Chicago, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.9},{\"species\":\"Semipalmated Sandpiper (Calidris pusilla)\",\"confidence\":0.55}],\"birdCenter\":[20,65],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Sanderling (Calidris alba)\",\"confidence\":0.9,\"plumage\":\"nonbreeding\"},{\"species\":\"Semipalmated Sandpiper (Calidris pusilla)\",\"confidence\":0.6,\"plumage\":\"nonbreeding\"},{\"species\":\"Western Sandpiper (Calidris mauri)\",\"confidence\":0.5,\"plumage\":\"nonbreeding\"}],\"birdCenter\":[20,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Sanderling (Calidris alba)",
-        "confidence": 0.9
+        "confidence": 0.9,
+        "plumage": "nonbreeding"
       },
       {
         "species": "Semipalmated Sandpiper (Calidris pusilla)",
-        "confidence": 0.55
+        "confidence": 0.6,
+        "plumage": "nonbreeding"
+      },
+      {
+        "species": "Western Sandpiper (Calidris mauri)",
+        "confidence": 0.5,
+        "plumage": "nonbreeding"
       }
     ],
     "birdCenter": [
       20,
-      65
+      70
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 2764,
+      "height": 1843
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1642,
-  "capturedAt": "2026-02-24T00:41:31.333Z",
-  "promotedAt": "2026-02-24T01:18:06.943Z"
+  "durationMs": 3104,
+  "capturedAt": "2026-03-17T02:41:50.372Z"
 }

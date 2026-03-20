@@ -6,37 +6,49 @@
     "month": 8,
     "locationName": "Lake Como, Italy"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.9},{\"species\":\"European Shag (Gulosus aristotelis)\",\"confidence\":0.5}],\"birdCenter\":[50,25],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Great Cormorant (Phalacrocorax carbo)\",\"confidence\":0.95,\"plumage\":null},{\"species\":\"European Shag (Gulosus aristotelis)\",\"confidence\":0.5,\"plumage\":null},{\"species\":\"Black-headed Gull (Chroicocephalus ridibundus)\",\"confidence\":0.3,\"plumage\":\"nonbreeding\"}],\"birdCenter\":[50,40],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Great Cormorant (Phalacrocorax carbo)",
-        "confidence": 0.9
+        "confidence": 0.95,
+        "plumage": null
       },
       {
         "species": "European Shag (Gulosus aristotelis)",
-        "confidence": 0.5
+        "confidence": 0.5,
+        "plumage": null
+      },
+      {
+        "species": "Black-headed Gull (Chroicocephalus ridibundus)",
+        "confidence": 0.3,
+        "plumage": "nonbreeding"
       }
     ],
     "birdCenter": [
       50,
-      25
+      40
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3291,
+      "height": 2194
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 2296,
-  "capturedAt": "2026-02-24T00:53:20.105Z",
-  "promotedAt": "2026-02-24T01:18:06.937Z"
+  "durationMs": 4159,
+  "capturedAt": "2026-03-17T02:42:05.152Z"
 }

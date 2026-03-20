@@ -6,37 +6,49 @@
     "month": 10,
     "locationName": "Union Bay Natural Area, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"American Goldfinch (Spinus tristis)\",\"confidence\":0.85},{\"species\":\"Lesser Goldfinch (Spinus psaltria)\",\"confidence\":0.4}],\"birdCenter\":[40,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"American Goldfinch (Spinus tristis)\",\"confidence\":0.9,\"plumage\":\"female nonbreeding\"},{\"species\":\"Lesser Goldfinch (Spinus psaltria)\",\"confidence\":0.5,\"plumage\":null},{\"species\":\"Pine Siskin (Spinus pinus)\",\"confidence\":0.4,\"plumage\":null}],\"birdCenter\":[55,45],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "American Goldfinch (Spinus tristis)",
-        "confidence": 0.85
+        "confidence": 0.9,
+        "plumage": "female nonbreeding"
       },
       {
         "species": "Lesser Goldfinch (Spinus psaltria)",
-        "confidence": 0.4
+        "confidence": 0.5,
+        "plumage": null
+      },
+      {
+        "species": "Pine Siskin (Spinus pinus)",
+        "confidence": 0.4,
+        "plumage": null
       }
     ],
     "birdCenter": [
-      40,
-      50
+      55,
+      45
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 1910,
+      "height": 2865
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
   },
-  "durationMs": 1900,
-  "capturedAt": "2026-02-24T00:40:01.728Z",
-  "promotedAt": "2026-02-24T01:18:06.934Z"
+  "durationMs": 2943,
+  "capturedAt": "2026-03-17T02:40:34.566Z"
 }

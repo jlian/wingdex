@@ -6,20 +6,27 @@
     "month": 6,
     "locationName": "Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Anna's Hummingbird (Calypte anna)\",\"confidence\":0.9},{\"species\":\"Rufous Hummingbird (Selasphorus rufus)\",\"confidence\":0.5}],\"birdCenter\":[70,45],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Anna's Hummingbird (Calypte anna)\",\"confidence\":0.9,\"plumage\":\"male\"},{\"species\":\"Rufous Hummingbird (Selasphorus rufus)\",\"confidence\":0.5,\"plumage\":\"male\"},{\"species\":\"Calliope Hummingbird (Selasphorus calliope)\",\"confidence\":0.3,\"plumage\":\"male\"}],\"birdCenter\":[60,45],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Anna's Hummingbird (Calypte anna)",
-        "confidence": 0.9
+        "confidence": 0.9,
+        "plumage": "male"
       },
       {
         "species": "Rufous Hummingbird (Selasphorus rufus)",
-        "confidence": 0.5
+        "confidence": 0.5,
+        "plumage": "male"
+      },
+      {
+        "species": "Calliope Hummingbird (Selasphorus calliope)",
+        "confidence": 0.3,
+        "plumage": "male"
       }
     ],
     "birdCenter": [
-      70,
+      60,
       45
     ],
     "birdSize": "small",
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3668,
+      "height": 2445
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
   },
-  "durationMs": 1745,
-  "capturedAt": "2026-02-24T00:52:56.141Z",
-  "promotedAt": "2026-02-24T01:18:06.934Z"
+  "durationMs": 2973,
+  "capturedAt": "2026-03-17T02:40:38.597Z"
 }

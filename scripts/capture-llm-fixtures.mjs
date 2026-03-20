@@ -56,6 +56,10 @@ const API_URL = process.env.FIXTURE_API_URL || (
     : ''
 )
 const MODEL = process.env.FIXTURE_MODEL || 'gpt-4.1-mini'
+const STRONG_MODEL = process.env.FIXTURE_STRONG_MODEL || 'gpt-5-mini'
+const MODELS = process.env.FIXTURE_MODEL
+  ? [MODEL] // explicit single model via env var
+  : [MODEL, STRONG_MODEL] // default: both models
 const TOKEN = process.env.OPENAI_API_KEY || DEV_VARS.OPENAI_API_KEY
 if (!TOKEN) { console.error('OPENAI_API_KEY required'); process.exit(1) }
 if (!API_URL) {
@@ -127,8 +131,18 @@ function canonicalizeParsed(parsed) {
   }
 }
 
-const FIXTURE_DIR = join(import.meta.dirname, '..', 'src', '__tests__', 'fixtures', 'llm-responses')
-mkdirSync(FIXTURE_DIR, { recursive: true })
+const FIXTURE_BASE_DIR = join(import.meta.dirname, '..', 'src', '__tests__', 'fixtures', 'llm-responses')
+
+function fixtureDir(model) {
+  // Fast model stays in the root dir for backward compat; strong goes in a subdirectory
+  if (model === STRONG_MODEL) {
+    const dir = join(FIXTURE_BASE_DIR, 'strong')
+    mkdirSync(dir, { recursive: true })
+    return dir
+  }
+  mkdirSync(FIXTURE_BASE_DIR, { recursive: true })
+  return FIXTURE_BASE_DIR
+}
 
 // Canonical image set with context metadata
 // GPS/month derived from EXIF data and the real eBird CSV export.
@@ -251,7 +265,7 @@ const IMAGES = [
   },
 ]
 
-async function captureOne(entry) {
+async function captureOne(entry, model) {
   const imgPath = join(import.meta.dirname, '..', 'src', 'assets', 'images', entry.file)
   if (!existsSync(imgPath)) {
     console.warn(`⚠️  Skipping ${entry.file}: file not found`)
@@ -259,7 +273,8 @@ async function captureOne(entry) {
   }
 
   const key = entry.file.replace(/\.[^.]+$/, '')
-  const outPath = join(FIXTURE_DIR, `${key}.json`)
+  const outDir = fixtureDir(model)
+  const outPath = join(outDir, `${key}.json`)
   if (!FIXTURE_TIMING_ONLY && !FIXTURE_OVERWRITE && existsSync(outPath)) {
     console.log(`⏭️  ${key}: fixture exists, skipping`)
     return
@@ -290,10 +305,10 @@ async function captureOne(entry) {
   )
 
   const body = {
-    model: MODEL,
-    ...withReasoningOptions(MODEL),
-    ...withSamplingOptions(MODEL),
-    ...withTokenLimit(MODEL, MAX_COMPLETION_TOKENS),
+    model,
+    ...withReasoningOptions(model),
+    ...withSamplingOptions(model),
+    ...withTokenLimit(model, MAX_COMPLETION_TOKENS),
     messages: [
       { role: 'system', content: 'You are an expert ornithologist assistant. Return only what is asked.' },
       {
@@ -344,11 +359,11 @@ async function captureOne(entry) {
       },
       rawResponse,
       parsed: canonicalParsed,
-      model: MODEL,
+      model,
       requestConfig: {
-        tokenParam: shouldUseMaxCompletionTokens(MODEL) ? 'max_completion_tokens' : 'max_tokens',
+        tokenParam: shouldUseMaxCompletionTokens(model) ? 'max_completion_tokens' : 'max_tokens',
         maxCompletionTokens: MAX_COMPLETION_TOKENS,
-        reasoningEffort: withReasoningOptions(MODEL).reasoning_effort || null,
+        reasoningEffort: withReasoningOptions(model).reasoning_effort || null,
         resizedBeforeSend: true,
         resizeMaxDim: RESIZE_MAX_DIM,
         jpegQuality: JPEG_QUALITY,
@@ -384,36 +399,39 @@ function percentile(sortedValues, p) {
 }
 
 async function main() {
-  console.log(`\n🐦 ${FIXTURE_TIMING_ONLY ? 'Capturing LLM timing' : 'Capturing LLM fixtures'} for ${IMAGES.length} images...\n`)
+  console.log(`\n🐦 ${FIXTURE_TIMING_ONLY ? 'Capturing LLM timing' : 'Capturing LLM fixtures'} for ${IMAGES.length} images, ${MODELS.length} model(s)...\n`)
   if (FIXTURE_TIMING_ONLY) {
     console.log('ℹ️  FIXTURE_TIMING_ONLY=true → no fixture files will be written')
   } else if (FIXTURE_OVERWRITE) {
     console.log('ℹ️  FIXTURE_OVERWRITE=true → existing fixture files will be replaced')
   }
 
-  const durations = []
+  for (const model of MODELS) {
+    console.log(`\n-- Model: ${model} --\n`)
+    const durations = []
 
-  for (const entry of IMAGES) {
-    const durationMs = await captureOne(entry)
-    if (typeof durationMs === 'number') {
-      durations.push(durationMs)
+    for (const entry of IMAGES) {
+      const durationMs = await captureOne(entry, model)
+      if (typeof durationMs === 'number') {
+        durations.push(durationMs)
+      }
+      // Small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 1000))
     }
-    // Small delay to avoid rate limits
-    await new Promise(r => setTimeout(r, 1000))
-  }
 
-  if (durations.length > 0) {
-    const sorted = [...durations].sort((a, b) => a - b)
-    const median = percentile(sorted, 50)
-    const p95 = percentile(sorted, 95)
-    const min = sorted[0]
-    const max = sorted[sorted.length - 1]
+    if (durations.length > 0) {
+      const sorted = [...durations].sort((a, b) => a - b)
+      const median = percentile(sorted, 50)
+      const p95 = percentile(sorted, 95)
+      const min = sorted[0]
+      const max = sorted[sorted.length - 1]
 
-    console.log('\n⏱️ Timing summary (ms):')
-    console.log(`   min: ${min}`)
-    console.log(`   median: ${median}`)
-    console.log(`   p95: ${p95}`)
-    console.log(`   max: ${max}`)
+      console.log(`\n⏱️ Timing summary for ${model} (ms):`)
+      console.log(`   min: ${min}`)
+      console.log(`   median: ${median}`)
+      console.log(`   p95: ${p95}`)
+      console.log(`   max: ${max}`)
+    }
   }
 
   console.log('\n✅ Done! Fixtures written to src/__tests__/fixtures/llm-responses/')

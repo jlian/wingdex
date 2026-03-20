@@ -2,6 +2,7 @@ import { findBestMatch, getWikiTitle } from './taxonomy'
 import { buildBirdIdPrompt } from './bird-id-prompt.js'
 import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
+import { getRangePriors, adjustConfidence } from './range-filter'
 
 
 export const VISION_MODEL = 'gpt-4.1-mini'
@@ -11,12 +12,14 @@ type Candidate = {
   species: string
   confidence: number
   wikiTitle?: string
+  plumage?: string
 }
 
 type IdentifyBirdResult = {
   candidates: Candidate[]
   cropBox?: { x: number; y: number; width: number; height: number }
   multipleBirds?: boolean
+  rangeAdjusted?: boolean
 }
 
 type IdentifyBirdInput = {
@@ -204,11 +207,15 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     ? (env.OPENAI_MODEL_STRONG || VISION_MODEL_STRONG)
     : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
+  const debug = !!env.DEBUG
 
-  const candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
+  if (debug) console.log('[bird-id] LLM raw candidates:', JSON.stringify(parsed.candidates))
+
+  let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
       species: String(candidate?.species || ''),
       confidence: Number(candidate?.confidence),
+      plumage: typeof candidate?.plumage === 'string' && candidate.plumage ? candidate.plumage : undefined,
     }))
     .filter(candidate => candidate.species && Number.isFinite(candidate.confidence) && candidate.confidence >= 0.2)
     .sort((a, b) => b.confidence - a.confidence)
@@ -222,12 +229,45 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
         species,
         confidence: candidate.confidence,
         wikiTitle: getWikiTitle(match.common),
+        ebirdCode: match.ebirdCode || '',
+        ...(candidate.plumage ? { plumage: candidate.plumage } : {}),
       }]
     })
 
-  return {
-    candidates,
+  if (debug) console.log('[bird-id] After taxonomy match:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} code=${c.ebirdCode}`))
+
+  // Apply range-prior adjustment if location is available
+  const hasRangeBucket = env.RANGE_PRIORS != null
+  if (debug) console.log('[bird-id] Range filter: location=%s, bucket=%s', input.location ? `${input.location.lat},${input.location.lon}` : 'none', hasRangeBucket)
+
+  let rangeAdjusted = false
+
+  if (input.location && env.RANGE_PRIORS) {
+    const codes = candidates.map(c => c.ebirdCode).filter(Boolean)
+    const priors = await getRangePriors(
+      env.RANGE_PRIORS,
+      input.location.lat,
+      input.location.lon,
+      input.month,
+      codes,
+    )
+    if (debug) console.log('[bird-id] Range priors:', Object.fromEntries(priors))
+    rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
+    candidates = candidates.map(c => {
+      const range = priors.get(c.ebirdCode)
+      if (!range) return c
+      return { ...c, confidence: adjustConfidence(c.confidence, range) }
+    })
+    candidates.sort((a, b) => b.confidence - a.confidence)
+    if (debug) console.log('[bird-id] After range adjustment:', candidates.map(c => `${c.species} ${c.confidence}`))
+  }
+
+  const result = {
+    candidates: candidates.map(({ ebirdCode: _, ...rest }) => rest),
     cropBox: buildCropBox(parsed.birdCenter, parsed.birdSize, input.imageWidth, input.imageHeight),
     multipleBirds: parsed.multipleBirds === true,
+    ...(rangeAdjusted ? { rangeAdjusted: true } : {}),
   }
+  if (debug) console.log('[bird-id] Final response:', JSON.stringify(result))
+  return result
 }

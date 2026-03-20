@@ -1,0 +1,54 @@
+{
+  "imageFile": "Palm_warbler_on_Lake_Michigan_shore_Chicago.jpg",
+  "context": {
+    "lat": 41.9632,
+    "lon": -87.6342,
+    "month": 8,
+    "locationName": "Lake Michigan shore, Chicago, IL"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Ruby-crowned Kinglet (Regulus calendula)\",\"confidence\":0.68,\"plumage\":\"immature\"},{\"species\":\"Golden-crowned Kinglet (Regulus satrapa)\",\"confidence\":0.45,\"plumage\":\"female/nonbreeding\"},{\"species\":\"Blue-gray Gnatcatcher (Polioptila caerulea)\",\"confidence\":0.3,\"plumage\":\"female/immature\"}],\"birdCenter\":[45,72],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Ruby-crowned Kinglet (Regulus calendula)",
+        "confidence": 0.68,
+        "plumage": "immature"
+      },
+      {
+        "species": "Golden-crowned Kinglet (Regulus satrapa)",
+        "confidence": 0.45,
+        "plumage": "female/nonbreeding"
+      },
+      {
+        "species": "Blue-gray Gnatcatcher (Polioptila caerulea)",
+        "confidence": 0.3,
+        "plumage": "female/immature"
+      }
+    ],
+    "birdCenter": [
+      45,
+      72
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 1258,
+      "height": 1887
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "durationMs": 7892,
+  "capturedAt": "2026-03-17T02:49:43.701Z"
+}

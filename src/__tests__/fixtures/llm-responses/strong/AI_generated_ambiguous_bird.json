@@ -1,0 +1,59 @@
+{
+  "imageFile": "AI_generated_ambiguous_bird.png",
+  "context": {
+    "lat": 40,
+    "lon": -100,
+    "month": 5,
+    "locationName": "Unknown (AI-generated test image)"
+  },
+  "rawResponse": "{\"candidates\":[{\"species\":\"Spotted Flycatcher (Muscicapa striata)\",\"confidence\":0.65,\"plumage\":null},{\"species\":\"Least Flycatcher (Empidonax minimus)\",\"confidence\":0.55,\"plumage\":null},{\"species\":\"Willow Flycatcher (Empidonax traillii)\",\"confidence\":0.4,\"plumage\":null},{\"species\":\"Eastern Wood-Pewee (Contopus virens)\",\"confidence\":0.35,\"plumage\":null}],\"birdCenter\":[48,45],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "parsed": {
+    "candidates": [
+      {
+        "species": "Spotted Flycatcher (Muscicapa striata)",
+        "confidence": 0.65,
+        "plumage": null
+      },
+      {
+        "species": "Least Flycatcher (Empidonax minimus)",
+        "confidence": 0.55,
+        "plumage": null
+      },
+      {
+        "species": "Willow Flycatcher (Empidonax traillii)",
+        "confidence": 0.4,
+        "plumage": null
+      },
+      {
+        "species": "Eastern Wood-Pewee (Contopus virens)",
+        "confidence": 0.35,
+        "plumage": null
+      }
+    ],
+    "birdCenter": [
+      48,
+      45
+    ],
+    "birdSize": "small",
+    "multipleBirds": false
+  },
+  "model": "gpt-5-mini",
+  "requestConfig": {
+    "tokenParam": "max_completion_tokens",
+    "maxCompletionTokens": 1400,
+    "reasoningEffort": "low",
+    "resizedBeforeSend": true,
+    "resizeMaxDim": 640,
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 1024,
+      "height": 1536
+    },
+    "uploadedDimensions": {
+      "width": 427,
+      "height": 640
+    }
+  },
+  "durationMs": 13087,
+  "capturedAt": "2026-03-17T02:50:59.863Z"
+}

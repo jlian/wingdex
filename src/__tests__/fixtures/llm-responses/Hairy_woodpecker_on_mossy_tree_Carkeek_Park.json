@@ -6,16 +6,23 @@
     "month": 6,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Leuconotopicus villosus)\",\"confidence\":0.9},{\"species\":\"Downy Woodpecker (Dryobates pubescens)\",\"confidence\":0.6}],\"birdCenter\":[40,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Hairy Woodpecker (Leuconotopicus villosus)\",\"confidence\":0.9,\"plumage\":\"female\"},{\"species\":\"Downy Woodpecker (Dryobates pubescens)\",\"confidence\":0.75,\"plumage\":\"female\"},{\"species\":\"Northern Flicker (Colaptes auratus)\",\"confidence\":0.4,\"plumage\":null}],\"birdCenter\":[40,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Hairy Woodpecker (Leuconotopicus villosus)",
-        "confidence": 0.9
+        "confidence": 0.9,
+        "plumage": "female"
       },
       {
         "species": "Downy Woodpecker (Dryobates pubescens)",
-        "confidence": 0.6
+        "confidence": 0.75,
+        "plumage": "female"
+      },
+      {
+        "species": "Northern Flicker (Colaptes auratus)",
+        "confidence": 0.4,
+        "plumage": null
       }
     ],
     "birdCenter": [
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 5083,
+      "height": 3389
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1738,
-  "capturedAt": "2026-02-24T00:41:07.184Z",
-  "promotedAt": "2026-02-24T01:18:06.940Z"
+  "durationMs": 2835,
+  "capturedAt": "2026-03-17T02:41:12.429Z"
 }

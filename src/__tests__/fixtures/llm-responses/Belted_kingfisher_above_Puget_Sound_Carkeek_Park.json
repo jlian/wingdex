@@ -6,16 +6,23 @@
     "month": 7,
     "locationName": "Carkeek Park, Seattle, WA"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Belted Kingfisher (Megaceryle alcyon)\",\"confidence\":0.92},{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.35}],\"birdCenter\":[50,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Belted Kingfisher (Megaceryle alcyon)\",\"confidence\":0.95,\"plumage\":\"female\"},{\"species\":\"Ringed Kingfisher (Megaceryle torquata)\",\"confidence\":0.4,\"plumage\":null},{\"species\":\"Common Kingfisher (Alcedo atthis)\",\"confidence\":0.3,\"plumage\":null}],\"birdCenter\":[50,50],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Belted Kingfisher (Megaceryle alcyon)",
-        "confidence": 0.92
+        "confidence": 0.95,
+        "plumage": "female"
+      },
+      {
+        "species": "Ringed Kingfisher (Megaceryle torquata)",
+        "confidence": 0.4,
+        "plumage": null
       },
       {
         "species": "Common Kingfisher (Alcedo atthis)",
-        "confidence": 0.35
+        "confidence": 0.3,
+        "plumage": null
       }
     ],
     "birdCenter": [
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 3832,
+      "height": 2555
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 426
+    }
   },
-  "durationMs": 1687,
-  "capturedAt": "2026-02-24T00:53:00.238Z",
-  "promotedAt": "2026-02-24T01:18:06.935Z"
+  "durationMs": 3033,
+  "capturedAt": "2026-03-17T02:40:42.685Z"
 }

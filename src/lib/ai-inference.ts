@@ -4,6 +4,7 @@ interface VisionResult {
   species: string
   confidence: number
   wikiTitle?: string
+  plumage?: string
 }
 
 export type BirdIdModelTier = 'fast' | 'strong'
@@ -12,6 +13,7 @@ export interface BirdIdResult {
   candidates: VisionResult[]
   cropBox?: { x: number; y: number; width: number; height: number }
   multipleBirds?: boolean
+  rangeAdjusted?: boolean
 }
 
 function compressImage(img: HTMLImageElement, maxDim: number, quality: number): { dataUrl: string; width: number; height: number } {
@@ -102,5 +104,6 @@ export async function identifyBirdInPhoto(
     candidates: Array.isArray(payload?.candidates) ? payload.candidates : [],
     cropBox: payload?.cropBox,
     multipleBirds: payload?.multipleBirds === true,
+    rangeAdjusted: payload?.rangeAdjusted === true,
   }
 }

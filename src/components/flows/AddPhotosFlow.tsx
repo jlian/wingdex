@@ -74,8 +74,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const [photoResults, setPhotoResults] = useState<PhotoResult[]>([])
   const [currentCandidates, setCurrentCandidates] = useState<
-    { species: string; confidence: number }[]
+    { species: string; confidence: number; plumage?: string }[]
   >([])
+  const [rangeAdjusted, setRangeAdjusted] = useState(false)
 
   const [lastLocationName, setLastLocationName] = useState(() => {
     const sorted = [...data.outings].sort(
@@ -179,6 +180,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           console.log('No species identified by fast model, asking user to crop before escalation')
           setCurrentCandidates([])
         }
+        setRangeAdjusted(false)
         setStep('photo-manual-crop')
         return;
       }
@@ -232,9 +234,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         console.log('Multiple birds detected, asking user to crop')
         toast.info('Multiple birds detected, crop to one')
         setCurrentCandidates(result.candidates)
+        setRangeAdjusted(result.rangeAdjusted === true)
         setStep('photo-manual-crop')
       } else {
         setCurrentCandidates(result.candidates)
+        setRangeAdjusted(result.rangeAdjusted === true)
         setStep('photo-confirm')
       }
     } catch (error) {
@@ -242,6 +246,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const msg = error instanceof Error ? error.message : 'Species identification failed'
       toast.error(msg)
       setCurrentCandidates([])
+      setRangeAdjusted(false)
       setStep('photo-confirm')
     }
   }
@@ -252,6 +257,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     const nextIdx = currentPhotoIndex + 1
     if (nextIdx < clusterPhotos.length) {
       setCurrentCandidates([])
+      setRangeAdjusted(false)
       void runSpeciesId(nextIdx)
     } else {
       saveOuting(finalResults)
@@ -373,6 +379,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setCurrentPhotoIndex(0)
       setPhotoResults([])
       setCurrentCandidates([])
+      setRangeAdjusted(false)
       setStep('review')
       return
     }
@@ -561,6 +568,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
     setPhotoResults([])
     setCurrentCandidates([])
+    setRangeAdjusted(false)
     runSpeciesId(0, undefined, normalizedLocationName)
   }
 
@@ -738,6 +746,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
             <PerPhotoConfirm
               photo={fullCurrentPhoto}
               candidates={currentCandidates}
+              rangeAdjusted={rangeAdjusted}
               photoIndex={currentPhotoIndex}
               totalPhotos={clusterPhotos.length}
               onConfirm={confirmCurrentPhoto}
@@ -746,6 +755,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
                 // Remove the last result (for the previous photo) and go back
                 setPhotoResults(prev => prev.slice(0, -1))
                 setCurrentCandidates([])
+                setRangeAdjusted(false)
                 runSpeciesId(currentPhotoIndex - 1)
               } : undefined}
               onRecrop={() => setStep('photo-manual-crop')}
@@ -814,6 +824,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           onCancel={() => {
             // Go back to confirm screen (showing no-results) rather than silently skipping
             setCurrentCandidates([])
+            setRangeAdjusted(false)
             setStep('photo-confirm')
           }}
           open={true}
@@ -876,7 +887,8 @@ function AiZoomedPreview({
 
 interface PerPhotoConfirmProps {
   photo: PhotoWithCrop
-  candidates: { species: string; confidence: number }[]
+  candidates: { species: string; confidence: number; plumage?: string }[]
+  rangeAdjusted?: boolean
   photoIndex: number
   totalPhotos: number
   onConfirm: (
@@ -894,6 +906,7 @@ interface PerPhotoConfirmProps {
 function PerPhotoConfirm({
   photo,
   candidates,
+  rangeAdjusted,
   photoIndex,
   totalPhotos,
   onConfirm,
@@ -907,6 +920,7 @@ function PerPhotoConfirm({
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [selectedSpecies, setSelectedSpecies] = useState(topCandidate?.species ?? '')
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
+  const [selectedPlumage, setSelectedPlumage] = useState(topCandidate?.plumage)
   const isHighConfidence = selectedConfidence >= 0.8
   
   // Fetch Wikipedia reference image for the selected species
@@ -945,15 +959,24 @@ function PerPhotoConfirm({
     onConfirm(selectedSpecies, selectedConfidence, status, 1)
   }
 
-  const selectAlternative = (species: string, confidence: number) => {
+  const selectAlternative = (species: string, confidence: number, plumage?: string) => {
     setSelectedSpecies(species)
     setSelectedConfidence(confidence)
+    setSelectedPlumage(plumage)
   }
 
   const confidencePct = Math.round(selectedConfidence * 100)
   const displayName = getDisplayName(selectedSpecies)
   const scientificMatch = selectedSpecies.match(/\(([^)]+)\)/)
   const scientificName = scientificMatch ? scientificMatch[1] : ''
+
+  const plumageIcon = (p: string): string | null => {
+    const l = p.toLowerCase()
+    if (l.includes('juvenile') || l.includes('immature') || l.includes('chick')) return '\u{1F423}'
+    if (l.includes('female')) return '\u2640'
+    if (l.includes('male')) return '\u2642'
+    return null
+  }
 
   return (
     <div className="space-y-4">
@@ -998,6 +1021,9 @@ function PerPhotoConfirm({
           <div className="flex-1">
             <h3 className="font-serif text-lg font-semibold text-foreground">
               {displayName}
+              {selectedPlumage && plumageIcon(selectedPlumage) && (
+                <span className="ml-1 text-base align-baseline opacity-70" aria-label={selectedPlumage} role="img">{plumageIcon(selectedPlumage)}</span>
+              )}
             </h3>
             {scientificName && (
               <p className="text-sm text-muted-foreground italic">{scientificName}</p>
@@ -1095,9 +1121,14 @@ function PerPhotoConfirm({
                           ? 'bg-primary/10 border border-primary'
                           : 'bg-muted/40'
                       }`}
-                      onClick={() => selectAlternative(c.species, c.confidence)}
+                      onClick={() => selectAlternative(c.species, c.confidence, c.plumage)}
                     >
-                      <span className="text-sm font-medium">{altName}</span>
+                      <span className="text-sm font-medium">
+                        {altName}
+                        {c.plumage && (
+                          <span className="ml-1 text-xs text-muted-foreground font-normal">({c.plumage})</span>
+                        )}
+                      </span>
                       <span className="text-xs text-muted-foreground">{altPct}%</span>
                     </button>
                   )
@@ -1107,6 +1138,21 @@ function PerPhotoConfirm({
           </div>
         )}
       </Card>
+
+      {rangeAdjusted && (
+        <p className="text-[10px] text-muted-foreground text-center">
+          Location-filtered using{' '}
+          <a
+            href="https://datazone.birdlife.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            BirdLife International
+          </a>
+          .
+        </p>
+      )}
 
       {/* Bottom actions */}
       <div className="flex gap-2">

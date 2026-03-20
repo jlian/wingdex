@@ -6,37 +6,49 @@
     "month": 8,
     "locationName": "Park Ridge, IL"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85},{\"species\":\"Song Sparrow (Melospiza melodia)\",\"confidence\":0.4}],\"birdCenter\":[50,60],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"House Sparrow (Passer domesticus)\",\"confidence\":0.85,\"plumage\":\"female\"},{\"species\":\"Song Sparrow (Melospiza melodia)\",\"confidence\":0.5,\"plumage\":null},{\"species\":\"Chipping Sparrow (Spizella passerina)\",\"confidence\":0.4,\"plumage\":null}],\"birdCenter\":[50,45],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "House Sparrow (Passer domesticus)",
-        "confidence": 0.85
+        "confidence": 0.85,
+        "plumage": "female"
       },
       {
         "species": "Song Sparrow (Melospiza melodia)",
-        "confidence": 0.4
+        "confidence": 0.5,
+        "plumage": null
+      },
+      {
+        "species": "Chipping Sparrow (Spizella passerina)",
+        "confidence": 0.4,
+        "plumage": null
       }
     ],
     "birdCenter": [
       50,
-      60
+      45
     ],
     "birdSize": "small",
     "multipleBirds": false
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4098,
+      "height": 2732
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1905,
-  "capturedAt": "2026-02-24T00:53:59.632Z",
-  "promotedAt": "2026-02-24T01:18:06.940Z"
+  "durationMs": 2320,
+  "capturedAt": "2026-03-17T02:41:42.624Z"
 }

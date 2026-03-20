@@ -6,16 +6,23 @@
     "month": 11,
     "locationName": "Haleakala, Maui, HI"
   },
-  "rawResponse": "{\"candidates\":[{\"species\":\"Chukar (Alectoris chukar)\",\"confidence\":0.95},{\"species\":\"Gray Francolin (Ortygornis pondicerianus)\",\"confidence\":0.4}],\"birdCenter\":[65,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
+  "rawResponse": "{\"candidates\":[{\"species\":\"Chukar (Alectoris chukar)\",\"confidence\":0.95,\"plumage\":null},{\"species\":\"Gray Francolin (Ortygornis pondicerianus)\",\"confidence\":0.5,\"plumage\":null},{\"species\":\"Rock Partridge (Alectoris graeca)\",\"confidence\":0.4,\"plumage\":null}],\"birdCenter\":[65,70],\"birdSize\":\"small\",\"multipleBirds\":false}",
   "parsed": {
     "candidates": [
       {
         "species": "Chukar (Alectoris chukar)",
-        "confidence": 0.95
+        "confidence": 0.95,
+        "plumage": null
       },
       {
         "species": "Gray Francolin (Ortygornis pondicerianus)",
-        "confidence": 0.4
+        "confidence": 0.5,
+        "plumage": null
+      },
+      {
+        "species": "Rock Partridge (Alectoris graeca)",
+        "confidence": 0.4,
+        "plumage": null
       }
     ],
     "birdCenter": [
@@ -27,16 +34,21 @@
   },
   "model": "gpt-4.1-mini",
   "requestConfig": {
-    "promotedFromMatrix": true,
-    "source": "llm",
-    "modelTier": "fast",
     "tokenParam": "max_tokens",
     "maxCompletionTokens": 1400,
     "reasoningEffort": null,
+    "resizedBeforeSend": true,
     "resizeMaxDim": 640,
-    "jpegQuality": 70
+    "jpegQuality": 70,
+    "sourceDimensions": {
+      "width": 4380,
+      "height": 2920
+    },
+    "uploadedDimensions": {
+      "width": 640,
+      "height": 427
+    }
   },
-  "durationMs": 1650,
-  "capturedAt": "2026-02-24T00:53:08.660Z",
-  "promotedAt": "2026-02-24T01:18:06.936Z"
+  "durationMs": 2848,
+  "capturedAt": "2026-03-17T02:41:54.264Z"
 }

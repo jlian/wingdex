@@ -336,7 +336,7 @@ describe('LLM fixture replay', () => {
       expect(result.candidates[0].species).toContain('Dark-eyed Junco')
     })
 
-    it('identifies Rock Pigeon in Amsterdam', async () => {
+    it('identifies Common Wood-Pigeon in Amsterdam', async () => {
       const f = fixtures.find(f => f.imageFile.includes('Pigeon'))!
       replayFixture(f)
 
@@ -347,7 +347,7 @@ describe('LLM fixture replay', () => {
         f.context.locationName,
       )
 
-      expect(result.candidates[0].species).toContain('Rock Pigeon')
+      expect(result.candidates[0].species).toContain('Wood-Pigeon')
     })
 
     it("identifies Anna's Hummingbird in Seattle", async () => {

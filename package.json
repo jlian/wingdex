@@ -108,6 +108,7 @@
         }
     },
     "devDependencies": {
+        "@aws-sdk/client-s3": "^3.1013.0",
         "@cloudflare/workers-types": "^4.20260228.0",
         "@eslint/js": "^9.21.0",
         "@playwright/test": "^1.58.2",
@@ -123,6 +124,7 @@
         "@types/react-dom": "^19.0.4",
         "@types/tz-lookup": "^6.1.2",
         "@vitejs/plugin-react-swc": "^4.3.0",
+        "better-sqlite3": "^12.8.0",
         "eslint": "^9.28.0",
         "eslint-plugin-react-hooks": "^7.0.1",
         "eslint-plugin-react-refresh": "^0.5.0",
