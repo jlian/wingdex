@@ -74,7 +74,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
   const [photoResults, setPhotoResults] = useState<PhotoResult[]>([])
   const [currentCandidates, setCurrentCandidates] = useState<
-    { species: string; confidence: number; plumage?: string }[]
+    { species: string; confidence: number; plumage?: string; rangeStatus?: string }[]
   >([])
   const [rangeAdjusted, setRangeAdjusted] = useState(false)
 
@@ -887,7 +887,7 @@ function AiZoomedPreview({
 
 interface PerPhotoConfirmProps {
   photo: PhotoWithCrop
-  candidates: { species: string; confidence: number; plumage?: string }[]
+  candidates: { species: string; confidence: number; plumage?: string; rangeStatus?: string }[]
   rangeAdjusted?: boolean
   photoIndex: number
   totalPhotos: number
@@ -1129,7 +1129,14 @@ function PerPhotoConfirm({
                           <span className="ml-1 text-xs text-muted-foreground font-normal">({c.plumage})</span>
                         )}
                       </span>
-                      <span className="text-xs text-muted-foreground">{altPct}%</span>
+                      <span className="flex items-center gap-1.5">
+                        {c.rangeStatus && c.rangeStatus !== 'present' && c.rangeStatus !== 'no-data' && (
+                          <span className={`text-[10px] font-medium ${c.rangeStatus === 'out-of-range' ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {c.rangeStatus === 'out-of-range' ? 'Out of range' : 'Wrong season'}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{altPct}%</span>
+                      </span>
                     </button>
                   )
                 })}

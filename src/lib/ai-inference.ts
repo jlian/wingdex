@@ -5,6 +5,7 @@ interface VisionResult {
   confidence: number
   wikiTitle?: string
   plumage?: string
+  rangeStatus?: 'present' | 'wrong-season' | 'out-of-range' | 'no-data'
 }
 
 export type BirdIdModelTier = 'fast' | 'strong'

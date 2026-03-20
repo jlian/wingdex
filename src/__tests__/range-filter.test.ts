@@ -122,3 +122,47 @@ describe('getRangePriors', () => {
     expect(bucket.get).not.toHaveBeenCalled()
   })
 })
+
+describe('adjustConfidence preserves candidate data through sort', () => {
+  it('plumage stays with its species after range-based reordering', async () => {
+    // Simulate the bird-id.ts pipeline: candidates with plumage, then range
+    // adjustment drops #1 below #2, and we verify plumage follows its species.
+    const yearRound = Array(12).fill(128)
+    const bucket = mockBucket([
+      makeRecord('baleag', yearRound),
+      // norcar not in blob -> out-of-range
+    ])
+
+    type Candidate = {
+      species: string
+      confidence: number
+      plumage?: string
+      ebirdCode: string
+      rangeStatus?: string
+    }
+
+    let candidates: Candidate[] = [
+      { species: 'Northern Cardinal', confidence: 0.85, plumage: 'male', ebirdCode: 'norcar' },
+      { species: 'Bald Eagle', confidence: 0.70, plumage: 'juvenile', ebirdCode: 'baleag' },
+    ]
+
+    const priors = await getRangePriors(bucket, SEATTLE_LAT, SEATTLE_LON, 5, ['norcar', 'baleag'])
+
+    candidates = candidates.map(c => {
+      const range = priors.get(c.ebirdCode)
+      if (!range) return c
+      return { ...c, confidence: adjustConfidence(c.confidence, range), rangeStatus: range.status }
+    })
+    candidates.sort((a, b) => b.confidence - a.confidence)
+
+    // After range adjustment: Cardinal is out-of-range (0.85 * 0.35 = 0.2975),
+    // Eagle is present (0.70 * 1.0 = 0.70). Eagle should now be first.
+    expect(candidates[0].species).toBe('Bald Eagle')
+    expect(candidates[0].plumage).toBe('juvenile')
+    expect(candidates[0].rangeStatus).toBe('present')
+
+    expect(candidates[1].species).toBe('Northern Cardinal')
+    expect(candidates[1].plumage).toBe('male')
+    expect(candidates[1].rangeStatus).toBe('out-of-range')
+  })
+})
