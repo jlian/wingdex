@@ -5,8 +5,8 @@ import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-
 import { getRangePriors, adjustConfidence } from './range-filter'
 
 
-export const VISION_MODEL = 'gpt-4.1-mini'
-export const VISION_MODEL_STRONG = 'gpt-5-mini'
+export const VISION_MODEL = 'gpt-5.4-mini'
+export const VISION_MODEL_STRONG = 'gpt-5.4-mini'
 
 /** Extract text content from a Responses API payload. */
 function extractResponseText(payload: any): string {
@@ -32,7 +32,7 @@ type Candidate = {
   confidence: number
   wikiTitle?: string
   plumage?: string
-  rangeStatus?: 'present' | 'wrong-season' | 'out-of-range' | 'no-data'
+  rangeStatus?: 'present' | 'near-range' | 'out-of-range' | 'no-data'
 }
 
 type IdentifyBirdResult = {
@@ -107,8 +107,8 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       model,
       store: false,
       ...withSamplingOptions(model),
-      ...(isReasoningModel(model) ? { reasoning: { effort: 'low' as const } } : {}),
-      max_output_tokens: 1400,
+      ...(isReasoningModel(model) ? { reasoning: { effort: input.modelTier === 'strong' ? 'low' as const : 'none' as const } } : {}),
+      max_output_tokens: 600,
       text: { format: BIRD_ID_SCHEMA },
       instructions: BIRD_ID_INSTRUCTIONS,
       input: [
@@ -116,7 +116,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
           role: 'user',
           content: [
             { type: 'input_text', text: prompt },
-            { type: 'input_image', image_url: input.imageDataUrl, detail: 'auto' },
+            { type: 'input_image', image_url: input.imageDataUrl, detail: 'high' },
           ],
         },
       ],
@@ -189,7 +189,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
       if (!range) return c
-      return { ...c, confidence: adjustConfidence(c.confidence, range), rangeStatus: range.status }
+      return { ...c, confidence: adjustConfidence(c.confidence, range, input.month, input.location!.lat), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
     if (debug) console.log('[bird-id] After range adjustment:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} range=${c.rangeStatus ?? 'n/a'}`))

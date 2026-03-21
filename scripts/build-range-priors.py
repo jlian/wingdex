@@ -2,10 +2,10 @@
 """
 Build per-cell range-prior blobs from BirdLife BOTW GeoPackage.
 
-Rasterizes BirdLife species distribution polygons onto a 27km Equal Earth
+Rasterizes BirdLife species distribution polygons onto a 27 km Equal Earth
 grid and produces compact binary blobs for each grid cell. These blobs are
 uploaded to Cloudflare R2 and queried at runtime to adjust bird-ID confidence
-based on location and season.
+based on whether a species is known to occur at a given location.
 
 Requirements (install into a venv):
     pip install fiona shapely pyproj numpy rasterio
@@ -19,8 +19,18 @@ Usage:
 Blob format (per cell):
     Repeated records, no header, no separators:
       [8-byte ASCII species code (right-padded with spaces)]
-      [12 x uint8 monthly occurrence (0-255, maps to 0.0-1.0)]
-    Total: 20 bytes per species per cell.
+      [1 byte  presence   -- best (lowest) across all polygons hitting this cell]
+      [1 byte  origin     -- bitmask, bit N-1 for each origin code present]
+      [1 byte  seasonal   -- bitmask, bit N-1 for each seasonal code present]
+    Total: 11 bytes per species per cell.
+
+    BirdLife attribute codes stored verbatim (see data-attributes.md):
+      Presence: 1=Extant, 3=Possibly Extant, 4=Possibly Extinct,
+                6=Presence Uncertain (only 5=Extinct excluded at build time)
+      Origin:   1=Native, 2=Reintroduced, 3=Introduced, 4=Vagrant,
+                5=Origin Uncertain, 6=Assisted Colonisation
+      Seasonal: 1=Resident, 2=Breeding, 3=Non-breeding, 4=Passage,
+                5=Seasonal Occurrence Uncertain
 
 Grid reference:
     CRS: EPSG:8857 (Equal Earth)
@@ -33,7 +43,6 @@ Grid reference:
 import gzip
 import json
 import os
-import struct
 import sys
 import time
 from pathlib import Path
@@ -44,7 +53,6 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 GPKG_PATH = WORKSPACE / "tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
 OUTPUT_DIR = WORKSPACE / "tmp" / "range-priors" / "cells"
 MANIFEST_PATH = WORKSPACE / "tmp" / "range-priors" / "manifest.json"
-SCRATCH_DIR = WORKSPACE / "tmp" / "range-priors" / "scratch"
 
 # Grid constants (EPSG:8857 Equal Earth, matching the runtime module)
 GRID_COLS = 1276
@@ -52,19 +60,6 @@ GRID_ROWS = 618
 ORIGIN_X = -17226000.0
 ORIGIN_Y = 8343000.0
 CELL_SIZE = 27000.0
-
-# BirdLife presence value: binary "species is here" encoded as uint8.
-# 128/255 ~ 0.50 occurrence, well above FULL_TRUST_AT (0.10) so no penalty.
-PRESENCE_VALUE = 128
-
-# BirdLife seasonal codes -> months (0-indexed)
-# 1=Resident (year-round), 2=Breeding, 3=Non-breeding, 4=Passage
-SEASONAL_MONTHS = {
-    1: list(range(12)),           # Resident: all months
-    2: [3, 4, 5, 6, 7],          # Breeding: Apr-Aug
-    3: [9, 10, 11, 0, 1],        # Non-breeding: Oct-Feb
-    4: [2, 3, 8, 9],             # Passage: Mar-Apr + Sep-Oct
-}
 
 
 def load_taxonomy():
@@ -101,19 +96,21 @@ def main():
     # Transformer from WGS84 to Equal Earth for polygon reprojection
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:8857", always_xy=True)
 
-    # Rasterio transform for the target grid (EPSG:8857)
-    grid_transform = from_bounds(
-        ORIGIN_X, ORIGIN_Y - GRID_ROWS * CELL_SIZE,  # left, bottom
-        ORIGIN_X + GRID_COLS * CELL_SIZE, ORIGIN_Y,   # right, top
-        GRID_COLS, GRID_ROWS,
-    )
+    # Grid extent in EPSG:8857
+    grid_left = ORIGIN_X
+    grid_top = ORIGIN_Y
+    grid_right = ORIGIN_X + GRID_COLS * CELL_SIZE
+    grid_bottom = ORIGIN_Y - GRID_ROWS * CELL_SIZE
 
-    # Phase 1: Read GPKG and group polygons by (species_code, seasonal)
-    print(f"Reading {GPKG_PATH.name}...")
+    # Single-pass streaming: read each feature, project, rasterize immediately,
+    # accumulate only the compact cell records in memory (~300 MB).
+    # Geometries are discarded after each feature - no 24 GB memory spike.
+    print(f"Reading and rasterizing {GPKG_PATH.name}...")
     t0 = time.time()
 
-    # species_polys: {code: [(projected_geom, seasonal), ...]}
-    species_polys: dict[str, list] = {}
+    # Per-cell per-species accumulator: {(row,col): {code: [min_presence, origin_mask, seasonal_mask]}}
+    cell_species: dict[tuple[int, int], dict[str, list]] = {}
+    species_seen: set[str] = set()
     matched = 0
     unmatched = 0
     skipped = 0
@@ -123,10 +120,18 @@ def main():
         for i, feat in enumerate(src):
             props = feat["properties"]
 
-            if props.get("presence", 0) not in (1, 2):
+            presence = props.get("presence", 0)
+            if presence == 5:
                 skipped += 1
                 continue
-            if props.get("origin", 0) not in (1, 2):
+
+            origin = props.get("origin", 0)
+            if origin < 1 or origin > 6:
+                skipped += 1
+                continue
+
+            seasonal = props.get("seasonal", 0)
+            if seasonal < 1 or seasonal > 5:
                 skipped += 1
                 continue
 
@@ -136,7 +141,6 @@ def main():
                 unmatched += 1
                 continue
 
-            seasonal = props.get("seasonal", 1)
             geom = shape(feat["geometry"])
             if geom.is_empty:
                 continue
@@ -146,97 +150,103 @@ def main():
             except Exception:
                 continue
 
-            species_polys.setdefault(code, []).append((proj_geom, seasonal))
-            matched += 1
+            # Rasterize this single feature immediately using bounding-box sub-grid
+            b = proj_geom.bounds  # (minx, miny, maxx, maxy)
+            minx = max(b[0], grid_left)
+            miny = max(b[1], grid_bottom)
+            maxx = min(b[2], grid_right)
+            maxy = min(b[3], grid_top)
 
-            if (i + 1) % 2000 == 0:
-                print(f"  Read {i+1}/{total} features, {len(species_polys)} species...")
+            if minx >= maxx or miny >= maxy:
+                matched += 1
+                species_seen.add(code)
+                continue
 
-    elapsed = time.time() - t0
-    print(f"Read {total} features in {elapsed:.0f}s")
-    print(f"  Matched: {matched}, Unmatched: {unmatched}, Skipped: {skipped}")
-    print(f"  Unique species: {len(species_polys)}")
+            col_lo = max(0, int((minx - grid_left) / CELL_SIZE))
+            col_hi = min(GRID_COLS, int((maxx - grid_left) / CELL_SIZE) + 1)
+            row_lo = max(0, int((grid_top - maxy) / CELL_SIZE))
+            row_hi = min(GRID_ROWS, int((grid_top - miny) / CELL_SIZE) + 1)
 
-    # Phase 2: Rasterize each species and append records to per-cell scratch files.
-    # This avoids holding all cell data in memory (which can exceed 50 GB).
-    print(f"\nRasterizing {len(species_polys)} species (streaming to disk)...")
-    t1 = time.time()
+            sub_cols = col_hi - col_lo
+            sub_rows = row_hi - row_lo
+            if sub_cols <= 0 or sub_rows <= 0:
+                matched += 1
+                species_seen.add(code)
+                continue
 
-    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
-    # Clean scratch dir from any previous run
-    for old in SCRATCH_DIR.iterdir():
-        old.unlink()
+            sub_left = grid_left + col_lo * CELL_SIZE
+            sub_top = grid_top - row_lo * CELL_SIZE
+            sub_transform = from_bounds(
+                sub_left, sub_top - sub_rows * CELL_SIZE,
+                sub_left + sub_cols * CELL_SIZE, sub_top,
+                sub_cols, sub_rows,
+            )
 
-    cells_touched: set[tuple[int, int]] = set()
-    processed = 0
-
-    for code, polys in species_polys.items():
-        padded_code = code.ljust(8)[:8].encode("ascii")
-
-        # Group polygons by seasonal type and rasterize each season
-        by_season: dict[int, list] = {}
-        for proj_geom, seasonal in polys:
-            by_season.setdefault(seasonal, []).append(proj_geom)
-
-        # Build a per-species 12-month accumulator only for the cells this species touches.
-        # Key = (row, col), value = bytearray(12)
-        species_cells: dict[tuple[int, int], bytearray] = {}
-
-        for seasonal, geoms in by_season.items():
-            months = SEASONAL_MONTHS.get(seasonal, SEASONAL_MONTHS[1])
-
-            shapes = [(g, 1) for g in geoms]
             try:
                 mask = rasterize(
-                    shapes,
-                    out_shape=(GRID_ROWS, GRID_COLS),
-                    transform=grid_transform,
+                    [(proj_geom, 1)],
+                    out_shape=(sub_rows, sub_cols),
+                    transform=sub_transform,
                     fill=0,
                     dtype=np.uint8,
                     all_touched=False,
                 )
             except Exception:
+                matched += 1
+                species_seen.add(code)
                 continue
+
+            origin_bit = 1 << (origin - 1)
+            seasonal_bit = 1 << (seasonal - 1)
 
             rows, cols = np.where(mask == 1)
             for r, c in zip(rows.tolist(), cols.tolist()):
-                key = (r, c)
-                if key not in species_cells:
-                    species_cells[key] = bytearray(12)
-                for m in months:
-                    species_cells[key][m] = max(species_cells[key][m], PRESENCE_VALUE)
+                rc = (r + row_lo, c + col_lo)
+                cell_dict = cell_species.get(rc)
+                if cell_dict is None:
+                    cell_dict = {}
+                    cell_species[rc] = cell_dict
+                prev = cell_dict.get(code)
+                if prev is None:
+                    cell_dict[code] = [presence, origin_bit, seasonal_bit]
+                else:
+                    prev[0] = min(prev[0], presence)
+                    prev[1] |= origin_bit
+                    prev[2] |= seasonal_bit
 
-        # Append this species' 20-byte records to per-cell scratch files
-        for (r, c), monthly in species_cells.items():
-            cells_touched.add((r, c))
-            scratch_path = SCRATCH_DIR / f"{r}-{c}.bin"
-            with open(scratch_path, "ab") as f:
-                f.write(padded_code + bytes(monthly))
+            matched += 1
+            species_seen.add(code)
 
-        processed += 1
-        if processed % 500 == 0:
-            elapsed = time.time() - t1
-            print(f"  {processed}/{len(species_polys)} species rasterized, {len(cells_touched)} cells, {elapsed:.0f}s")
+            if (i + 1) % 500 == 0:
+                elapsed = time.time() - t0
+                rate = (i + 1) / elapsed if elapsed > 0 else 0
+                eta = (total - i - 1) / rate if rate > 0 else 0
+                print(f"  {i+1}/{total} features, {len(species_seen)} species, {len(cell_species)} cells, {elapsed:.0f}s ({rate:.1f} feat/s, ~{eta/60:.0f}m left)")
 
-    elapsed = time.time() - t1
-    print(f"Rasterized {processed} species in {elapsed:.0f}s")
-    print(f"Grid cells with data: {len(cells_touched)}")
+    elapsed = time.time() - t0
+    print(f"Processed {total} features in {elapsed:.0f}s")
+    print(f"  Matched: {matched}, Unmatched: {unmatched}, Skipped: {skipped}")
+    print(f"  Unique species: {len(species_seen)}, Grid cells: {len(cell_species)}")
 
-    # Phase 3: Compress scratch files into final gzipped blobs
+    # Phase 2: Serialize cell dicts into gzipped blobs
     print(f"\nWriting cell blobs to {OUTPUT_DIR}/...")
+    t1 = time.time()
     total_bytes = 0
     cells_written = 0
 
-    for (r, c) in sorted(cells_touched):
-        scratch_path = SCRATCH_DIR / f"{r}-{c}.bin"
-        raw = scratch_path.read_bytes()
+    for (r, c) in sorted(cell_species):
+        parts = []
+        for code, (pres, omask, smask) in cell_species[(r, c)].items():
+            parts.append(code.ljust(8)[:8].encode("ascii") + bytes([pres, omask, smask]))
+        raw = b"".join(parts)
         blob = gzip.compress(raw, compresslevel=6)
         out_path = OUTPUT_DIR / f"{r}-{c}.bin.gz"
         out_path.write_bytes(blob)
         total_bytes += len(blob)
         cells_written += 1
-        scratch_path.unlink()  # Free disk space as we go
 
+    elapsed = time.time() - t1
+    print(f"Wrote {cells_written:,} files ({total_bytes / 1024 / 1024:.1f} MB) in {elapsed:.0f}s")
     print(f"Total output: {total_bytes / 1024 / 1024:.1f} MB in {cells_written:,} files")
 
     # Write manifest
@@ -249,12 +259,11 @@ def main():
         "gridCols": GRID_COLS,
         "gridRows": GRID_ROWS,
         "totalCells": cells_written,
-        "speciesCount": processed,
+        "speciesCount": len(species_seen),
         "matchedPolygons": matched,
         "unmatchedPolygons": unmatched,
-        "recordSize": 20,
-        "presenceValue": PRESENCE_VALUE,
-        "format": "8-byte code + 12x uint8 monthly occurrence",
+        "recordSize": 11,
+        "format": "8-byte code + uint8 presence + uint8 origin_mask + uint8 seasonal_mask",
     }
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Manifest: {MANIFEST_PATH}")

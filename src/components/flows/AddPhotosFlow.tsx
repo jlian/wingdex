@@ -1130,9 +1130,9 @@ function PerPhotoConfirm({
                         )}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        {c.rangeStatus && c.rangeStatus !== 'present' && c.rangeStatus !== 'no-data' && (
+                        {c.rangeStatus && (c.rangeStatus === 'out-of-range' || c.rangeStatus === 'near-range') && (
                           <span className={`text-[10px] font-medium ${c.rangeStatus === 'out-of-range' ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                            {c.rangeStatus === 'out-of-range' ? 'Out of range' : 'Wrong season'}
+                            {c.rangeStatus === 'out-of-range' ? 'Out of range' : 'Near range'}
                           </span>
                         )}
                         <span className="text-xs text-muted-foreground">{altPct}%</span>
