@@ -271,6 +271,12 @@ const GALLERY_EXCLUDE_RE = /\.(svg|gif)$|Status_|range_map|distribution|map_of|m
 const galleryCache = new Map<string, string[]>()
 const galleryInFlight = new Map<string, Promise<string[]>>()
 
+function trimGalleryCache(): void {
+  if (galleryCache.size <= MAX_CACHED_ENTRIES) return
+  const keys = Array.from(galleryCache.keys())
+  for (let i = 0; i < keys.length - MAX_CACHED_ENTRIES; i++) galleryCache.delete(keys[i])
+}
+
 /**
  * Get additional reference image URLs from a species' Wikipedia article.
  * Returns up to `limit` photo URLs (excluding the lead image, SVGs, maps, icons).
@@ -297,10 +303,12 @@ export async function getWikimediaGallery(
       const urls = await fetchMediaList(title, limit)
       if (urls.length > 0) {
         galleryCache.set(cacheKey, urls)
+        trimGalleryCache()
         return urls
       }
     }
     galleryCache.set(cacheKey, [])
+    trimGalleryCache()
     return []
   })()
 

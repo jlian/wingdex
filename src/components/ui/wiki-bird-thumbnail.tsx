@@ -143,7 +143,7 @@ export function WikiBirdThumbnail({
         </div>
       )}
 
-      {/* Arrow buttons (visible on hover / always on touch) */}
+      {/* Arrow buttons (hover only, touch devices use swipe) */}
       {hasMultiple && (
         <>
           <button

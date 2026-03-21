@@ -1017,7 +1017,8 @@ function PerPhotoConfirm({
         </div>
       </div>
 
-      {/* Species result card */}      <Card className="p-4 space-y-3">
+      {/* Species result card */}
+      <Card className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <h3 className="font-serif text-lg font-semibold text-foreground">
