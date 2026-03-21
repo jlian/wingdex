@@ -150,7 +150,7 @@ export function WikiBirdThumbnail({
             type="button"
             onClick={(e) => { e.stopPropagation(); goPrev() }}
             className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity duration-200
+              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200
               bg-gradient-to-r from-black/20 to-transparent text-white/80 hover:text-white"
             aria-label="Previous image"
           >
@@ -162,7 +162,7 @@ export function WikiBirdThumbnail({
             type="button"
             onClick={(e) => { e.stopPropagation(); goNext() }}
             className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity duration-200
+              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200
               bg-gradient-to-l from-black/20 to-transparent text-white/80 hover:text-white"
             aria-label="Next image"
           >

@@ -11,6 +11,9 @@
 .animate-gallery-slide {
   animation: gallery-slide 0.25s ease-out;
 }
+@media (prefers-reduced-motion: reduce) {
+  .animate-gallery-slide { animation: none; }
+}
 
 :root {
   --background: oklch(0.88 0.03 85);
