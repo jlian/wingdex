@@ -434,8 +434,8 @@ struct PerPhotoConfirmView: View {
         if let c = candidates.first(where: { $0.species == species }), let t = c.wikiTitle { wikiTitle = t }
         else { wikiTitle = getDisplayName(species).replacingOccurrences(of: " ", with: "_") }
         isLoadingWikiImage = true; wikiImageURL = nil
-        wikiImageTask = Task {
-            defer { if !Task.isCancelled { await MainActor.run { isLoadingWikiImage = false } } }
+        wikiImageTask = Task { @MainActor in
+            defer { if !Task.isCancelled { isLoadingWikiImage = false } }
             do {
                 let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
                 guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(enc)") else { return }
@@ -445,12 +445,12 @@ struct PerPhotoConfirmView: View {
                 struct S: Codable { let thumbnail: T?; struct T: Codable { let source: String? } }
                 let s = try JSONDecoder().decode(S.self, from: data)
                 guard !Task.isCancelled else { return }
-                if let src = s.thumbnail?.source, let u = URL(string: src) { await MainActor.run { wikiImageURL = u } }
+                if let src = s.thumbnail?.source, let u = URL(string: src) { wikiImageURL = u }
             } catch is CancellationError { /* expected */ }
             catch { log.debug("Wiki fetch failed: \(error.localizedDescription)") }
         }
         galleryURLs = []
-        galleryTask = Task {
+        galleryTask = Task { @MainActor in
             do {
                 let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
                 guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/media-list/\(enc)") else { return }
@@ -484,7 +484,7 @@ struct PerPhotoConfirmView: View {
                     if urls.count >= 6 { break }
                 }
                 guard !Task.isCancelled else { return }
-                await MainActor.run { galleryURLs = urls }
+                galleryURLs = urls
             } catch is CancellationError { /* expected */ }
             catch { log.debug("Gallery fetch failed: \(error.localizedDescription)") }
         }
