@@ -35,6 +35,9 @@ export default defineConfig(({ mode }) => {
       host: !!env.VITE_SERVER_HOST,
       allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) ?? [],
       forwardConsole: true,
+      watch: {
+        ignored: ['**/.wrangler/**', '**/tmp/**'],
+      },
       proxy: {
         '/api': `http://localhost:${apiPort}`,
       },
