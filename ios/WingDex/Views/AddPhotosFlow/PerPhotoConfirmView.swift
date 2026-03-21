@@ -164,6 +164,15 @@ struct PerPhotoConfirmView: View {
                     .padding(.horizontal, 16)
 
                     speciesCard
+
+                    if viewModel.rangeAdjusted {
+                        Link(destination: URL(string: "https://datazone.birdlife.org")!) {
+                            Text("Location-filtered using BirdLife International.")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -255,68 +264,27 @@ struct PerPhotoConfirmView: View {
     private func wikiSquareThumbnail(size: CGFloat) -> some View {
         let urls = allWikiURLs
         let safeIndex = urls.isEmpty ? 0 : min(galleryIndex, urls.count - 1)
-        let currentURL = urls.isEmpty ? nil : urls[safeIndex]
 
         return ZStack(alignment: .bottom) {
-            Group {
-                if let url = currentURL?.absoluteString {
-                    BirdThumbnail(url: url, size: size, cornerRadius: 12)
-                        .id(url)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
-                } else if isLoadingWikiImage {
+            if urls.isEmpty {
+                if isLoadingWikiImage {
                     wikiPlaceholder(size: size)
                         .overlay { ProgressView() }
                 } else {
                     wikiPlaceholder(size: size)
                 }
-            }
-            .animation(.easeInOut(duration: 0.25), value: safeIndex)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                    .onEnded { value in
-                        guard urls.count > 1 else { return }
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            if value.translation.width < -20 {
-                                galleryIndex = (safeIndex + 1) % urls.count
-                            } else if value.translation.width > 20 {
-                                galleryIndex = (safeIndex - 1 + urls.count) % urls.count
-                            }
-                        }
-                    }
-            )
-
-            // Navigation arrows
-            if urls.count > 1 {
-                HStack {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            galleryIndex = (safeIndex - 1 + urls.count) % urls.count
-                        }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .background(.black.opacity(0.25), in: Circle())
-                    }
-                    Spacer()
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            galleryIndex = (safeIndex + 1) % urls.count
-                        }
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                            .background(.black.opacity(0.25), in: Circle())
+            } else {
+                TabView(selection: Binding(
+                    get: { safeIndex },
+                    set: { galleryIndex = $0 }
+                )) {
+                    ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                        BirdThumbnail(url: url.absoluteString, size: size, cornerRadius: 12)
+                            .tag(i)
                     }
                 }
-                .padding(.horizontal, 6)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(width: size, height: size)
             }
 
             // Dot indicators
@@ -326,14 +294,13 @@ struct PerPhotoConfirmView: View {
                         Circle()
                             .fill(i == safeIndex ? Color.white : Color.white.opacity(0.4))
                             .frame(width: 6, height: 6)
-                            .scaleEffect(i == safeIndex ? 1.15 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: safeIndex)
                     }
                 }
                 .padding(.bottom, 6)
             }
         }
         .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func wikiPlaceholder(size: CGFloat) -> some View {
@@ -376,14 +343,6 @@ struct PerPhotoConfirmView: View {
 
             ProgressView(value: selectedConfidence)
                 .tint(confidenceColor)
-
-            if viewModel.rangeAdjusted {
-                Link(destination: URL(string: "https://datazone.birdlife.org")!) {
-                    Text("Location-filtered using BirdLife International.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                }
-            }
 
             if candidates.count > 1 {
                 Divider()
