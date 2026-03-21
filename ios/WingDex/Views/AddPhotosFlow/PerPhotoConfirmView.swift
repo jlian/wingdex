@@ -371,15 +371,15 @@ struct PerPhotoConfirmView: View {
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.4))
                 Text(getDisplayName(candidate.species))
                     .font(.body)
-                if let plumage = candidate.plumage {
-                    Text("(\(plumage))")
+                if let plumage = candidate.plumage, let icon = plumageIcon(plumage) {
+                    Text(icon)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(plumage)
                 }
                 Spacer()
                 if let range = candidate.rangeStatus, range == "out-of-range" || range == "near-range" {
-                    Text(range == "out-of-range" ? "Out of range" : "Near range")
-                        .font(.system(size: 10, weight: .medium))
+                    Image(systemName: range == "out-of-range" ? "location.slash" : "location")
+                        .font(.system(size: 10))
                         .foregroundStyle(range == "out-of-range" ? .red : .orange)
                 }
                 Text("\(Int(candidate.confidence * 100))%")
