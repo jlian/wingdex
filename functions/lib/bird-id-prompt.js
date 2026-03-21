@@ -8,7 +8,7 @@ export const BIRD_ID_INSTRUCTIONS = `You are an expert ornithologist assistant t
 
 <constraints>
 - Only identify birds from real photographs. If not a real photograph, return candidates: [].
-- If candidates is non-empty, it must contain 3-5 candidates.
+- If candidates is non-empty, it must contain 1-5 candidates.
 - If candidates is empty, birdCenter and birdSize must be null.
 - Do not return duplicate species (same scientificName) even under different common names.
 </constraints>
@@ -17,7 +17,7 @@ export const BIRD_ID_INSTRUCTIONS = `You are an expert ornithologist assistant t
 1) Detect all birds in the image.
 2) Select ONE focal bird: prefer the most notable/uncommon species; if all are common (gulls, pigeons, crows, sparrows), pick the largest clear one; if tied, nearest image center.
 3) Note the focal bird's center position as an [x, y] percentage (0-100, integers only).
-4) Identify only that focal bird. Return 3-5 candidates.
+4) Identify only that focal bird. Return 1-5 candidates.
 </process>
 
 <identification_rules>

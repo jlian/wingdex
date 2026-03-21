@@ -57,6 +57,7 @@ export function WikiBirdThumbnail({
   const [direction, setDirection] = useState<'left' | 'right'>('left')
   const [animKey, setAnimKey] = useState(0)
   const touchStartX = useRef<number | null>(null)
+  const didSwipe = useRef(false)
 
   // Reset index when species changes
   useEffect(() => {
@@ -84,6 +85,7 @@ export function WikiBirdThumbnail({
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
+    didSwipe.current = false
   }, [])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
@@ -91,9 +93,15 @@ export function WikiBirdThumbnail({
     const dx = e.changedTouches[0].clientX - touchStartX.current
     touchStartX.current = null
     if (Math.abs(dx) < 30) return
+    didSwipe.current = true
     if (dx < 0) goNext()
     else goPrev()
   }, [hasMultiple, goNext, goPrev])
+
+  const handleClick = useCallback(() => {
+    if (didSwipe.current) { didSwipe.current = false; return }
+    goNext()
+  }, [goNext])
 
   return (
     <div
@@ -101,6 +109,7 @@ export function WikiBirdThumbnail({
         'aspect-square rounded-lg overflow-hidden bg-muted/20 relative group',
         className,
       )}
+      onClick={hasMultiple ? handleClick : undefined}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

@@ -8,25 +8,6 @@ import { getRangePriors, adjustConfidence } from './range-filter'
 export const VISION_MODEL = 'gpt-5.4-mini'
 export const VISION_MODEL_STRONG = 'gpt-5.4-mini'
 
-/** Extract text content from a Responses API payload. */
-function extractResponseText(payload: any): string {
-  // Convenience field returned by Responses API
-  if (typeof payload?.output_text === 'string') return payload.output_text
-
-  // Walk output items for message content
-  if (Array.isArray(payload?.output)) {
-    for (const item of payload.output) {
-      if (item?.type !== 'message' || !Array.isArray(item.content)) continue
-      for (const part of item.content) {
-        if (part?.type === 'output_text' && typeof part.text === 'string') return part.text
-      }
-    }
-  }
-
-  // Fallback: Chat Completions format (for test mocks / gateway compat)
-  return extractAssistantContent(payload)
-}
-
 type Candidate = {
   species: string
   confidence: number
@@ -80,7 +61,7 @@ async function callOpenAI(env: Env, body: unknown): Promise<string> {
   }
 
   const payload = await response.json() as any
-  return extractResponseText(payload)
+  return extractAssistantContent(payload)
 }
 
 function isReasoningModel(model: string): boolean {
