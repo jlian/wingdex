@@ -111,6 +111,9 @@ function useHashRouter() {
 
 // ─── App ──────────────────────────────────────────────────
 
+// Module-level flag so AppContent can signal explicit sign-out to App
+let explicitSignOut = false
+
 function App() {
   const sessionState = authClient.useSession()
   const session = sessionState.data
@@ -170,12 +173,13 @@ function App() {
     // Only reset bootstrap guard when transitioning from a real session
     // to no session (e.g. after sign-out).
     if (hadSessionRef.current) {
-      if (wasRealUserRef.current) {
+      if (wasRealUserRef.current && !explicitSignOut) {
         toast.info('Your session has expired. Please sign in again.')
         setUser(null)
       }
       hadSessionRef.current = false
       wasRealUserRef.current = false
+      explicitSignOut = false
       anonBootstrapStarted.current = false
     }
 
@@ -575,7 +579,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                   data={data}
                   user={user}
                   onSignIn={openSignIn}
-                  onSignedOut={() => navigate('home')}
+                  onSignedOut={() => { explicitSignOut = true; navigate('home') }}
                   onProfileUpdated={refetchSession}
                 />
               </Suspense>

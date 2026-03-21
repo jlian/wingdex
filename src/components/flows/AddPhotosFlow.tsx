@@ -922,6 +922,15 @@ function PerPhotoConfirm({
   const [selectedConfidence, setSelectedConfidence] = useState(topCandidate?.confidence ?? 0)
   const [selectedPlumage, setSelectedPlumage] = useState(topCandidate?.plumage)
   const isHighConfidence = selectedConfidence >= 0.8
+
+  // Reset selection when candidates change (new photo or async results)
+  useEffect(() => {
+    const top = candidates[0]
+    setSelectedSpecies(top?.species ?? '')
+    setSelectedConfidence(top?.confidence ?? 0)
+    setSelectedPlumage(top?.plumage)
+    setShowAlternatives(false)
+  }, [candidates])
   
   // Fetch Wikipedia reference image + additional gallery images for the selected species
   const { imageUrl: wikiImage, loading: wikiLoading } = useBirdImageWithStatus(selectedSpecies)

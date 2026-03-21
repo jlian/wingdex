@@ -292,10 +292,11 @@ export async function getWikimediaGallery(
 
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
-  if (galleryCache.has(cacheKey)) return galleryCache.get(cacheKey)!
+  const cached = galleryCache.get(cacheKey)
+  if (cached) return cached.slice(0, limit)
 
   const existing = galleryInFlight.get(cacheKey)
-  if (existing) return existing
+  if (existing) return existing.then(urls => urls.slice(0, limit))
 
   const promise = (async (): Promise<string[]> => {
     const titles = getLookupTitles(speciesName, options?.wikiTitle)
