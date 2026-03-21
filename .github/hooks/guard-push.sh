@@ -13,5 +13,5 @@ COMMAND=$(echo "$INPUT" | jq -r '.toolArgs' | jq -r '.command')
 
 # Match git push (with optional flags/args)
 if echo "$COMMAND" | grep -qE '\bgit\b.*\bpush\b'; then
-  jq -n '{permissionDecision: "ask", permissionDecisionReason: "git push requires explicit user approval"}'
+  jq -n '{permissionDecision: "deny", permissionDecisionReason: "git push requires explicit user approval"}'
 fi
