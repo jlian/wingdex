@@ -167,6 +167,14 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       }]
     })
 
+  // Dedup by species (LLM may return same species under different common names)
+  const seen = new Set<string>()
+  candidates = candidates.filter(c => {
+    if (seen.has(c.species)) return false
+    seen.add(c.species)
+    return true
+  })
+
   if (debug) console.log('[bird-id] After taxonomy match:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} code=${c.ebirdCode}`))
 
   // Apply range-prior adjustment if location is available

@@ -10,6 +10,7 @@ export const BIRD_ID_INSTRUCTIONS = `You are an expert ornithologist assistant t
 - Only identify birds from real photographs. If not a real photograph, return candidates: [].
 - If candidates is non-empty, it must contain 3-5 candidates.
 - If candidates is empty, birdCenter and birdSize must be null.
+- Do not return duplicate species (same scientificName) even under different common names.
 </constraints>
 
 <process>
