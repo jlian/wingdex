@@ -95,7 +95,7 @@ export function buildCropBox(
   const clampedCx = Math.max(0, Math.min(100, cx))
   const clampedCy = Math.max(0, Math.min(100, cy))
 
-  const sizePct = birdSize === 'large' ? 0.75 : birdSize === 'medium' ? 0.55 : 0.4
+  const sizePct = birdSize === 'large' ? 0.75 : birdSize === 'medium' ? 0.55 : birdSize === 'tiny' ? 0.25 : 0.4
 
   if (imageWidth && imageHeight && imageWidth > 0 && imageHeight > 0) {
     const shortSide = Math.min(imageWidth, imageHeight)

@@ -33,13 +33,13 @@ export const BIRD_ID_INSTRUCTIONS = `You are an expert ornithologist assistant t
 - 0.75-0.89: strong match.
 - 0.50-0.74: likely but partially obscured, distant, or plausibly one of several similar species.
 - 0.30-0.49: poor view, silhouette-only, or AI-generated/artistic ambiguity.
-- Cap at 0.80 if focal bird is small (<20% image area), backlit, or facing away.
+- Cap at 0.80 if focal bird is small or xsmall (<20% image area), backlit, or facing away.
 - Use the full 0.30-1.00 range. Do not cluster all answers at 0.85-0.95.
 </confidence_scale>
 
 <output_fields>
 - multipleBirds: true whenever more than one bird is visible (including same species).
-- birdSize: "small" (<20% area), "medium" (20-50%), "large" (>50%).
+- birdSize: "tiny" (<5% area), "small" (5-20%), "medium" (20-50%), "large" (>50%).
 </output_fields>
 
 <example>
@@ -83,7 +83,7 @@ export const BIRD_ID_SCHEMA = {
       },
       birdSize: {
         type: ['string', 'null'],
-        enum: ['small', 'medium', 'large', null],
+        enum: ['tiny', 'small', 'medium', 'large', null],
       },
       multipleBirds: { type: 'boolean' },
     },
