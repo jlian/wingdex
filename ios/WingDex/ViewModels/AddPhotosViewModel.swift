@@ -419,7 +419,7 @@ final class AddPhotosViewModel {
             // Fast model first
             let fastResult = try await service.identifyBird(request)
             let fastCandidates = (fastResult.candidates ?? []).map {
-                IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage)
+                IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage, rangeStatus: $0.rangeStatus)
             }
             let fastCropBox: CropBoxResult? = fastResult.cropBox.map {
                 CropBoxResult(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
@@ -484,7 +484,7 @@ final class AddPhotosViewModel {
 
                 let strongResult = try await service.identifyBird(request)
                 finalCandidates = (strongResult.candidates ?? []).map {
-                    IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage)
+                    IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage, rangeStatus: $0.rangeStatus)
                 }
                 finalMultipleBirds = strongResult.multipleBirds ?? false
                 finalRangeAdjusted = strongResult.rangeAdjusted ?? false
@@ -785,6 +785,7 @@ struct IdentifiedCandidate {
     let confidence: Double
     let wikiTitle: String?
     let plumage: String?
+    let rangeStatus: String?
 }
 
 /// AI crop box in percentage coordinates (0-100).

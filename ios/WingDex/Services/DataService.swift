@@ -113,6 +113,7 @@ final class DataService: Sendable {
             let confidence: Double
             let wikiTitle: String?
             let plumage: String?
+            let rangeStatus: String?
         }
 
         struct CropBox: Codable {

@@ -317,17 +317,19 @@ struct PerPhotoConfirmView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName)
-                        .font(.title3.weight(.semibold))
+                    HStack(spacing: 4) {
+                        Text(displayName)
+                            .font(.title3.weight(.semibold))
+                        if let plumage = selectedPlumage, let icon = plumageIcon(plumage) {
+                            Text(icon)
+                                .font(.subheadline)
+                                .accessibilityLabel(plumage)
+                        }
+                    }
                     if let sci = scientificName {
                         Text(sci)
                             .font(.subheadline.italic())
                             .foregroundStyle(.secondary)
-                    }
-                    if let plumage = selectedPlumage, let icon = plumageIcon(plumage) {
-                        Text(icon)
-                            .font(.subheadline)
-                            .accessibilityLabel(plumage)
                     }
                 }
                 Spacer()
@@ -380,6 +382,11 @@ struct PerPhotoConfirmView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if let range = candidate.rangeStatus, range == "out-of-range" || range == "near-range" {
+                    Text(range == "out-of-range" ? "Out of range" : "Near range")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(range == "out-of-range" ? .red : .orange)
+                }
                 Text("\(Int(candidate.confidence * 100))%")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
@@ -499,8 +506,8 @@ struct PerPhotoConfirmView: View {
                     confidence: 0.95, status: .confirmed, count: 1
                 )]
                 vm.currentCandidates = [
-                    IdentifiedCandidate(species: "Bald Eagle (Haliaeetus leucocephalus)", confidence: 0.92, wikiTitle: "Bald_eagle", plumage: nil),
-                    IdentifiedCandidate(species: "Golden Eagle (Aquila chrysaetos)", confidence: 0.06, wikiTitle: "Golden_eagle", plumage: nil),
+                    IdentifiedCandidate(species: "Bald Eagle (Haliaeetus leucocephalus)", confidence: 0.92, wikiTitle: "Bald_eagle", plumage: nil, rangeStatus: nil),
+                    IdentifiedCandidate(species: "Golden Eagle (Aquila chrysaetos)", confidence: 0.06, wikiTitle: "Golden_eagle", plumage: nil, rangeStatus: nil),
                 ]
             }
     }
@@ -514,9 +521,9 @@ struct PerPhotoConfirmView: View {
                 vm.clusters = [PreviewData.sampleCluster(photoCount: 5)]
                 vm.currentPhotoIndex = 2
                 vm.currentCandidates = [
-                    IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: "Northern_cardinal", plumage: nil),
-                    IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: "Vermilion_flycatcher", plumage: nil),
-                    IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: "Summer_tanager", plumage: nil),
+                    IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: "Northern_cardinal", plumage: nil, rangeStatus: nil),
+                    IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: "Vermilion_flycatcher", plumage: nil, rangeStatus: nil),
+                    IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: "Summer_tanager", plumage: nil, rangeStatus: nil),
                 ]
             }
     }
@@ -542,9 +549,9 @@ struct PerPhotoConfirmView: View {
             vm.clusters = [PreviewData.sampleCluster(photoCount: 5)]
             vm.currentPhotoIndex = 2
             vm.currentCandidates = [
-                IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: "Northern_cardinal", plumage: nil),
-                IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: "Vermilion_flycatcher", plumage: nil),
-                IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: "Summer_tanager", plumage: nil),
+                IdentifiedCandidate(species: "Northern Cardinal (Cardinalis cardinalis)", confidence: 0.55, wikiTitle: "Northern_cardinal", plumage: nil, rangeStatus: nil),
+                IdentifiedCandidate(species: "Vermilion Flycatcher (Pyrocephalus rubinus)", confidence: 0.30, wikiTitle: "Vermilion_flycatcher", plumage: nil, rangeStatus: nil),
+                IdentifiedCandidate(species: "Summer Tanager (Piranga rubra)", confidence: 0.10, wikiTitle: "Summer_tanager", plumage: nil, rangeStatus: nil),
             ]
         }
 }
