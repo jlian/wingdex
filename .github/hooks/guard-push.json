@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/guard-push.sh",
+        "comment": "Ask for confirmation before git push"
+      }
+    ]
+  }
+}
