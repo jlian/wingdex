@@ -118,6 +118,7 @@ function App() {
   const refetchSession = sessionState.refetch
   const anonBootstrapStarted = useRef(false)
   const hadSessionRef = useRef(false)
+  const wasRealUserRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
 
@@ -153,6 +154,7 @@ function App() {
       hadSessionRef.current = true
       anonBootstrapStarted.current = false
       const isAnon = Boolean((session.user as { isAnonymous?: boolean }).isAnonymous)
+      wasRealUserRef.current = !isAnon
 
       setAnonBootstrapFailed(false)
       setUser({
@@ -168,7 +170,12 @@ function App() {
     // Only reset bootstrap guard when transitioning from a real session
     // to no session (e.g. after sign-out).
     if (hadSessionRef.current) {
+      if (wasRealUserRef.current) {
+        toast.info('Your session has expired. Please sign in again.')
+        setUser(null)
+      }
       hadSessionRef.current = false
+      wasRealUserRef.current = false
       anonBootstrapStarted.current = false
     }
 

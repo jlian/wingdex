@@ -263,8 +263,9 @@ final class AddPhotosViewModel {
         if !duplicatePhotos.isEmpty {
             pendingNewPhotos = newPhotos
             pendingDuplicatePhotos = duplicatePhotos
-            showDuplicateConfirm = true
+            currentStep = .selectPhotos
             isProcessing = false
+            showDuplicateConfirm = true
             return
         }
 
@@ -281,10 +282,12 @@ final class AddPhotosViewModel {
         pendingDuplicatePhotos = []
 
         if finalPhotos.isEmpty {
+            selectedItems = []
             currentStep = .selectPhotos
             return
         }
 
+        currentStep = .extracting
         finishExtraction(photos: finalPhotos)
     }
 
