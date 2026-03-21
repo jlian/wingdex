@@ -63,8 +63,15 @@ CELL_SIZE = 27000.0
 
 
 def load_taxonomy():
-    """Build a map of scientific_name (lowercase) -> ebird_code."""
+    """Build a map of scientific_name (lowercase) -> ebird_code.
+
+    Uses eBird taxonomy as the primary source, then layers on a crosswalk
+    from AviList (via build-birdlife-crosswalk.py) to recover BirdLife-only
+    names that map to eBird codes via protonym matching.
+    """
     taxonomy_path = WORKSPACE / "src" / "lib" / "taxonomy.json"
+    crosswalk_path = WORKSPACE / "tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
+
     raw = json.loads(taxonomy_path.read_text())
     sci_to_code = {}
     for entry in raw:
@@ -72,6 +79,19 @@ def load_taxonomy():
         code = entry[2] if len(entry) > 2 and entry[2] else None
         if sci and code:
             sci_to_code[sci] = code
+
+    # Layer on crosswalk for BirdLife-only names (don't overwrite eBird entries)
+    if crosswalk_path.exists():
+        crosswalk = json.loads(crosswalk_path.read_text())
+        added = 0
+        for sci, code in crosswalk.items():
+            if sci not in sci_to_code:
+                sci_to_code[sci] = code
+                added += 1
+        print(f"Crosswalk: added {added} BirdLife-to-eBird mappings")
+    else:
+        print("Warning: no crosswalk found, run scripts/build-birdlife-crosswalk.py first")
+
     return sci_to_code
 
 
