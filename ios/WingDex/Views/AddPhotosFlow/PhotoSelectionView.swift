@@ -49,6 +49,7 @@ struct PhotoSelectionView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
+                .tint(Color.accentColor)
             }
             .padding(.horizontal, 24)
 

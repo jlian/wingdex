@@ -118,6 +118,7 @@ struct OutingReviewView: View {
                     Label("Continue", systemImage: "chevron.right")
                         .labelStyle(.titleAndIcon)
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(isLoadingLocation)
             }
         }

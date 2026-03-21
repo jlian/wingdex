@@ -142,6 +142,7 @@ struct CropView: View {
                 } label: {
                     Image(systemName: "checkmark")
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(cachedImage == nil)
             }
             ToolbarItemGroup(placement: .bottomBar) {
@@ -153,19 +154,22 @@ struct CropView: View {
 
                 Spacer()
 
-                Button("Skip", role: .destructive) {
-                    onSkip()
-                }
-
-                Spacer()
-
-                Button() {
-                    photoScale = initialScale
-                    committedScale = initialScale
-                    photoOffset = initialOffset
-                    committedOffset = initialOffset
+                Menu {
+                    Button {
+                        photoScale = initialScale
+                        committedScale = initialScale
+                        photoOffset = initialOffset
+                        committedOffset = initialOffset
+                    } label: {
+                        Label("Reset Crop", systemImage: "arrow.counterclockwise")
+                    }
+                    Button(role: .destructive) {
+                        onSkip()
+                    } label: {
+                        Label("Skip Photo", systemImage: "forward")
+                    }
                 } label: {
-                    Image(systemName: "arrow.counterclockwise")
+                    Image(systemName: "ellipsis")
                 }
             }
         }

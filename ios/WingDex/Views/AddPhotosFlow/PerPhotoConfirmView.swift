@@ -55,20 +55,23 @@ struct PerPhotoConfirmView: View {
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Primary action top-right - only shown when candidates exist
-            ToolbarItemGroup(placement: .primaryAction) {
+            // Confirm action top-right (tinted green)
+            ToolbarItem(placement: .primaryAction) {
                 if hasCandidates {
-                    Button("Possible", systemImage: "questionmark") {
-                        confirmWith(status: .possible)
-                    }
-                    .disabled(selectedSpecies.isEmpty)
-                    Button("Confirm", systemImage: "checkmark") {
+                    Button {
                         confirmWith(status: .confirmed)
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
+                    .buttonStyle(.borderedProminent)
                     .disabled(selectedSpecies.isEmpty)
+                } else {
+                    Button("Skip", role: .destructive) {
+                        viewModel.skipCurrentPhoto()
+                    }
                 }
             }
-            // Bottom bar: back (left) + secondary tools (right of back)
+            // Bottom bar: back (left) + overflow menu (right)
             ToolbarItemGroup(placement: .bottomBar) {
                 if photoIndex > 0 {
                     Button {
@@ -80,19 +83,32 @@ struct PerPhotoConfirmView: View {
 
                 Spacer()
 
-                Button("Skip", role: .destructive) {
-                    viewModel.skipCurrentPhoto()
+                if hasCandidates {
+                    Menu {
+                        Button {
+                            confirmWith(status: .possible)
+                        } label: {
+                            Label("Mark as Possible", systemImage: "questionmark")
+                        }
+                        .disabled(selectedSpecies.isEmpty)
+                        Button {
+                            viewModel.requestManualCrop()
+                        } label: {
+                            Label("Re-crop", systemImage: "crop")
+                        }
+                        Button(role: .destructive) {
+                            viewModel.skipCurrentPhoto()
+                        } label: {
+                            Label("Skip Photo", systemImage: "forward")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                } else {
+                    Button("Re-crop") {
+                        viewModel.requestManualCrop()
+                    }
                 }
-
-                Spacer()
-                
-                Button {
-                    viewModel.requestManualCrop()
-                } label: {
-                    Image(systemName: "crop")
-                }
-
-                
             }
         }
         .onAppear { initializeSelection() }
