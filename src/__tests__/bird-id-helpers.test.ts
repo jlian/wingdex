@@ -228,7 +228,7 @@ describe('bird-id helpers', () => {
     })
 
     it('defaults to small size for unknown birdSize values', () => {
-      const box = buildCropBox([50, 50], 'tiny')
+      const box = buildCropBox([50, 50], 'unknown-value')
       expect(box).toBeDefined()
       // falls through to 0.4 (small default)
       expect(box!.width).toBe(40)
