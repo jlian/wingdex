@@ -18,6 +18,7 @@ OUTPUT_PATH = ROOT / "tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
 # Load eBird taxonomy
 ebird = json.loads(TAXONOMY_PATH.read_text())
 ebird_sci = {e[1].lower(): e[2] for e in ebird if len(e) > 2 and e[2]}
+ebird_valid_codes = set(ebird_sci.values())  # set of valid eBird codes for fast lookup
 
 # Parse AviList
 wb = openpyxl.load_workbook(str(AVILIST_PATH), read_only=True)
@@ -58,11 +59,11 @@ for row in ws.iter_rows(min_row=2, values_only=True):
     bow_code = extract_bow_code(bow_url)
 
     # Track the current parent species code from species rows only.
-    # Priority: BOW URL code > raw code > our taxonomy lookup.
-    # This handles cases where AviList has no code for a species that eBird has
-    # (e.g., Aerodramus leucophaeus -> polswi1 in our taxonomy).
+    # Priority: BOW URL code > raw code (if valid) > our taxonomy lookup.
+    # Validates raw code against taxonomy to catch AviList typos like fotswi1 -> fotswi.
     if rank == "species":
-        current_species_code = bow_code or raw_code or ebird_sci.get(sci_name.lower(), "")
+        validated_raw = raw_code if raw_code in ebird_valid_codes else ""
+        current_species_code = bow_code or validated_raw or ebird_sci.get(sci_name.lower(), "") or raw_code
 
     ebird_code = raw_code
     if not ebird_code:

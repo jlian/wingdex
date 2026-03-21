@@ -32,7 +32,7 @@ import {
   resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
-import { useBirdImageWithStatus } from '@/hooks/use-bird-image'
+import { useBirdImageWithStatus, useBirdGallery } from '@/hooks/use-bird-image'
 import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 
@@ -923,8 +923,9 @@ function PerPhotoConfirm({
   const [selectedPlumage, setSelectedPlumage] = useState(topCandidate?.plumage)
   const isHighConfidence = selectedConfidence >= 0.8
   
-  // Fetch Wikipedia reference image for the selected species
+  // Fetch Wikipedia reference image + additional gallery images for the selected species
   const { imageUrl: wikiImage, loading: wikiLoading } = useBirdImageWithStatus(selectedSpecies)
+  const { images: galleryImages } = useBirdGallery(selectedSpecies)
 
   // No candidates
   if (candidates.length === 0) {
@@ -1007,6 +1008,7 @@ function PerPhotoConfirm({
           <WikiBirdThumbnail
             speciesName={selectedSpecies}
             imageUrl={wikiImage}
+            galleryUrls={galleryImages}
             alt={`${displayName} reference`}
             className="w-full max-w-48 border-2 border-muted"
             loading={wikiLoading}
@@ -1015,8 +1017,7 @@ function PerPhotoConfirm({
         </div>
       </div>
 
-      {/* Species result card */}
-      <Card className="p-4 space-y-3">
+      {/* Species result card */}      <Card className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <h3 className="font-serif text-lg font-semibold text-foreground">

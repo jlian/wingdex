@@ -18,6 +18,9 @@ struct PerPhotoConfirmView: View {
     @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
     @State private var wikiImageTask: Task<Void, Never>?
+    @State private var galleryURLs: [URL] = []
+    @State private var galleryTask: Task<Void, Never>?
+    @State private var galleryIndex = 0
 
     private var photo: ProcessedPhoto? { viewModel.currentPhoto }
     private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
@@ -239,19 +242,62 @@ struct PerPhotoConfirmView: View {
         }
     }
 
-    // MARK: - Wiki Square Thumbnail (portrait-aware)
+    // MARK: - Wiki Square Thumbnail (portrait-aware, swipeable gallery)
+
+    /// All available image URLs: primary wiki image + gallery images.
+    private var allWikiURLs: [URL] {
+        var urls: [URL] = []
+        if let u = wikiImageURL { urls.append(u) }
+        urls.append(contentsOf: galleryURLs)
+        return urls
+    }
 
     private func wikiSquareThumbnail(size: CGFloat) -> some View {
-        Group {
-            if let url = wikiImageURL?.absoluteString {
-                BirdThumbnail(url: url, size: size, cornerRadius: 12)
-            } else if isLoadingWikiImage {
-                wikiPlaceholder(size: size)
-                    .overlay { ProgressView() }
-            } else {
-                wikiPlaceholder(size: size)
+        let urls = allWikiURLs
+        let safeIndex = urls.isEmpty ? 0 : min(galleryIndex, urls.count - 1)
+        let currentURL = urls.isEmpty ? nil : urls[safeIndex]
+
+        return ZStack(alignment: .bottom) {
+            Group {
+                if let url = currentURL?.absoluteString {
+                    BirdThumbnail(url: url, size: size, cornerRadius: 12)
+                } else if isLoadingWikiImage {
+                    wikiPlaceholder(size: size)
+                        .overlay { ProgressView() }
+                } else {
+                    wikiPlaceholder(size: size)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if urls.count > 1 {
+                    galleryIndex = (safeIndex + 1) % urls.count
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                    .onEnded { value in
+                        guard urls.count > 1 else { return }
+                        if value.translation.width < -20 {
+                            galleryIndex = (safeIndex + 1) % urls.count
+                        } else if value.translation.width > 20 {
+                            galleryIndex = (safeIndex - 1 + urls.count) % urls.count
+                        }
+                    }
+            )
+
+            if urls.count > 1 {
+                HStack(spacing: 4) {
+                    ForEach(0..<urls.count, id: \.self) { i in
+                        Circle()
+                            .fill(i == safeIndex ? Color.white : Color.white.opacity(0.4))
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .padding(.bottom, 6)
             }
         }
+        .frame(width: size, height: size)
     }
 
     private func wikiPlaceholder(size: CGFloat) -> some View {
@@ -373,8 +419,10 @@ struct PerPhotoConfirmView: View {
 
     private func fetchWikiImage() {
         wikiImageTask?.cancel()
+        galleryTask?.cancel()
+        galleryIndex = 0
         let species = selectedSpecies
-        guard !species.isEmpty else { wikiImageURL = nil; return }
+        guard !species.isEmpty else { wikiImageURL = nil; galleryURLs = []; galleryIndex = 0; return }
         let wikiTitle: String
         if let c = candidates.first(where: { $0.species == species }), let t = c.wikiTitle { wikiTitle = t }
         else { wikiTitle = getDisplayName(species).replacingOccurrences(of: " ", with: "_") }
@@ -393,6 +441,45 @@ struct PerPhotoConfirmView: View {
                 if let src = s.thumbnail?.source, let u = URL(string: src) { wikiImageURL = u }
             } catch is CancellationError { /* expected */ }
             catch { log.debug("Wiki fetch failed: \(error.localizedDescription)") }
+        }
+        galleryURLs = []
+        galleryTask = Task {
+            do {
+                let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
+                guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/media-list/\(enc)") else { return }
+                var req = URLRequest(url: url); req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
+                let (data, _) = try await URLSession.shared.data(for: req)
+                try Task.checkCancellation()
+                struct MediaList: Codable {
+                    let items: [MediaItem]?
+                    struct MediaItem: Codable {
+                        let title: String?
+                        let type: String?
+                        let leadImage: Bool?
+                        let srcset: [Srcset]?
+                        struct Srcset: Codable { let src: String? }
+                    }
+                }
+                let list = try JSONDecoder().decode(MediaList.self, from: data)
+                guard !Task.isCancelled else { return }
+                let excludePattern = try! NSRegularExpression(
+                    pattern: "\\.(svg|gif)$|Status_|range_map|distribution|map_of|map\\.png|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal",
+                    options: .caseInsensitive
+                )
+                var urls: [URL] = []
+                for item in list.items ?? [] {
+                    guard item.type == "image", item.leadImage != true,
+                          let title = item.title,
+                          excludePattern.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) == nil,
+                          let src = item.srcset?.first?.src else { continue }
+                    let full = src.hasPrefix("//") ? "https:\(src)" : src
+                    if let u = URL(string: full) { urls.append(u) }
+                    if urls.count >= 6 { break }
+                }
+                guard !Task.isCancelled else { return }
+                galleryURLs = urls
+            } catch is CancellationError { /* expected */ }
+            catch { log.debug("Gallery fetch failed: \(error.localizedDescription)") }
         }
     }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getWikimediaImage, getWikimediaSummary } from '@/lib/wikimedia'
+import { getWikimediaImage, getWikimediaSummary, getWikimediaGallery } from '@/lib/wikimedia'
 import type { WikiSummary } from '@/lib/wikimedia'
 
 /**
@@ -74,4 +74,37 @@ export function useBirdSummary(
   }, [speciesName, wikiTitle])
 
   return { summary, loading }
+}
+
+/**
+ * Hook to fetch additional reference images from a species' Wikipedia article.
+ * Returns an array of image URLs (excluding the lead/primary image).
+ */
+export function useBirdGallery(speciesName: string | undefined): {
+  images: string[]
+  loading: boolean
+} {
+  const [images, setImages] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!speciesName) {
+      setImages([])
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+
+    getWikimediaGallery(speciesName).then((urls) => {
+      if (!cancelled) {
+        setImages(urls)
+        setLoading(false)
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [speciesName])
+
+  return { images, loading }
 }

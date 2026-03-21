@@ -253,3 +253,84 @@ export async function getWikimediaSummary(
     pageUrl: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent((data.title || common).replace(/ /g, '_'))}`,
   }
 }
+
+// -- Gallery: multiple reference images from Wikipedia article -----------
+
+/** Raw shape of an item from the Wikipedia media-list endpoint. */
+type MediaListItem = {
+  title: string
+  type: string
+  leadImage?: boolean
+  showInGallery?: boolean
+  srcset?: Array<{ src: string; scale: string }>
+}
+
+/** Patterns in filenames that indicate non-bird imagery (icons, maps, diagrams). */
+const GALLERY_EXCLUDE_RE = /\.(svg|gif)$|Status_|range_map|distribution|map_of|map\.png|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal/i
+
+const galleryCache = new Map<string, string[]>()
+const galleryInFlight = new Map<string, Promise<string[]>>()
+
+/**
+ * Get additional reference image URLs from a species' Wikipedia article.
+ * Returns up to `limit` photo URLs (excluding the lead image, SVGs, maps, icons).
+ */
+export async function getWikimediaGallery(
+  speciesName: string,
+  options?: WikiLookupOptions & { limit?: number },
+): Promise<string[]> {
+  const limit = options?.limit ?? 6
+
+  // Resolve the wiki title so we know which article to query
+  if (!options?.wikiTitle) await ensureWikiTitleCached(speciesName)
+
+  const common = getCommonName(speciesName)
+  const cacheKey = common.toLowerCase()
+  if (galleryCache.has(cacheKey)) return galleryCache.get(cacheKey)!
+
+  const existing = galleryInFlight.get(cacheKey)
+  if (existing) return existing
+
+  const promise = (async (): Promise<string[]> => {
+    const titles = getLookupTitles(speciesName, options?.wikiTitle)
+    for (const title of titles) {
+      const urls = await fetchMediaList(title, limit)
+      if (urls.length > 0) {
+        galleryCache.set(cacheKey, urls)
+        return urls
+      }
+    }
+    galleryCache.set(cacheKey, [])
+    return []
+  })()
+
+  galleryInFlight.set(cacheKey, promise)
+  try { return await promise } finally { galleryInFlight.delete(cacheKey) }
+}
+
+async function fetchMediaList(title: string, limit: number): Promise<string[]> {
+  try {
+    const encoded = encodeURIComponent(title.replace(/ /g, '_'))
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/media-list/${encoded}`,
+      { headers: { 'Api-User-Agent': 'WingDex/1.0 (bird identification app)' } },
+    )
+    if (!res.ok) return []
+    const data = (await res.json()) as { items?: MediaListItem[] }
+    if (!data.items) return []
+
+    const urls: string[] = []
+    for (const item of data.items) {
+      if (item.type !== 'image') continue
+      if (item.leadImage) continue
+      if (GALLERY_EXCLUDE_RE.test(item.title)) continue
+      const src = item.srcset?.[0]?.src
+      if (!src) continue
+      urls.push(src.startsWith('//') ? `https:${src}` : src)
+      if (urls.length >= limit) break
+    }
+    return urls
+  } catch {
+    return []
+  }
+}
