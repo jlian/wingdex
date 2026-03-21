@@ -111,9 +111,6 @@ function useHashRouter() {
 
 // ─── App ──────────────────────────────────────────────────
 
-// Module-level flag so AppContent can signal explicit sign-out to App
-let explicitSignOut = false
-
 function App() {
   const sessionState = authClient.useSession()
   const session = sessionState.data
@@ -122,6 +119,7 @@ function App() {
   const anonBootstrapStarted = useRef(false)
   const hadSessionRef = useRef(false)
   const wasRealUserRef = useRef(false)
+  const explicitSignOutRef = useRef(false)
   const [anonBootstrapFailed, setAnonBootstrapFailed] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
 
@@ -173,13 +171,13 @@ function App() {
     // Only reset bootstrap guard when transitioning from a real session
     // to no session (e.g. after sign-out).
     if (hadSessionRef.current) {
-      if (wasRealUserRef.current && !explicitSignOut) {
+      if (wasRealUserRef.current && !explicitSignOutRef.current) {
         toast.info('Your session has expired. Please sign in again.')
         setUser(null)
       }
       hadSessionRef.current = false
       wasRealUserRef.current = false
-      explicitSignOut = false
+      explicitSignOutRef.current = false
       anonBootstrapStarted.current = false
     }
 
@@ -307,7 +305,7 @@ function App() {
     return <BootShell />
   }
 
-  return <AppContent user={user} refetchSession={refetchSession} />
+  return <AppContent user={user} refetchSession={refetchSession} onBeforeSignOut={() => { explicitSignOutRef.current = true }} />
 }
 
 function BootShell() {
@@ -319,7 +317,7 @@ function BootShell() {
   )
 }
 
-function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: () => Promise<unknown> }) {
+function AppContent({ user, refetchSession, onBeforeSignOut }: { user: UserInfo; refetchSession: () => Promise<unknown>; onBeforeSignOut: () => void }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useWingDexData(user.id)
@@ -579,7 +577,7 @@ function AppContent({ user, refetchSession }: { user: UserInfo; refetchSession: 
                   data={data}
                   user={user}
                   onSignIn={openSignIn}
-                  onSignedOut={() => { explicitSignOut = true; navigate('home') }}
+                  onSignedOut={() => { onBeforeSignOut(); navigate('home') }}
                   onProfileUpdated={refetchSession}
                 />
               </Suspense>

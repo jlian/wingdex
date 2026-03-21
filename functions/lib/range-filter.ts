@@ -13,12 +13,6 @@ import {
   nearestNeighborCell,
   parseCellBlob,
   adjustConfidence as _adjustConfidence,
-  RECORD_SIZE,
-  GRID_ORIGIN_X,
-  GRID_ORIGIN_Y,
-  GRID_CELL_SIZE,
-  GRID_COLS,
-  GRID_ROWS,
 } from './range-adjust.js'
 
 export type RangeResult = {

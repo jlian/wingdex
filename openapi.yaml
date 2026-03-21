@@ -953,9 +953,8 @@ components:
         wikiTitle:
           type: string
         plumage:
-          type: string
-          nullable: true
-          enum: [male, female, juvenile]
+          type: ['string', 'null']
+          enum: [male, female, juvenile, null]
           description: Plumage descriptor from the vision model
         rangeStatus:
           type: string
