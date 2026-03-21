@@ -33,7 +33,7 @@ interface WikiBirdThumbnailProps {
 /**
  * Square Wikipedia bird thumbnail with portrait-aware cropping.
  * Tall (portrait) images anchor to the top so the bird's head stays visible.
- * When galleryUrls are provided, tap/swipe cycles through all images.
+ * When galleryUrls are provided, swipe or use arrow buttons to navigate.
  */
 export function WikiBirdThumbnail({
   speciesName,
@@ -54,6 +54,8 @@ export function WikiBirdThumbnail({
 
   const [index, setIndex] = useState(0)
   const [portrait, setPortrait] = useState(false)
+  const [direction, setDirection] = useState<'left' | 'right'>('left')
+  const [animKey, setAnimKey] = useState(0)
   const touchStartX = useRef<number | null>(null)
 
   // Reset index when species changes
@@ -66,8 +68,18 @@ export function WikiBirdThumbnail({
   const currentUrl = total > 0 ? allUrls[Math.min(index, total - 1)] : undefined
   const hasMultiple = total > 1
 
-  const advance = useCallback(() => {
-    if (hasMultiple) setIndex((i) => (i + 1) % total)
+  const goNext = useCallback(() => {
+    if (!hasMultiple) return
+    setDirection('left')
+    setIndex((i) => (i + 1) % total)
+    setAnimKey((k) => k + 1)
+  }, [hasMultiple, total])
+
+  const goPrev = useCallback(() => {
+    if (!hasMultiple) return
+    setDirection('right')
+    setIndex((i) => (i - 1 + total) % total)
+    setAnimKey((k) => k + 1)
   }, [hasMultiple, total])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -78,25 +90,23 @@ export function WikiBirdThumbnail({
     if (touchStartX.current === null || !hasMultiple) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     touchStartX.current = null
-    if (Math.abs(dx) < 30) return // too short, let click handle it
-    if (dx < 0) setIndex((i) => (i + 1) % total) // swipe left = next
-    else setIndex((i) => (i - 1 + total) % total) // swipe right = prev
-  }, [hasMultiple, total])
+    if (Math.abs(dx) < 30) return
+    if (dx < 0) goNext()
+    else goPrev()
+  }, [hasMultiple, goNext, goPrev])
 
   return (
     <div
       className={cn(
-        'aspect-square rounded-lg overflow-hidden bg-muted/20 relative',
-        hasMultiple && 'cursor-pointer',
+        'aspect-square rounded-lg overflow-hidden bg-muted/20 relative group',
         className,
       )}
-      onClick={advance}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {currentUrl ? (
         <img
-          key={currentUrl}
+          key={`${currentUrl}-${animKey}`}
           src={currentUrl}
           alt={alt ?? speciesName}
           loading={SHOULD_LAZY_LOAD_THUMBNAILS ? 'lazy' : 'eager'}
@@ -104,8 +114,14 @@ export function WikiBirdThumbnail({
             const img = e.currentTarget
             setPortrait(img.naturalHeight > img.naturalWidth)
           }}
-          className="w-full h-full object-cover"
-          style={{ objectPosition: portrait ? 'center top' : 'center center' }}
+          className={cn(
+            'w-full h-full object-cover',
+            hasMultiple && 'animate-gallery-slide',
+          )}
+          style={{
+            objectPosition: portrait ? 'center top' : 'center center',
+            '--slide-from': direction === 'left' ? '8%' : '-8%',
+          } as React.CSSProperties}
         />
       ) : (
         <div
@@ -117,17 +133,57 @@ export function WikiBirdThumbnail({
           <BirdLogo size={24} className="text-muted-foreground/40" />
         </div>
       )}
+
+      {/* Arrow buttons (visible on hover / always on touch) */}
+      {hasMultiple && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); goPrev() }}
+            className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center
+              opacity-0 group-hover:opacity-100 transition-opacity duration-200
+              bg-gradient-to-r from-black/20 to-transparent text-white/80 hover:text-white"
+            aria-label="Previous image"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="drop-shadow">
+              <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); goNext() }}
+            className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center
+              opacity-0 group-hover:opacity-100 transition-opacity duration-200
+              bg-gradient-to-l from-black/20 to-transparent text-white/80 hover:text-white"
+            aria-label="Next image"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="drop-shadow">
+              <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
       {hasMultiple && (
         <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1">
           {allUrls.map((_, i) => (
-            <div
+            <button
               key={i}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setDirection(i > index ? 'left' : 'right')
+                setIndex(i)
+                setAnimKey((k) => k + 1)
+              }}
               className={cn(
-                'w-1.5 h-1.5 rounded-full transition-colors',
+                'w-1.5 h-1.5 rounded-full transition-all duration-200',
                 i === Math.min(index, total - 1)
-                  ? 'bg-white'
-                  : 'bg-white/40',
+                  ? 'bg-white scale-110'
+                  : 'bg-white/40 hover:bg-white/60',
               )}
+              aria-label={`Image ${i + 1} of ${total}`}
             />
           ))}
         </div>

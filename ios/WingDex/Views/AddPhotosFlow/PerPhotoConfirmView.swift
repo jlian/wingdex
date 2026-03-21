@@ -261,6 +261,11 @@ struct PerPhotoConfirmView: View {
             Group {
                 if let url = currentURL?.absoluteString {
                     BirdThumbnail(url: url, size: size, cornerRadius: 12)
+                        .id(url)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                 } else if isLoadingWikiImage {
                     wikiPlaceholder(size: size)
                         .overlay { ProgressView() }
@@ -268,30 +273,61 @@ struct PerPhotoConfirmView: View {
                     wikiPlaceholder(size: size)
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: safeIndex)
             .contentShape(Rectangle())
-            .onTapGesture {
-                if urls.count > 1 {
-                    galleryIndex = (safeIndex + 1) % urls.count
-                }
-            }
             .gesture(
                 DragGesture(minimumDistance: 20, coordinateSpace: .local)
                     .onEnded { value in
                         guard urls.count > 1 else { return }
-                        if value.translation.width < -20 {
-                            galleryIndex = (safeIndex + 1) % urls.count
-                        } else if value.translation.width > 20 {
-                            galleryIndex = (safeIndex - 1 + urls.count) % urls.count
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            if value.translation.width < -20 {
+                                galleryIndex = (safeIndex + 1) % urls.count
+                            } else if value.translation.width > 20 {
+                                galleryIndex = (safeIndex - 1 + urls.count) % urls.count
+                            }
                         }
                     }
             )
 
+            // Navigation arrows
+            if urls.count > 1 {
+                HStack {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            galleryIndex = (safeIndex - 1 + urls.count) % urls.count
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .background(.black.opacity(0.25), in: Circle())
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            galleryIndex = (safeIndex + 1) % urls.count
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .frame(width: 28, height: 28)
+                            .background(.black.opacity(0.25), in: Circle())
+                    }
+                }
+                .padding(.horizontal, 6)
+            }
+
+            // Dot indicators
             if urls.count > 1 {
                 HStack(spacing: 4) {
                     ForEach(0..<urls.count, id: \.self) { i in
                         Circle()
                             .fill(i == safeIndex ? Color.white : Color.white.opacity(0.4))
                             .frame(width: 6, height: 6)
+                            .scaleEffect(i == safeIndex ? 1.15 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: safeIndex)
                     }
                 }
                 .padding(.bottom, 6)
