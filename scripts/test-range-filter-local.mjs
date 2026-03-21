@@ -23,7 +23,7 @@ const ORIGIN_Y = 8343000
 const CELL_SIZE = 27000
 const GRID_COLS = 1276
 const GRID_ROWS = 618
-const RECORD_SIZE = 20
+const RECORD_SIZE = 11
 
 function lonLatToEqualEarth(lon, lat) {
   const A1 = 1.340264, A2 = -0.081106, A3 = 0.000893, A4 = 0.003796
@@ -64,35 +64,27 @@ function lookup(lon, lat, month, speciesCodes) {
   const compressed = readFileSync(blobPath)
   const data = gunzipSync(compressed)
 
-  // Parse records
+  // Parse 11-byte records: 8-byte code + uint8 presence + uint8 origin_mask + uint8 seasonal_mask
   const speciesMap = new Map()
   for (let offset = 0; offset + RECORD_SIZE <= data.length; offset += RECORD_SIZE) {
     const code = data.subarray(offset, offset + 8).toString('ascii').trimEnd()
-    const months = data.subarray(offset + 8, offset + RECORD_SIZE)
-    speciesMap.set(code, months)
+    const presence = data[offset + 8]
+    const originMask = data[offset + 9]
+    const seasonalMask = data[offset + 10]
+    speciesMap.set(code, { presence, originMask, seasonalMask })
   }
 
   return speciesCodes.map(code => {
-    const months = speciesMap.get(code)
-    if (!months) {
+    const rec = speciesMap.get(code)
+    if (!rec) {
       return { code, status: 'out-of-range' }
     }
-    const cur = months[month]
-    const prev = months[(month + 11) % 12]
-    const next = months[(month + 1) % 12]
-    if (cur > 0 || prev > 0 || next > 0) {
-      return { code, status: 'present' }
-    }
-    const anyMonth = Array.from(months).some(v => v > 0)
-    if (anyMonth) {
-      return { code, status: 'wrong-season' }
-    }
-    return { code, status: 'out-of-range' }
+    return { code, status: 'present', presence: rec.presence, origin: rec.originMask, seasonal: rec.seasonalMask }
   })
 }
 
-// Multipliers matching range-filter.ts
-const TRUST = { present: 1.0, 'wrong-season': 0.6, 'out-of-range': 0.35, 'no-data': 1.0 }
+// Multipliers matching range-adjust.js
+const TRUST = { present: 1.0, 'near-range': 0.85, 'out-of-range': 0.5, 'no-data': 1.0 }
 function adjustConfidence(confidence, status) {
   return confidence * TRUST[status]
 }

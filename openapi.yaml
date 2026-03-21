@@ -957,7 +957,7 @@ components:
           description: Plumage descriptor from the vision model (e.g. male, female, juvenile)
         rangeStatus:
           type: string
-          enum: [present, wrong-season, out-of-range, no-data]
+          enum: [present, near-range, out-of-range, no-data]
           description: BirdLife range status for this species at the query location and month
 
     CropBox:

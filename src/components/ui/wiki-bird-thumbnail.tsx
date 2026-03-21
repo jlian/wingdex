@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { BirdLogo } from '@/components/ui/bird-logo'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { cn } from '@/lib/utils'
@@ -56,13 +56,11 @@ export function WikiBirdThumbnail({
   const [portrait, setPortrait] = useState(false)
   const touchStartX = useRef<number | null>(null)
 
-  // Reset index when species changes (allUrls reference changes)
-  const prevSpecies = useRef(speciesName)
-  if (prevSpecies.current !== speciesName) {
-    prevSpecies.current = speciesName
+  // Reset index when species changes
+  useEffect(() => {
     setIndex(0)
     setPortrait(false)
-  }
+  }, [speciesName])
 
   const total = allUrls.length
   const currentUrl = total > 0 ? allUrls[Math.min(index, total - 1)] : undefined
