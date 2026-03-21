@@ -17,7 +17,7 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const cellsDir = resolve(__dirname, '../tmp/range-priors/cells')
+const cellsDir = resolve(__dirname, '../.tmp/range-priors/cells')
 const devVarsPath = resolve(__dirname, '../.dev.vars')
 
 const BUCKET = 'wingdex-range-priors'

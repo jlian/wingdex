@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) ?? [],
       forwardConsole: true,
       watch: {
-        ignored: ['**/.wrangler/**', '**/tmp/**'],
+        ignored: ['**/.wrangler/**', '**/.tmp/**'],
       },
       proxy: {
         '/api': `http://localhost:${apiPort}`,

@@ -11,9 +11,9 @@ except ImportError:
     sys.exit(1)
 
 ROOT = Path(__file__).resolve().parent.parent
-AVILIST_PATH = ROOT / "tmp" / "avilist-v2025-extended.xlsx"
+AVILIST_PATH = ROOT / ".tmp" / "avilist-v2025-extended.xlsx"
 TAXONOMY_PATH = ROOT / "src" / "lib" / "taxonomy.json"
-OUTPUT_PATH = ROOT / "tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
+OUTPUT_PATH = ROOT / ".tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
 
 # Load eBird taxonomy
 ebird = json.loads(TAXONOMY_PATH.read_text())
@@ -106,7 +106,7 @@ wb.close()
 # of AviList subspecies like "Aethopyga christinae latouchii".
 try:
     import fiona
-    gpkg = ROOT / "tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
+    gpkg = ROOT / ".tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
     if gpkg.exists():
         birdlife_names = set()
         with fiona.open(str(gpkg), layer="all_species") as src:

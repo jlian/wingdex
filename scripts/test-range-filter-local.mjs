@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url'
 import { gunzipSync } from 'zlib'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const CELLS_DIR = resolve(__dirname, '../tmp/range-priors/cells')
+const CELLS_DIR = resolve(__dirname, '../.tmp/range-priors/cells')
 
 // ------- Inline the projection + parsing logic (mirrors range-filter.ts) -------
 
@@ -83,7 +83,8 @@ function lookup(lon, lat, month, speciesCodes) {
   })
 }
 
-// Multipliers matching range-adjust.js
+// Base status multipliers only (does not replicate the layered
+// presence/origin/seasonal adjustments from range-adjust.js).
 const TRUST = { present: 1.0, 'near-range': 0.85, 'out-of-range': 0.5, 'no-data': 1.0 }
 function adjustConfidence(confidence, status) {
   return confidence * TRUST[status]

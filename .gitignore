@@ -44,4 +44,4 @@ screenshots/
 wiki-validation-report.txt
 src/assets/csv/
 ios/WingDex/App/GitInfo.swift
-tmp/
+.tmp/

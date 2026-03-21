@@ -35,7 +35,7 @@ const GOLDEN_DIR = join(ROOT, 'src', '__tests__', 'fixtures', 'llm-responses')
 const VARIANT_DIR = join(ROOT, 'test-results', 'llm-variants')
 const BENCHMARK_RUNS_DIR = join(ROOT, 'test-results', 'benchmark-runs')
 const RESULTS_DIR = join(ROOT, 'test-results')
-const RANGE_CELLS_DIR = join(ROOT, 'tmp', 'range-priors', 'cells')
+const RANGE_CELLS_DIR = join(ROOT, '.tmp', 'range-priors', 'cells')
 
 const MAX_OUTPUT_TOKENS = 600
 const RESIZE_MAX_DIM = 640
@@ -120,7 +120,7 @@ import {
   RECORD_SIZE as RG_RECORD_SIZE,
 } from '../functions/lib/range-adjust.js'
 
-const CELLS_DIR = join(ROOT, 'tmp', 'range-priors', 'cells')
+const CELLS_DIR = join(ROOT, '.tmp', 'range-priors', 'cells')
 const RANGE_AVAILABLE = existsSync(CELLS_DIR)
 
 function loadCellBlob(row, col) {
@@ -531,7 +531,7 @@ function analyzeVariants() {
   }
 
   if (!RANGE_AVAILABLE) {
-    console.warn('Warning: tmp/range-priors/cells/ not found - pipeline accuracy will skip range adjustment')
+    console.warn('Warning: .tmp/range-priors/cells/ not found - pipeline accuracy will skip range adjustment')
   }
 
   // Build ground-truth map from IMAGES array (substring match, case-insensitive)

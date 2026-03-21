@@ -13,7 +13,7 @@ Requirements (install into a venv):
 Usage:
     python scripts/build-range-priors.py
 
-    Output goes to tmp/range-priors/cells/
+    Output goes to .tmp/range-priors/cells/
     Upload to local R2: node scripts/upload-range-priors-local.mjs
 
 Blob format (per cell):
@@ -50,9 +50,9 @@ from pathlib import Path
 import numpy as np
 
 WORKSPACE = Path(__file__).resolve().parent.parent
-GPKG_PATH = WORKSPACE / "tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
-OUTPUT_DIR = WORKSPACE / "tmp" / "range-priors" / "cells"
-MANIFEST_PATH = WORKSPACE / "tmp" / "range-priors" / "manifest.json"
+GPKG_PATH = WORKSPACE / ".tmp" / "birdlife-shp" / "BOTW_2025.gpkg"
+OUTPUT_DIR = WORKSPACE / ".tmp" / "range-priors" / "cells"
+MANIFEST_PATH = WORKSPACE / ".tmp" / "range-priors" / "manifest.json"
 
 # Grid constants (EPSG:8857 Equal Earth, matching the runtime module)
 GRID_COLS = 1276
@@ -70,7 +70,7 @@ def load_taxonomy():
     names that map to eBird codes via protonym matching.
     """
     taxonomy_path = WORKSPACE / "src" / "lib" / "taxonomy.json"
-    crosswalk_path = WORKSPACE / "tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
+    crosswalk_path = WORKSPACE / ".tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
 
     raw = json.loads(taxonomy_path.read_text())
     sci_to_code = {}

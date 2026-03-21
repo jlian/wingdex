@@ -16,7 +16,7 @@ import { createHash } from 'crypto'
 import Database from 'better-sqlite3'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const cellsDir = resolve(__dirname, '../tmp/range-priors/cells')
+const cellsDir = resolve(__dirname, '../.tmp/range-priors/cells')
 const r2Dir = resolve(__dirname, '../.wrangler/state/v3/r2')
 
 const metaDir = resolve(r2Dir, 'miniflare-R2BucketObject')

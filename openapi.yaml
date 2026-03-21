@@ -954,7 +954,9 @@ components:
           type: string
         plumage:
           type: string
-          description: Plumage descriptor from the vision model (e.g. male, female, juvenile)
+          nullable: true
+          enum: [male, female, juvenile]
+          description: Plumage descriptor from the vision model
         rangeStatus:
           type: string
           enum: [present, near-range, out-of-range, no-data]
