@@ -83,6 +83,22 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: "YES"
 
+schemes:
+  WingDex:
+    build:
+      targets:
+        WingDex: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - WingDexTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+
 packages:
   swift-openapi-generator:
     url: https://github.com/apple/swift-openapi-generator

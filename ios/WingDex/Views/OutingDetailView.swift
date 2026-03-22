@@ -27,7 +27,8 @@ struct OutingDetailView: View {
         // WHY: see SpeciesDetailView - hide system list background, apply our own.
         .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
-        .confirmationDialog("Delete this outing?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+        .alert("Delete this outing?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
             Button("Delete Outing", role: .destructive) {
                 Task {
                     await store.deleteOuting(id: outingId)

@@ -82,14 +82,14 @@ struct PasskeyManagementView: View {
         } message: {
             Text("Give this passkey a name to help identify it later.")
         }
-        .confirmationDialog(
+        .alert(
             "Delete Passkey?",
             isPresented: Binding(
                 get: { deleteTarget != nil },
                 set: { if !$0 { deleteTarget = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
+            Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 if let target = deleteTarget {
                     Task { await removePasskey(id: target.id) }

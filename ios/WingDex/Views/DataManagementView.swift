@@ -20,23 +20,6 @@ struct DataManagementView: View {
                 Button("Delete All Data", role: .destructive) {
                     showingDeleteDataConfirmation = true
                 }
-                .confirmationDialog(
-                    "Delete All Data?",
-                    isPresented: $showingDeleteDataConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete Everything", role: .destructive) {
-                        Task {
-                            do {
-                                try await store.clearAll()
-                            } catch {
-                                deleteError = error.localizedDescription
-                            }
-                        }
-                    }
-                } message: {
-                    Text("This will permanently delete all your outings, observations, and WingDex entries. This cannot be undone.")
-                }
             } footer: {
                 Text("Removes all your outings, observations, and species data. Your account and login credentials are kept.")
             }
@@ -93,6 +76,23 @@ struct DataManagementView: View {
         .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle("Data Management")
         .navigationBarTitleDisplayMode(.inline)
+        .alert(
+            "Delete All Data?",
+            isPresented: $showingDeleteDataConfirmation
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Everything", role: .destructive) {
+                Task {
+                    do {
+                        try await store.clearAll()
+                    } catch {
+                        deleteError = error.localizedDescription
+                    }
+                }
+            }
+        } message: {
+            Text("This will permanently delete all your outings, observations, and WingDex entries. This cannot be undone.")
+        }
     }
 
     private func deleteAccount() async {

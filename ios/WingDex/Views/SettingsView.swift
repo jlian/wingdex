@@ -344,32 +344,32 @@ struct SettingsView: View {
                 }
             }
             .disabled(isLoadingDemo)
-            .confirmationDialog(
-                "Load Demo Data?",
-                isPresented: $showingDemoConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Replace All Data", role: .destructive) {
-                    isLoadingDemo = true
-                    demoError = nil
-                    Task {
-                        do {
-                            try await store.loadDemoData()
-                        } catch {
-                            demoError = error.localizedDescription
-                        }
-                        isLoadingDemo = false
-                    }
-                }
-            } message: {
-                Text("This will replace all your current outings, observations, and WingDex entries with demo data. This cannot be undone.")
-            }
 
             if let demoError {
                 Text(demoError)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+        }
+        .alert(
+            "Load Demo Data?",
+            isPresented: $showingDemoConfirmation
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Replace All Data", role: .destructive) {
+                isLoadingDemo = true
+                demoError = nil
+                Task {
+                    do {
+                        try await store.loadDemoData()
+                    } catch {
+                        demoError = error.localizedDescription
+                    }
+                    isLoadingDemo = false
+                }
+            }
+        } message: {
+            Text("This will replace all your current outings, observations, and WingDex entries with demo data. This cannot be undone.")
         }
     }
     #endif
