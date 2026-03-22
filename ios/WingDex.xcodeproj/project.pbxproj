@@ -349,7 +349,6 @@
 				};
 			};
 			buildConfigurationList = 1B57DE26A2341D9230C8D22E /* Build configuration list for PBXProject "WingDex" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -365,6 +364,7 @@
 				05914FFD98F0F320B88F6693 /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 171A4E77667DF212FEDB47BF /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -528,7 +528,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -536,7 +536,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.wingdex;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -650,7 +650,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				CODE_SIGN_ENTITLEMENTS = WingDex/WingDex.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z8LQS5S492;
 				INFOPLIST_FILE = WingDex/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -658,7 +658,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.wingdex;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
