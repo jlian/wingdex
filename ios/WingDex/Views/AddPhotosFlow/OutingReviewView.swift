@@ -115,8 +115,7 @@ struct OutingReviewView: View {
                 Button {
                     handleConfirm()
                 } label: {
-                    Label("Continue", systemImage: "chevron.right")
-                        .labelStyle(.titleAndIcon)
+                    Image(systemName: "chevron.right")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isLoadingLocation)
