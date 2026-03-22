@@ -11,54 +11,48 @@ struct PhotoSelectionView: View {
     @State private var showCamera = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Spacer()
 
-            Image(systemName: "camera.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(spacing: 6) {
-                Text("Add Photos")
-                    .font(.title2.weight(.semibold))
+            VStack(spacing: 8) {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.bottom, 4)
+                Text("Identify Birds")
+                    .font(.system(.title2, design: .serif, weight: .semibold))
                     .foregroundStyle(Color.foregroundText)
-                Text("Take or choose bird photos to identify.")
+                Text("Take a photo or choose from your library.\nClose-ups and side profiles work best.")
                     .font(.subheadline)
                     .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
             }
 
-            // Two input options side by side - standard iOS pattern
-            HStack(spacing: 12) {
-                // Camera capture
-                Button {
-                    showCamera = true
-                } label: {
-                    Label("Take Photo", systemImage: "camera")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+            Spacer().frame(height: 40)
 
-                // Photo library picker
+            VStack(spacing: 12) {
                 PhotosPicker(
                     selection: $viewModel.selectedItems,
                     maxSelectionCount: 50,
                     matching: .images
                 ) {
-                    Label("Library", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    Label("Choose from Library", systemImage: "photo.on.rectangle")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    showCamera = true
+                } label: {
+                    Label("Take Photo", systemImage: "camera")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.bordered)
-                .tint(Color.accentColor)
+                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
             }
             .padding(.horizontal, 24)
-
-            // Tips
-            HStack(spacing: 12) {
-                tipCard("Close-ups and side profiles ID best", icon: "sparkle")
-                tipCard("One bird per photo for accuracy", icon: "sparkle")
-            }
-            .padding(.horizontal, 16)
 
             Spacer()
         }
@@ -80,14 +74,7 @@ struct PhotoSelectionView: View {
         }
     }
 
-    private func tipCard(_ text: String, icon: String) -> some View {
-        Label(text, systemImage: icon)
-            .font(.caption)
-            .foregroundStyle(Color.mutedText)
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-    }
+
 }
 
 // MARK: - Camera Capture View
