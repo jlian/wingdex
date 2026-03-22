@@ -1,3 +1,33 @@
+# [1.19.0](https://github.com/jlian/wingdex/compare/v1.18.0...v1.19.0) (2026-03-22)
+
+
+### Bug Fixes
+
+* **Auth:** show session-expired toast, fix iOS dupe photo hang ([0310a42](https://github.com/jlian/wingdex/commit/0310a4204f18fdebb07040194b13aacc2b73cb54))
+* **BirdId:** address PR [#232](https://github.com/jlian/wingdex/issues/232) review comments ([504c3d1](https://github.com/jlian/wingdex/commit/504c3d1670d91b397078c55a1c8a33beae889d89))
+* **BirdId:** address PR [#232](https://github.com/jlian/wingdex/issues/232) review round 2 ([83d3a26](https://github.com/jlian/wingdex/commit/83d3a267ae1113d520bc46029a5b00cd5e9e0c45))
+* **BirdId:** address PR review - signout ref, openapi 3.1, unused imports ([0e478d5](https://github.com/jlian/wingdex/commit/0e478d563fccdc84d7a6073e71172c59c8c19993))
+* **BirdId:** address PR review round - session toast, selection reset, cache limit ([ed6ec21](https://github.com/jlian/wingdex/commit/ed6ec21bde8fed49e11767fb92c22caff175db54))
+* **BirdId:** clarify test multiplier comment, tighten plumage enum in OpenAPI ([5e513b1](https://github.com/jlian/wingdex/commit/5e513b1725b622ea634717c9c57909839fc45d2a))
+* **BirdId:** prevent duplicate species in candidates ([32ac48a](https://github.com/jlian/wingdex/commit/32ac48a3c70a0931b54b33f5ee0fb5b4810911db))
+* **BirdId:** update candidate count requirements in bird identification instructions ([96a3693](https://github.com/jlian/wingdex/commit/96a3693204473a8ad2cc381423bd67661d27451d))
+* **Gallery:** cap gallery cache, fix arrow comment, clean up Card line ([89013fb](https://github.com/jlian/wingdex/commit/89013fb7588abf71dcce1a1197476cd239d4dcb4))
+* **Gallery:** respect prefers-reduced-motion, show arrows on focus-visible ([0294174](https://github.com/jlian/wingdex/commit/02941743dcc821b400684f89495bffa2b78dd911))
+* **Release:** serialize web and iOS release workflows to prevent git push race ([#233](https://github.com/jlian/wingdex/issues/233)) ([29dfdb3](https://github.com/jlian/wingdex/commit/29dfdb347b27b373510224bf9e81b4955845f4f4))
+* **Tests:** use unknown birdSize value to test default fallback ([61b0915](https://github.com/jlian/wingdex/commit/61b0915300e43fed7208e1bb44e56fabdd25cded))
+
+
+### Features
+
+* **BirdId:** add tiny birdSize for auto-crop decision ([9826e8e](https://github.com/jlian/wingdex/commit/9826e8e93f49b76d6055751d3df34cce5f764b40))
+* **BirdId:** migrate from Chat Completions to Responses API ([0b1f036](https://github.com/jlian/wingdex/commit/0b1f036533d21aa50dca55685f36c739edcc9072))
+* **BirdId:** optimize prompt for gpt-5.4-mini with XML sections and example ([b31c9ff](https://github.com/jlian/wingdex/commit/b31c9ff8dd4efdfe3d80dae40faec76ead8e9b29))
+* **BirdID:** swipeable Wikipedia reference gallery during identification ([b8af3c2](https://github.com/jlian/wingdex/commit/b8af3c2641aacfbbdfcd3352b8ca79c7a51ea7c1))
+* **Gallery:** improve Wikipedia reference gallery on web and iOS ([32628f0](https://github.com/jlian/wingdex/commit/32628f045370880ad31ea4f65fa9bc5ff6ec7191))
+* **RangeFilter:** add BirdLife-to-eBird taxonomy crosswalk via AviList ([456497b](https://github.com/jlian/wingdex/commit/456497b409c7c28a688e0277a527bb245adc2479))
+* **RangeFilter:** overhaul BirdLife data to 11-byte format with tiered adjustment ([4ac8f5a](https://github.com/jlian/wingdex/commit/4ac8f5a39ee1328a03403e72bb3508124de64639))
+* **RangePriors:** location-based range filtering with BirdLife data ([#230](https://github.com/jlian/wingdex/issues/230)) ([6e2e1ef](https://github.com/jlian/wingdex/commit/6e2e1ef9f9125d9a9d20e6fe556a89cfee5eb036)), closes [#225](https://github.com/jlian/wingdex/issues/225)
+
 # [1.18.0](https://github.com/jlian/wingdex/compare/v1.17.3...v1.18.0) (2026-03-16)
 
 
