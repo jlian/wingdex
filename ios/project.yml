@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: app.wingdex
   deploymentTarget:
     iOS: "26.0"
-  xcodeVersion: "26.0"
+  xcodeVersion: "26.3"
   createIntermediateGroups: true
   postGenCommand: scripts/fix-icon-ref.sh && scripts/gen-git-info.sh
 
@@ -12,6 +12,9 @@ settings:
     SWIFT_VERSION: "6.0"
     ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     SWIFT_EMIT_LOC_STRINGS: "YES"
+    DEVELOPMENT_TEAM: Z8LQS5S492
+    STRING_CATALOG_GENERATE_SYMBOLS: "YES"
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: "YES"
 
 targets:
   WingDex:
@@ -35,7 +38,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.wingdex
         MARKETING_VERSION: "0.3.0"
         CURRENT_PROJECT_VERSION: 1
-        DEVELOPMENT_TEAM: Z8LQS5S492
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: WingDex/WingDex.entitlements
         CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: "YES"
@@ -79,17 +81,20 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.wingdex.tests
-        DEVELOPMENT_TEAM: Z8LQS5S492
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: "YES"
 
 schemes:
-  WingDex:
+  Localhost:
     build:
       targets:
         WingDex: all
     run:
       config: Debug
+      environmentVariables:
+        - variable: API_BASE_URL
+          value: https://localhost.wingdex.app
+          isEnabled: true
     test:
       config: Debug
       targets:
@@ -99,7 +104,26 @@ schemes:
     analyze:
       config: Debug
 
-  WingDex Release:
+  Dev:
+    build:
+      targets:
+        WingDex: all
+    run:
+      config: Debug
+      environmentVariables:
+        - variable: API_BASE_URL
+          value: https://dev.wingdex.app
+          isEnabled: true
+    test:
+      config: Debug
+      targets:
+        - WingDexTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+
+  Production:
     build:
       targets:
         WingDex: all

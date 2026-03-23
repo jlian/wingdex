@@ -3,19 +3,20 @@ import Foundation
 /// App-wide configuration constants.
 enum Config {
     /// Base URL for the WingDex API.
-    /// - Simulator: localhost.wingdex.app (local Mac via DNS, HTTPS)
-    /// - Physical device (DEBUG): dev.wingdex.app (Cloudflare Pages preview)
-    /// - Release: wingdex.app (production)
+    ///
+    /// Resolution order:
+    /// 1. `API_BASE_URL` environment variable (set per-scheme in project.yml)
+    /// 2. Release builds fall back to production (wingdex.app)
+    /// 3. Debug builds fall back to localhost (localhost.wingdex.app)
     static let apiBaseURL: URL = {
+        if let envURL = ProcessInfo.processInfo.environment["API_BASE_URL"],
+           let url = URL(string: envURL) {
+            return url
+        }
         #if DEBUG
-            #if targetEnvironment(simulator)
-            URL(string: "https://localhost.wingdex.app")!
-            #else
-            // URL(string: "https://localhost.wingdex.app")!
-            URL(string: "https://dev.wingdex.app")!
-            #endif
+        return URL(string: "https://localhost.wingdex.app")!
         #else
-        URL(string: "https://wingdex.app")!
+        return URL(string: "https://wingdex.app")!
         #endif
     }()
 
