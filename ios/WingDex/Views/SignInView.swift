@@ -192,6 +192,7 @@ struct SignInView: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.glass)
+                     .colorScheme(colorScheme == .dark ? .light : .dark)
 
                     // GitHub -- neutral style matching Google
                     Button {
@@ -211,6 +212,7 @@ struct SignInView: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.glass)
+                     .colorScheme(colorScheme == .dark ? .light : .dark)
                 }
                 .padding(.horizontal, 28)
 
@@ -251,6 +253,7 @@ struct SignInView: View {
                         }
                         .buttonStyle(.glass)
                         .buttonSizing(.flexible)
+                         .colorScheme(colorScheme == .dark ? .light : .dark)
                     }
                 }
                 .padding(16)
@@ -298,24 +301,33 @@ struct SignInView: View {
     // MARK: - Parallax Motion
 
     private static let motionManager = CMMotionManager()
+    @State private var gravityBaseline: (x: Double, y: Double)?
 
     private func startParallax() {
         let manager = Self.motionManager
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
+        gravityBaseline = nil
         manager.deviceMotionUpdateInterval = 1.0 / 30.0
         manager.startDeviceMotionUpdates(to: .main) { motion, _ in
             guard let gravity = motion?.gravity else { return }
-            // gravity.x/y range from -1 to 1, smooth at all orientations (no gimbal lock)
+            // Capture initial position as baseline so there's no jump on first reading
+            if gravityBaseline == nil {
+                gravityBaseline = (gravity.x, gravity.y)
+            }
+            let base = gravityBaseline!
+            let dx = gravity.x - base.x
+            let dy = -(gravity.y - base.y)
             let clamp = { (v: Double) -> Double in min(max(v, -1), 1) }
             parallaxOffset = CGSize(
-                width: clamp(gravity.x) * signInParallaxStrength,
-                height: clamp(-gravity.y) * signInParallaxStrength
+                width: clamp(dx) * signInParallaxStrength,
+                height: clamp(dy) * signInParallaxStrength
             )
         }
     }
 
     private func stopParallax() {
         Self.motionManager.stopDeviceMotionUpdates()
+        gravityBaseline = nil
     }
 
     // MARK: - Sign-In Handler
