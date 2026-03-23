@@ -192,13 +192,13 @@ struct OutingsView: View {
 
 #if DEBUG
 #Preview("Outings - Populated") {
-    OutingsView()
+    PreviewTabs(.outings) { OutingsView() }
         .environment(AuthService())
         .environment(previewStore())
 }
 
 #Preview("Outings - Empty") {
-    OutingsView()
+    PreviewTabs(.outings) { OutingsView() }
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }

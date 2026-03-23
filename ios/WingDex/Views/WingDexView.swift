@@ -213,13 +213,13 @@ struct WingDexView: View {
 
 #if DEBUG
 #Preview("WingDex - Populated") {
-    WingDexView()
+    PreviewTabs(.wingdex) { WingDexView() }
         .environment(AuthService())
         .environment(previewStore())
 }
 
 #Preview("WingDex - Empty") {
-    WingDexView()
+    PreviewTabs(.wingdex) { WingDexView() }
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }

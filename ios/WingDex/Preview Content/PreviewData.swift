@@ -386,17 +386,18 @@ import SwiftUI
 /// Usage:
 /// ```
 /// #Preview {
-///     PreviewTabs(.add) {
-///         MyView()
-///     }
+///     PreviewTabs(.home) { HomeView() }
+///         .environment(previewStore())
 /// }
 /// ```
 struct PreviewTabs<Content: View>: View {
     enum Tab: Int { case home, wingdex, outings, add }
     @State private var selectedTab: Tab
+    let tab: Tab
     let content: Content
 
     init(_ tab: Tab = .home, @ViewBuilder content: () -> Content) {
+        self.tab = tab
         self._selectedTab = State(initialValue: tab)
         self.content = content()
     }
@@ -405,17 +406,17 @@ struct PreviewTabs<Content: View>: View {
         TabView(selection: $selectedTab) {
             TabSection {
                 SwiftUI.Tab("Home", systemImage: "house", value: Tab.home) {
-                    Color.pageBg
+                    if tab == .home { content } else { Color.pageBg }
                 }
                 SwiftUI.Tab("WingDex", image: "BirdTab", value: Tab.wingdex) {
-                    Color.pageBg
+                    if tab == .wingdex { content } else { Color.pageBg }
                 }
                 SwiftUI.Tab("Outings", systemImage: "binoculars", value: Tab.outings) {
-                    Color.pageBg
+                    if tab == .outings { content } else { Color.pageBg }
                 }
             }
             SwiftUI.Tab(value: Tab.add, role: .search) {
-                content
+                if tab == .add { content } else { Color.pageBg }
             } label: {
                 Label("Add", systemImage: "camera.fill")
             }

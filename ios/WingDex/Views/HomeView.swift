@@ -265,13 +265,13 @@ struct HomeView: View {
 
 #if DEBUG
 #Preview("Home - Populated") {
-    HomeView()
+    PreviewTabs(.home) { HomeView() }
         .environment(AuthService())
         .environment(previewStore())
 }
 
 #Preview("Home - Empty") {
-    HomeView()
+    PreviewTabs(.home) { HomeView() }
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }

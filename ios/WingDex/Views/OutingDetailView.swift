@@ -323,23 +323,29 @@ struct OutingDetailView: View {
 
 #if DEBUG
 #Preview("Outing Detail - Discovery Park") {
-    NavigationStack {
-        OutingDetailView(outingId: PreviewData.sampleOutingId)
-            .environment(previewStore())
+    PreviewTabs(.outings) {
+        NavigationStack {
+            OutingDetailView(outingId: PreviewData.sampleOutingId)
+                .environment(previewStore())
+        }
     }
 }
 
 #Preview("Outing Detail - Everglades") {
-    NavigationStack {
-        OutingDetailView(outingId: PreviewData.richOutingId)
-            .environment(previewStore())
+    PreviewTabs(.outings) {
+        NavigationStack {
+            OutingDetailView(outingId: PreviewData.richOutingId)
+                .environment(previewStore())
+        }
     }
 }
 
 #Preview("Outing Detail - Not Found") {
-    NavigationStack {
-        OutingDetailView(outingId: "nonexistent")
-            .environment(previewStore())
+    PreviewTabs(.outings) {
+        NavigationStack {
+            OutingDetailView(outingId: "nonexistent")
+                .environment(previewStore())
+        }
     }
 }
 #endif

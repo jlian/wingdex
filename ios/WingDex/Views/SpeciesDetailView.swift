@@ -232,16 +232,20 @@ struct SpeciesDetailView: View {
 
 #if DEBUG
 #Preview("Species Detail - Cardinal") {
-    NavigationStack {
-        SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
-            .environment(previewStore())
+    PreviewTabs(.wingdex) {
+        NavigationStack {
+            SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
+                .environment(previewStore())
+        }
     }
 }
 
 #Preview("Species Detail - Bald Eagle") {
-    NavigationStack {
-        SpeciesDetailView(speciesName: "Bald Eagle (Haliaeetus leucocephalus)")
-            .environment(previewStore())
+    PreviewTabs(.wingdex) {
+        NavigationStack {
+            SpeciesDetailView(speciesName: "Bald Eagle (Haliaeetus leucocephalus)")
+                .environment(previewStore())
+        }
     }
 }
 #endif
