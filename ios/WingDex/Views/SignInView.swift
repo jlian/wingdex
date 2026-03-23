@@ -39,13 +39,7 @@ struct SignInView: View {
     @State private var errorMessage: String?
     @State private var parallaxOffset: CGSize = .zero
 
-    private static let collageImages: [String] = {
-        (1...27).compactMap { i in
-            let name = "collage\(i)"
-            if Bundle.main.url(forResource: name, withExtension: "jpg") != nil { return name }
-            return nil
-        }
-    }()
+    private static let collageImages = CollageImageCache.names
 
     var body: some View {
         GeometryReader { geo in
@@ -307,10 +301,9 @@ struct SignInView: View {
         let manager = Self.motionManager
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
         gravityBaseline = nil
-        manager.deviceMotionUpdateInterval = 1.0 / 30.0
+        manager.deviceMotionUpdateInterval = 1.0 / 15.0
         manager.startDeviceMotionUpdates(to: .main) { motion, _ in
             guard let gravity = motion?.gravity else { return }
-            // Capture initial position as baseline so there's no jump on first reading
             if gravityBaseline == nil {
                 gravityBaseline = (gravity.x, gravity.y)
             }
@@ -318,10 +311,16 @@ struct SignInView: View {
             let dx = gravity.x - base.x
             let dy = -(gravity.y - base.y)
             let clamp = { (v: Double) -> Double in min(max(v, -1), 1) }
-            parallaxOffset = CGSize(
+            let newOffset = CGSize(
                 width: clamp(dx) * signInParallaxStrength,
                 height: clamp(dy) * signInParallaxStrength
             )
+            // Skip update if movement is below threshold (saves render cycles)
+            let deltaW = abs(newOffset.width - parallaxOffset.width)
+            let deltaH = abs(newOffset.height - parallaxOffset.height)
+            if deltaW > 0.5 || deltaH > 0.5 {
+                parallaxOffset = newOffset
+            }
         }
     }
 
@@ -360,6 +359,7 @@ private struct SignInCollage: View {
     let imageNames: [String]
 
     var body: some View {
+        if imageNames.isEmpty { Color.clear } else {
         GeometryReader { geo in
             let pitch = signInTileSize + signInSpacing
             let extraWidth = geo.size.height * abs(sin(signInAngle * .pi / 180))
@@ -374,7 +374,7 @@ private struct SignInCollage: View {
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
-                            if let img = Self.imageCache[name] {
+                            if let img = CollageImageCache.images[name] {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
@@ -397,19 +397,8 @@ private struct SignInCollage: View {
                 perspective: signInPerspectiveAmount
             )
         }
-    }
-
-    private static let imageCache: [String: UIImage] = {
-        var cache: [String: UIImage] = [:]
-        for i in 1...27 {
-            let name = "collage\(i)"
-            if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
-               let img = UIImage(contentsOfFile: url.path) {
-                cache[name] = img
-            }
         }
-        return cache
-    }()
+    }
 }
 
 #if DEBUG

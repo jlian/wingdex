@@ -37,13 +37,7 @@ struct PhotoSelectionView: View {
     @State private var showCamera = false
     @State private var collageDrag: CGSize = .zero
 
-    private static let collageImages: [String] = {
-        (1...27).compactMap { i in
-            let name = "collage\(i)"
-            if Bundle.main.url(forResource: name, withExtension: "jpg") != nil { return name }
-            return nil
-        }
-    }()
+    private static let collageImages = CollageImageCache.names
 
     var body: some View {
         GeometryReader { geo in
@@ -194,6 +188,7 @@ private struct DiagonalPhotoCollage: View {
     let imageNames: [String]
 
     var body: some View {
+        if imageNames.isEmpty { Color.clear } else {
         GeometryReader { geo in
             let pitch = collageTileSize + collageSpacing
             let extraWidth = geo.size.height * abs(sin(collageAngle * .pi / 180))
@@ -208,7 +203,7 @@ private struct DiagonalPhotoCollage: View {
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
-                            if let img = Self.imageCache[name] {
+                            if let img = CollageImageCache.images[name] {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
@@ -225,19 +220,8 @@ private struct DiagonalPhotoCollage: View {
             .offset(x: -extraWidth / 2, y: -pitch)
             .opacity(collageOpacity)
         }
-    }
-
-    private static let imageCache: [String: UIImage] = {
-        var cache: [String: UIImage] = [:]
-        for i in 1...27 {
-            let name = "collage\(i)"
-            if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
-               let img = UIImage(contentsOfFile: url.path) {
-                cache[name] = img
-            }
         }
-        return cache
-    }()
+    }
 }
 
 // MARK: - Camera Capture View

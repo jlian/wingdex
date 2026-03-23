@@ -22,6 +22,7 @@
 		2300C447E8E145BFE9E12FA5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B8621A8E42D9A18A2125F8 /* Config.swift */; };
 		2314AD2B5AD2CAE6D1426754 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A98BE3CB346AC4FFC28246D /* SharedComponents.swift */; };
 		27F3FC5181B71ADB687A56CC /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26C4686392C96AAB515199 /* CropView.swift */; };
+		28C700594AF36399A460FAAB /* CollageImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1D850B642C51F0AEA560F3 /* CollageImageCache.swift */; };
 		2CDDDF5ED153526ADF124174 /* collage21.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7A292B9762D444579B157E2C /* collage21.jpg */; };
 		3765CB91633BD6B909098629 /* AddPhotosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61DFE3278988BC58601C97F3 /* AddPhotosViewModel.swift */; };
 		3AD082AB856689D48C4E9C72 /* DataManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA379E90DE3BD99B508BCD7 /* DataManagementView.swift */; };
@@ -123,6 +124,7 @@
 		5CACACCB759F9881B6989222 /* CropService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropService.swift; sourceTree = "<group>"; };
 		5D23677801319F3BA63350DF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		61DFE3278988BC58601C97F3 /* AddPhotosViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosViewModel.swift; sourceTree = "<group>"; };
+		6A1D850B642C51F0AEA560F3 /* CollageImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollageImageCache.swift; sourceTree = "<group>"; };
 		6B5043AC2718CF99118DD12C /* WingDexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WingDexView.swift; sourceTree = "<group>"; };
 		72BFD16A9929E03855E5E380 /* collage25.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage25.jpg; sourceTree = "<group>"; };
 		73B4D479201C022372C3F4BF /* WingDexApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WingDexApp.swift; sourceTree = "<group>"; };
@@ -197,6 +199,7 @@
 			children = (
 				B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */,
 				494CD419AD323D541E04D2AB /* AuthService.swift */,
+				6A1D850B642C51F0AEA560F3 /* CollageImageCache.swift */,
 				5CACACCB759F9881B6989222 /* CropService.swift */,
 				CFBE1598DFE8F27ED8313060 /* DataService.swift */,
 				8DF3BE4EAF4D781A2029593E /* DataStore.swift */,
@@ -517,6 +520,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				0C26BD71C3D1128D41123339 /* AppModels.swift in Sources */,
 				4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */,
 				78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */,
+				28C700594AF36399A460FAAB /* CollageImageCache.swift in Sources */,
 				2300C447E8E145BFE9E12FA5 /* Config.swift in Sources */,
 				FE52C5B543CE063EF47FEFF5 /* CropService.swift in Sources */,
 				27F3FC5181B71ADB687A56CC /* CropView.swift in Sources */,
