@@ -1,6 +1,29 @@
 import PhotosUI
 import SwiftUI
 
+// MARK: - Collage Tuning Parameters
+
+/// Size of each photo tile in points
+private let collageTileSize: CGFloat = 130
+/// Gap between tiles
+private let collageSpacing: CGFloat = 5
+/// Rotation angle in degrees (negative = counter-clockwise)
+private let collageAngle: Double = -15
+/// Number of horizontal rows of photos
+private let collageRows = 8
+/// Corner radius of each tile
+private let collageCornerRadius: CGFloat = 10
+/// Photo opacity (0 = invisible, 1 = full brightness)
+private let collageOpacity: Double = 0.99
+/// How far down the screen photos remain visible (0 = top only, 1 = full screen)
+private let collageFadeEnd: Double = 0.45
+/// Fade length as a fraction of screen height (0.2 = fade out over 20% of screen)
+private let collageFadeLength: Double = 0.3
+/// Height of the top gradient that fades photos in from the nav bar
+private let collageTopFadeHeight: CGFloat = 0
+
+// MARK: - Photo Selection View
+
 /// Photo selection step in the Add Photos flow.
 ///
 /// Offers both photo library picker and camera capture - the standard iOS
@@ -10,53 +33,87 @@ struct PhotoSelectionView: View {
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showCamera = false
 
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            VStack(spacing: 8) {
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.bottom, 4)
-                Text("Identify Birds")
-                    .font(.system(.title2, design: .serif, weight: .semibold))
-                    .foregroundStyle(Color.foregroundText)
-                Text("Take a photo or choose from your library.\nClose-ups and side profiles work best.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mutedText)
-                    .multilineTextAlignment(.center)
-            }
-
-            Spacer().frame(height: 40)
-
-            VStack(spacing: 12) {
-                PhotosPicker(
-                    selection: $viewModel.selectedItems,
-                    maxSelectionCount: 50,
-                    matching: .images
-                ) {
-                    Label("Choose from Library", systemImage: "photo.on.rectangle")
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button {
-                    showCamera = true
-                } label: {
-                    Label("Take Photo", systemImage: "camera")
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.bordered)
-                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
+    private static let collageImages: [String] = {
+        (1...27).compactMap { i in
+            let name = "collage\(i)"
+            if Bundle.main.url(forResource: name, withExtension: "jpg") != nil { return name }
+            return nil
         }
-        .background(Color.pageBg.ignoresSafeArea())
+    }()
+
+    var body: some View {
+        ZStack {
+            // Base background -- pageBg so edges match
+            Color.pageBg.ignoresSafeArea()
+
+            // Diagonal photo collage with edge fades
+            DiagonalPhotoCollage(imageNames: Self.collageImages)
+                .mask(
+                    GeometryReader { geo in
+                        let fadeStart = geo.size.height * collageFadeEnd
+                        let fadeLength = geo.size.height * collageFadeLength
+                        VStack(spacing: 0) {
+                            // Top fade in
+                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                                .frame(height: collageTopFadeHeight)
+                            // Fully visible region
+                            Color.black
+                                .frame(height: max(fadeStart - collageTopFadeHeight, 0))
+                            // Bottom fade out
+                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                                .frame(height: fadeLength)
+                            // Fully transparent below -- text area is clean
+                            Color.clear
+                        }
+                    }
+                )
+                .ignoresSafeArea()
+
+            // Foreground content
+            VStack(spacing: 0) {
+                Spacer()
+
+                VStack(spacing: 6) {
+                    Text("Identify Birds")
+                        .font(.system(.title2, design: .serif, weight: .semibold))
+                        .foregroundStyle(Color.foregroundText)
+                    Text("One bird per photo for accuracy\nClose-ups and side profiles work best")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
+                }
+
+                Spacer().frame(height: 28)
+
+                VStack(spacing: 12) {
+                    PhotosPicker(
+                        selection: $viewModel.selectedItems,
+                        maxSelectionCount: 50,
+                        matching: .images
+                    ) {
+                        Label("Choose from Library", systemImage: "photo.on.rectangle")
+                            .font(.body.weight(.medium))
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .glassEffect(.regular.interactive())
+
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label("Take Photo", systemImage: "camera")
+                            .font(.body.weight(.medium))
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.bordered)
+                    .glassEffect(.regular.interactive())
+                    .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
         .onChange(of: viewModel.selectedItems) {
             if !viewModel.selectedItems.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }
@@ -75,6 +132,50 @@ struct PhotoSelectionView: View {
     }
 
 
+}
+
+// MARK: - Diagonal Photo Collage
+
+/// Netflix-style diagonal scrolling photo grid background.
+private struct DiagonalPhotoCollage: View {
+    let imageNames: [String]
+
+    var body: some View {
+        GeometryReader { geo in
+            let rowHeight = collageTileSize + collageSpacing
+            let extraWidth = geo.size.height * abs(sin(collageAngle * .pi / 180))
+            let tilesPerRow = Int((geo.size.width + extraWidth) / (collageTileSize + collageSpacing)) + 2
+
+            VStack(spacing: collageSpacing) {
+                ForEach(0..<collageRows, id: \.self) { row in
+                    HStack(spacing: collageSpacing) {
+                        ForEach(0..<tilesPerRow, id: \.self) { col in
+                            let index = (row * tilesPerRow + col) % imageNames.count
+                            let name = imageNames[index]
+                            if let img = Self.loadImage(named: name) {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: collageTileSize, height: collageTileSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: collageCornerRadius))
+                            }
+                        }
+                    }
+                    .offset(x: row.isMultiple(of: 2) ? 0 : collageTileSize / 2)
+                }
+            }
+            .frame(width: geo.size.width + extraWidth)
+            .rotationEffect(.degrees(collageAngle))
+            .offset(x: -extraWidth / 2, y: -rowHeight)
+            .opacity(collageOpacity)
+        }
+    }
+
+    private static func loadImage(named name: String) -> UIImage? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
+              let img = UIImage(contentsOfFile: url.path) else { return nil }
+        return img
+    }
 }
 
 // MARK: - Camera Capture View
@@ -124,8 +225,10 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 
 #if DEBUG
 #Preview {
-    NavigationStack {
-        PhotoSelectionView(viewModel: AddPhotosViewModel())
+    PreviewTabs(.add) {
+        NavigationStack {
+            PhotoSelectionView(viewModel: AddPhotosViewModel())
+        }
     }
 }
 #endif
