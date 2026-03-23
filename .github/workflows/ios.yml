@@ -70,7 +70,7 @@ jobs:
 
       - name: Resolve SPM dependencies
         working-directory: ios
-        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme WingDex
+        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme Dev
 
       - name: Build for Simulator
         working-directory: ios
@@ -78,7 +78,7 @@ jobs:
           set -o pipefail
           xcodebuild build-for-testing \
             -project WingDex.xcodeproj \
-            -scheme WingDex \
+            -scheme Dev \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
@@ -90,7 +90,7 @@ jobs:
           set -o pipefail
           xcodebuild test-without-building \
             -project WingDex.xcodeproj \
-            -scheme WingDex \
+            -scheme Dev \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -only-testing:WingDexTests \
             CODE_SIGNING_ALLOWED=NO

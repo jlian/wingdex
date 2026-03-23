@@ -17,8 +17,8 @@ struct PerPhotoConfirmView: View {
     @State private var selectedConfidence: Double = 0
     @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
-    @State private var wikiImageTask: Task<Void, Never>?
     @State private var galleryURLs: [URL] = []
+    @State private var galleryPlumages: [String?] = []
     @State private var galleryTask: Task<Void, Never>?
     @State private var galleryIndex = 0
 
@@ -170,7 +170,7 @@ struct PerPhotoConfirmView: View {
 
                         VStack(spacing: 6) {
                             wikiSquareThumbnail(size: photoSize)
-                            Text("Wikipedia Reference")
+                            Text(currentRefLabel)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -181,14 +181,17 @@ struct PerPhotoConfirmView: View {
 
                     speciesCard
 
-                    if viewModel.rangeAdjusted {
-                        Link(destination: URL(string: "https://datazone.birdlife.org")!) {
-                            Text("Location-filtered using BirdLife International.")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
+                                                            Group {
+                        if viewModel.rangeAdjusted {
+                            Text("Photos from ") + Text("[Wikipedia](https://en.wikipedia.org)") + Text(", range data from ") + Text("[BirdLife International](https://datazone.birdlife.org)") + Text(".")
+                        } else {
+                            Text("Photos from ") + Text("[Wikipedia](https://en.wikipedia.org)") + Text(".")
                         }
-                        .frame(maxWidth: .infinity)
                     }
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .tint(.secondary)
+                    .frame(maxWidth: .infinity)
                 }
 
                 Spacer(minLength: 0)
@@ -269,12 +272,36 @@ struct PerPhotoConfirmView: View {
 
     // MARK: - Wiki Square Thumbnail (portrait-aware, swipeable gallery)
 
-    /// All available image URLs: primary wiki image + gallery images.
-    private var allWikiURLs: [URL] {
-        var urls: [URL] = []
-        if let u = wikiImageURL { urls.append(u) }
-        urls.append(contentsOf: galleryURLs)
-        return urls
+    /// All gallery items (URL + plumage), with plumage-matching images promoted to the front.
+    private var sortedGalleryItems: [(url: URL, plumage: String?)] {
+        var items: [(url: URL, plumage: String?)] = []
+        var idx = 0
+        if let u = wikiImageURL {
+            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
+            idx += 1
+        }
+        for u in galleryURLs {
+            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
+            idx += 1
+        }
+        // Promote images whose plumage matches the LLM-detected plumage
+        guard let detected = selectedPlumage?.lowercased(), !detected.isEmpty else { return items }
+        let matching = items.filter { $0.plumage?.lowercased().contains(detected) == true }
+        let rest = items.filter { $0.plumage?.lowercased().contains(detected) != true }
+        return matching + rest
+    }
+
+    private var allWikiURLs: [URL] { sortedGalleryItems.map(\.url) }
+
+    /// Label for the current gallery image, including plumage if available.
+    private var currentRefLabel: String {
+        let items = sortedGalleryItems
+        guard !items.isEmpty else { return "Reference" }
+        let idx = min(galleryIndex, items.count - 1)
+        if idx >= 0, let plumage = items[idx].plumage {
+            return "Reference (\(plumage))"
+        }
+        return "Reference"
     }
 
     private func wikiSquareThumbnail(size: CGFloat) -> some View {
@@ -290,16 +317,21 @@ struct PerPhotoConfirmView: View {
                     wikiPlaceholder(size: size)
                 }
             } else {
-                TabView(selection: Binding(
-                    get: { safeIndex },
-                    set: { galleryIndex = $0 }
-                )) {
-                    ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
-                        BirdThumbnail(url: url.absoluteString, size: size, cornerRadius: 12)
-                            .tag(i)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 0) {
+                        ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                            BirdThumbnail(url: url.absoluteString, size: size, cornerRadius: 12)
+                                .frame(width: size, height: size)
+                                .id(i)
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: Binding(
+                    get: { safeIndex },
+                    set: { if let v = $0 { galleryIndex = v } }
+                ))
                 .frame(width: size, height: size)
             }
 
@@ -436,74 +468,123 @@ struct PerPhotoConfirmView: View {
     }
 
     private func fetchWikiImage() {
-        wikiImageTask?.cancel()
         galleryTask?.cancel()
         galleryIndex = 0
         let species = selectedSpecies
-        guard !species.isEmpty else { wikiImageURL = nil; galleryURLs = []; galleryIndex = 0; return }
-        let wikiTitle: String
-        if let c = candidates.first(where: { $0.species == species }), let t = c.wikiTitle { wikiTitle = t }
-        else { wikiTitle = getDisplayName(species).replacingOccurrences(of: " ", with: "_") }
+        guard !species.isEmpty else { wikiImageURL = nil; galleryURLs = []; galleryPlumages = []; galleryIndex = 0; return }
+
+        let displayName = getDisplayName(species)
         isLoadingWikiImage = true; wikiImageURL = nil
-        wikiImageTask = Task {
-            do {
-                let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
-                guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(enc)") else { return }
-                var req = URLRequest(url: url); req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
-                let (data, _) = try await URLSession.shared.data(for: req)
-                try Task.checkCancellation()
-                struct S: Codable { let thumbnail: T?; struct T: Codable { let source: String? } }
-                let s = try JSONDecoder().decode(S.self, from: data)
-                guard !Task.isCancelled else { return }
-                let thumbURL = s.thumbnail?.source.flatMap { URL(string: $0) }
-                await MainActor.run {
-                    wikiImageURL = thumbURL
-                    isLoadingWikiImage = false
-                }
-            } catch is CancellationError { /* expected */ }
-            catch {
-                log.debug("Wiki fetch failed: \(error.localizedDescription)")
-                await MainActor.run { isLoadingWikiImage = false }
-            }
+        galleryURLs = []; galleryPlumages = []
+
+        // Single Wikimedia Commons search: returns thumbnails + descriptions in one call
+        galleryTask = Task { await performCommonsGalleryFetch(displayName: displayName) }
+    }
+
+    private struct CommonsResponse: Codable {
+        let query: Query?
+        struct Query: Codable { let pages: [String: Page]? }
+        struct Page: Codable {
+            let title: String?
+            let index: Int?
+            let imageinfo: [ImageInfo]?
         }
-        galleryURLs = []
-        galleryTask = Task {
-            do {
-                let enc = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
-                guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/media-list/\(enc)") else { return }
-                var req = URLRequest(url: url); req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
-                let (data, _) = try await URLSession.shared.data(for: req)
-                try Task.checkCancellation()
-                struct MediaList: Codable {
-                    let items: [MediaItem]?
-                    struct MediaItem: Codable {
-                        let title: String?
-                        let type: String?
-                        let leadImage: Bool?
-                        let srcset: [Srcset]?
-                        struct Srcset: Codable { let src: String? }
-                    }
+        struct ImageInfo: Codable {
+            let thumburl: String?
+            let extmetadata: ExtMetadata?
+        }
+        struct ExtMetadata: Codable {
+            let ImageDescription: MetaValue?
+            let Assessments: MetaValue?
+        }
+        struct MetaValue: Codable { let value: String? }
+    }
+
+    private static let excludeRE = try! NSRegularExpression(
+        pattern: "\\.(svg|gif)$|Status_|IUCN|range_map|distribution|map_of|map\\.png|stamp_of|MHNT|MWNH|_egg|_nest|museum|specimen|skeleton|taxiderm|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal",
+        options: .caseInsensitive
+    )
+    private static let captionExcludeRE = try! NSRegularExpression(
+        pattern: "\\beggs?\\b|\\bnest\\b|\\bskeleton\\b|\\bspecimen\\b|\\btaxiderm",
+        options: .caseInsensitive
+    )
+
+    /// Parse plumage from caption + filename text (matches web logic).
+    private func parseGalleryPlumage(_ text: String) -> String? {
+        let lower = text.lowercased().replacingOccurrences(of: "_", with: " ").replacingOccurrences(of: "-", with: " ")
+        var tags: [String] = []
+        if lower.contains("drake") { tags.append("male") }
+        else if lower.contains("male") && !lower.contains("female") { tags.append("male") }
+        if lower.contains("female") || lower.contains("hen") { tags.append("female") }
+        if lower.range(of: "\\bjuvenile\\b|\\bchick\\b|\\bduckling\\b|\\bimmature\\b", options: .regularExpression) != nil {
+            tags.append("juvenile")
+        }
+        return tags.isEmpty ? nil : tags.joined(separator: ", ")
+    }
+
+    private func performCommonsGalleryFetch(displayName: String) async {
+        do {
+            let query = "\"\(displayName)\"".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? displayName
+            let urlStr = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=\(query)&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=extmetadata%7Curl&iiurlwidth=500&format=json&origin=*"
+            guard let url = URL(string: urlStr) else {
+                #if DEBUG
+                print("[Wiki] Invalid URL: \(urlStr)")
+                #endif
+                return
+            }
+            var req = URLRequest(url: url)
+            req.setValue("WingDex-iOS/1.0", forHTTPHeaderField: "User-Agent")
+            let (data, _) = try await URLSession.shared.data(for: req)
+            try Task.checkCancellation()
+
+            let response = try JSONDecoder().decode(CommonsResponse.self, from: data)
+            guard !Task.isCancelled else { return }
+            #if DEBUG
+            let pageCount = response.query?.pages?.count ?? 0
+            print("[Wiki] Commons returned \(pageCount) pages for '\(displayName)'")
+            #endif
+
+            // Score: featured > quality > relevance
+            var scored: [(page: CommonsResponse.Page, score: Int, relevance: Int)] = []
+            if let pages = response.query?.pages?.values {
+                for page in pages {
+                    let assessed = page.imageinfo?.first?.extmetadata?.Assessments?.value ?? ""
+                    let s = assessed.contains("featured") ? 0 : assessed.contains("quality") ? 1 : 2
+                    scored.append((page: page, score: s, relevance: page.index ?? 999))
                 }
-                let list = try JSONDecoder().decode(MediaList.self, from: data)
-                guard !Task.isCancelled else { return }
-                let excludePattern = try! NSRegularExpression(
-                    pattern: "\\.(svg|gif)$|Status_|range_map|distribution|map_of|map\\.png|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal",
-                    options: .caseInsensitive
-                )
-                var urls: [URL] = []
-                for item in list.items ?? [] {
-                    guard item.type == "image", item.leadImage != true,
-                          let title = item.title,
-                          excludePattern.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) == nil,
-                          let src = item.srcset?.first?.src else { continue }
-                    let full = src.hasPrefix("//") ? "https:\(src)" : src
-                    if let u = URL(string: full) { urls.append(u) }
-                    if urls.count >= 6 { break }
-                }
-                guard !Task.isCancelled else { return }
-                await MainActor.run { galleryURLs = urls }
-            } catch is CancellationError { /* expected */ }
-            catch { log.debug("Gallery fetch failed: \(error.localizedDescription)") }
+            }
+            scored.sort { $0.score != $1.score ? $0.score < $1.score : $0.relevance < $1.relevance }
+
+            var urls: [URL] = []
+            var plumages: [String?] = []
+            for entry in scored {
+                let title = entry.page.title ?? ""
+                let titleRange = NSRange(title.startIndex..., in: title)
+                if Self.excludeRE.firstMatch(in: title, range: titleRange) != nil { continue }
+                guard let thumbStr = entry.page.imageinfo?.first?.thumburl,
+                      let thumbURL = URL(string: thumbStr) else { continue }
+                let rawDesc = entry.page.imageinfo?.first?.extmetadata?.ImageDescription?.value ?? ""
+                let desc = rawDesc.replacingOccurrences(of: "<[^>]*>", with: "", options: String.CompareOptions.regularExpression)
+                let descRange = NSRange(desc.startIndex..., in: desc)
+                if Self.captionExcludeRE.firstMatch(in: desc, range: descRange) != nil { continue }
+                urls.append(thumbURL)
+                plumages.append(parseGalleryPlumage([desc, title].joined(separator: " ")))
+                if urls.count >= 6 { break }
+            }
+            guard !Task.isCancelled else { return }
+            #if DEBUG
+            print("[Wiki] After filtering: \(urls.count) URLs")
+            #endif
+            await MainActor.run {
+                wikiImageURL = urls.first
+                galleryURLs = Array(urls.dropFirst())
+                galleryPlumages = plumages
+                isLoadingWikiImage = false
+            }
+        } catch is CancellationError { /* expected */ }
+        catch {
+            log.debug("Commons gallery fetch failed: \(error.localizedDescription)")
+            await MainActor.run { isLoadingWikiImage = false }
         }
     }
 }

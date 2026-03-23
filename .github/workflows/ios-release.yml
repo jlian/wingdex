@@ -113,7 +113,7 @@ jobs:
       - name: Resolve SPM dependencies
         if: steps.semrel.outputs.released == 'true'
         working-directory: ios
-        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme WingDex
+        run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme Production
 
       - name: Write App Store Connect API key
         if: steps.semrel.outputs.released == 'true' && inputs.dry_run != true
@@ -128,7 +128,7 @@ jobs:
           set -o pipefail
           xcodebuild archive \
             -project WingDex.xcodeproj \
-            -scheme WingDex \
+            -scheme Production \
             -archivePath build/WingDex.xcarchive \
             -destination 'generic/platform=iOS' \
             -allowProvisioningUpdates \
