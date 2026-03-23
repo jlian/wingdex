@@ -302,12 +302,14 @@ struct SignInView: View {
     private func startParallax() {
         let manager = Self.motionManager
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
-        manager.deviceMotionUpdateInterval = 1.0 / 60.0
+        manager.deviceMotionUpdateInterval = 1.0 / 30.0
         manager.startDeviceMotionUpdates(to: .main) { motion, _ in
-            guard let attitude = motion?.attitude else { return }
+            guard let gravity = motion?.gravity else { return }
+            // gravity.x/y range from -1 to 1, smooth at all orientations (no gimbal lock)
+            let clamp = { (v: Double) -> Double in min(max(v, -1), 1) }
             parallaxOffset = CGSize(
-                width: CGFloat(attitude.roll) * signInParallaxStrength,
-                height: CGFloat(attitude.pitch) * signInParallaxStrength
+                width: clamp(gravity.x) * signInParallaxStrength,
+                height: clamp(-gravity.y) * signInParallaxStrength
             )
         }
     }
