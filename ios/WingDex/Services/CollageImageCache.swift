@@ -1,7 +1,9 @@
 import UIKit
 
-/// Shared in-memory cache for collage tile images, loaded once from the bundle.
+/// Shared in-memory cache for collage tile images, loaded lazily from the bundle.
 enum CollageImageCache {
+    /// Access triggers one-time decode of all collage JPEGs.
+    /// Both SignInView and PhotoSelectionView share this single cache.
     static let images: [String: UIImage] = {
         var cache: [String: UIImage] = [:]
         for i in 1...26 {

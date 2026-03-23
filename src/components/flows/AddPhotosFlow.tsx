@@ -939,9 +939,15 @@ function PerPhotoConfirm({
   // Promote images matching the LLM's detected plumage to the front
   const sortedGallery = useMemo(() => {
     if (!selectedPlumage || galleryImages.length === 0) return galleryImages
-    const plumLower = selectedPlumage.toLowerCase()
-    const matching = galleryImages.filter(img => img.plumage?.includes(plumLower))
-    const rest = galleryImages.filter(img => !img.plumage?.includes(plumLower))
+    const detected = selectedPlumage.toLowerCase().split(/,\s*/)
+    const matching = galleryImages.filter(img => {
+      const tags = img.plumage?.toLowerCase().split(/,\s*/) ?? []
+      return detected.some(d => tags.includes(d))
+    })
+    const rest = galleryImages.filter(img => {
+      const tags = img.plumage?.toLowerCase().split(/,\s*/) ?? []
+      return !detected.some(d => tags.includes(d))
+    })
     return [...matching, ...rest]
   }, [galleryImages, selectedPlumage])
 
@@ -1172,8 +1178,8 @@ function PerPhotoConfirm({
 
       <p className="text-[10px] text-muted-foreground text-center">
         Photos from{' '}
-        <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer" className="underline">
-          Wikipedia
+        <a href="https://commons.wikimedia.org" target="_blank" rel="noopener noreferrer" className="underline">
+          Wikimedia Commons
         </a>
         {', '}range data from{' '}
         <a href="https://datazone.birdlife.org" target="_blank" rel="noopener noreferrer" className="underline">

@@ -181,7 +181,7 @@ struct PerPhotoConfirmView: View {
 
                     speciesCard
 
-                                                            Text("Photos from [Wikipedia](https://en.wikipedia.org), range data from [BirdLife International](https://datazone.birdlife.org).")
+                                                            Text("Photos from [Wikimedia Commons](https://commons.wikimedia.org), range data from [BirdLife International](https://datazone.birdlife.org).")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .tint(.secondary)
@@ -280,8 +280,17 @@ struct PerPhotoConfirmView: View {
         }
         // Promote images whose plumage matches the LLM-detected plumage
         guard let detected = selectedPlumage?.lowercased(), !detected.isEmpty else { return items }
-        let matching = items.filter { $0.plumage?.lowercased().contains(detected) == true }
-        let rest = items.filter { $0.plumage?.lowercased().contains(detected) != true }
+        let detectedTags = Set(detected.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        let matching = items.filter { item in
+            guard let p = item.plumage?.lowercased() else { return false }
+            let tags = p.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            return !detectedTags.isDisjoint(with: tags)
+        }
+        let rest = items.filter { item in
+            guard let p = item.plumage?.lowercased() else { return true }
+            let tags = p.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            return detectedTags.isDisjoint(with: tags)
+        }
         return matching + rest
     }
 

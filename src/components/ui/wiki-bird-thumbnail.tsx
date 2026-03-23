@@ -46,7 +46,7 @@ export function WikiBirdThumbnail({
   const primaryUrl = imageUrlProp || hookUrl
 
   // Build combined image list: primary (if provided) + gallery
-  const galleryItems = galleryUrls ?? []
+  const galleryItems = useMemo(() => galleryUrls ?? [], [galleryUrls])
   const allImages: GalleryImage[] = useMemo(() => {
     if (!primaryUrl) return galleryItems
     let title = ''
