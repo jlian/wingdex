@@ -260,6 +260,7 @@ export async function getWikimediaSummary(
 type MediaListItem = {
   title: string
   type: string
+  section_id?: number
   leadImage?: boolean
   showInGallery?: boolean
   srcset?: Array<{ src: string; scale: string }>
@@ -332,6 +333,9 @@ async function fetchMediaList(title: string, limit: number): Promise<string[]> {
     for (const item of data.items) {
       if (item.type !== 'image') continue
       if (item.leadImage) continue
+      if (item.showInGallery === false) continue
+      // Limit to intro/infobox (section 0) and early body sections
+      if (item.section_id !== undefined && item.section_id > 6) continue
       if (GALLERY_EXCLUDE_RE.test(item.title)) continue
       const src = item.srcset?.[0]?.src
       if (!src) continue

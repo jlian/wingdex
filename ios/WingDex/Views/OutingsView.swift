@@ -16,7 +16,7 @@ struct OutingsView: View {
         var label: String {
             switch self {
             case .date: "Date"
-            case .species: "Species"
+            case .species: "Species Seen"
             case .name: "Name"
             }
         }

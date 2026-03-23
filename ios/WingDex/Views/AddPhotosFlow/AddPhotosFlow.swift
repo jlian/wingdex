@@ -24,8 +24,8 @@ struct AddPhotosFlow: View {
         Group {
             switch viewModel.currentStep {
             case .selectPhotos:
-                // Should not happen - PhotoSelectionView lives in the tab
-                Text("Select photos from the Add tab")
+                // Shown briefly during duplicate detection before alert appears
+                Color.pageBg
             case .extracting:
                 extractingView
             case .outingReview:
