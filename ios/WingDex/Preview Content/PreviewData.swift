@@ -377,4 +377,50 @@ enum PreviewData {
         )
     }
 }
+
+// MARK: - Preview Tab Wrapper
+
+import SwiftUI
+
+/// Wraps a view in the app's real tab bar layout for realistic previews.
+/// Usage:
+/// ```
+/// #Preview {
+///     PreviewTabs(.add) {
+///         MyView()
+///     }
+/// }
+/// ```
+struct PreviewTabs<Content: View>: View {
+    enum Tab: Int { case home, wingdex, outings, add }
+    @State private var selectedTab: Tab
+    let content: Content
+
+    init(_ tab: Tab = .home, @ViewBuilder content: () -> Content) {
+        self._selectedTab = State(initialValue: tab)
+        self.content = content()
+    }
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            TabSection {
+                SwiftUI.Tab("Home", systemImage: "house", value: Tab.home) {
+                    Color.pageBg
+                }
+                SwiftUI.Tab("WingDex", image: "BirdTab", value: Tab.wingdex) {
+                    Color.pageBg
+                }
+                SwiftUI.Tab("Outings", systemImage: "binoculars", value: Tab.outings) {
+                    Color.pageBg
+                }
+            }
+            SwiftUI.Tab(value: Tab.add, role: .search) {
+                content
+            } label: {
+                Label("Add", systemImage: "camera.fill")
+            }
+        }
+    }
+}
+
 #endif
