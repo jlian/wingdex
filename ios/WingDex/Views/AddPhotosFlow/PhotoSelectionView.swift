@@ -35,6 +35,7 @@ private let collageBlurFadeLength: Double = 0.25
 struct PhotoSelectionView: View {
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showCamera = false
+    @State private var collageDrag: CGSize = .zero
 
     private static let collageImages: [String] = {
         (1...27).compactMap { i in
@@ -53,6 +54,7 @@ struct PhotoSelectionView: View {
 
             // Diagonal photo collage -- full screen
             DiagonalPhotoCollage(imageNames: Self.collageImages)
+                .offset(collageDrag)
                 .ignoresSafeArea()
 
             // Blur mask (shared shape, same system as SignInView)
@@ -137,6 +139,32 @@ struct PhotoSelectionView: View {
                 .padding(.bottom, 24)
             }
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { value in
+                    // Rubber-band function: maps unbounded input to bounded output.
+                    // limit: max displacement in points
+                    // resistance: how hard to drag (higher = stiffer). 1.0 = no resistance.
+                    let rubberBand = { (v: CGFloat, limit: CGFloat, resistance: CGFloat) -> CGFloat in
+                        limit * tanh(v / (limit * resistance))
+                    }
+                    let limit: CGFloat = 60   // max pixels the collage can move
+                    let resistance: CGFloat = 16  // drag divisor (16 = very stiff)
+                    collageDrag = CGSize(
+                        width: rubberBand(value.translation.width, limit, resistance),
+                        height: rubberBand(value.translation.height, limit, resistance)
+                    )
+                }
+                .onEnded { _ in
+                    // Spring back to center
+                    // response: duration in seconds (lower = snappier)
+                    // dampingFraction: 0 = infinite bounce, 1 = no bounce (critically damped)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        collageDrag = .zero
+                    }
+                }
+        )
         .toolbar(.hidden, for: .navigationBar)
         }
         .onChange(of: viewModel.selectedItems) {
