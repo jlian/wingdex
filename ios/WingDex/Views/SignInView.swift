@@ -20,13 +20,13 @@ private let signInParallaxStrength: CGFloat = 20
 /// Where the top blur finishes fading out (fraction from top, 0 = no top blur)
 private let signInTopBlurFadeEnd: Double = 0.10
 /// How far down the screen photos remains crisp (0 = top only, 1 = full screen)
-private let signInBlurFadeEnd: Double = 0.3
+private let signInBlurFadeEnd: Double = 0.4
 /// Blur fade-in length as a fraction of screen height
-private let signInBlurFadeLength: Double = 0.4
+private let signInBlurFadeLength: Double = 0.2
 /// Darkening tint in light mode (0 = none, 1 = solid black). Applied with same mask as blur.
-private let signInDarkenLight: Double = 0.1
-/// Dark mode multiplier for darkening (stacks on light value)
-private let signInDarkenDarkMultiplier: Double = 5
+private let signInDarkenLight: Double = 0
+/// Darkening tint in dark mode
+private let signInDarkenDark: Double = 0.7
 
 /// Full-screen sign-in view.
 struct SignInView: View {
@@ -88,7 +88,7 @@ struct SignInView: View {
 
             // Darkening layer -- same mask shape so dark tint follows the blur
             let darkenOpacity = colorScheme == .dark
-                ? signInDarkenLight * signInDarkenDarkMultiplier
+                ? signInDarkenDark
                 : signInDarkenLight
             Color.black
                 .mask(blurMask)
@@ -99,12 +99,8 @@ struct SignInView: View {
             VStack(spacing: 0) {
                 // Top bar
                 HStack {
-                    Image("BirdLogo")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 36, height: 36)
-                        .foregroundStyle(.white)
+                    AppIconView()
+                        .frame(width: 44, height: 44)
                     Spacer()
                     #if DEBUG
                     Menu {
@@ -301,7 +297,7 @@ struct SignInView: View {
         let manager = Self.motionManager
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
         gravityBaseline = nil
-        manager.deviceMotionUpdateInterval = 1.0 / 15.0
+        manager.deviceMotionUpdateInterval = 1.0 / 30.0
         manager.startDeviceMotionUpdates(to: .main) { motion, _ in
             guard let gravity = motion?.gravity else { return }
             if gravityBaseline == nil {
@@ -318,7 +314,7 @@ struct SignInView: View {
             // Skip update if movement is below threshold (saves render cycles)
             let deltaW = abs(newOffset.width - parallaxOffset.width)
             let deltaH = abs(newOffset.height - parallaxOffset.height)
-            if deltaW > 0.5 || deltaH > 0.5 {
+            if deltaW > 0.1 || deltaH > 0.1 {
                 parallaxOffset = newOffset
             }
         }
@@ -363,13 +359,13 @@ private struct SignInCollage: View {
         GeometryReader { geo in
             let pitch = signInTileSize + signInSpacing
             let extraWidth = geo.size.height * abs(sin(signInAngle * .pi / 180))
-            let tilesPerRow = Int((geo.size.width + extraWidth) / pitch) + 3
+            let tilesPerRow = Int((geo.size.width + extraWidth) / pitch) + 4
 
             VStack(spacing: signInSpacing) {
                 ForEach(0..<signInRows, id: \.self) { row in
                     HStack(spacing: signInSpacing) {
                         if !row.isMultiple(of: 2) {
-                            Spacer().frame(width: pitch / 2, height: signInTileSize)
+                            Spacer().frame(width: pitch, height: signInTileSize)
                         }
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
