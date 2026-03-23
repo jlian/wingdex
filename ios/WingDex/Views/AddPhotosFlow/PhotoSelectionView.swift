@@ -14,13 +14,16 @@ private let collageRows = 8
 /// Corner radius of each tile
 private let collageCornerRadius: CGFloat = 10
 /// Photo opacity (0 = invisible, 1 = full brightness)
-private let collageOpacity: Double = 0.99
-/// How far down the screen photos remain visible (0 = top only, 1 = full screen)
-private let collageFadeEnd: Double = 0.45
-/// Fade length as a fraction of screen height (0.2 = fade out over 20% of screen)
-private let collageFadeLength: Double = 0.3
-/// Height of the top gradient that fades photos in from the nav bar
-private let collageTopFadeHeight: CGFloat = 0
+private let collageOpacity: Double = 1
+
+// -- Blur overlay parameters (same system as SignInView) --
+
+/// Where the top blur finishes fading out (fraction of screen, 0 = no top blur)
+private let collageTopBlurFadeEnd: Double = 0.05
+/// How far down the screen remains unblurred (0 = top only, 1 = full screen)
+private let collageBlurFadeEnd: Double = 0.5
+/// Blur fade-in length as a fraction of screen height
+private let collageBlurFadeLength: Double = 0.25
 
 // MARK: - Photo Selection View
 
@@ -42,31 +45,52 @@ struct PhotoSelectionView: View {
     }()
 
     var body: some View {
+        GeometryReader { geo in
+            let screenH = geo.size.height
         ZStack {
-            // Base background -- pageBg so edges match
+            // Base background
             Color.pageBg.ignoresSafeArea()
 
-            // Diagonal photo collage with edge fades
+            // Diagonal photo collage -- full screen
             DiagonalPhotoCollage(imageNames: Self.collageImages)
-                .mask(
-                    GeometryReader { geo in
-                        let fadeStart = geo.size.height * collageFadeEnd
-                        let fadeLength = geo.size.height * collageFadeLength
-                        VStack(spacing: 0) {
-                            // Top fade in
-                            LinearGradient(colors: [.clear, .black] as [Color], startPoint: .top, endPoint: .bottom)
-                                .frame(height: collageTopFadeHeight)
-                            // Fully visible region
-                            Color.black
-                                .frame(height: max(fadeStart - collageTopFadeHeight, 0))
-                            // Bottom fade out
-                            LinearGradient(colors: [.black, .clear] as [Color], startPoint: .top, endPoint: .bottom)
-                                .frame(height: fadeLength)
-                            // Fully transparent below -- text area is clean
-                            Color.clear
-                        }
-                    }
+                .ignoresSafeArea()
+
+            // Blur mask (shared shape, same system as SignInView)
+            //
+            // Top:    black -> clear over collageTopBlurFadeEnd
+            // Middle: clear (unblurred) until collageBlurFadeEnd
+            // Bottom: clear -> black over collageBlurFadeLength, then solid black
+            let blurMask = VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [.black, .clear] as [Color],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
+                .frame(height: screenH * collageTopBlurFadeEnd)
+
+                Color.clear
+                    .frame(height: screenH * max(collageBlurFadeEnd - collageTopBlurFadeEnd, 0))
+
+                LinearGradient(
+                    colors: [.clear, .black] as [Color],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: screenH * collageBlurFadeLength)
+
+                Color.black
+            }
+
+            // Blur layer
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .mask(blurMask)
+                .ignoresSafeArea()
+
+            // Fade to background color -- same mask so it follows the blur transition
+            Color.pageBg
+                .mask(blurMask)
+                .opacity(0.60)
                 .ignoresSafeArea()
 
             // Foreground content
@@ -74,8 +98,8 @@ struct PhotoSelectionView: View {
                 Spacer()
 
                 VStack(spacing: 6) {
-                    Text("Identify Birds")
-                        .font(.system(.title2, design: .serif, weight: .semibold))
+                    Text("Upload & Identify")
+                        .font(.system(.title, design: .serif, weight: .semibold))
                         .foregroundStyle(Color.foregroundText)
                     Text("One bird per photo for accuracy\nClose-ups and side profiles work best")
                         .font(.subheadline)
@@ -95,8 +119,8 @@ struct PhotoSelectionView: View {
                             .font(.body.weight(.medium))
                             .frame(maxWidth: .infinity, minHeight: 50)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .glassEffect(.regular.interactive())
+                    .buttonStyle(.glassProminent)
+                    .buttonSizing(.flexible)
 
                     Button {
                         showCamera = true
@@ -105,8 +129,8 @@ struct PhotoSelectionView: View {
                             .font(.body.weight(.medium))
                             .frame(maxWidth: .infinity, minHeight: 50)
                     }
-                    .buttonStyle(.bordered)
-                    .glassEffect(.regular.interactive())
+                    .buttonStyle(.glass)
+                    .buttonSizing(.flexible)
                     .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
                 }
                 .padding(.horizontal, 24)
@@ -114,6 +138,7 @@ struct PhotoSelectionView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        }
         .onChange(of: viewModel.selectedItems) {
             if !viewModel.selectedItems.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }

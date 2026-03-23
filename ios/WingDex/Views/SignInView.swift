@@ -3,16 +3,30 @@ import SwiftUI
 
 // MARK: - Sign-In Collage Parameters
 
-private let signInTileWidth: CGFloat = 175
-private let signInTileHeight: CGFloat = 175
+private let signInTileSize: CGFloat = 175
 private let signInSpacing: CGFloat = 5
 private let signInAngle: Double = -20
 private let signInRows = 6
 private let signInCornerRadius: CGFloat = 10
-private let signInOpacity: Double = 0.9
 /// 3D tilt angle (degrees) -- tilts the collage "into" the screen
 private let signInPerspectiveTilt: Double = 30
 private let signInPerspectiveAmount: CGFloat = 1.0
+
+// -- Blur overlay parameters (same system as PhotoSelectionView's collageFadeEnd/collageFadeLength) --
+
+/// Where the top blur finishes fading out (fraction from top, 0 = no top blur)
+private let signInTopBlurFadeEnd: Double = 0.10
+/// How far down the screen photos remains crisp (0 = top only, 1 = full screen)
+private let signInBlurFadeEnd: Double = 0.3
+/// Blur fade-in length as a fraction of screen height
+private let signInBlurFadeLength: Double = 0.3
+/// Darkening tint in light mode (0 = none, 1 = solid black). Applied with same mask as blur.
+private let signInDarkenLight: Double = 0.25
+/// Dark mode multiplier for darkening (stacks on light value)
+private let signInDarkenDarkMultiplier: Double = 2.5
+
+/// Bright green for the title -- uses the dark-mode accent so it pops against photos
+private let signInTitleGreen = Color(.displayP3, red: 0.45, green: 0.775, blue: 0.55)
 
 /// Full-screen sign-in view.
 struct SignInView: View {
@@ -33,19 +47,91 @@ struct SignInView: View {
     }()
 
     var body: some View {
+        GeometryReader { geo in
+            let screenH = geo.size.height
         ZStack {
             // Base background
             Color.pageBg.ignoresSafeArea()
 
             // 3D perspective diagonal photo collage -- full screen
             SignInCollage(imageNames: Self.collageImages)
-                .overlay {
-                    Color.black.opacity(0.45)
-                }
+                .ignoresSafeArea()
+
+            // Blur + darkening mask (shared shape)
+            //
+            // Top:    black -> clear over signInTopBlurFadeEnd
+            // Middle: clear (unblurred) until signInBlurFadeEnd
+            // Bottom: clear -> black over signInBlurFadeLength, then solid black
+            let blurMask = VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color.black, .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: screenH * signInTopBlurFadeEnd)
+
+                Color.clear
+                    .frame(height: screenH * max(signInBlurFadeEnd - signInTopBlurFadeEnd, 0))
+
+                LinearGradient(
+                    colors: [.clear, Color.black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: screenH * signInBlurFadeLength)
+
+                Color.black
+            }
+
+            // Blur layer
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .mask(blurMask)
+                .ignoresSafeArea()
+
+            // Darkening layer -- same mask shape so dark tint follows the blur
+            let darkenOpacity = colorScheme == .dark
+                ? signInDarkenLight * signInDarkenDarkMultiplier
+                : signInDarkenLight
+            Color.black
+                .mask(blurMask)
+                .opacity(darkenOpacity)
                 .ignoresSafeArea()
 
             // Foreground content
             VStack(spacing: 0) {
+                // Top bar
+                HStack {
+                    Image("BirdLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 36, height: 36)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    #if DEBUG
+                    Menu {
+                        Button {
+                            signIn {
+                                try await auth.signInAnonymously()
+                                try await store.loadDemoData()
+                            }
+                        } label: {
+                            Label("Try with Demo Data", systemImage: "sparkles")
+                        }
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .menuStyle(.borderlessButton)
+                    .buttonStyle(.plain)
+                    #endif
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 8)
+
                 Spacer()
 
                 // Big left-aligned title
@@ -54,11 +140,10 @@ struct SignInView: View {
                         .font(.system(size: 52, weight: .bold, design: .serif))
                     Text("WingDex")
                         .font(.system(size: 52, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(signInTitleGreen)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 2)
                 .padding(.horizontal, 28)
                 .padding(.bottom, 32)
 
@@ -183,31 +268,14 @@ struct SignInView: View {
                     .padding(.top, 8)
 
                 // Legal text
-                Text("By continuing you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy).")
+                Text("By continuing, you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy).")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.5))
                     .tint(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
                     .padding(.top, 4)
-
-                Spacer()
-
-                // Debug-only demo data
-                #if DEBUG
-                Button {
-                    signIn {
-                        try await auth.signInAnonymously()
-                        try await store.loadDemoData()
-                    }
-                } label: {
-                    Label("Try with Demo Data", systemImage: "sparkles")
-                        .font(.subheadline.weight(.medium))
-                }
-                .buttonStyle(.borderless)
-                .tint(.white.opacity(0.7))
-                .padding(.bottom, 16)
-                #endif
+                    .padding(.bottom, 8)
             }
         }
         .disabled(isSigningIn)
@@ -219,6 +287,7 @@ struct SignInView: View {
             }
         }
         .animation(.default, value: errorMessage)
+        }
     }
 
     // MARK: - Sign-In Handler
@@ -252,16 +321,15 @@ private struct SignInCollage: View {
 
     var body: some View {
         GeometryReader { geo in
-            let xPitch = signInTileWidth + signInSpacing
-            let yPitch = signInTileHeight + signInSpacing
+            let pitch = signInTileSize + signInSpacing
             let extraWidth = geo.size.height * abs(sin(signInAngle * .pi / 180))
-            let tilesPerRow = Int((geo.size.width + extraWidth) / xPitch) + 3
+            let tilesPerRow = Int((geo.size.width + extraWidth) / pitch) + 3
 
             VStack(spacing: signInSpacing) {
                 ForEach(0..<signInRows, id: \.self) { row in
                     HStack(spacing: signInSpacing) {
                         if !row.isMultiple(of: 2) {
-                            Spacer().frame(width: xPitch / 2, height: signInTileHeight)
+                            Spacer().frame(width: pitch / 2, height: signInTileSize)
                         }
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
@@ -270,7 +338,7 @@ private struct SignInCollage: View {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: signInTileWidth, height: signInTileHeight)
+                                    .frame(width: signInTileSize, height: signInTileSize)
                                     .clipShape(RoundedRectangle(cornerRadius: signInCornerRadius))
                             }
                         }
@@ -280,9 +348,8 @@ private struct SignInCollage: View {
             .drawingGroup()
             .frame(width: geo.size.width + extraWidth)
             .rotationEffect(.degrees(signInAngle))
-            .offset(x: -extraWidth / 2, y: -yPitch)
-            .opacity(signInOpacity)
-            // 3D perspective -- right side recedes, left side comes forward
+            .offset(x: -extraWidth / 2, y: -pitch)
+            // 3D perspective
             .rotation3DEffect(
                 .degrees(signInPerspectiveTilt),
                 axis: (x: 1, y: 1, z: -0.5),
