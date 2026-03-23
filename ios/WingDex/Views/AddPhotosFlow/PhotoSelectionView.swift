@@ -208,7 +208,7 @@ private struct DiagonalPhotoCollage: View {
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
-                            if let img = Self.loadImage(named: name) {
+                            if let img = Self.imageCache[name] {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
@@ -227,11 +227,17 @@ private struct DiagonalPhotoCollage: View {
         }
     }
 
-    private static func loadImage(named name: String) -> UIImage? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
-              let img = UIImage(contentsOfFile: url.path) else { return nil }
-        return img
-    }
+    private static let imageCache: [String: UIImage] = {
+        var cache: [String: UIImage] = [:]
+        for i in 1...27 {
+            let name = "collage\(i)"
+            if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
+               let img = UIImage(contentsOfFile: url.path) {
+                cache[name] = img
+            }
+        }
+        return cache
+    }()
 }
 
 // MARK: - Camera Capture View
