@@ -198,7 +198,7 @@ private struct DiagonalPhotoCollage: View {
                 ForEach(0..<collageRows, id: \.self) { row in
                     HStack(spacing: collageSpacing) {
                         if !row.isMultiple(of: 2) {
-                            Spacer().frame(width: pitch / 2, height: collageTileSize)
+                            Spacer().frame(width: pitch, height: collageTileSize)
                         }
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count

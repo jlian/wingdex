@@ -98,8 +98,6 @@ struct OutingsView: View {
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
-                            // WHY: flat avatar, no glass pill.
-                            .glassEffect(.identity)
                         }
                         .padding(.trailing, -12)
                     }

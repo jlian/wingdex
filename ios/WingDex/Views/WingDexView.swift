@@ -102,10 +102,6 @@ struct WingDexView: View {
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
                             }
-                            // WHY .glassEffect(.identity): renders the avatar with no visible glass
-                            // effect (flat circle like Apple Music's profile button), while still
-                            // participating in the shared glass layout system.
-                            .glassEffect(.identity)
                         }
                         .padding(.trailing, -12)
                     }

@@ -29,6 +29,15 @@ final class AuthService: @unchecked Sendable {
     private let keychain = Keychain(service: Config.bundleID)
         .accessibility(.whenUnlockedThisDeviceOnly)
 
+    /// Ephemeral session that never sends or stores cookies.
+    /// Prevents stale cookies from conflicting with Bearer token auth.
+    private static let bearerSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieAcceptPolicy = .never
+        config.httpShouldSetCookies = false
+        return URLSession(configuration: config)
+    }()
+
     private static let tokenKey = "session_token"
     private static let signedTokenKey = "signed_session_token"
     private static let expiryKey = "session_expires_at"
@@ -40,6 +49,28 @@ final class AuthService: @unchecked Sendable {
     init() {
         restoreSession()
         log.info("AuthService init - authenticated: \(self.isAuthenticated), userId: \(self.userId ?? "nil")")
+    }
+
+    /// Validate the locally-cached session with the server.
+    /// Signs out on 401 (expired/revoked session) so the UI goes straight to
+    /// sign-in instead of flashing authenticated content. Network errors are
+    /// ignored - the user may be offline with a valid cached session.
+    func validateSession() async {
+        guard let token = sessionToken else { return }
+        let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 5
+        do {
+            let (_, response) = try await Self.bearerSession.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+                log.warning("Session rejected by server, signing out")
+                signOut()
+            }
+        } catch {
+            // Network error - don't sign out, user may be offline
+            log.info("Session validation skipped: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - OAuth Flows
@@ -192,7 +223,7 @@ final class AuthService: @unchecked Sendable {
         let body: [String: String] = ["name": name.trimmingCharacters(in: .whitespacesAndNewlines), "image": image]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             let detail = String(data: data, encoding: .utf8) ?? ""
@@ -218,7 +249,7 @@ final class AuthService: @unchecked Sendable {
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         request.httpBody = Data("{}".utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             let detail = String(data: data, encoding: .utf8) ?? ""
@@ -396,7 +427,7 @@ final class AuthService: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200,

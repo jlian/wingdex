@@ -10,6 +10,15 @@ private let log = Logger(subsystem: "app.wingdex", category: "DataService")
 final class DataService: Sendable {
     private let auth: AuthService
 
+    /// Ephemeral session that never sends or stores cookies.
+    /// Prevents stale cookies from conflicting with Bearer token auth.
+    private static let bearerSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieAcceptPolicy = .never
+        config.httpShouldSetCookies = false
+        return URLSession(configuration: config)
+    }()
+
     init(auth: AuthService) {
         self.auth = auth
     }
@@ -189,7 +198,7 @@ final class DataService: Sendable {
         request.httpBody = body
         try await attachAuth(&request)
 
-        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await Self.bearerSession.data(for: request)
         try await validate(response, data: responseData)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
@@ -228,7 +237,7 @@ final class DataService: Sendable {
         try await attachAuth(&request)
 
         log.debug("GET \(path)")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
         try await validate(response, data: data)
         log.debug("GET \(path) -> \(data.count) bytes")
         return data
@@ -243,7 +252,7 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
-        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await Self.bearerSession.data(for: request)
         try await validate(response, data: responseData)
         return responseData
     }
@@ -257,7 +266,7 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
-        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await Self.bearerSession.data(for: request)
         try await validate(response, data: responseData)
         return responseData
     }
@@ -269,7 +278,7 @@ final class DataService: Sendable {
         request.httpMethod = "DELETE"
         try await attachAuth(&request)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
         try await validate(response, data: data)
         return data
     }

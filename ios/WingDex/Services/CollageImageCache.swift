@@ -4,7 +4,7 @@ import UIKit
 enum CollageImageCache {
     static let images: [String: UIImage] = {
         var cache: [String: UIImage] = [:]
-        for i in 1...27 {
+        for i in 1...26 {
             let name = "collage\(i)"
             if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
                let img = UIImage(contentsOfFile: url.path) {
@@ -15,7 +15,7 @@ enum CollageImageCache {
     }()
 
     static let names: [String] = {
-        (1...27).compactMap { i in
+        (1...26).compactMap { i in
             let name = "collage\(i)"
             return images[name] != nil ? name : nil
         }

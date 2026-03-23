@@ -33,9 +33,14 @@ struct ContentView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
 
+    @State private var isValidating = true
+
     var body: some View {
         Group {
-            if auth.isAuthenticated {
+            if isValidating {
+                // Blank screen while validating session with server
+                Color.pageBg.ignoresSafeArea()
+            } else if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
                     .task {
@@ -62,6 +67,12 @@ struct ContentView: View {
         }
         .background(Color.pageBg.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
+        .task {
+            if auth.isAuthenticated {
+                await auth.validateSession()
+            }
+            isValidating = false
+        }
     }
 }
 
