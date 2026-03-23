@@ -1,14 +1,12 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Full-screen sign-in view matching the web app's auth gate.
-///
-/// Uses native SwiftUI controls styled to match the web's warm palette:
-/// serif heading, 14px body text, 36pt button height, 12pt corner radius.
+/// Full-screen sign-in view.
 struct SignInView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
-    // MARK: - State
+
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var isSigningIn = false
     @State private var errorMessage: String?
@@ -17,177 +15,176 @@ struct SignInView: View {
         VStack(spacing: 0) {
             Spacer()
 
-                    // Bird icon
-                    Image("BirdLogo")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 28, height: 28)
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.bottom, 24)
+            // Logo and title
+            VStack(spacing: 12) {
+                Image("BirdLogo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 36, height: 36)
+                    .foregroundStyle(Color.accentColor)
 
-                    VStack(spacing: 16) {
-                        // Header
-                        VStack(spacing: 8) {
-                            Text("Start your WingDex")
-                                .font(.system(size: 18, weight: .semibold, design: .serif))
-                                .foregroundStyle(Color.foregroundText)
+                Text("Start your WingDex")
+                    .font(.system(.title, design: .serif, weight: .semibold))
+                    .foregroundStyle(Color.foregroundText)
+            }
+            .padding(.bottom, 32)
 
-                            Text("By continuing you accept our \(Text("Terms of Use").foregroundStyle(Color.accentColor)) and \(Text("Privacy Policy").foregroundStyle(Color.accentColor)).")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.mutedText)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        // Social buttons
-                        VStack(spacing: 12) {
-                            Button {
-                                signIn { try await auth.signInWithGitHub() }
-                            } label: {
-                                Label {
-                                    Text("Continue with GitHub")
-                                        .font(.system(size: 14, weight: .medium))
-                                } icon: {
-                                    Image(systemName: "chevron.left.forwardslash.chevron.right")
-                                        .font(.system(size: 14))
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 36)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(Color.foregroundText)
-
-                            Button {
-                                signIn { try await auth.signInWithAppleNative() }
-                            } label: {
-                                Label {
-                                    Text("Continue with Apple")
-                                        .font(.system(size: 14, weight: .medium))
-                                } icon: {
-                                    Image(systemName: "apple.logo")
-                                        .font(.system(size: 14))
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 36)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(Color.foregroundText)
-
-                            Button {
-                                signIn { try await auth.signInWithGoogle() }
-                            } label: {
-                                Label {
-                                    Text("Continue with Google")
-                                        .font(.system(size: 14, weight: .medium))
-                                } icon: {
-                                    Image(systemName: "globe")
-                                        .font(.system(size: 14))
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 36)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(Color.foregroundText)
-                        }
-
-                        // OR divider
-                        HStack(spacing: 8) {
-                            Rectangle()
-                                .fill(Color.warmBorder)
-                                .frame(height: 1)
-                            Text("OR")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.mutedText)
-                                .textCase(.uppercase)
-                            Rectangle()
-                                .fill(Color.warmBorder)
-                                .frame(height: 1)
-                        }
-
-                        // Passkey section - bordered container matching web
-                        VStack(spacing: 12) {
-                            Label {
-                                Text("Continue with a Passkey")
-                                    .font(.system(size: 14, weight: .medium))
-                            } icon: {
-                                Image(systemName: "key.fill")
-                                    .font(.system(size: 14))
-                            }
-                            .foregroundStyle(Color.foregroundText)
-
-                            HStack(spacing: 12) {
-                                Button {
-                                    signIn { try await auth.signInWithPasskey() }
-                                } label: {
-                                    Text("Log in")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .frame(maxWidth: .infinity, minHeight: 36)
-                                }
-                                .buttonStyle(.borderedProminent)
-
-                                Button {
-                                    signIn { try await auth.signUpWithPasskey() }
-                                } label: {
-                                    Text("Sign up")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .frame(maxWidth: .infinity, minHeight: 36)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(Color.foregroundText)
-                            }
-                        }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.mutedText.opacity(0.06))
-                                .stroke(Color.warmBorder.opacity(0.7), lineWidth: 1)
-                        )
-
-                        // WHY invisible placeholder text instead of conditional:
-                        // If we use `if let errorMessage` to conditionally show this Text,
-                        // the VStack re-layouts when errors appear/clear, causing the entire
-                        // sign-in form to visually jump. By always rendering the Text with
-                        // a space placeholder and toggling opacity, the layout stays stable.
-                        Text(errorMessage ?? " ")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.red)
-                            .multilineTextAlignment(.center)
-                            .opacity(errorMessage != nil ? 1 : 0)
-                            .accessibilityHidden(errorMessage == nil)
-
-                        // Demo data button - available in all builds so App Store
-                        // reviewers (and curious users) can explore without an account.
-                        Button {
-                            signIn {
-                                try await auth.signInAnonymously()
-                                try await store.loadDemoData()
-                            }
-                        } label: {
-                            Label {
-                                Text("Try with Demo Data")
-                                    .font(.system(size: 14, weight: .medium))
-                            } icon: {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 14))
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(.horizontal, 24)
-                    .disabled(isSigningIn)
-                    // WHY overlay instead of inline ProgressView: placing the spinner
-                    // inside the VStack pushes content down and causes layout jank.
-                    // An overlay floats on top without affecting the form's position.
-                    .overlay {
-                        if isSigningIn {
-                            ProgressView()
-                                .frame(maxHeight: .infinity, alignment: .bottom)
-                                .padding(.bottom, -32)
-                        }
-                    }
-
-                    Spacer()
+            // Social sign-in buttons
+            let btnHeight: CGFloat = 44
+            let iconSize: CGFloat = btnHeight * 0.30
+            let fontSize: CGFloat = btnHeight * 0.36
+            
+            // Glass button styles add ~14pt of chrome padding around the label
+            let glassLabelHeight: CGFloat = btnHeight - 14
+            VStack(spacing: 12) {
+                // Apple -- native SwiftUI button; overlay intercepts tap for our auth flow
+                SignInWithAppleButton(.continue) { _ in } onCompletion: { _ in }
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .id(colorScheme)
+                .frame(height: btnHeight)
+                .clipShape(Capsule())
+                .allowsHitTesting(false)
+                .overlay {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { signIn { try await auth.signInWithAppleNative() } }
                 }
+
+                // Google -- neutral style per branding guidelines
+                Button {
+                    signIn { try await auth.signInWithGoogle() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image("GoogleIcon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: iconSize, height: iconSize)
+                        Text("Continue with Google")
+                            .font(.system(size: fontSize, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: btnHeight)
+                    .foregroundStyle(Color(red: 0.12, green: 0.12, blue: 0.12))
+                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                // GitHub -- neutral style matching Google
+                Button {
+                    signIn { try await auth.signInWithGitHub() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image("GitHubIcon")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: iconSize, height: iconSize)
+                        Text("Continue with GitHub")
+                            .font(.system(size: fontSize, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: btnHeight)
+                    .foregroundStyle(Color(red: 0.12, green: 0.12, blue: 0.12))
+                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 24)
+
+            // OR divider
+            HStack(spacing: 8) {
+                Rectangle().fill(Color.warmBorder).frame(height: 1)
+                Text("OR")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.mutedText)
+                Rectangle().fill(Color.warmBorder).frame(height: 1)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+
+            // Passkey section
+            VStack(spacing: 12) {
+                Label("Continue with a Passkey", systemImage: "person.badge.key.fill")
+                    .font(.system(size: fontSize, weight: .medium))
+                    .foregroundStyle(Color.foregroundText)
+
+                HStack(spacing: 12) {
+                    Button {
+                        signIn { try await auth.signInWithPasskey() }
+                    } label: {
+                        Text("Log in")
+                            .font(.system(size: fontSize, weight: .medium))
+                            .frame(height: glassLabelHeight)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonSizing(.flexible)
+
+                    Button {
+                        signIn { try await auth.signUpWithPasskey() }
+                    } label: {
+                        Text("Sign up")
+                            .font(.system(size: fontSize, weight: .medium))
+                            .frame(height: glassLabelHeight)
+                    }
+                    .buttonStyle(.glass)
+                    .buttonSizing(.flexible)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(.ultraThinMaterial)
+            )
+            .padding(.horizontal, 24)
+
+            // Error message (stable layout)
+            Text(errorMessage ?? " ")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.center)
+                .opacity(errorMessage != nil ? 1 : 0)
+                .accessibilityHidden(errorMessage == nil)
+                .padding(.top, 8)
+
+            // Legal text
+            Text("By continuing you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy).")
+                .font(.caption)
+                .foregroundStyle(Color.mutedText)
+                .tint(Color.accentColor)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 4)
+
+            Spacer()
+
+            // Debug-only demo data
+            #if DEBUG
+            Button {
+                signIn {
+                    try await auth.signInAnonymously()
+                    try await store.loadDemoData()
+                }
+            } label: {
+                Label("Try with Demo Data", systemImage: "sparkles")
+                    .font(.subheadline.weight(.medium))
+            }
+            .buttonStyle(.borderless)
+            .tint(Color.accentColor)
+            .padding(.bottom, 16)
+            #endif
+        }
         .background(Color.pageBg.ignoresSafeArea())
+        .disabled(isSigningIn)
+        .overlay {
+            if isSigningIn {
+                ProgressView()
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 40)
+            }
+        }
         .animation(.default, value: errorMessage)
     }
 
@@ -200,10 +197,8 @@ struct SignInView: View {
             do {
                 try await action()
             } catch let error as ASAuthorizationError where error.code == .notHandled {
-                // Code 1004: associated domain not set up for this rpID
                 errorMessage = "Passkey not available for this domain. Check Associated Domains entitlement."
             } catch let error as ASAuthorizationError where error.code == .canceled {
-                // User cancelled - no error message needed
                 errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription
