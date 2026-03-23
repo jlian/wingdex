@@ -186,7 +186,7 @@ struct SignInView: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.glass)
-                     .colorScheme(colorScheme == .dark ? .light : .dark)
+                    .colorScheme(colorScheme == .dark ? .light : .dark)
 
                     // GitHub -- neutral style matching Google
                     Button {
@@ -206,7 +206,7 @@ struct SignInView: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.glass)
-                     .colorScheme(colorScheme == .dark ? .light : .dark)
+                    .colorScheme(colorScheme == .dark ? .light : .dark)
                 }
                 .padding(.horizontal, 28)
 
@@ -247,7 +247,7 @@ struct SignInView: View {
                         }
                         .buttonStyle(.glass)
                         .buttonSizing(.flexible)
-                         .colorScheme(colorScheme == .dark ? .light : .dark)
+                        .colorScheme(colorScheme == .dark ? .light : .dark)
                     }
                 }
                 .padding(16)
