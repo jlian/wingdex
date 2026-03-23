@@ -115,16 +115,17 @@ struct SettingsView: View {
             // Version info
             Section {
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
                 HStack {
                     Spacer()
                     VStack(spacing: 2) {
-                        Text("WingDex v\(version) (\(build))")
+                        Text("WingDex v\(version)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        #if DEBUG
                         Text("\(GitInfo.branch)@\(GitInfo.commit)")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                        #endif
                     }
                     Spacer()
                 }
