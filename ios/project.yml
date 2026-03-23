@@ -99,6 +99,17 @@ schemes:
     analyze:
       config: Debug
 
+  WingDex Release:
+    build:
+      targets:
+        WingDex: all
+    run:
+      config: Release
+    profile:
+      config: Release
+    analyze:
+      config: Release
+
 packages:
   swift-openapi-generator:
     url: https://github.com/apple/swift-openapi-generator
