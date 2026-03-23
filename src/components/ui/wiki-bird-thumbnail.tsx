@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { BirdLogo } from '@/components/ui/bird-logo'
 import { useBirdImage } from '@/hooks/use-bird-image'
 import { cn } from '@/lib/utils'
@@ -47,9 +47,12 @@ export function WikiBirdThumbnail({
 
   // Build combined image list: primary (if provided) + gallery
   const galleryItems = galleryUrls ?? []
-  const allImages: GalleryImage[] = primaryUrl
-    ? [{ url: primaryUrl, title: decodeURIComponent(primaryUrl.split('/').pop()?.replace(/^\d+px-/, '') ?? '') }, ...galleryItems]
-    : galleryItems
+  const allImages: GalleryImage[] = useMemo(() => {
+    if (!primaryUrl) return galleryItems
+    let title = ''
+    try { title = decodeURIComponent(primaryUrl.split('/').pop()?.replace(/^\d+px-/, '') ?? '') } catch { title = primaryUrl.split('/').pop() ?? '' }
+    return [{ url: primaryUrl, title }, ...galleryItems]
+  }, [primaryUrl, galleryItems])
   const allUrls = allImages.map(img => img.url)
 
   const [index, setIndex] = useState(0)
@@ -64,15 +67,16 @@ export function WikiBirdThumbnail({
   }, [speciesName])
 
   const total = allUrls.length
-  const currentUrl = total > 0 ? allUrls[Math.min(index, total - 1)] : undefined
-  const currentImage = total > 0 ? allImages[Math.min(index, total - 1)] : undefined
+  const safeIndex = total > 0 ? Math.min(index, total - 1) : 0
+  const currentUrl = total > 0 ? allUrls[safeIndex] : undefined
+  const currentImage = useMemo(() => total > 0 ? allImages[safeIndex] : undefined, [allImages, safeIndex, total])
   const currentCaption = currentImage?.caption
   const hasMultiple = total > 1
 
   // Notify parent when displayed image changes
   useEffect(() => {
     onImageChange?.(currentImage)
-  }, [index, currentImage, onImageChange])
+  }, [currentImage, onImageChange])
 
   const goNext = useCallback(() => {
     if (!hasMultiple) return

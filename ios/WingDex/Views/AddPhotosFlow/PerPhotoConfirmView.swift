@@ -181,17 +181,11 @@ struct PerPhotoConfirmView: View {
 
                     speciesCard
 
-                                                            Group {
-                        if viewModel.rangeAdjusted {
-                            Text("Photos from ") + Text("[Wikipedia](https://en.wikipedia.org)") + Text(", range data from ") + Text("[BirdLife International](https://datazone.birdlife.org)") + Text(".")
-                        } else {
-                            Text("Photos from ") + Text("[Wikipedia](https://en.wikipedia.org)") + Text(".")
-                        }
-                    }
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .tint(.secondary)
-                    .frame(maxWidth: .infinity)
+                                                            Text("Photos from [Wikipedia](https://en.wikipedia.org), range data from [BirdLife International](https://datazone.birdlife.org).")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .tint(.secondary)
+                        .frame(maxWidth: .infinity)
                 }
 
                 Spacer(minLength: 0)
@@ -530,6 +524,7 @@ struct PerPhotoConfirmView: View {
                 #if DEBUG
                 print("[Wiki] Invalid URL: \(urlStr)")
                 #endif
+                await MainActor.run { isLoadingWikiImage = false }
                 return
             }
             var req = URLRequest(url: url)

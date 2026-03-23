@@ -256,17 +256,6 @@ export async function getWikimediaSummary(
 
 // -- Gallery: multiple reference images from Wikipedia article -----------
 
-/** Raw shape of an item from the Wikipedia media-list endpoint. */
-type MediaListItem = {
-  title: string
-  type: string
-  section_id?: number
-  leadImage?: boolean
-  showInGallery?: boolean
-  caption?: { text: string; html: string }
-  srcset?: Array<{ src: string; scale: string }>
-}
-
 /** A gallery image with URL, optional caption, and filename for plumage parsing. */
 export type GalleryImage = {
   url: string
@@ -290,8 +279,9 @@ function trimGalleryCache(): void {
 }
 
 /**
- * Get additional reference images from a species' Wikipedia article.
- * Returns up to `limit` images with URLs and captions (excluding the lead image, SVGs, maps, icons).
+ * Get reference images for a species from Wikimedia Commons.
+ * Searches Commons for photos matching the species name, scored by quality assessment.
+ * Returns up to `limit` images with URLs, captions, and parsed plumage tags.
  */
 export async function getWikimediaGallery(
   speciesName: string,
