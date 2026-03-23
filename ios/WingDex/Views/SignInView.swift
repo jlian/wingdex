@@ -21,12 +21,9 @@ private let signInBlurFadeEnd: Double = 0.3
 /// Blur fade-in length as a fraction of screen height
 private let signInBlurFadeLength: Double = 0.3
 /// Darkening tint in light mode (0 = none, 1 = solid black). Applied with same mask as blur.
-private let signInDarkenLight: Double = 0.25
+private let signInDarkenLight: Double = 0.1
 /// Dark mode multiplier for darkening (stacks on light value)
-private let signInDarkenDarkMultiplier: Double = 2.5
-
-/// Bright green for the title -- uses the dark-mode accent so it pops against photos
-private let signInTitleGreen = Color(.displayP3, red: 0.45, green: 0.775, blue: 0.55)
+private let signInDarkenDarkMultiplier: Double = 5
 
 /// Full-screen sign-in view.
 struct SignInView: View {
@@ -140,7 +137,8 @@ struct SignInView: View {
                         .font(.system(size: 52, weight: .bold, design: .serif))
                     Text("WingDex")
                         .font(.system(size: 52, weight: .bold, design: .serif))
-                        .foregroundStyle(signInTitleGreen)
+                        .foregroundStyle(Color.accentColor)
+                        .environment(\.colorScheme, .dark)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(.white)
@@ -149,8 +147,8 @@ struct SignInView: View {
 
                 // Social sign-in buttons
                 let btnHeight: CGFloat = 44
-                let iconSize: CGFloat = btnHeight * 0.30
-                let fontSize: CGFloat = btnHeight * 0.36
+                let iconSize: CGFloat = btnHeight * 0.32
+                let fontSize: CGFloat = btnHeight * 0.38
 
                 // Glass button styles add ~14pt of chrome padding around the label
                 let glassLabelHeight: CGFloat = btnHeight - 14
@@ -181,12 +179,10 @@ struct SignInView: View {
                                 .font(.system(size: fontSize, weight: .medium))
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: btnHeight)
-                        .foregroundStyle(Color(red: 0.12, green: 0.12, blue: 0.12))
-                        .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .frame(height: glassLabelHeight)
                         .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass)
 
                     // GitHub -- neutral style matching Google
                     Button {
@@ -202,12 +198,10 @@ struct SignInView: View {
                                 .font(.system(size: fontSize, weight: .medium))
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: btnHeight)
-                        .foregroundStyle(Color(red: 0.12, green: 0.12, blue: 0.12))
-                        .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .frame(height: glassLabelHeight)
                         .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass)
                 }
                 .padding(.horizontal, 28)
 
