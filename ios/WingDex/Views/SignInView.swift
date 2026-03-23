@@ -153,18 +153,22 @@ struct SignInView: View {
                 // Glass button styles add ~14pt of chrome padding around the label
                 let glassLabelHeight: CGFloat = btnHeight - 14
                 VStack(spacing: 12) {
-                    // Apple -- native SwiftUI button; overlay intercepts tap for our auth flow
-                    SignInWithAppleButton(.continue) { _ in } onCompletion: { _ in }
+                    // Apple -- native SignInWithAppleButton
+                    SignInWithAppleButton(.continue) { request in
+                        request.requestedScopes = [.fullName, .email]
+                    } onCompletion: { result in
+                        signIn {
+                            let authorization = try result.get()
+                            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                                throw URLError(.userAuthenticationRequired)
+                            }
+                            try await auth.signInWithApple(credential: credential)
+                        }
+                    }
                     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                     .id(colorScheme)
                     .frame(height: btnHeight)
                     .clipShape(Capsule())
-                    .allowsHitTesting(false)
-                    .overlay {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { signIn { try await auth.signInWithAppleNative() } }
-                    }
 
                     // Google -- neutral style per branding guidelines
                     Button {
