@@ -389,3 +389,165 @@ describe('localStorage cache persistence', () => {
   })
 })
 
+// == getWikimediaGallery (Commons search) =====================
+
+const { getWikimediaGallery } = await import('@/lib/wikimedia')
+
+/** Helper: build a mock Commons API response with the given pages. */
+function commonsResponse(pages: Record<string, {
+  title?: string
+  index?: number
+  thumburl?: string
+  description?: string
+  assessments?: string
+}>) {
+  const pagesObj: Record<string, unknown> = {}
+  for (const [id, p] of Object.entries(pages)) {
+    pagesObj[id] = {
+      title: p.title ?? `File:bird-${id}.jpg`,
+      index: p.index ?? Number(id),
+      imageinfo: [{
+        thumburl: p.thumburl ?? `https://upload.wikimedia.org/thumb/${id}.jpg`,
+        extmetadata: {
+          ImageDescription: { value: p.description ?? '' },
+          Assessments: { value: p.assessments ?? '' },
+        },
+      }],
+    }
+  }
+  return { ok: true, json: async () => ({ query: { pages: pagesObj } }) }
+}
+
+describe('getWikimediaGallery', () => {
+  beforeEach(() => {
+    mockFetch.mockClear()
+    wikiQueue.length = 0
+    wikiTitleOverride = null
+  })
+
+  it('returns gallery images from Commons search', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Lesser Scaup male.jpg', index: 1, description: 'A male lesser scaup' },
+      '2': { title: 'File:Lesser Scaup female.jpg', index: 2, description: 'A female lesser scaup' },
+    })))
+
+    const result = await getWikimediaGallery('Lesser Scaup Gallery1')
+    expect(result).toHaveLength(2)
+    expect(result[0].url).toContain('1.jpg')
+    expect(result[1].url).toContain('2.jpg')
+  })
+
+  it('filters out SVGs, range maps, and other non-photo files', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Bird photo.jpg', index: 1 },
+      '2': { title: 'File:Bird_range_map.png', index: 2 },
+      '3': { title: 'File:IUCN_status.svg', index: 3 },
+      '4': { title: 'File:Bird_distribution.gif', index: 4 },
+      '5': { title: 'File:Bird_skeleton_museum.jpg', index: 5 },
+    })))
+
+    const result = await getWikimediaGallery('Filter Bird Gallery2')
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe('File:Bird photo.jpg')
+  })
+
+  it('filters out images with egg/nest/specimen captions', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Good photo.jpg', index: 1, description: 'A beautiful bird' },
+      '2': { title: 'File:Nest photo.jpg', index: 2, description: 'Bird nest with eggs' },
+      '3': { title: 'File:Specimen.jpg', index: 3, description: 'Taxiderm specimen in museum' },
+    })))
+
+    const result = await getWikimediaGallery('Caption Bird Gallery3')
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe('File:Good photo.jpg')
+  })
+
+  it('scores featured images above quality above regular', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Regular.jpg', index: 1, assessments: '' },
+      '2': { title: 'File:Featured.jpg', index: 2, assessments: 'featured' },
+      '3': { title: 'File:Quality.jpg', index: 3, assessments: 'quality' },
+    })))
+
+    const result = await getWikimediaGallery('Scored Bird Gallery4')
+    expect(result).toHaveLength(3)
+    expect(result[0].title).toBe('File:Featured.jpg')
+    expect(result[1].title).toBe('File:Quality.jpg')
+    expect(result[2].title).toBe('File:Regular.jpg')
+  })
+
+  it('parses plumage from captions and titles', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Drake Lesser Scaup.jpg', index: 1, description: 'A drake on water' },
+      '2': { title: 'File:Lesser Scaup hen.jpg', index: 2, description: 'Female resting' },
+      '3': { title: 'File:Juvenile bird.jpg', index: 3, description: 'An immature bird' },
+      '4': { title: 'File:Adult bird.jpg', index: 4, description: 'No plumage info' },
+    })))
+
+    const result = await getWikimediaGallery('Plumage Bird Gallery5')
+    expect(result[0].plumage).toBe('male')
+    expect(result[1].plumage).toBe('female')
+    expect(result[2].plumage).toBe('juvenile')
+    expect(result[3].plumage).toBeUndefined()
+  })
+
+  it('does not match "female" as "male"', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Female bird.jpg', index: 1, description: 'A female bird' },
+    })))
+
+    const result = await getWikimediaGallery('Female Only Gallery6')
+    expect(result[0].plumage).toBe('female')
+    expect(result[0].plumage).not.toContain('male,')
+  })
+
+  it('respects limit parameter', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:A.jpg', index: 1 },
+      '2': { title: 'File:B.jpg', index: 2 },
+      '3': { title: 'File:C.jpg', index: 3 },
+      '4': { title: 'File:D.jpg', index: 4 },
+    })))
+
+    const result = await getWikimediaGallery('Limit Bird Gallery7', { limit: 2 })
+    expect(result).toHaveLength(2)
+  })
+
+  it('caches results for subsequent calls', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Cached.jpg', index: 1 },
+    })))
+
+    const result1 = await getWikimediaGallery('Cached Bird Gallery8')
+    const result2 = await getWikimediaGallery('Cached Bird Gallery8')
+    expect(result1).toEqual(result2)
+    const commonsCalls = mockFetch.mock.calls.filter(([url]: [string]) => url.includes('commons.wikimedia.org'))
+    expect(commonsCalls).toHaveLength(1)
+  })
+
+  it('returns empty array on fetch error', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.reject(new Error('Network error')))
+
+    const result = await getWikimediaGallery('Error Bird Gallery9')
+    expect(result).toEqual([])
+  })
+
+  it('returns empty array when API returns no pages', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
+      ok: true, json: async () => ({ query: {} }),
+    }))
+
+    const result = await getWikimediaGallery('Empty Bird Gallery10')
+    expect(result).toEqual([])
+  })
+
+  it('strips HTML from captions', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
+      '1': { title: 'File:Bird.jpg', index: 1, description: '<b>A <i>beautiful</i> bird</b> in flight' },
+    })))
+
+    const result = await getWikimediaGallery('HTML Bird Gallery11')
+    expect(result[0].caption).toBe('A beautiful bird in flight')
+  })
+})
