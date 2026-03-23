@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CoreMotion
 import SwiftUI
 
 // MARK: - Sign-In Collage Parameters
@@ -11,6 +12,8 @@ private let signInCornerRadius: CGFloat = 10
 /// 3D tilt angle (degrees) -- tilts the collage "into" the screen
 private let signInPerspectiveTilt: Double = 30
 private let signInPerspectiveAmount: CGFloat = 1.0
+/// How many points the collage shifts per unit of device tilt
+private let signInParallaxStrength: CGFloat = 20
 
 // -- Blur overlay parameters (same system as PhotoSelectionView's collageFadeEnd/collageFadeLength) --
 
@@ -19,7 +22,7 @@ private let signInTopBlurFadeEnd: Double = 0.10
 /// How far down the screen photos remains crisp (0 = top only, 1 = full screen)
 private let signInBlurFadeEnd: Double = 0.3
 /// Blur fade-in length as a fraction of screen height
-private let signInBlurFadeLength: Double = 0.3
+private let signInBlurFadeLength: Double = 0.4
 /// Darkening tint in light mode (0 = none, 1 = solid black). Applied with same mask as blur.
 private let signInDarkenLight: Double = 0.1
 /// Dark mode multiplier for darkening (stacks on light value)
@@ -34,6 +37,7 @@ struct SignInView: View {
 
     @State private var isSigningIn = false
     @State private var errorMessage: String?
+    @State private var parallaxOffset: CGSize = .zero
 
     private static let collageImages: [String] = {
         (1...27).compactMap { i in
@@ -52,6 +56,7 @@ struct SignInView: View {
 
             // 3D perspective diagonal photo collage -- full screen
             SignInCollage(imageNames: Self.collageImages)
+                .offset(parallaxOffset)
                 .ignoresSafeArea()
 
             // Blur + darkening mask (shared shape)
@@ -285,7 +290,30 @@ struct SignInView: View {
             }
         }
         .animation(.default, value: errorMessage)
+        .onAppear { startParallax() }
+        .onDisappear { stopParallax() }
         }
+    }
+
+    // MARK: - Parallax Motion
+
+    private static let motionManager = CMMotionManager()
+
+    private func startParallax() {
+        let manager = Self.motionManager
+        guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
+        manager.deviceMotionUpdateInterval = 1.0 / 60.0
+        manager.startDeviceMotionUpdates(to: .main) { motion, _ in
+            guard let attitude = motion?.attitude else { return }
+            parallaxOffset = CGSize(
+                width: CGFloat(attitude.roll) * signInParallaxStrength,
+                height: CGFloat(attitude.pitch) * signInParallaxStrength
+            )
+        }
+    }
+
+    private func stopParallax() {
+        Self.motionManager.stopDeviceMotionUpdates()
     }
 
     // MARK: - Sign-In Handler
