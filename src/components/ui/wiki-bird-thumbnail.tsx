@@ -18,7 +18,7 @@ import type { GalleryImage } from '@/lib/wikimedia'
 interface WikiBirdThumbnailProps {
   speciesName: string
   imageUrl?: string
-  galleryUrls?: GalleryImage[]
+  galleryImages?: GalleryImage[]
   allowLookup?: boolean
   alt?: string
   className?: string
@@ -30,12 +30,12 @@ interface WikiBirdThumbnailProps {
 /**
  * Square Wikipedia bird thumbnail with portrait-aware cropping.
  * Tall (portrait) images anchor to the top so the bird's head stays visible.
- * When galleryUrls are provided, swipe or use arrow buttons to navigate.
+ * When galleryImages are provided, swipe or use arrow buttons to navigate.
  */
 export function WikiBirdThumbnail({
   speciesName,
   imageUrl: imageUrlProp,
-  galleryUrls,
+  galleryImages,
   allowLookup = true,
   alt,
   className,
@@ -46,7 +46,7 @@ export function WikiBirdThumbnail({
   const primaryUrl = imageUrlProp || hookUrl
 
   // Build combined image list: primary (if provided) + gallery
-  const galleryItems = useMemo(() => galleryUrls ?? [], [galleryUrls])
+  const galleryItems = useMemo(() => galleryImages ?? [], [galleryImages])
   const allImages: GalleryImage[] = useMemo(() => {
     if (!primaryUrl) return galleryItems
     let title = ''
@@ -70,7 +70,6 @@ export function WikiBirdThumbnail({
   const safeIndex = total > 0 ? Math.min(index, total - 1) : 0
   const currentUrl = total > 0 ? allUrls[safeIndex] : undefined
   const currentImage = useMemo(() => total > 0 ? allImages[safeIndex] : undefined, [allImages, safeIndex, total])
-  const currentCaption = currentImage?.caption
   const hasMultiple = total > 1
 
   // Notify parent when displayed image changes

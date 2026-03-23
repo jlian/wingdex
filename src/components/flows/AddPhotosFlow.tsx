@@ -1031,7 +1031,7 @@ function PerPhotoConfirm({
         <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
           <WikiBirdThumbnail
             speciesName={selectedSpecies}
-            galleryUrls={sortedGallery}
+            galleryImages={sortedGallery}
             allowLookup={false}
             alt={`${displayName} reference`}
             className="w-full max-w-48 border-2 border-muted"
