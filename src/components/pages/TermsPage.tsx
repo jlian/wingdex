@@ -3,7 +3,7 @@ export default function TermsPage() {
     <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto">
       <div className="space-y-2">
         <h2 className="font-serif text-2xl font-semibold text-foreground">Terms of Use</h2>
-        <p className="text-sm text-muted-foreground">Last updated: February 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: March 2026</p>
       </div>
 
       <article className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -58,7 +58,7 @@ export default function TermsPage() {
 
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">9. Third-party services</h3>
-          <p>The Service integrates with third-party services (including Cloudflare, AI providers, Wikimedia, and eBird). Your use of these integrations may be subject to additional terms. WingDex is not responsible for third-party availability, accuracy, or practices.</p>
+          <p>The Service integrates with third-party services (including Cloudflare, AI providers, Wikimedia, eBird, and BirdLife International). Your use of these integrations may be subject to additional terms. WingDex is not responsible for third-party availability, accuracy, or practices.</p>
         </section>
 
         <section className="space-y-1">

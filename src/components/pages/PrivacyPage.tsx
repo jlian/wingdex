@@ -3,7 +3,7 @@ export default function PrivacyPage() {
     <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto">
       <div className="space-y-2">
         <h2 className="font-serif text-2xl font-semibold text-foreground">Privacy Policy</h2>
-        <p className="text-sm text-muted-foreground">Last updated: February 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: March 2026</p>
       </div>
 
       <article className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -57,6 +57,7 @@ export default function PrivacyPage() {
             <li><strong>AI / vision model providers:</strong> Photo data for bird identification, subject to their privacy policies.</li>
             <li><strong>Wikimedia / Wikipedia:</strong> Species images and descriptions fetched from Wikimedia APIs.</li>
             <li><strong>eBird / Cornell Lab of Ornithology:</strong> Taxonomy and species data for matching and display.</li>
+            <li><strong>BirdLife International:</strong> Species range distribution data used to refine identification confidence based on your photo location.</li>
             <li><strong>OpenStreetMap / Nominatim:</strong> Location search queries and coordinates sent for geocoding and reverse geocoding.</li>
             <li><strong>Authentication providers:</strong> Limited profile data exchanged during social login (e.g., GitHub, Apple).</li>
           </ul>

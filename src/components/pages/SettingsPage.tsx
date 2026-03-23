@@ -703,7 +703,11 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           <p>
             Location lookups use OpenStreetMap Nominatim to resolve GPS
             coordinates into place names. Species images are loaded on-demand
-            from Wikimedia Commons.
+            from Wikimedia Commons. Species range data from{' '}
+            <a href="https://datazone.birdlife.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              BirdLife International
+            </a>{' '}
+            is used to refine identification confidence.
           </p>
           <p>
             Learn more in our{' '}
