@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -32,7 +32,7 @@ import {
   resolveInferenceLocationName,
 } from '@/lib/add-photos-helpers'
 import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
-import { useBirdImageWithStatus, useBirdGallery } from '@/hooks/use-bird-image'
+import { useBirdGallery } from '@/hooks/use-bird-image'
 import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 
@@ -932,9 +932,18 @@ function PerPhotoConfirm({
     setShowAlternatives(false)
   }, [candidates])
   
-  // Fetch Wikipedia reference image + additional gallery images for the selected species
-  const { imageUrl: wikiImage, loading: wikiLoading } = useBirdImageWithStatus(selectedSpecies)
-  const { images: galleryImages } = useBirdGallery(selectedSpecies)
+  // Fetch reference gallery images from Wikimedia Commons
+  const { images: galleryImages, loading: galleryLoading } = useBirdGallery(selectedSpecies)
+  const [refLabel, setRefLabel] = useState<string>('Reference')
+
+  // Promote images matching the LLM's detected plumage to the front
+  const sortedGallery = useMemo(() => {
+    if (!selectedPlumage || galleryImages.length === 0) return galleryImages
+    const plumLower = selectedPlumage.toLowerCase()
+    const matching = galleryImages.filter(img => img.plumage?.includes(plumLower))
+    const rest = galleryImages.filter(img => !img.plumage?.includes(plumLower))
+    return [...matching, ...rest]
+  }, [galleryImages, selectedPlumage])
 
   // No candidates
   if (candidates.length === 0) {
@@ -1012,17 +1021,21 @@ function PerPhotoConfirm({
           </p>
         </div>
         
-        {/* Wikipedia reference image */}
+        {/* Reference images from Wikimedia Commons */}
         <div className="flex flex-col items-center gap-1" style={{ flex: '1 1 0', minWidth: 0, maxWidth: '50%' }}>
           <WikiBirdThumbnail
             speciesName={selectedSpecies}
-            imageUrl={wikiImage}
-            galleryUrls={galleryImages}
+            galleryUrls={sortedGallery}
+            allowLookup={false}
             alt={`${displayName} reference`}
             className="w-full max-w-48 border-2 border-muted"
-            loading={wikiLoading}
+            loading={galleryLoading}
+            onImageChange={(img) => {
+              const p = img?.plumage
+              setRefLabel(p ? `Reference (${p})` : 'Reference')
+            }}
           />
-          <p className="text-xs text-muted-foreground">Wikipedia reference</p>
+          <p className="text-xs text-muted-foreground">{refLabel}</p>
         </div>
       </div>
 
@@ -1157,20 +1170,17 @@ function PerPhotoConfirm({
         )}
       </Card>
 
-      {rangeAdjusted && (
-        <p className="text-[10px] text-muted-foreground text-center">
-          Location-filtered using{' '}
-          <a
-            href="https://datazone.birdlife.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            BirdLife International
-          </a>
-          .
-        </p>
-      )}
+      <p className="text-[10px] text-muted-foreground text-center">
+        Photos from{' '}
+        <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer" className="underline">
+          Wikipedia
+        </a>
+        {', '}range data from{' '}
+        <a href="https://datazone.birdlife.org" target="_blank" rel="noopener noreferrer" className="underline">
+          BirdLife International
+        </a>
+        .
+      </p>
 
       {/* Bottom actions */}
       <div className="flex gap-2">

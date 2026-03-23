@@ -263,14 +263,25 @@ type MediaListItem = {
   section_id?: number
   leadImage?: boolean
   showInGallery?: boolean
+  caption?: { text: string; html: string }
   srcset?: Array<{ src: string; scale: string }>
 }
 
-/** Patterns in filenames that indicate non-bird imagery (icons, maps, diagrams). */
-const GALLERY_EXCLUDE_RE = /\.(svg|gif)$|Status_|range_map|distribution|map_of|map\.png|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal/i
+/** A gallery image with URL, optional caption, and filename for plumage parsing. */
+export type GalleryImage = {
+  url: string
+  caption?: string
+  title?: string
+  /** Parsed plumage tag from caption/filename (e.g. "male", "female", "juvenile") */
+  plumage?: string
+}
 
-const galleryCache = new Map<string, string[]>()
-const galleryInFlight = new Map<string, Promise<string[]>>()
+/** Patterns in filenames that indicate non-bird-photo imagery. */
+const GALLERY_EXCLUDE_RE =
+  /\.(svg|gif)$|Status_|IUCN|range_map|distribution|map_of|map\.png|stamp_of|MHNT|MWNH|_egg|_nest|museum|specimen|skeleton|taxiderm|wikimedia-logo|commons-logo|wikidata-logo|cscr-|question_book|edit-clear|crystal_clear|ambox|folder_hexagonal/i
+
+const galleryCache = new Map<string, GalleryImage[]>()
+const galleryInFlight = new Map<string, Promise<GalleryImage[]>>()
 
 function trimGalleryCache(): void {
   if (galleryCache.size <= MAX_CACHED_ENTRIES) return
@@ -279,17 +290,14 @@ function trimGalleryCache(): void {
 }
 
 /**
- * Get additional reference image URLs from a species' Wikipedia article.
- * Returns up to `limit` photo URLs (excluding the lead image, SVGs, maps, icons).
+ * Get additional reference images from a species' Wikipedia article.
+ * Returns up to `limit` images with URLs and captions (excluding the lead image, SVGs, maps, icons).
  */
 export async function getWikimediaGallery(
   speciesName: string,
   options?: WikiLookupOptions & { limit?: number },
-): Promise<string[]> {
+): Promise<GalleryImage[]> {
   const limit = options?.limit ?? 6
-
-  // Resolve the wiki title so we know which article to query
-  if (!options?.wikiTitle) await ensureWikiTitleCached(speciesName)
 
   const common = getCommonName(speciesName)
   const cacheKey = common.toLowerCase()
@@ -297,52 +305,83 @@ export async function getWikimediaGallery(
   if (cached) return cached.slice(0, limit)
 
   const existing = galleryInFlight.get(cacheKey)
-  if (existing) return existing.then(urls => urls.slice(0, limit))
+  if (existing) return existing.then(imgs => imgs.slice(0, limit))
 
-  const promise = (async (): Promise<string[]> => {
-    const titles = getLookupTitles(speciesName, options?.wikiTitle)
-    for (const title of titles) {
-      const urls = await fetchMediaList(title, limit)
-      if (urls.length > 0) {
-        galleryCache.set(cacheKey, urls)
-        trimGalleryCache()
-        return urls
-      }
-    }
-    galleryCache.set(cacheKey, [])
+  const promise = (async (): Promise<GalleryImage[]> => {
+    const images = await fetchCommonsGallery(common, limit)
+    galleryCache.set(cacheKey, images)
     trimGalleryCache()
-    return []
+    return images
   })()
 
   galleryInFlight.set(cacheKey, promise)
   try { return await promise } finally { galleryInFlight.delete(cacheKey) }
 }
 
-async function fetchMediaList(title: string, limit: number): Promise<string[]> {
+/** Parse plumage from caption + filename text. */
+function parsePlumage(text: string): string | undefined {
+  const lower = text.toLowerCase().replace(/[_-]/g, ' ')
+  const tags: string[] = []
+  if (/\bdrake\b/.test(lower)) tags.push('male')
+  else if (/\bmale\b/.test(lower) && !/\bfemale\b/.test(lower)) tags.push('male')
+  if (/\bfemale\b/.test(lower) || /\bhen\b/.test(lower)) tags.push('female')
+  if (/\bjuvenile\b|\bchick\b|\bduckling\b|\bimmature\b/.test(lower)) tags.push('juvenile')
+  return tags.length > 0 ? tags.join(', ') : undefined
+}
+
+/** Search Wikimedia Commons for bird photos. Returns images with 500px thumbnails and descriptions. */
+async function fetchCommonsGallery(speciesName: string, limit: number): Promise<GalleryImage[]> {
   try {
-    const encoded = encodeURIComponent(title.replace(/ /g, '_'))
+    const query = encodeURIComponent(`"${speciesName}"`)
     const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/media-list/${encoded}`,
+      `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrnamespace=6&gsrlimit=${limit + 6}&prop=imageinfo&iiprop=extmetadata|url&iiurlwidth=500&format=json&origin=*`,
       { headers: { 'Api-User-Agent': 'WingDex/1.0 (bird identification app)' } },
     )
     if (!res.ok) return []
-    const data = (await res.json()) as { items?: MediaListItem[] }
-    if (!data.items) return []
-
-    const urls: string[] = []
-    for (const item of data.items) {
-      if (item.type !== 'image') continue
-      if (item.leadImage) continue
-      if (item.showInGallery === false) continue
-      // Limit to intro/infobox (section 0) and early body sections
-      if (item.section_id !== undefined && item.section_id > 6) continue
-      if (GALLERY_EXCLUDE_RE.test(item.title)) continue
-      const src = item.srcset?.[0]?.src
-      if (!src) continue
-      urls.push(src.startsWith('//') ? `https:${src}` : src)
-      if (urls.length >= limit) break
+    const data = (await res.json()) as {
+      query?: { pages?: Record<string, {
+        title?: string
+        index?: number
+        imageinfo?: Array<{
+          thumburl?: string
+          extmetadata?: {
+            ImageDescription?: { value?: string }
+            Assessments?: { value?: string }
+          }
+        }>
+      }> }
     }
-    return urls
+    if (!data.query?.pages) return []
+
+    const pages = Object.values(data.query.pages)
+
+    // Score each image: featured/quality images get priority, then search relevance
+    const scored = pages.map(page => {
+      const ii = page.imageinfo?.[0]
+      const assessed = ii?.extmetadata?.Assessments?.value ?? ''
+      const isFeatured = assessed.includes('featured')
+      const isQuality = assessed.includes('quality')
+      // Lower score = better. Featured first, then quality, then by search index.
+      const qualityScore = isFeatured ? 0 : isQuality ? 1 : 2
+      return { page, qualityScore, relevance: page.index ?? 999 }
+    }).sort((a, b) => a.qualityScore - b.qualityScore || a.relevance - b.relevance)
+
+    const results: GalleryImage[] = []
+    for (const { page } of scored) {
+      const title = page.title ?? ''
+      if (GALLERY_EXCLUDE_RE.test(title)) continue
+      const ii = page.imageinfo?.[0]
+      const url = ii?.thumburl
+      if (!url) continue
+      const rawDesc = ii?.extmetadata?.ImageDescription?.value ?? ''
+      const caption = rawDesc.replace(/<[^>]*>/g, '')
+      // Skip non-photo content based on caption
+      if (/\beggs?\b|\bnest\b|\bskeleton\b|\bspecimen\b|\btaxiderm/i.test(caption)) continue
+      const plumage = parsePlumage([caption, title].join(' '))
+      results.push({ url, caption: caption || undefined, title, plumage })
+      if (results.length >= limit) break
+    }
+    return results
   } catch {
     return []
   }

@@ -13,21 +13,18 @@ const SHOULD_LAZY_LOAD_THUMBNAILS = (() => {
   return !isIOS
 })()
 
+import type { GalleryImage } from '@/lib/wikimedia'
+
 interface WikiBirdThumbnailProps {
-  /** Species name to fetch the Wikipedia thumbnail for */
   speciesName: string
-  /** Optional pre-resolved image URL (skips the hook when provided) */
   imageUrl?: string
-  /** Additional gallery image URLs to cycle through on tap */
-  galleryUrls?: string[]
-  /** When false, do not fallback to client-side Wikipedia lookup */
+  galleryUrls?: GalleryImage[]
   allowLookup?: boolean
-  /** Display name for the alt text */
   alt?: string
-  /** Additional class names for the outer container */
   className?: string
-  /** Show a pulsing placeholder while loading (default: false) */
   loading?: boolean
+  /** Called when the displayed image changes, with the current gallery image */
+  onImageChange?: (image: GalleryImage | undefined) => void
 }
 
 /**
@@ -43,19 +40,20 @@ export function WikiBirdThumbnail({
   alt,
   className,
   loading: externalLoading,
+  onImageChange,
 }: WikiBirdThumbnailProps) {
   const hookUrl = useBirdImage(imageUrlProp || !allowLookup ? undefined : speciesName)
   const primaryUrl = imageUrlProp || hookUrl
 
-  // Build combined image list: primary + gallery
-  const allUrls = primaryUrl
-    ? [primaryUrl, ...(galleryUrls ?? [])]
-    : galleryUrls ?? []
+  // Build combined image list: primary (if provided) + gallery
+  const galleryItems = galleryUrls ?? []
+  const allImages: GalleryImage[] = primaryUrl
+    ? [{ url: primaryUrl, title: decodeURIComponent(primaryUrl.split('/').pop()?.replace(/^\d+px-/, '') ?? '') }, ...galleryItems]
+    : galleryItems
+  const allUrls = allImages.map(img => img.url)
 
   const [index, setIndex] = useState(0)
   const [portrait, setPortrait] = useState(false)
-  const [direction, setDirection] = useState<'left' | 'right'>('left')
-  const [animKey, setAnimKey] = useState(0)
   const touchStartX = useRef<number | null>(null)
   const didSwipe = useRef(false)
 
@@ -67,20 +65,23 @@ export function WikiBirdThumbnail({
 
   const total = allUrls.length
   const currentUrl = total > 0 ? allUrls[Math.min(index, total - 1)] : undefined
+  const currentImage = total > 0 ? allImages[Math.min(index, total - 1)] : undefined
+  const currentCaption = currentImage?.caption
   const hasMultiple = total > 1
+
+  // Notify parent when displayed image changes
+  useEffect(() => {
+    onImageChange?.(currentImage)
+  }, [index, currentImage, onImageChange])
 
   const goNext = useCallback(() => {
     if (!hasMultiple) return
-    setDirection('left')
     setIndex((i) => (i + 1) % total)
-    setAnimKey((k) => k + 1)
   }, [hasMultiple, total])
 
   const goPrev = useCallback(() => {
     if (!hasMultiple) return
-    setDirection('right')
     setIndex((i) => (i - 1 + total) % total)
-    setAnimKey((k) => k + 1)
   }, [hasMultiple, total])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -115,7 +116,7 @@ export function WikiBirdThumbnail({
     >
       {currentUrl ? (
         <img
-          key={`${currentUrl}-${animKey}`}
+          key={currentUrl}
           src={currentUrl}
           alt={alt ?? speciesName}
           loading={SHOULD_LAZY_LOAD_THUMBNAILS ? 'lazy' : 'eager'}
@@ -123,14 +124,8 @@ export function WikiBirdThumbnail({
             const img = e.currentTarget
             setPortrait(img.naturalHeight > img.naturalWidth)
           }}
-          className={cn(
-            'w-full h-full object-cover',
-            hasMultiple && 'animate-gallery-slide',
-          )}
-          style={{
-            objectPosition: portrait ? 'center top' : 'center center',
-            '--slide-from': direction === 'left' ? '8%' : '-8%',
-          } as React.CSSProperties}
+          className="w-full h-full object-cover"
+          style={{ objectPosition: portrait ? 'center top' : 'center center' }}
         />
       ) : (
         <div
@@ -182,9 +177,7 @@ export function WikiBirdThumbnail({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                setDirection(i > index ? 'left' : 'right')
                 setIndex(i)
-                setAnimKey((k) => k + 1)
               }}
               className={cn(
                 'w-1.5 h-1.5 rounded-full transition-all duration-200',
