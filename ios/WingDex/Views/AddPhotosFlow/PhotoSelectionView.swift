@@ -54,13 +54,13 @@ struct PhotoSelectionView: View {
                         let fadeLength = geo.size.height * collageFadeLength
                         VStack(spacing: 0) {
                             // Top fade in
-                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                            LinearGradient(colors: [.clear, .black] as [Color], startPoint: .top, endPoint: .bottom)
                                 .frame(height: collageTopFadeHeight)
                             // Fully visible region
                             Color.black
                                 .frame(height: max(fadeStart - collageTopFadeHeight, 0))
                             // Bottom fade out
-                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                            LinearGradient(colors: [.black, .clear] as [Color], startPoint: .top, endPoint: .bottom)
                                 .frame(height: fadeLength)
                             // Fully transparent below -- text area is clean
                             Color.clear
@@ -142,13 +142,16 @@ private struct DiagonalPhotoCollage: View {
 
     var body: some View {
         GeometryReader { geo in
-            let rowHeight = collageTileSize + collageSpacing
+            let pitch = collageTileSize + collageSpacing
             let extraWidth = geo.size.height * abs(sin(collageAngle * .pi / 180))
-            let tilesPerRow = Int((geo.size.width + extraWidth) / (collageTileSize + collageSpacing)) + 2
+            let tilesPerRow = Int((geo.size.width + extraWidth) / pitch) + 2
 
             VStack(spacing: collageSpacing) {
                 ForEach(0..<collageRows, id: \.self) { row in
                     HStack(spacing: collageSpacing) {
+                        if !row.isMultiple(of: 2) {
+                            Spacer().frame(width: pitch / 2, height: collageTileSize)
+                        }
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
@@ -161,12 +164,12 @@ private struct DiagonalPhotoCollage: View {
                             }
                         }
                     }
-                    .offset(x: row.isMultiple(of: 2) ? 0 : collageTileSize / 2)
                 }
             }
+            .drawingGroup()
             .frame(width: geo.size.width + extraWidth)
             .rotationEffect(.degrees(collageAngle))
-            .offset(x: -extraWidth / 2, y: -rowHeight)
+            .offset(x: -extraWidth / 2, y: -pitch)
             .opacity(collageOpacity)
         }
     }
