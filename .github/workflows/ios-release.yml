@@ -31,6 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Check for iOS-relevant changes since last tag
@@ -59,6 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
           persist-credentials: false
 
