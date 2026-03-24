@@ -129,7 +129,7 @@ final class AuthService: @unchecked Sendable {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode)
@@ -156,7 +156,7 @@ final class AuthService: @unchecked Sendable {
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         request.httpBody = Data("{}".utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.bearerSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AuthError.oauthFailed("Invalid response")
@@ -301,7 +301,7 @@ final class AuthService: @unchecked Sendable {
         anonRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         anonRequest.httpBody = Data("{}".utf8)
 
-        let (anonData, anonResponse) = try await URLSession.shared.data(for: anonRequest)
+        let (anonData, anonResponse) = try await Self.bearerSession.data(for: anonRequest)
         guard let anonHttp = anonResponse as? HTTPURLResponse,
               (200...299).contains(anonHttp.statusCode),
               let anonJson = try JSONSerialization.jsonObject(with: anonData) as? [String: Any],
