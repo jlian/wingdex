@@ -77,8 +77,8 @@ export function useBirdSummary(
 }
 
 /**
- * Hook to fetch additional reference images from a species' Wikipedia article.
- * Returns an array of image URLs (excluding the lead/primary image).
+ * Hook to fetch reference images for a species from Wikimedia Commons.
+ * Returns GalleryImage objects with url, caption, title, and parsed plumage tags.
  */
 export function useBirdGallery(speciesName: string | undefined): {
   images: GalleryImage[]
