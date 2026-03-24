@@ -254,7 +254,7 @@ export async function getWikimediaSummary(
   }
 }
 
-// -- Gallery: multiple reference images from Wikipedia article -----------
+// -- Gallery: multiple reference images from Wikimedia Commons -----------
 
 /** A gallery image with URL, optional caption, and filename for plumage parsing. */
 export type GalleryImage = {
