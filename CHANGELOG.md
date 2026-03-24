@@ -1,3 +1,19 @@
+## [1.19.1](https://github.com/jlian/wingdex/compare/v1.19.0...v1.19.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* duplicate photo placeholder, wiki gallery filter, outings sort label ([848ffe5](https://github.com/jlian/wingdex/commit/848ffe53adfc5bf150af9313b1afa8b7e3f93669)), closes [#235](https://github.com/jlian/wingdex/issues/235) [#236](https://github.com/jlian/wingdex/issues/236) [#237](https://github.com/jlian/wingdex/issues/237) [#235](https://github.com/jlian/wingdex/issues/235) [#236](https://github.com/jlian/wingdex/issues/236) [#237](https://github.com/jlian/wingdex/issues/237)
+* **iOS.Wikimedia:** gallery parity with web - URL fix, plumage, attribution, swipe ([726e08c](https://github.com/jlian/wingdex/commit/726e08c7375115ba30a9570a1c7742ace727694b))
+* **PrivacyPage, TermsPage:** update last updated date and add BirdLife International reference ([f03c3e2](https://github.com/jlian/wingdex/commit/f03c3e271e1f42975946221b0f36e2a0d1c929ac))
+* **Release:** checkout branch tip to avoid stale-SHA after queued release ([8a72195](https://github.com/jlian/wingdex/commit/8a721952e0731d2ef2fd8be6ca85a6a2f1c14d40))
+* **Web.Wikimedia:** smarter gallery filtering with plumage parsing and dedup ([c6adf1e](https://github.com/jlian/wingdex/commit/c6adf1eef05e8d1908525e7e5b7f137af89b81b6))
+* **Web.Wikimedia:** update section comment to reflect Commons source ([1541fbe](https://github.com/jlian/wingdex/commit/1541fbebedfb7dd4720d49e909b40c9ba0a535df))
+* **Wikimedia:** address PR review - safety, memoization, dead code ([6fe7c90](https://github.com/jlian/wingdex/commit/6fe7c9016866bf4f5a1b59d46eb9b897c41ac3c9))
+* **Wikimedia:** plumage matching, attribution, and review fixes ([3eecdb7](https://github.com/jlian/wingdex/commit/3eecdb7aef340383672667cf1dac78cfd0cb4975))
+* **Wikimedia:** rename prop, remove dead code, fix indentation ([315797d](https://github.com/jlian/wingdex/commit/315797ddd77fa43e44deb6d7ab286b579106d1ac))
+* **Wikimedia:** update JSDoc and fix attribution indentation ([8877efb](https://github.com/jlian/wingdex/commit/8877efbe4e19916c42ffddc8fb7db57e92e1bca9))
+
 # [1.19.0](https://github.com/jlian/wingdex/compare/v1.18.0...v1.19.0) (2026-03-22)
 
 
