@@ -15,15 +15,13 @@ struct PerPhotoConfirmView: View {
 
     @State private var selectedSpecies = ""
     @State private var selectedConfidence: Double = 0
-    @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
-    @State private var galleryURLs: [URL] = []
-    @State private var galleryPlumages: [String?] = []
+    @State private var galleryItems: [(url: URL, plumage: String?)] = []
     @State private var galleryTask: Task<Void, Never>?
     @State private var galleryIndex = 0
     @State private var decodedCroppedImage: UIImage?
     @State private var decodedThumbnail: UIImage?
-    @State private var cachedGalleryItems: [(url: URL, plumage: String?)] = []
+    @State private var decodeTask: Task<Void, Never>?
 
     private var photo: ProcessedPhoto? { viewModel.currentPhoto }
     private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
@@ -117,8 +115,6 @@ struct PerPhotoConfirmView: View {
         .onAppear { initializeSelection() }
         .onChange(of: viewModel.currentPhotoIndex) { initializeSelection() }
         .onChange(of: viewModel.currentCandidates.count) { initializeSelection() }
-        .onChange(of: wikiImageURL) { recomputeGalleryItems() }
-        .onChange(of: galleryURLs) { recomputeGalleryItems() }
     }
 
     // MARK: - No Candidates
@@ -262,19 +258,8 @@ struct PerPhotoConfirmView: View {
 
     // MARK: - Wiki Square Thumbnail (portrait-aware, swipeable gallery)
 
-    /// All gallery items (URL + plumage), with plumage-matching images promoted to the front.
-    private func computeSortedGalleryItems() -> [(url: URL, plumage: String?)] {
-        var items: [(url: URL, plumage: String?)] = []
-        var idx = 0
-        if let u = wikiImageURL {
-            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
-            idx += 1
-        }
-        for u in galleryURLs {
-            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
-            idx += 1
-        }
-        // Promote images whose plumage matches the LLM-detected plumage
+    /// Reorder gallery items so plumage-matching images come first.
+    private func sortedByPlumage(_ items: [(url: URL, plumage: String?)]) -> [(url: URL, plumage: String?)] {
         guard let detected = selectedPlumage?.lowercased(), !detected.isEmpty else { return items }
         let detectedTags = Set(detected.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         let matching = items.filter { item in
@@ -290,11 +275,11 @@ struct PerPhotoConfirmView: View {
         return matching + rest
     }
 
-    private var allWikiURLs: [URL] { cachedGalleryItems.map(\.url) }
+    private var allWikiURLs: [URL] { galleryItems.map(\.url) }
 
     /// Label for the current gallery image, including plumage if available.
     private var currentRefLabel: String {
-        let items = cachedGalleryItems
+        let items = galleryItems
         guard !items.isEmpty else { return "Reference" }
         let idx = min(galleryIndex, items.count - 1)
         if idx >= 0, let plumage = items[idx].plumage {
@@ -461,15 +446,16 @@ struct PerPhotoConfirmView: View {
         selectedSpecies = candidate.species
         selectedConfidence = candidate.confidence
         fetchWikiImage()
-        recomputeGalleryItems()
     }
 
     /// Decode user photo images off the main thread so the view body never calls UIImage(data:).
     private func decodeUserImages() {
+        decodeTask?.cancel()
         let currentPhoto = photo
+        let photoId = currentPhoto?.id
         decodedCroppedImage = nil
         decodedThumbnail = nil
-        Task.detached(priority: .userInitiated) {
+        decodeTask = Task.detached(priority: .userInitiated) {
             var cropped: UIImage?
             var thumb: UIImage?
             if let data = currentPhoto?.croppedImage {
@@ -477,18 +463,17 @@ struct PerPhotoConfirmView: View {
             } else if let p = currentPhoto, let box = p.aiCropBox {
                 cropped = Self.aiPreviewImage(from: p.image, cropBox: box)
             }
+            guard !Task.isCancelled else { return }
             if let data = currentPhoto?.thumbnail {
                 thumb = UIImage(data: data)
             }
+            guard !Task.isCancelled else { return }
             await MainActor.run {
+                guard photo?.id == photoId else { return }
                 decodedCroppedImage = cropped
                 decodedThumbnail = thumb
             }
         }
-    }
-
-    private func recomputeGalleryItems() {
-        cachedGalleryItems = computeSortedGalleryItems()
     }
 
     private func confirmWith(status: ObservationStatus) {
@@ -499,11 +484,11 @@ struct PerPhotoConfirmView: View {
         galleryTask?.cancel()
         galleryIndex = 0
         let species = selectedSpecies
-        guard !species.isEmpty else { wikiImageURL = nil; galleryURLs = []; galleryPlumages = []; galleryIndex = 0; return }
+        guard !species.isEmpty else { galleryItems = []; galleryIndex = 0; return }
 
         let displayName = getDisplayName(species)
-        isLoadingWikiImage = true; wikiImageURL = nil
-        galleryURLs = []; galleryPlumages = []
+        isLoadingWikiImage = true
+        galleryItems = []
 
         // Single Wikimedia Commons search: returns thumbnails + descriptions in one call
         galleryTask = Task { await performCommonsGalleryFetch(displayName: displayName) }
@@ -604,10 +589,9 @@ struct PerPhotoConfirmView: View {
             #if DEBUG
             print("[Wiki] After filtering: \(urls.count) URLs")
             #endif
+            let items = zip(urls, plumages).map { (url: $0, plumage: $1) }
             await MainActor.run {
-                wikiImageURL = urls.first
-                galleryURLs = Array(urls.dropFirst())
-                galleryPlumages = plumages
+                galleryItems = sortedByPlumage(items)
                 isLoadingWikiImage = false
             }
         } catch is CancellationError { /* expected */ }
