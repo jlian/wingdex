@@ -589,7 +589,7 @@ struct PerPhotoConfirmView: View {
             #if DEBUG
             print("[Wiki] After filtering: \(urls.count) URLs")
             #endif
-            let items = zip(urls, plumages).map { (url: $0, plumage: $1) }
+            let items = zip(urls, plumages).map { (url, plumage) in (url: url, plumage: plumage) }
             await MainActor.run {
                 galleryItems = sortedByPlumage(items)
                 isLoadingWikiImage = false
