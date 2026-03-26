@@ -15,12 +15,13 @@ struct PerPhotoConfirmView: View {
 
     @State private var selectedSpecies = ""
     @State private var selectedConfidence: Double = 0
-    @State private var wikiImageURL: URL?
     @State private var isLoadingWikiImage = false
-    @State private var galleryURLs: [URL] = []
-    @State private var galleryPlumages: [String?] = []
+    @State private var galleryItems: [(url: URL, plumage: String?)] = []
     @State private var galleryTask: Task<Void, Never>?
     @State private var galleryIndex = 0
+    @State private var decodedCroppedImage: UIImage?
+    @State private var decodedThumbnail: UIImage?
+    @State private var decodeTask: Task<Void, Never>?
 
     private var photo: ProcessedPhoto? { viewModel.currentPhoto }
     private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
@@ -122,7 +123,7 @@ struct PerPhotoConfirmView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            if let photo, let uiImage = UIImage(data: photo.thumbnail) {
+            if let uiImage = decodedThumbnail {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
@@ -197,16 +198,8 @@ struct PerPhotoConfirmView: View {
 
     private func aiCroppedUserPhoto(size: CGFloat) -> some View {
         Group {
-            if let croppedData = photo?.croppedImage,
-               let croppedImage = UIImage(data: croppedData) {
-                Image(uiImage: croppedImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else if let photo, let cropBox = photo.aiCropBox,
-                      let previewImage = aiPreviewImage(from: photo.image, cropBox: cropBox) {
-                Image(uiImage: previewImage)
+            if let img = decodedCroppedImage {
+                Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size, height: size)
@@ -217,7 +210,7 @@ struct PerPhotoConfirmView: View {
         }
     }
 
-    private func aiPreviewImage(from imageData: Data, cropBox: CropBoxResult) -> UIImage? {
+    private nonisolated static func aiPreviewImage(from imageData: Data, cropBox: CropBoxResult) -> UIImage? {
         guard let uiImage = UIImage(data: imageData) else { return nil }
         let uprightImage = uiImage.imageOrientation == .up
             ? uiImage
@@ -244,7 +237,7 @@ struct PerPhotoConfirmView: View {
 
     private func fallbackPhoto(size: CGFloat) -> some View {
         Group {
-            if let photo, let uiImage = UIImage(data: photo.thumbnail) {
+            if let uiImage = decodedThumbnail {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
@@ -265,19 +258,8 @@ struct PerPhotoConfirmView: View {
 
     // MARK: - Wiki Square Thumbnail (portrait-aware, swipeable gallery)
 
-    /// All gallery items (URL + plumage), with plumage-matching images promoted to the front.
-    private var sortedGalleryItems: [(url: URL, plumage: String?)] {
-        var items: [(url: URL, plumage: String?)] = []
-        var idx = 0
-        if let u = wikiImageURL {
-            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
-            idx += 1
-        }
-        for u in galleryURLs {
-            items.append((u, galleryPlumages.indices.contains(idx) ? galleryPlumages[idx] : nil))
-            idx += 1
-        }
-        // Promote images whose plumage matches the LLM-detected plumage
+    /// Reorder gallery items so plumage-matching images come first.
+    private func sortedByPlumage(_ items: [(url: URL, plumage: String?)]) -> [(url: URL, plumage: String?)] {
         guard let detected = selectedPlumage?.lowercased(), !detected.isEmpty else { return items }
         let detectedTags = Set(detected.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         let matching = items.filter { item in
@@ -293,11 +275,11 @@ struct PerPhotoConfirmView: View {
         return matching + rest
     }
 
-    private var allWikiURLs: [URL] { sortedGalleryItems.map(\.url) }
+    private var allWikiURLs: [URL] { galleryItems.map(\.url) }
 
     /// Label for the current gallery image, including plumage if available.
     private var currentRefLabel: String {
-        let items = sortedGalleryItems
+        let items = galleryItems
         guard !items.isEmpty else { return "Reference" }
         let idx = min(galleryIndex, items.count - 1)
         if idx >= 0, let plumage = items[idx].plumage {
@@ -456,6 +438,7 @@ struct PerPhotoConfirmView: View {
             selectedSpecies = top.species
             selectedConfidence = top.confidence
         } else { selectedSpecies = ""; selectedConfidence = 0 }
+        decodeUserImages()
         fetchWikiImage()
     }
 
@@ -463,6 +446,34 @@ struct PerPhotoConfirmView: View {
         selectedSpecies = candidate.species
         selectedConfidence = candidate.confidence
         fetchWikiImage()
+    }
+
+    /// Decode user photo images off the main thread so the view body never calls UIImage(data:).
+    private func decodeUserImages() {
+        decodeTask?.cancel()
+        let currentPhoto = photo
+        let photoId = currentPhoto?.id
+        decodedCroppedImage = nil
+        decodedThumbnail = nil
+        decodeTask = Task.detached(priority: .userInitiated) {
+            var cropped: UIImage?
+            var thumb: UIImage?
+            if let data = currentPhoto?.croppedImage {
+                cropped = UIImage(data: data)
+            } else if let p = currentPhoto, let box = p.aiCropBox {
+                cropped = Self.aiPreviewImage(from: p.image, cropBox: box)
+            }
+            guard !Task.isCancelled else { return }
+            if let data = currentPhoto?.thumbnail {
+                thumb = UIImage(data: data)
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard photo?.id == photoId else { return }
+                decodedCroppedImage = cropped
+                decodedThumbnail = thumb
+            }
+        }
     }
 
     private func confirmWith(status: ObservationStatus) {
@@ -473,11 +484,11 @@ struct PerPhotoConfirmView: View {
         galleryTask?.cancel()
         galleryIndex = 0
         let species = selectedSpecies
-        guard !species.isEmpty else { wikiImageURL = nil; galleryURLs = []; galleryPlumages = []; galleryIndex = 0; return }
+        guard !species.isEmpty else { galleryItems = []; galleryIndex = 0; return }
 
         let displayName = getDisplayName(species)
-        isLoadingWikiImage = true; wikiImageURL = nil
-        galleryURLs = []; galleryPlumages = []
+        isLoadingWikiImage = true
+        galleryItems = []
 
         // Single Wikimedia Commons search: returns thumbnails + descriptions in one call
         galleryTask = Task { await performCommonsGalleryFetch(displayName: displayName) }
@@ -578,10 +589,9 @@ struct PerPhotoConfirmView: View {
             #if DEBUG
             print("[Wiki] After filtering: \(urls.count) URLs")
             #endif
+            let items = zip(urls, plumages).map { (url, plumage) in (url: url, plumage: plumage) }
             await MainActor.run {
-                wikiImageURL = urls.first
-                galleryURLs = Array(urls.dropFirst())
-                galleryPlumages = plumages
+                galleryItems = sortedByPlumage(items)
                 isLoadingWikiImage = false
             }
         } catch is CancellationError { /* expected */ }
