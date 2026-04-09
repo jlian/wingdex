@@ -105,7 +105,7 @@ export function parseCellBlob(data, wanted) {
 // Layers 2-4 only apply when status is 'present' or 'near-range'.
 
 export const NEAR_RANGE_TRUST = 0.85
-export const OUT_OF_RANGE_TRUST = 0.5
+export const OUT_OF_RANGE_TRUST = 0.65
 
 export function presenceTrust(presence) {
   switch (presence) {
