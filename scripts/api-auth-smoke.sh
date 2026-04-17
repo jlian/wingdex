@@ -19,10 +19,10 @@ trap cleanup EXIT
 rm -f "$COOKIE_JAR"
 
 echo "[smoke] Applying local D1 migrations..."
-printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local >/dev/null
+printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local --persist-to "$HOME/.cache/wingdex/wrangler-state" >/dev/null
 
 echo "[smoke] Starting Pages dev server on :${PORT}..."
-npx wrangler pages dev dist --port "$PORT" >"$LOG_FILE" 2>&1 &
+npx wrangler pages dev dist --port "$PORT" --persist-to "$HOME/.cache/wingdex/wrangler-state" >"$LOG_FILE" 2>&1 &
 WRANGLER_PID=$!
 
 for _ in {1..30}; do
