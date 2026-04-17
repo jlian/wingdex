@@ -24,6 +24,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -177,6 +178,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
 
 export const onRequestDelete: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }

@@ -25,6 +25,7 @@ function decodePreviewId(previewId: string): ImportPreview | null {
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -42,7 +43,13 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   const selectedPreviews = body.previewIds
     .map(previewId => decodePreviewId(previewId))
-    .filter((preview): preview is ImportPreview => !!preview)
+    .filter((preview): preview is ImportPreview => {
+      if (!preview) {
+        log.warn('importConfirm.invalidPreviewId', { category: 'Import', properties: { reason: 'decode_failed' } })
+        return false
+      }
+      return true
+    })
 
   if (selectedPreviews.length === 0) {
     const dexUpdates = await computeDex(context.env.DB, userId)
@@ -181,6 +188,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
+  log.debug('importConfirm.batchInsert', { category: 'Import', properties: { outings: outings.length, observations: observations.length, statements: insertStatements.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length

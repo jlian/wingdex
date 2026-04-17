@@ -139,6 +139,7 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -206,6 +207,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   })
 
   await context.env.DB.batch(statements)
+  log.debug('observations.batchInsert', { category: 'Data', properties: { count: body.length } })
 
   const observations = body.map(observation => ({
     ...observation,
@@ -221,6 +223,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }

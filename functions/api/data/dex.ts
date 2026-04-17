@@ -44,11 +44,13 @@ async function upsertDexMetaPatch(db: D1Database, userId: string, patch: DexMeta
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const dex = await computeDex(context.env.DB, userId)
+  log.debug('dex.compute', { category: 'Data', properties: { count: dex.length } })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -60,6 +62,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -79,6 +82,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   for (const patch of patches) {
     await upsertDexMetaPatch(context.env.DB, userId, patch)
   }
+  log.debug('dex.upsertMeta', { category: 'Data', properties: { patchCount: patches.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({

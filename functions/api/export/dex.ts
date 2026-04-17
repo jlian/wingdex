@@ -3,12 +3,14 @@ import { exportDexToCSV } from '../../lib/ebird'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const dex = await computeDex(context.env.DB, userId)
   const csv = exportDexToCSV(dex)
+  log.debug('exportDex.complete', { category: 'Export', properties: { speciesCount: dex.length, csvLength: csv.length } })
 
   return new Response(csv, {
     headers: {

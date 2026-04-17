@@ -1,6 +1,7 @@
 import { createAuth } from '../../lib/auth'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
+  const log = (context.data as RequestData).log
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
@@ -20,6 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         .filter((providerId): providerId is string => Boolean(providerId))
     )
   )
+  log.debug('auth.linkedProviders', { category: 'Auth', properties: { count: providers.length } })
 
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },

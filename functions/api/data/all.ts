@@ -46,6 +46,7 @@ type ObservationRow = {
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -98,6 +99,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     aiConfidence: observation.aiConfidence ?? undefined,
     speciesComments: observation.speciesComments || undefined,
   }))
+
+  log.debug('all.fetched', { category: 'Data', properties: { outings: outings.length, photos: photos.length, observations: observations.length, dex: dex.length } })
 
   return Response.json({
     outings,

@@ -2,6 +2,7 @@ import { createAuth } from '../../lib/auth'
 import { waitForPasskeyOwnership } from '../../lib/passkey-ownership'
 
 export const onRequestPost: PagesFunction<Env> = async context => {
+  const log = (context.data as RequestData).log
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
@@ -9,11 +10,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  let body: { name?: string; passkeyId?: string } = {}
+  let body: { name?: string; passkeyId?: string }
   try {
     body = await context.request.json() as { name?: string; passkeyId?: string }
   } catch {
-    body = {}
+    return new Response('Invalid JSON body', { status: 400 })
   }
 
   const passkeyId = typeof body.passkeyId === 'string' ? body.passkeyId.trim() : ''
@@ -33,6 +34,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .prepare('UPDATE "user" SET isAnonymous = 0, name = ?, updatedAt = datetime(\'now\') WHERE id = ?')
     .bind(nextName, session.user.id)
     .run()
+  log.info('auth.finalizePasskey', { category: 'Auth', resultType: 'Succeeded' })
 
   return Response.json({ success: true })
 }

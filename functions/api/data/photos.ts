@@ -38,6 +38,7 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }

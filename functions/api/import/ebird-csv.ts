@@ -18,6 +18,7 @@ function encodePreviewId(preview: ImportPreview): string {
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -41,6 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const profileTimezone = formData.get('profileTimezone')
   const csvContent = await file.text()
   const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
+  log.debug('importCsv.parsed', { category: 'Import', properties: { fileSize: file.size, rowCount: previews.length } })
 
   const existingDexRows = await computeDex(context.env.DB, userId)
   const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))
