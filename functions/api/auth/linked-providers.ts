@@ -21,7 +21,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         .filter((providerId): providerId is string => Boolean(providerId))
     )
   )
-  log?.debug('WingDex/Auth/LinkedProviders/read', { category: 'Auth', resultDescription: `User has ${providers.length} linked auth providers`, properties: { providerCount: providers.length } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { providerCount: providers.length })
+  void log
 
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },

@@ -9,7 +9,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     context.env.DB.prepare('DELETE FROM outing WHERE userId = ?').bind(userId),
     context.env.DB.prepare('DELETE FROM dex_meta WHERE userId = ?').bind(userId),
   ])
-  log?.info('WingDex/Data/Clear/delete', { category: 'Data', resultType: 'Succeeded', resultDescription: 'Deleted all outings and dex metadata for user' })
+  void log
 
   return Response.json({ cleared: true })
 }

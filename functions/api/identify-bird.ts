@@ -136,7 +136,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {
-      log?.warn('WingDex/BirdId/Identify/action', { category: 'BirdId', resultType: 'Failed', resultSignature: 429, resultDescription: `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, properties: { retryAfterSeconds: error.retryAfterSeconds } })
+      log?.warn('birdId.identify.rateLimited', { resultType: 'Failed', resultSignature: 429, resultDescription: `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, properties: { retryAfterSeconds: error.retryAfterSeconds } })
       return new Response(error.message, {
         status: error.status,
         headers: {
@@ -146,14 +146,14 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }
 
     if (error instanceof HttpError) {
-      log?.warn('WingDex/BirdId/Identify/action', { category: 'BirdId', resultType: 'Failed', resultSignature: error.status, resultDescription: `Bird identification failed: ${error.message}` })
+      log?.warn('birdId.identify.failed', { resultType: 'Failed', resultSignature: error.status, resultDescription: `Bird identification failed: ${error.message}` })
       return new Response(error.message, { status: error.status })
     }
 
     if (error instanceof Error) {
-      log?.error('WingDex/BirdId/Identify/action', { category: 'BirdId', resultType: 'Failed', resultDescription: `Bird identification failed unexpectedly: ${error.message}`, properties: { error: error.message, stack: error.stack } })
+      log?.error('birdId.identify.failed', { resultType: 'Failed', resultDescription: `Bird identification failed unexpectedly: ${error.message}`, properties: { error: error.message, stack: error.stack } })
     } else {
-      log?.error('WingDex/BirdId/Identify/action', { category: 'BirdId', resultType: 'Failed', resultDescription: `Bird identification failed with non-Error value: ${String(error)}`, properties: { error: String(error) } })
+      log?.error('birdId.identify.failed', { resultType: 'Failed', resultDescription: `Bird identification failed with non-Error value: ${String(error)}`, properties: { error: String(error) } })
     }
 
     return new Response('An unexpected error occurred during bird identification', { status: 500 })

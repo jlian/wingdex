@@ -27,25 +27,25 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     formData = await context.request.formData()
   } catch {
-    log?.debug('WingDex/Import/EBirdCsv/action', { category: 'Import', resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body could not be parsed as multipart/form-data' })
+    log?.warn('import.ebirdCsv.invalid', { resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body could not be parsed as multipart/form-data' })
     return new Response('Invalid form payload', { status: 400 })
   }
 
   const file = formData.get('file')
   if (!(file instanceof File)) {
-    log?.debug('WingDex/Import/EBirdCsv/action', { category: 'Import', resultType: 'Failed', resultSignature: 400, resultDescription: 'No CSV file found in the "file" form field' })
+    log?.warn('import.ebirdCsv.invalid', { resultType: 'Failed', resultSignature: 400, resultDescription: 'No CSV file found in the "file" form field' })
     return new Response('Missing CSV file', { status: 400 })
   }
 
   if (file.size > MAX_CSV_SIZE_BYTES) {
-    log?.warn('WingDex/Import/EBirdCsv/action', { category: 'Import', resultType: 'Failed', resultSignature: 413, resultDescription: `CSV file is ${file.size} bytes, exceeding the ${MAX_CSV_SIZE_BYTES}-byte limit`, properties: { fileSize: file.size, limit: MAX_CSV_SIZE_BYTES } })
+    log?.warn('import.ebirdCsv.invalid', { resultType: 'Failed', resultSignature: 413, resultDescription: `CSV file is ${file.size} bytes, exceeding the ${MAX_CSV_SIZE_BYTES}-byte limit`, properties: { fileSize: file.size, limit: MAX_CSV_SIZE_BYTES } })
     return new Response('CSV file too large (max 10MB)', { status: 413 })
   }
 
   const profileTimezone = formData.get('profileTimezone')
   const csvContent = await file.text()
   const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
-  log?.debug('WingDex/Import/EBirdCsv/read', { category: 'Import', resultDescription: `Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, properties: { fileSize: file.size, rowCount: previews.length } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { fileSize: file.size, rowCount: previews.length })
 
   const existingDexRows = await computeDex(context.env.DB, userId)
   const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))

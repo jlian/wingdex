@@ -10,7 +10,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const dex = await computeDex(context.env.DB, userId)
   const csv = exportDexToCSV(dex)
-  log?.debug('WingDex/Export/Dex/read', { category: 'Export', resultDescription: `Exported dex CSV with ${dex.length} species (${csv.length} bytes)`, properties: { speciesCount: dex.length, csvLength: csv.length } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { speciesCount: dex.length, csvLength: csv.length })
+  void log
 
   return new Response(csv, {
     headers: {

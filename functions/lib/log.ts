@@ -2,27 +2,26 @@
  * Schematized structured logger for Cloudflare Workers.
  *
  * Emits JSON log lines via console.log/console.error that Cloudflare Workers
- * Logs auto-indexes for the Query Builder. Schema inspired by Azure Monitor
- * resource logs: common envelope + extensible properties bag.
+ * Logs auto-indexes for the Query Builder.
  *
- * operationName conventions (Azure Monitor inspired; we don't strictly mirror
- * Azure Resource Manager syntax):
- *   - Request lifecycle (auto, emitted by middleware):  `<pathname>/<action>`
- *     e.g. `/api/auth/get-session/read`, `/api/data/observations/write`
- *   - Per-route sub-operations (semantic):              `WingDex/<Resource>/<Sub>/<action>`
- *     e.g. `WingDex/Data/Observations/write`, `WingDex/BirdId/RangeFilter/action`
- *   `<action>` is one of `read | write | delete | action` (HTTP method maps via
- *   `methodToAction`). Path/method are intentionally NOT separate envelope
- *   fields - they're folded into operationName so queries pivot on a single
- *   dimension.
+ * See `.github/AGENTS.md` (Observability) for the full schema, operationName
+ * conventions, enrichment pattern, and required practices for new code.
+ *
+ * Quick reference:
+ *   - Request lifecycle log (auto, one per request):
+ *       operationName = `<METHOD> <route>`     e.g. `GET /api/auth/get-session`
+ *   - Sub-step log (handler/lib emitted):
+ *       operationName = `<area>.<step>[.<sub>]` e.g. `birdId.llm.call`
+ *   - Drop `category` (always derivable from operationName prefix).
+ *   - Omit `resultDescription` on success (the rest of the row already says so).
+ *   - To attach context to the request log instead of emitting a duplicate
+ *     "did the obvious thing" log, mutate `context.data.requestProperties`.
  *
  * Debug-level logs are gated on env.DEBUG.
- *
- * See `.github/AGENTS.md` (Observability) for full conventions and rationale.
  */
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
-export type ResultType = 'Succeeded' | 'Failed' | 'InProgress'
+export type ResultType = 'Succeeded' | 'Failed'
 
 /** Identity of the caller, inspired by Azure Monitor's identity blob. */
 export interface Identity {
@@ -32,10 +31,9 @@ export interface Identity {
 }
 
 export interface LogFields {
-  category?: string
   resultType?: ResultType
   resultSignature?: number | string
-  /** Human-readable description: context, what happened, mitigation. Omit when redundant with other fields. */
+  /** Human-readable message: cause + mitigation. Omit on success. */
   resultDescription?: string
   durationMs?: number
   properties?: Record<string, unknown>
@@ -46,30 +44,24 @@ export interface Logger {
   warn(operationName: string, fields?: LogFields): void
   error(operationName: string, fields?: LogFields): void
   debug(operationName: string, fields?: LogFields): void
-  /** Start a timed span. Call `end()` on the result to log with durationMs. */
-  time(operationName: string, category?: string): TimedSpan
+  /** Start a timed span. Call `.end()` on the result to log with durationMs. */
+  time(operationName: string): TimedSpan
 }
 
 export interface TimedSpan {
-  end(fields?: Omit<LogFields, 'durationMs' | 'category'>): void
+  end(fields?: Omit<LogFields, 'durationMs'>): void
 }
 
-/** Map an HTTP method to its operationName action suffix. */
-export function methodToAction(method: string): 'read' | 'write' | 'delete' | 'action' {
-  switch (method.toUpperCase()) {
-    case 'GET':
-    case 'HEAD':
-    case 'OPTIONS':
-      return 'read'
-    case 'POST':
-    case 'PUT':
-    case 'PATCH':
-      return 'write'
-    case 'DELETE':
-      return 'delete'
-    default:
-      return 'action'
-  }
+/**
+ * Build the request-lifecycle operationName: `<METHOD> <normalized route>`.
+ * Dynamic ID segments are collapsed to `:id` so cardinality stays bounded.
+ * Whitelist-based: only known dynamic-segment parents are normalized.
+ */
+export function operationNameForRequest(method: string, pathname: string): string {
+  const normalized = pathname
+    .replace(/^\/api\/data\/outings\/[^/]+/, '/api/data/outings/:id')
+    .replace(/^\/api\/export\/outing\/[^/]+/, '/api/export/outing/:id')
+  return `${method.toUpperCase()} ${normalized}`
 }
 
 /** Create a logger bound to a specific request context. */
@@ -91,13 +83,12 @@ export function createLogger(
       spanId,
       operationName,
     }
-    if (fields?.category) entry.category = fields.category
     if (fields?.resultType) entry.resultType = fields.resultType
     if (fields?.resultSignature !== undefined) entry.resultSignature = fields.resultSignature
     if (fields?.resultDescription) entry.resultDescription = fields.resultDescription
     if (fields?.durationMs !== undefined) entry.durationMs = fields.durationMs
-    if (identity?.userId) entry.identity = identity
-    if (fields?.properties) entry.properties = fields.properties
+    if (identity && (identity.userId || identity.authMethod)) entry.identity = identity
+    if (fields?.properties && Object.keys(fields.properties).length > 0) entry.properties = fields.properties
 
     const json = JSON.stringify(entry)
     if (level === 'error') {
@@ -112,12 +103,12 @@ export function createLogger(
     warn: (op, f) => emit('warn', op, f),
     error: (op, f) => emit('error', op, f),
     debug: (op, f) => emit('debug', op, f),
-    time(operationName: string, category?: string): TimedSpan {
+    time(operationName: string): TimedSpan {
       const start = Date.now()
       return {
         end(fields) {
           const durationMs = Date.now() - start
-          emit('info', operationName, { ...fields, category, durationMs })
+          emit('info', operationName, { ...fields, durationMs })
         },
       }
     },

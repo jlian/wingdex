@@ -151,7 +151,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       .run()
   }
 
-  log?.debug('WingDex/Data/Outings/write', { category: 'Data', resultDescription: `Created outing at ${body.locationName}`, properties: { outingId: body.id, location: body.locationName } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { outingId: body.id, location: body.locationName })
+  void log
 
   return Response.json({
     id: body.id,

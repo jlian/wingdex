@@ -50,7 +50,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const dex = await computeDex(context.env.DB, userId)
-  log?.debug('WingDex/Data/Dex/read', { category: 'Data', resultDescription: `Computed dex with ${dex.length} species`, properties: { count: dex.length } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { count: dex.length })
+  void log
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -82,7 +83,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   for (const patch of patches) {
     await upsertDexMetaPatch(context.env.DB, userId, patch)
   }
-  log?.debug('WingDex/Data/Dex/write', { category: 'Data', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length } })
+  Object.assign((context.data as RequestData).requestProperties ?? {}, { patchCount: patches.length })
+  void log
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({

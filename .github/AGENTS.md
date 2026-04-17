@@ -70,27 +70,45 @@ WingDex emits Azure-Monitor-inspired structured logs from every Cloudflare Pages
 
 ### Schema
 
-Every log line is a single JSON object with this envelope:
+Every log line is a single JSON object. Fields are emitted only when meaningful (the logger drops empty/undefined values).
 
-| Field | Required | Notes |
+| Field | When | Notes |
 |---|---|---|
-| `time` | yes | ISO 8601 timestamp, set by `createLogger`. |
-| `level` | yes | `info \| warn \| error \| debug` (debug gated on `env.DEBUG`). |
-| `traceId`, `spanId` | yes | W3C Trace Context, propagated from incoming `traceparent` (or generated). |
-| `operationName` | yes | See conventions below. Path/method are intentionally folded in here, not separate fields. |
-| `category` | recommended | Coarse bucket: `Request`, `Auth`, `Data`, `BirdId`, `Import`, `Export`, `Health`, etc. |
-| `resultType` | on errors | `Succeeded \| Failed \| InProgress`. Omit on uneventful debug traces. |
-| `resultSignature` | on errors | HTTP status code (or domain-specific code). |
-| `resultDescription` | on errors | Human-readable message: what happened + mitigation. **Omit on 200/uneventful logs** when the rest of the envelope already conveys the outcome. |
-| `durationMs` | on completion | Set automatically by `log.time(...)` spans and request-end logs. |
-| `identity` | when known | `{ userId, isAnonymous, authMethod }`. Set by middleware after the session check. |
-| `properties` | optional | Open bag of machine-queryable, operation-specific fields. Don't duplicate envelope fields here. |
+| `time` | always | ISO 8601 timestamp. |
+| `level` | always | `info \| warn \| error \| debug` (debug gated on `env.DEBUG`). |
+| `traceId`, `spanId` | always | W3C Trace Context, propagated from incoming `traceparent` (or generated). |
+| `operationName` | always | See conventions below. The single dimension you pivot on. |
+| `resultType` | always | `Succeeded \| Failed`. |
+| `resultSignature` | always | HTTP status (request log) or domain code (sub-step). |
+| `resultDescription` | warn/error only | Human-readable: cause + mitigation. **Omit on success** - the rest of the row already says so. |
+| `durationMs` | when measured | Set by middleware on the request log and by `log.time(...)` spans. |
+| `identity` | when known | `{ userId?, isAnonymous?, authMethod }`. Always present after the session check; auth routes carry only `authMethod`. |
+| `properties` | optional | Machine-queryable bag (counts, IDs, enums). Do not duplicate envelope fields. |
 
-### `operationName` conventions
+There is **no** `category` field. Always derivable from the operationName prefix.
 
-- **Request lifecycle (auto, emitted by middleware):** `<pathname>/<action>` - e.g. `/api/auth/get-session/read`, `/api/data/observations/write`, `/api/data/outings/abc/delete`.
-- **Per-route sub-operations (semantic):** `WingDex/<Resource>/<Sub>/<action>` - e.g. `WingDex/Data/Observations/write`, `WingDex/BirdId/RangeFilter/action`, `WingDex/Health/DB/read`.
-- `<action>` is one of `read | write | delete | action` (lowercase). HTTP methods map via `methodToAction()` in `functions/lib/log.ts`. Use `action` for non-CRUD verbs (sign-in, identify, import preview, etc.).
+### `operationName` (one rule per log type)
+
+| Log type | Format | Example |
+|---|---|---|
+| Request lifecycle (one per request, auto-emitted by middleware) | `<METHOD> <route>` | `GET /api/auth/get-session`, `DELETE /api/data/outings/:id` |
+| Sub-step event (handler/lib emitted) | `<area>.<step>[.<sub>]`, lowercase camelCase | `birdId.llm.call`, `birdId.range.filter`, `import.ebirdCsv.preview` |
+
+- **Path normalization:** dynamic ID segments are collapsed to `:id` so cardinality stays bounded. Whitelist-based; new dynamic-route templates must be added to `operationNameForRequest()` in `functions/lib/log.ts`.
+- **Sub-step ops never repeat the path** - the `traceId` stitches them. They describe the *step*, not the route.
+- **Method stays uppercase** (HTTP convention); steps are lowercase camelCase.
+
+### Enrich the request log instead of duplicating it
+
+A handler that wants to record "computed dex with 87 species" must NOT emit a second log row that echoes the request's outcome. Instead, mutate `context.data.requestProperties`:
+
+```ts
+Object.assign((context.data as RequestData).requestProperties ?? {}, { count: dex.length })
+```
+
+Middleware merges this bag into the request lifecycle log's `properties`. One row per request - all the context you need.
+
+Sub-step logs (`birdId.llm.call`, `birdId.range.filter`, etc.) are reserved for things with their own duration or an independent failure mode; not for "I successfully did the obvious thing."
 
 ### Identity caveat
 
@@ -101,8 +119,9 @@ Middleware only resolves the session (and therefore `identity.userId`) for non-`
 1. **Always use the request-scoped logger** from `context.data.log` in route handlers - never `console.log`/`console.error` directly. This guarantees `traceId`/`spanId`/`identity` flow.
 2. **Log every error path** at `warn` (client/validation) or `error` (server/unexpected) with `resultType: 'Failed'`, `resultSignature`, and a `resultDescription` that names the cause (and mitigation when possible). Silent `catch {}` and `.catch(() => undefined)` swallows are bugs.
 3. **Read response bodies on client errors.** When the client surfaces a fetch failure, read `response.text()` (or JSON) so the server's `resultDescription` reaches the user/log instead of a bare status code.
-4. **Use `log.time(op, category)`** for any operation whose latency matters (DB calls, R2 reads, LLM calls). Call `.end({ resultSignature, ... })` once.
+4. **Use `log.time(op)`** for any operation whose latency matters (DB calls, R2 reads, LLM calls). Call `.end({ resultType, resultSignature, ... })` once.
 5. **Propagate `traceparent`** on outbound calls between WingDex tiers (web -> API, iOS -> API). Middleware accepts incoming `traceparent` and echoes back response trace headers.
-6. **Keep `properties` machine-queryable.** Counts, IDs, enum values yes; long prose no - that belongs in `resultDescription`.
+6. **Don't emit a "summary success" sub-step log.** Enrich `requestProperties` instead. Sub-step logs are for actual sub-steps (LLM call, range filter) or for warn/error paths that need their own dimension.
+7. **Keep `properties` machine-queryable.** Counts, IDs, enum values yes; long prose no - that belongs in `resultDescription`.
 
 If a route doesn't yet follow these rules, fix it as part of any nearby change. Patterns are exercised across `functions/api/**` and `functions/_middleware.ts` - copy from there.
