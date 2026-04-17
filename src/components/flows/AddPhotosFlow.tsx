@@ -943,9 +943,13 @@ function PerPhotoConfirm({
     let cancelled = false
     setBirdlifeFactsheetUrl(undefined)
     if (!selectedSpecies) return
-    void getBirdlifeFactsheetUrl(selectedSpecies).then(url => {
-      if (!cancelled) setBirdlifeFactsheetUrl(url)
-    })
+    void getBirdlifeFactsheetUrl(selectedSpecies)
+      .then(url => {
+        if (!cancelled) setBirdlifeFactsheetUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setBirdlifeFactsheetUrl(undefined)
+      })
     return () => {
       cancelled = true
     }

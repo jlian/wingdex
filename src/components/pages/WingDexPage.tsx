@@ -372,9 +372,13 @@ function SpeciesDetail({
         }
       })
 
-    void getBirdlifeFactsheetUrl(entry.speciesName).then(url => {
-      if (active) setBirdlifeUrl(url)
-    })
+    void getBirdlifeFactsheetUrl(entry.speciesName)
+      .then(url => {
+        if (active) setBirdlifeUrl(url)
+      })
+      .catch(() => {
+        if (active) setBirdlifeUrl(undefined)
+      })
 
     return () => {
       active = false

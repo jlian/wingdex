@@ -16,6 +16,11 @@ AVILIST_CANDIDATES = [
     ROOT / ".tmp" / "avilist-v2025-extended.xlsx",
 ]
 AVILIST_PATH = next((p for p in AVILIST_CANDIDATES if p.exists()), AVILIST_CANDIDATES[0])
+if not AVILIST_PATH.exists():
+    print("AviList workbook not found. Expected one of:", file=sys.stderr)
+    for candidate in AVILIST_CANDIDATES:
+        print(f"  - {candidate}", file=sys.stderr)
+    sys.exit(1)
 TAXONOMY_PATH = ROOT / "src" / "lib" / "taxonomy.json"
 OUTPUT_PATH = ROOT / ".tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
 

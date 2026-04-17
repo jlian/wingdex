@@ -32,13 +32,6 @@ struct PerPhotoConfirmView: View {
     private var scientificName: String? { getScientificName(selectedSpecies) }
     private var selectedPlumage: String? { candidates.first { $0.species == selectedSpecies }?.plumage }
 
-    private var birdlifeAttribution: AttributedString {
-        let datazoneURL = getBirdlifeFactsheetURL(for: selectedSpecies)?.absoluteString
-            ?? "https://datazone.birdlife.org"
-        let markdown = "Photos from [Wikimedia Commons](https://commons.wikimedia.org), range data from [BirdLife International](\(datazoneURL))."
-        return (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
-    }
-
     private func plumageIcon(_ p: String) -> String? {
         let l = p.lowercased()
         if l.contains("juvenile") || l.contains("immature") || l.contains("chick") { return "\u{1F423}" }
@@ -192,7 +185,7 @@ struct PerPhotoConfirmView: View {
                     .padding(.horizontal, 16)
 
                     speciesCard
-                    Text(birdlifeAttribution)
+                    Text("Photos from [Wikimedia Commons](https://commons.wikimedia.org), range data from [BirdLife International](https://datazone.birdlife.org).")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .tint(.secondary)

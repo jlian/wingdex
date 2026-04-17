@@ -171,50 +171,38 @@ func getScientificName(_ speciesName: String) -> String? {
     return String(speciesName[openParen.upperBound..<closeParen.lowerBound])
 }
 
-private let ebirdCodeLookup: [String: String] = {
+/// Lowercased common name lookups built from the bundled taxonomy.json in a single pass.
+/// Slot [2] -> eBird species code. Slot [5] -> BirdLife DataZone species ID.
+private let taxonomyLookups: (ebird: [String: String], birdlife: [String: String]) = {
     guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
           let data = try? Data(contentsOf: url),
           let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
     else {
-        return [:]
+        return ([:], [:])
     }
 
-    var lookup: [String: String] = [:]
-    lookup.reserveCapacity(rawEntries.count)
+    var ebird: [String: String] = [:]
+    var birdlife: [String: String] = [:]
+    ebird.reserveCapacity(rawEntries.count)
+    birdlife.reserveCapacity(rawEntries.count)
 
     for entry in rawEntries {
-        guard entry.count > 2,
-              let commonName = entry[0] as? String,
-              let ebirdCode = entry[2] as? String,
-              !ebirdCode.isEmpty
-        else { continue }
+        guard let commonName = entry.first as? String else { continue }
+        let key = commonName.lowercased()
 
-        lookup[commonName.lowercased()] = ebirdCode
+        if entry.count > 2, let code = entry[2] as? String, !code.isEmpty {
+            ebird[key] = code
+        }
+        if entry.count > 5, let id = entry[5] as? String, !id.isEmpty {
+            birdlife[key] = id
+        }
     }
 
-    return lookup
+    return (ebird, birdlife)
 }()
 
-/// Maps lowercased common name -> BirdLife DataZone species ID (taxonomy.json slot [5]).
-private let birdlifeIdLookup: [String: String] = {
-    guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
-          let data = try? Data(contentsOf: url),
-          let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
-    else {
-        return [:]
-    }
-
-    var lookup: [String: String] = [:]
-    for entry in rawEntries {
-        guard entry.count > 5,
-              let commonName = entry[0] as? String,
-              let birdlifeId = entry[5] as? String,
-              !birdlifeId.isEmpty
-        else { continue }
-        lookup[commonName.lowercased()] = birdlifeId
-    }
-    return lookup
-}()
+private var ebirdCodeLookup: [String: String] { taxonomyLookups.ebird }
+private var birdlifeIdLookup: [String: String] { taxonomyLookups.birdlife }
 
 /// Build the eBird species URL for a stored species name.
 func getEbirdURL(for speciesName: String) -> URL? {
