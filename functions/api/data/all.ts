@@ -100,7 +100,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     speciesComments: observation.speciesComments || undefined,
   }))
 
-  log?.debug('all.fetched', { category: 'Data', resultDescription: `Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, properties: { outings: outings.length, photos: photos.length, observations: observations.length, dex: dex.length } })
+  log?.debug('WingDex/Data/All/Read', { category: 'Data', resultDescription: `Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, properties: { outings: outings.length, photos: photos.length, observations: observations.length, dex: dex.length } })
 
   return Response.json({
     outings,

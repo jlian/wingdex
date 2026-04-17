@@ -148,12 +148,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.debug('observations.invalidJson', { category: 'Data', resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body is not valid JSON' })
+    log?.debug('WingDex/Data/Observations/Write', { category: 'Data', resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body is not valid JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
-    log?.debug('observations.invalidPayload', { category: 'Data', resultType: 'Failed', resultSignature: 400, resultDescription: 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}' })
+    log?.debug('WingDex/Data/Observations/Write', { category: 'Data', resultType: 'Failed', resultSignature: 400, resultDescription: 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}' })
     return new Response('Invalid observations payload', { status: 400 })
   }
 
@@ -209,7 +209,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   })
 
   await context.env.DB.batch(statements)
-  log?.debug('observations.batchInsert', { category: 'Data', resultDescription: `Inserted ${body.length} observations`, properties: { count: body.length } })
+  log?.debug('WingDex/Data/Observations/Write', { category: 'Data', resultDescription: `Inserted ${body.length} observations`, properties: { count: body.length } })
 
   const observations = body.map(observation => ({
     ...observation,

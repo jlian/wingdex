@@ -34,7 +34,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .prepare('UPDATE "user" SET isAnonymous = 0, name = ?, updatedAt = datetime(\'now\') WHERE id = ?')
     .bind(nextName, session.user.id)
     .run()
-  log?.info('auth.finalizePasskey', { category: 'Auth', resultType: 'Succeeded', resultDescription: 'User finalized passkey upgrade and is no longer anonymous' })
+  log?.info('WingDex/Auth/FinalizePasskey/Action', { category: 'Auth', resultType: 'Succeeded', resultDescription: 'User finalized passkey upgrade and is no longer anonymous' })
 
   return Response.json({ success: true })
 }

@@ -193,11 +193,11 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     .run()
 
   if (deleteResult.meta.changes === 0) {
-    log?.debug('outings.deleteNotFound', { category: 'Data', resultType: 'Failed', resultSignature: 404, resultDescription: `Outing ${outingId} not found or not owned by user` })
+    log?.debug('WingDex/Data/Outings/Delete', { category: 'Data', resultType: 'Failed', resultSignature: 404, resultDescription: `Outing ${outingId} not found or not owned by user` })
     return new Response('Not found', { status: 404 })
   }
 
-  log?.debug('outings.delete', { category: 'Data', resultDescription: `Deleted outing ${outingId}`, properties: { outingId } })
+  log?.debug('WingDex/Data/Outings/Delete', { category: 'Data', resultDescription: `Deleted outing ${outingId}`, properties: { outingId } })
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({ dexUpdates })
 }

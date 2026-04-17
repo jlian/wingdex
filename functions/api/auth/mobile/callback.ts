@@ -60,7 +60,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   if (!session?.user?.id || !session?.session?.token) {
-    log?.warn('mobileAuth.callbackNoSession', { category: 'Auth', resultType: 'Failed', resultDescription: 'Mobile OAuth callback could not resolve a session from cookies; the OAuth flow may have failed or cookies were lost' })
+    log?.warn('WingDex/Auth/MobileCallback/Action', { category: 'Auth', resultType: 'Failed', resultDescription: 'Mobile OAuth callback could not resolve a session from cookies; the OAuth flow may have failed or cookies were lost' })
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
     return Response.redirect(errorUrl, 302)
   }
