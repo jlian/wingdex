@@ -1,3 +1,15 @@
+# [1.20.0](https://github.com/jlian/wingdex/compare/v1.19.2...v1.20.0) (2026-04-17)
+
+
+### Features
+
+* **SpeciesDetails:** add species factsheet links to BirdLife from AviList DataZone IDs ([#244](https://github.com/jlian/wingdex/issues/244)) ([3cf270e](https://github.com/jlian/wingdex/commit/3cf270e497d4389a7492047bd2b3f8a5b1bf7781))
+
+
+### Performance Improvements
+
+* **Dev:** use remote R2 binding and persist local state outside workspace ([#245](https://github.com/jlian/wingdex/issues/245)) ([da50835](https://github.com/jlian/wingdex/commit/da5083502c455c3e09afb6a71bfdd50ec6300342)), closes [#244](https://github.com/jlian/wingdex/issues/244)
+
 ## [1.19.2](https://github.com/jlian/wingdex/compare/v1.19.1...v1.19.2) (2026-04-17)
 
 
