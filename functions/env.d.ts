@@ -21,3 +21,12 @@ interface Env {
   TRUSTED_ORIGINS?: string
   DEBUG?: string
 }
+
+/** Shape of context.data populated by _middleware.ts. */
+interface RequestData {
+  user?: { id?: string; isAnonymous?: boolean }
+  session?: { id: string }
+  traceId: string
+  spanId: string
+  log: import('./lib/log').Logger
+}

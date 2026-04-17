@@ -29,6 +29,10 @@ remote = true
 [observability]
 enabled = true
 
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+
 # Preview/dev, uses a separate database
 [env.preview]
 [env.preview.vars]
