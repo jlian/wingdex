@@ -97,7 +97,7 @@ export function parseCellBlob(data, wanted) {
 // ── Tiered confidence adjustment ────────────────────────────
 //
 // Four layers of multipliers, applied multiplicatively:
-//   1. Base: status (present=1.0, near-range=0.85, out-of-range=0.5)
+//   1. Base: status (present=1.0, near-range=0.85, out-of-range=0.65)
 //   2. Presence quality (Extant=1.0, Possibly Extant=0.95, etc.)
 //   3. Origin type (Native=1.0, Vagrant=0.85, etc.)
 //   4. Seasonal match (in-season=1.0, out-of-season=0.9)
@@ -105,7 +105,7 @@ export function parseCellBlob(data, wanted) {
 // Layers 2-4 only apply when status is 'present' or 'near-range'.
 
 export const NEAR_RANGE_TRUST = 0.85
-export const OUT_OF_RANGE_TRUST = 0.5
+export const OUT_OF_RANGE_TRUST = 0.65
 
 export function presenceTrust(presence) {
   switch (presence) {

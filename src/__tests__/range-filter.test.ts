@@ -49,7 +49,7 @@ describe('adjustConfidence', () => {
   })
 
   it('moderate penalty when out of range', () => {
-    expect(adjustConfidence(0.80, { status: 'out-of-range' })).toBeCloseTo(0.40)
+    expect(adjustConfidence(0.80, { status: 'out-of-range' })).toBeCloseTo(0.52)
   })
 
   it('near-range applies 0.85x base penalty', () => {

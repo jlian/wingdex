@@ -792,7 +792,7 @@ struct IdentifiedCandidate {
 }
 
 /// AI crop box in percentage coordinates (0-100).
-struct CropBoxResult {
+struct CropBoxResult: Sendable {
     let x: Double
     let y: Double
     let width: Double
