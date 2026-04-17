@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Build a BirdLife -> eBird crosswalk from AviList and export as JSON."""
+"""Build a BirdLife -> eBird crosswalk from AviList and export as JSON.
+
+Side effects:
+- Writes the crosswalk to .tmp/birdlife-shp/birdlife-crosswalk.json (OUTPUT_PATH).
+- Hydrates src/lib/taxonomy.json (TAXONOMY_PATH) tuple slot [5] in place
+  with each species' BirdLife DataZone numeric ID, so clients can build
+  factsheet URLs offline.
+"""
 import json
 import sys
 from pathlib import Path
@@ -34,8 +41,10 @@ wb = openpyxl.load_workbook(str(AVILIST_PATH), read_only=True)
 ws = wb[wb.sheetnames[0]]
 
 crosswalk = {}
-# Per-eBird-code BirdLife DataZone species IDs (from AviList column 16).
-# Species IDs are the numeric path segment of factsheet URLs like
+# Per-eBird-code BirdLife DataZone species IDs from AviList row[16]
+# (zero-based, i.e. the 17th column / spreadsheet column Q,
+# header "BirdLife_DataZone_URL"). Species IDs are the numeric path
+# segment of factsheet URLs like
 # https://datazone.birdlife.org/species/factsheet/45020636
 code_to_datazone = {}
 # Also build a protonym index: maps old/original binomials to the PARENT
