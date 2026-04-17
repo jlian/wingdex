@@ -35,6 +35,7 @@ import type { FlowStep, PhotoResult } from '@/lib/add-photos-helpers'
 import { useBirdGallery } from '@/hooks/use-bird-image'
 import { computePaddedSquareCropFromPercent } from '@/lib/crop-math'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
+import { getBirdlifeFactsheetUrl } from '@/lib/taxonomy-order'
 
 interface AddPhotosFlowProps {
   data: WingDexDataStore
@@ -936,6 +937,24 @@ function PerPhotoConfirm({
   const { images: galleryImages, loading: galleryLoading } = useBirdGallery(selectedSpecies)
   const [refLabel, setRefLabel] = useState<string>('Reference')
 
+  // Resolve BirdLife DataZone factsheet URL for the selected species.
+  const [birdlifeFactsheetUrl, setBirdlifeFactsheetUrl] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    setBirdlifeFactsheetUrl(undefined)
+    if (!selectedSpecies) return
+    void getBirdlifeFactsheetUrl(selectedSpecies)
+      .then(url => {
+        if (!cancelled) setBirdlifeFactsheetUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setBirdlifeFactsheetUrl(undefined)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSpecies])
+
   // Promote images matching the LLM's detected plumage to the front
   const sortedGallery = useMemo(() => {
     if (!selectedPlumage || galleryImages.length === 0) return galleryImages
@@ -1182,7 +1201,12 @@ function PerPhotoConfirm({
           Wikimedia Commons
         </a>
         {', '}range data from{' '}
-        <a href="https://datazone.birdlife.org" target="_blank" rel="noopener noreferrer" className="underline">
+        <a
+          href={birdlifeFactsheetUrl ?? 'https://datazone.birdlife.org'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
           BirdLife International
         </a>
         .

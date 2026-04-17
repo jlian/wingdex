@@ -10,6 +10,8 @@ type TaxonEntry = {
   wikiTitle?: string
   /** Path relative to COMMONS_PREFIX (e.g. "thumb/a/ab/Foo.jpg/330px-Foo.jpg"). */
   thumbnailPath?: string
+  /** BirdLife DataZone species ID, used to build factsheet URLs. */
+  birdlifeId?: string
 }
 
 const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
@@ -18,6 +20,7 @@ const taxonomy: TaxonEntry[] = (rawTaxonomy as unknown[]).map((entry: any) => ({
   ...(entry[2] ? { ebirdCode: entry[2] } : {}),
   ...(entry[3] ? { wikiTitle: entry[3] } : {}),
   ...(entry[4] ? { thumbnailPath: entry[4] } : {}),
+  ...(entry[5] ? { birdlifeId: entry[5] } : {}),
 }))
 
 const lowerIndex = taxonomy.map(taxon => ({
@@ -136,6 +139,14 @@ export function getEbirdCode(commonName: string): string {
 
 export function getSpeciesByCode(code: string): TaxonEntry | undefined {
   return byCodeLower.get(code.toLowerCase())
+}
+
+/** Return the BirdLife DataZone factsheet URL for a species, or undefined if unknown. */
+export function getBirdlifeFactsheetUrl(name: string): string | undefined {
+  const match = findBestMatch(name)
+  return match?.birdlifeId
+    ? `https://datazone.birdlife.org/species/factsheet/${match.birdlifeId}`
+    : undefined
 }
 
 export function getWikiMetadata(name: string): {
