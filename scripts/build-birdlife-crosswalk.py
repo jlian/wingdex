@@ -11,7 +11,11 @@ except ImportError:
     sys.exit(1)
 
 ROOT = Path(__file__).resolve().parent.parent
-AVILIST_PATH = ROOT / ".tmp" / "avilist-v2025-extended.xlsx"
+AVILIST_CANDIDATES = [
+    ROOT / ".tmp" / "AviList-v2025-11Jun-extended.xlsx",
+    ROOT / ".tmp" / "avilist-v2025-extended.xlsx",
+]
+AVILIST_PATH = next((p for p in AVILIST_CANDIDATES if p.exists()), AVILIST_CANDIDATES[0])
 TAXONOMY_PATH = ROOT / "src" / "lib" / "taxonomy.json"
 OUTPUT_PATH = ROOT / ".tmp" / "birdlife-shp" / "birdlife-crosswalk.json"
 
@@ -25,6 +29,10 @@ wb = openpyxl.load_workbook(str(AVILIST_PATH), read_only=True)
 ws = wb[wb.sheetnames[0]]
 
 crosswalk = {}
+# Per-eBird-code BirdLife DataZone species IDs (from AviList column 16).
+# Species IDs are the numeric path segment of factsheet URLs like
+# https://datazone.birdlife.org/species/factsheet/45020636
+code_to_datazone = {}
 # Also build a protonym index: maps old/original binomials to the PARENT
 # species eBird code. BirdLife BOTW often uses protonyms as species names
 # when they treat a subspecies as a full species (e.g., "Aethopyga latouchii"
@@ -43,12 +51,22 @@ def extract_bow_code(bow_url):
     m = re.search(r'/bow/species/([a-z0-9]+)', str(bow_url))
     return m.group(1) if m else ""
 
+
+def extract_datazone_id(url):
+    """Extract numeric species ID from a DataZone factsheet URL like
+    https://datazone.birdlife.org/species/factsheet/45020636"""
+    if not url:
+        return ""
+    m = re.search(r'/species/factsheet/(\d+)', str(url))
+    return m.group(1) if m else ""
+
 for row in ws.iter_rows(min_row=2, values_only=True):
     stats["total"] += 1
     rank = (row[1] or "").strip()
     sci_name = (row[5] or "").strip()
     raw_code = (row[17] or "").strip()
     bow_url = (row[18] or "").strip()
+    datazone_url = (row[16] or "").strip() if row[16] else ""
     protonym = (row[25] or "").strip()
 
     if not sci_name:
@@ -64,6 +82,9 @@ for row in ws.iter_rows(min_row=2, values_only=True):
     if rank == "species":
         validated_raw = raw_code if raw_code in ebird_valid_codes else ""
         current_species_code = bow_code or validated_raw or ebird_sci.get(sci_name.lower(), "") or raw_code
+        datazone_id = extract_datazone_id(datazone_url)
+        if datazone_id and current_species_code:
+            code_to_datazone.setdefault(current_species_code, datazone_id)
 
     ebird_code = raw_code
     if not ebird_code:
@@ -147,3 +168,40 @@ for name in ["Aethopyga latouchii", "Aethopyga christinae"]:
 # Write crosswalk JSON (lowercase sci_name -> ebird_code)
 OUTPUT_PATH.write_text(json.dumps(crosswalk, indent=2, sort_keys=True) + "\n")
 print(f"\nWrote {len(crosswalk)} entries to {OUTPUT_PATH}")
+
+# Hydrate taxonomy.json tuple slot [5] with BirdLife DataZone species IDs.
+# Tuple layout: [common, scientific, ebirdCode, wikiTitle, thumbnailPath, birdlifeId]
+print(f"\nBirdLife DataZone IDs collected: {len(code_to_datazone)}")
+taxonomy = json.loads(TAXONOMY_PATH.read_text())
+updated = 0
+for entry in taxonomy:
+    code = entry[2] if len(entry) > 2 else ""
+    datazone_id = code_to_datazone.get(code) if code else None
+    if not datazone_id:
+        # Trim any stale slot-5 value without inflating rows that have none.
+        if len(entry) >= 6:
+            entry[5] = ""
+        continue
+    # Pad missing wikiTitle/thumbnail slots with empty strings so [5] lands
+    # in the right column. The TS reader treats empty strings as absent.
+    while len(entry) < 5:
+        entry.append("")
+    if len(entry) < 6:
+        entry.append(datazone_id)
+    else:
+        entry[5] = datazone_id
+    updated += 1
+
+# Strip trailing empty strings per row to keep the file compact.
+for entry in taxonomy:
+    while len(entry) > 2 and entry[-1] == "":
+        entry.pop()
+
+TAXONOMY_PATH.write_text(
+    "[\n"
+    + ",\n".join(
+        json.dumps(e, ensure_ascii=False, separators=(",", ":")) for e in taxonomy
+    )
+    + "\n]\n"
+)
+print(f"Updated {updated} taxonomy.json entries with BirdLife DataZone IDs")

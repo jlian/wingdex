@@ -204,6 +204,12 @@ struct SpeciesDetailView: View {
                 Label("eBird", systemImage: "globe")
             }
         }
+
+        if let url = getBirdlifeFactsheetURL(for: speciesName) {
+            Link(destination: url) {
+                Label("BirdLife", systemImage: "leaf")
+            }
+        }
     }
 
     // MARK: - Wikipedia Fetch

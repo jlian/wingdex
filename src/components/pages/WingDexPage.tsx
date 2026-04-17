@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { getDisplayName, getScientificName } from '@/lib/utils'
 import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { formatStoredDate } from '@/lib/timezone'
-import { buildSyncOrderLookup } from '@/lib/taxonomy-order'
+import { buildSyncOrderLookup, getBirdlifeFactsheetUrl } from '@/lib/taxonomy-order'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 import type { DexEntry, Observation } from '@/lib/types'
 
@@ -356,6 +356,7 @@ function SpeciesDetail({
   const scientificName = getScientificName(entry.speciesName)
   const { summary } = useBirdSummary(entry.speciesName, { wikiTitle: entry.wikiTitle })
   const [ebirdUrl, setEbirdUrl] = useState(() => getEbirdUrl(displayName))
+  const [birdlifeUrl, setBirdlifeUrl] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     let active = true
@@ -370,6 +371,10 @@ function SpeciesDetail({
           setEbirdUrl(getEbirdUrl(displayName))
         }
       })
+
+    void getBirdlifeFactsheetUrl(entry.speciesName).then(url => {
+      if (active) setBirdlifeUrl(url)
+    })
 
     return () => {
       active = false
@@ -497,6 +502,14 @@ function SpeciesDetail({
               eBird
             </a>
           </Button>
+          {birdlifeUrl && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={birdlifeUrl} target="_blank" rel="noopener noreferrer">
+                <ArrowSquareOut size={14} className="mr-1.5" />
+                BirdLife
+              </a>
+            </Button>
+          )}
         </div>
 
         {/* Sighting history */}

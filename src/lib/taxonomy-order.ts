@@ -6,16 +6,21 @@
  */
 
 let orderMap: Map<string, number> | null = null
+let birdlifeMap: Map<string, string> | null = null
 
 async function loadOrderMap(): Promise<Map<string, number>> {
   if (orderMap) return orderMap
   const raw = (await import('./taxonomy.json')).default as unknown[][]
   const map = new Map<string, number>()
+  const bl = new Map<string, string>()
   for (let i = 0; i < raw.length; i++) {
     const common = raw[i][0] as string
     map.set(common.toLowerCase(), i)
+    const birdlifeId = raw[i][5] as string | undefined
+    if (birdlifeId) bl.set(common.toLowerCase(), birdlifeId)
   }
   orderMap = map
+  birdlifeMap = bl
   return map
 }
 
@@ -44,4 +49,17 @@ export async function buildSyncOrderLookup(
     cache.set(name, map.get(display) ?? Number.MAX_SAFE_INTEGER)
   }
   return (name: string) => cache.get(name) ?? Number.MAX_SAFE_INTEGER
+}
+
+/**
+ * Return the BirdLife DataZone factsheet URL for a species, or undefined if unknown.
+ * Lazy-loads the taxonomy on first call (shares the cache with order lookups).
+ */
+export async function getBirdlifeFactsheetUrl(
+  speciesName: string
+): Promise<string | undefined> {
+  await loadOrderMap()
+  const display = speciesName.split('(')[0].trim().toLowerCase()
+  const id = birdlifeMap?.get(display)
+  return id ? `https://datazone.birdlife.org/species/factsheet/${id}` : undefined
 }

@@ -195,9 +195,37 @@ private let ebirdCodeLookup: [String: String] = {
     return lookup
 }()
 
+/// Maps lowercased common name -> BirdLife DataZone species ID (taxonomy.json slot [5]).
+private let birdlifeIdLookup: [String: String] = {
+    guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
+          let data = try? Data(contentsOf: url),
+          let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
+    else {
+        return [:]
+    }
+
+    var lookup: [String: String] = [:]
+    for entry in rawEntries {
+        guard entry.count > 5,
+              let commonName = entry[0] as? String,
+              let birdlifeId = entry[5] as? String,
+              !birdlifeId.isEmpty
+        else { continue }
+        lookup[commonName.lowercased()] = birdlifeId
+    }
+    return lookup
+}()
+
 /// Build the eBird species URL for a stored species name.
 func getEbirdURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
     guard let ebirdCode = ebirdCodeLookup[commonName.lowercased()] else { return nil }
     return URL(string: "https://ebird.org/species/\(ebirdCode)")
+}
+
+/// Build the BirdLife DataZone factsheet URL for a stored species name.
+func getBirdlifeFactsheetURL(for speciesName: String) -> URL? {
+    let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let id = birdlifeIdLookup[commonName.lowercased()] else { return nil }
+    return URL(string: "https://datazone.birdlife.org/species/factsheet/\(id)")
 }
