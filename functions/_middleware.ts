@@ -1,5 +1,5 @@
 import { createAuth } from './lib/auth'
-import { createLogger } from './lib/log'
+import { createLogger, methodToAction } from './lib/log'
 import { parseTraceparent, generateTraceContext, childSpanId, formatTraceparent } from './lib/trace-context'
 
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'])
@@ -54,8 +54,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     ? { traceId: incoming.traceId, spanId: childSpanId(), traceFlags: incoming.traceFlags }
     : generateTraceContext()
   const method = context.request.method
+  const action = methodToAction(method)
+  const requestOp = `${pathname}/${action}`
   const hasBearer = !!context.request.headers.get('authorization')
-  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, { authMethod: hasBearer ? 'bearer' : 'session' }, method, pathname)
+  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, { authMethod: hasBearer ? 'bearer' : 'session' })
 
   // Store on context.data for route handlers
   context.data.traceId = traceCtx.traceId
@@ -66,7 +68,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
-    log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
+    log.warn(requestOp, { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
     return errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -79,14 +81,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
-      log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
+      log.warn(requestOp, { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
       return errorResponse('Invalid Content-Length', 400)
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
-        log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
+        log.warn(requestOp, { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
         return errorResponse('Payload Too Large', 413)
       }
     }
@@ -97,10 +99,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      log.info('WingDex/Request/End', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, durationMs: Date.now() - start })
+      log.info(requestOp, { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, durationMs: Date.now() - start })
       return response
     } catch (err) {
-      return handleUnexpectedError(err, log, traceCtx, method, pathname, start)
+      return handleUnexpectedError(err, log, traceCtx, requestOp, start)
     }
   }
 
@@ -112,7 +114,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   if (!session) {
     log.debug('WingDex/Auth/Session/Read', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token' })
-    log.info('WingDex/Request/End', { category: 'Request', resultType: 'Failed', resultSignature: 401, durationMs: Date.now() - start })
+    log.info(requestOp, { category: 'Request', resultType: 'Failed', resultSignature: 401, durationMs: Date.now() - start })
     return errorResponse('Unauthorized', 401)
   }
 
@@ -124,16 +126,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     isAnonymous: !!(session.user as { isAnonymous?: boolean }).isAnonymous,
     authMethod: hasBearer ? 'bearer' : 'session',
   }
-  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, identity, method, pathname)
+  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, identity)
   context.data.log = authedLog
 
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    authedLog.info('WingDex/Request/End', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, durationMs: Date.now() - start })
+    authedLog.info(requestOp, { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, durationMs: Date.now() - start })
     return response
   } catch (err) {
-    return handleUnexpectedError(err, authedLog, traceCtx, method, pathname, start)
+    return handleUnexpectedError(err, authedLog, traceCtx, requestOp, start)
   }
 }
 
@@ -148,13 +150,12 @@ function handleUnexpectedError(
   err: unknown,
   log: ReturnType<typeof createLogger>,
   traceCtx: { traceId: string; spanId: string; traceFlags: string },
-  method: string,
-  pathname: string,
+  operationName: string,
   start: number,
 ): Response {
   const message = err instanceof Error ? err.message : String(err)
   const stack = err instanceof Error ? err.stack : undefined
-  log.error('WingDex/Request/Unhandled', {
+  log.error(operationName, {
     category: 'Request',
     resultType: 'Failed',
     resultSignature: 500,
