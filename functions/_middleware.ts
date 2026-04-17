@@ -91,8 +91,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // Auth routes -- skip session check but still apply security headers + tracing.
-  if (pathname.startsWith('/api/auth')) {
+  // Auth routes and health endpoint -- skip session check but still apply security headers + tracing.
+  if (pathname.startsWith('/api/auth') || pathname === '/api/health') {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)

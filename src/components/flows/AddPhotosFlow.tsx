@@ -174,11 +174,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setPhotoProgress(100)
         await wait(240)
         if (fastResult.multipleBirds) {
-          console.log('Multiple birds detected by fast model, asking user to crop before escalation')
+          if (import.meta.env.DEV) console.log('Multiple birds detected by fast model, asking user to crop before escalation')
           toast.info('Multiple birds detected, crop to one')
           setCurrentCandidates(fastResult.candidates)
         } else {
-          console.log('No species identified by fast model, asking user to crop before escalation')
+          if (import.meta.env.DEV) console.log('No species identified by fast model, asking user to crop before escalation')
           setCurrentCandidates([])
         }
         setRangeAdjusted(false)
@@ -213,7 +213,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         })()
         : fastResult
 
-      console.log(`✅ Found ${result.candidates.length} candidates`)
+      if (import.meta.env.DEV) console.log(`Found ${result.candidates.length} candidates`)
       setPhotoProgress(100)
       await wait(240)
 
@@ -228,11 +228,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
       if (result.candidates.length === 0 && !imageUrl) {
         // No species found on full image, ask user to crop and retry
-        console.log('No species identified, asking user to crop or skip')
+        if (import.meta.env.DEV) console.log('No species identified, asking user to crop or skip')
         setStep('photo-manual-crop')
       } else if (result.multipleBirds && !imageUrl) {
         // Multiple birds detected, let user crop to the one they want
-        console.log('Multiple birds detected, asking user to crop')
+        if (import.meta.env.DEV) console.log('Multiple birds detected, asking user to crop')
         toast.info('Multiple birds detected, crop to one')
         setCurrentCandidates(result.candidates)
         setRangeAdjusted(result.rangeAdjusted === true)
@@ -243,7 +243,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setStep('photo-confirm')
       }
     } catch (error) {
-      console.error('Species ID failed:', error)
+      if (import.meta.env.DEV) console.error('Species ID failed:', error)
       const msg = error instanceof Error ? error.message : 'Species identification failed'
       toast.error(msg)
       setCurrentCandidates([])
@@ -416,8 +416,8 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const file = files[i]
       try {
         const exif = await extractEXIF(file)
-        console.log(
-          `📷 ${file.name}: EXIF = time:${exif.timestamp || 'none'}, GPS:${
+        if (import.meta.env.DEV) console.log(
+          `${file.name}: EXIF = time:${exif.timestamp || 'none'}, GPS:${
             exif.gps
               ? `${exif.gps.lat.toFixed(4)},${exif.gps.lon.toFixed(4)}`
               : 'none'
@@ -459,7 +459,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           newPhotos.push(photo)
         }
       } catch (error) {
-        console.error(`Failed to process ${file.name}:`, error)
+        if (import.meta.env.DEV) console.error(`Failed to process ${file.name}:`, error)
         toast.error(`Failed to process ${file.name}`)
       }
       setProgress(((i + 1) / files.length) * 100)

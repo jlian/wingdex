@@ -38,6 +38,9 @@ function validateMonth(month: number | undefined): number | undefined {
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
+  const log = (context.data as RequestData).log
+  const traceId = (context.data as RequestData).traceId
+  const spanId = (context.data as RequestData).spanId
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
@@ -128,7 +131,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       month,
       locationName,
       modelTier: model,
-    })
+    }, log, traceId, spanId)
 
     return Response.json(result)
   } catch (error) {
@@ -146,9 +149,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }
 
     if (error instanceof Error) {
-      console.error('Unexpected error during bird identification:', error)
+      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', properties: { error: error.message, stack: error.stack } })
     } else {
-      console.error('Unexpected non-Error thrown during bird identification:', error)
+      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', properties: { error: String(error) } })
     }
 
     return new Response('An unexpected error occurred during bird identification', { status: 500 })

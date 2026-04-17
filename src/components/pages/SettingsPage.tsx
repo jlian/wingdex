@@ -230,7 +230,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to import eBird data: ${detail}`)
-      console.error(error)
+      if (import.meta.env.DEV) console.error(error)
     }
 
     if (importFileRef.current) {

@@ -128,7 +128,7 @@ export default function OutingReview({
       // 2) natural feature at point (strait/bay/lake/cliff/etc.)
       // 3) neighborhood-level reverse geocode
       // 4) city-level reverse geocode
-      console.log('📍 Reverse geocoding via Nominatim...')
+      if (import.meta.env.DEV) console.log('Reverse geocoding via Nominatim...')
 
       const scoreResult = (result: any): number => {
         if (!result) return 0
@@ -275,18 +275,18 @@ export default function OutingReview({
 
       if (!name) throw new Error('No location name returned')
       
-      console.log('✅ Location identified:', name)
+      if (import.meta.env.DEV) console.log('Location identified:', name)
       setSuggestedLocation(name)
       setLocationName(name)
       const region = extractRegionCodes(sourceResult)
       setInferredStateProvince(region.stateProvince)
       setInferredCountryCode(region.countryCode)
     } catch (error) {
-      console.error('❌ Reverse geocoding failed:', error)
+      if (import.meta.env.DEV) console.error('Reverse geocoding failed:', error)
       toast.warning('Could not look up location name, using coordinates instead')
       // Fall back to default location or coordinate string
       const fallback = defaultLocationName || `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
-      console.log('⚠️ Using fallback:', fallback)
+      if (import.meta.env.DEV) console.log('Using fallback:', fallback)
       setSuggestedLocation(fallback)
       setLocationName(fallback)
       setInferredStateProvince(undefined)
@@ -394,7 +394,7 @@ export default function OutingReview({
       const results = await res.json()
       setPlaceResults(results)
     } catch (error) {
-      console.error('Place search failed:', error)
+      if (import.meta.env.DEV) console.error('Place search failed:', error)
       toast.error('Place search failed')
     } finally {
       setIsSearchingPlace(false)
