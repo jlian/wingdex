@@ -15,6 +15,8 @@ export interface LogFields {
   category?: string
   resultType?: ResultType
   resultSignature?: number | string
+  /** Human-readable description: context of what was attempted, what happened, and how to fix (for errors). */
+  resultDescription?: string
   durationMs?: number
   properties?: Record<string, unknown>
 }
@@ -54,6 +56,7 @@ export function createLogger(
     if (fields?.category) entry.category = fields.category
     if (fields?.resultType) entry.resultType = fields.resultType
     if (fields?.resultSignature !== undefined) entry.resultSignature = fields.resultSignature
+    if (fields?.resultDescription) entry.resultDescription = fields.resultDescription
     if (fields?.durationMs !== undefined) entry.durationMs = fields.durationMs
     if (userId) entry.userId = userId
     if (fields?.properties) entry.properties = fields.properties

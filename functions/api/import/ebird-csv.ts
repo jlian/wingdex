@@ -42,7 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const profileTimezone = formData.get('profileTimezone')
   const csvContent = await file.text()
   const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
-  log.debug('importCsv.parsed', { category: 'Import', properties: { fileSize: file.size, rowCount: previews.length } })
+  log.debug('importCsv.parsed', { category: 'Import', resultDescription: `Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, properties: { fileSize: file.size, rowCount: previews.length } })
 
   const existingDexRows = await computeDex(context.env.DB, userId)
   const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))

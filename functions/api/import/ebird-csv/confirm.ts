@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        log.warn('importConfirm.invalidPreviewId', { category: 'Import', properties: { reason: 'decode_failed' } })
+        log.warn('importConfirm.invalidPreviewId', { category: 'Import', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted', properties: { reason: 'decode_failed' } })
         return false
       }
       return true
@@ -188,7 +188,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
-  log.debug('importConfirm.batchInsert', { category: 'Import', properties: { outings: outings.length, observations: observations.length, statements: insertStatements.length } })
+  log.debug('importConfirm.batchInsert', { category: 'Import', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations in ${insertStatements.length} statements`, properties: { outings: outings.length, observations: observations.length, statements: insertStatements.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length

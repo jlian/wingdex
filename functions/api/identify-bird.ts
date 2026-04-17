@@ -149,9 +149,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }
 
     if (error instanceof Error) {
-      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', properties: { error: error.message, stack: error.stack } })
+      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', resultDescription: `Bird identification failed unexpectedly: ${error.message}`, properties: { error: error.message, stack: error.stack } })
     } else {
-      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', properties: { error: String(error) } })
+      log?.error('birdId.unexpected', { category: 'BirdId', resultType: 'Failed', resultDescription: `Bird identification failed with non-Error value: ${String(error)}`, properties: { error: String(error) } })
     }
 
     return new Response('An unexpected error occurred during bird identification', { status: 500 })

@@ -121,7 +121,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
 
-  log?.debug('birdId.llmRawCandidates', { category: 'BirdId', properties: { candidates: parsed.candidates } })
+  log?.debug('birdId.llmRawCandidates', { category: 'BirdId', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidates: parsed.candidates } })
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
@@ -158,11 +158,11 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     return true
   })
 
-  log?.debug('birdId.taxonomyMatch', { category: 'BirdId', properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, plumage: c.plumage ?? null, code: c.ebirdCode })) } })
+  log?.debug('birdId.taxonomyMatch', { category: 'BirdId', resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, plumage: c.plumage ?? null, code: c.ebirdCode })) } })
 
   // Apply range-prior adjustment if location is available
   const hasRangeBucket = env.RANGE_PRIORS != null
-  log?.debug('birdId.rangeFilter', { category: 'BirdId', properties: { location: input.location ? `${input.location.lat},${input.location.lon}` : 'none', bucket: hasRangeBucket } })
+  log?.debug('birdId.rangeFilter', { category: 'BirdId', resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { location: input.location ? `${input.location.lat},${input.location.lon}` : 'none', bucket: hasRangeBucket } })
 
   let rangeAdjusted = false
 
@@ -175,7 +175,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       input.month,
       codes,
     )
-    log?.debug('birdId.rangePriors', { category: 'BirdId', properties: { priors: Object.fromEntries(priors) } })
+    log?.debug('birdId.rangePriors', { category: 'BirdId', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { priors: Object.fromEntries(priors) } })
     rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
@@ -183,7 +183,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       return { ...c, confidence: adjustConfidence(c.confidence, range, input.month, input.location!.lat), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
-    log?.debug('birdId.rangeAdjusted', { category: 'BirdId', properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, range: c.rangeStatus ?? 'n/a' })) } })
+    log?.debug('birdId.rangeAdjusted', { category: 'BirdId', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, range: c.rangeStatus ?? 'n/a' })) } })
   }
 
   const result = {
@@ -195,6 +195,6 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     multipleBirds: parsed.multipleBirds === true,
     ...(rangeAdjusted ? { rangeAdjusted: true } : {}),
   }
-  log?.debug('birdId.finalResponse', { category: 'BirdId', properties: { candidateCount: result.candidates.length, multipleBirds: result.multipleBirds, rangeAdjusted: result.rangeAdjusted } })
+  log?.debug('birdId.finalResponse', { category: 'BirdId', resultDescription: `Returning ${result.candidates.length} candidates, multipleBirds=${result.multipleBirds ?? false}, rangeAdjusted=${result.rangeAdjusted ?? false}`, properties: { candidateCount: result.candidates.length, multipleBirds: result.multipleBirds, rangeAdjusted: result.rangeAdjusted } })
   return result
 }

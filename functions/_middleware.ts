@@ -65,7 +65,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
-    log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, properties: { reason: 'method_not_allowed' } })
+    log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS`, properties: { reason: 'method_not_allowed' } })
     return errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -78,14 +78,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
-      log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, properties: { reason: 'invalid_content_length' } })
+      log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number', properties: { reason: 'invalid_content_length' } })
       return errorResponse('Invalid Content-Length', 400)
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
-        log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, properties: { reason: 'payload_too_large', limit } })
+        log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit for ${pathname}`, properties: { reason: 'payload_too_large', limit } })
         return errorResponse('Payload Too Large', 413)
       }
     }
@@ -96,7 +96,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      log.info('req.end', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, durationMs: Date.now() - start, properties: { method, path: pathname } })
+      log.info('req.end', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, resultDescription: `${method} ${pathname} completed`, durationMs: Date.now() - start, properties: { method, path: pathname } })
       return response
     } catch (err) {
       return handleUnexpectedError(err, log, traceCtx, method, pathname, start)
@@ -110,8 +110,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
-    log.debug('auth.rejected', { category: 'Auth', resultType: 'Failed', resultSignature: 401, properties: { method, path: pathname, bearer: !!context.request.headers.get('authorization') } })
-    log.info('req.end', { category: 'Request', resultType: 'Failed', resultSignature: 401, durationMs: Date.now() - start, properties: { method, path: pathname } })
+    log.debug('auth.rejected', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: `Session lookup failed for ${method} ${pathname}; no valid session cookie or bearer token`, properties: { method, path: pathname, bearer: !!context.request.headers.get('authorization') } })
+    log.info('req.end', { category: 'Request', resultType: 'Failed', resultSignature: 401, resultDescription: `${method} ${pathname} rejected: unauthorized`, durationMs: Date.now() - start, properties: { method, path: pathname } })
     return errorResponse('Unauthorized', 401)
   }
 
@@ -124,7 +124,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    authedLog.info('req.end', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, durationMs: Date.now() - start, properties: { method, path: pathname } })
+    authedLog.info('req.end', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, resultDescription: `${method} ${pathname} completed with ${response.status}`, durationMs: Date.now() - start, properties: { method, path: pathname } })
     return response
   } catch (err) {
     return handleUnexpectedError(err, authedLog, traceCtx, method, pathname, start)
@@ -152,6 +152,7 @@ function handleUnexpectedError(
     category: 'Request',
     resultType: 'Failed',
     resultSignature: 500,
+    resultDescription: `Unhandled error in ${method} ${pathname}: ${message}`,
     durationMs: Date.now() - start,
     properties: { method, path: pathname, error: message, stack },
   })

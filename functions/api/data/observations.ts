@@ -207,7 +207,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   })
 
   await context.env.DB.batch(statements)
-  log.debug('observations.batchInsert', { category: 'Data', properties: { count: body.length } })
+  log.debug('observations.batchInsert', { category: 'Data', resultDescription: `Inserted ${body.length} observations`, properties: { count: body.length } })
 
   const observations = body.map(observation => ({
     ...observation,
