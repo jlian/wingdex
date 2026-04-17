@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        log?.warn('importConfirm.invalidPreviewId', { category: 'Import', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted', properties: { reason: 'decode_failed' } })
+        log?.warn('importConfirm.invalidPreviewId', { category: 'Import', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
         return false
       }
       return true

@@ -53,19 +53,19 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const traceCtx = incoming
     ? { traceId: incoming.traceId, spanId: childSpanId(), traceFlags: incoming.traceFlags }
     : generateTraceContext()
-  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId)
+  const method = context.request.method
+  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, undefined, method, pathname)
 
   // Store on context.data for route handlers
   context.data.traceId = traceCtx.traceId
   context.data.spanId = traceCtx.spanId
   context.data.log = log
 
-  const method = context.request.method
   const start = Date.now()
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
-    log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS`, properties: { reason: 'method_not_allowed' } })
+    log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
     return errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -78,14 +78,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
-      log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number', properties: { reason: 'invalid_content_length' } })
+      log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
       return errorResponse('Invalid Content-Length', 400)
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
-        log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit for ${pathname}`, properties: { reason: 'payload_too_large', limit } })
+        log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
         return errorResponse('Payload Too Large', 413)
       }
     }
@@ -96,7 +96,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      log.info('req.end', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, resultDescription: `${method} ${pathname} completed`, durationMs: Date.now() - start, properties: { method, path: pathname } })
+      log.info('req.end', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, resultDescription: `Completed with ${response.status}`, durationMs: Date.now() - start })
       return response
     } catch (err) {
       return handleUnexpectedError(err, log, traceCtx, method, pathname, start)
@@ -110,21 +110,21 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
-    log.debug('auth.rejected', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: `Session lookup failed for ${method} ${pathname}; no valid session cookie or bearer token`, properties: { method, path: pathname, bearer: !!context.request.headers.get('authorization') } })
-    log.info('req.end', { category: 'Request', resultType: 'Failed', resultSignature: 401, resultDescription: `${method} ${pathname} rejected: unauthorized`, durationMs: Date.now() - start, properties: { method, path: pathname } })
+    log.debug('auth.rejected', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token', properties: { bearer: !!context.request.headers.get('authorization') } })
+    log.info('req.end', { category: 'Request', resultType: 'Failed', resultSignature: 401, resultDescription: 'Rejected: unauthorized', durationMs: Date.now() - start })
     return errorResponse('Unauthorized', 401)
   }
 
   context.data.user = session.user
   context.data.session = session.session
   // Re-create logger with userId for downstream logs
-  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, session.user.id)
+  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, session.user.id, method, pathname)
   context.data.log = authedLog
 
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    authedLog.info('req.end', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, resultDescription: `${method} ${pathname} completed with ${response.status}`, durationMs: Date.now() - start, properties: { method, path: pathname } })
+    authedLog.info('req.end', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, resultDescription: `Completed with ${response.status}`, durationMs: Date.now() - start })
     return response
   } catch (err) {
     return handleUnexpectedError(err, authedLog, traceCtx, method, pathname, start)
@@ -152,9 +152,9 @@ function handleUnexpectedError(
     category: 'Request',
     resultType: 'Failed',
     resultSignature: 500,
-    resultDescription: `Unhandled error in ${method} ${pathname}: ${message}`,
+    resultDescription: `Unhandled error: ${message}`,
     durationMs: Date.now() - start,
-    properties: { method, path: pathname, error: message, stack },
+    properties: { error: message, stack },
   })
   const response = errorResponse('Internal Server Error', 500)
   addTraceHeaders(response, traceCtx)

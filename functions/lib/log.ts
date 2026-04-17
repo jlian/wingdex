@@ -34,12 +34,16 @@ export interface TimedSpan {
   end(fields?: Omit<LogFields, 'durationMs' | 'category'>): void
 }
 
-/** Create a logger bound to a specific trace + user context. */
+/** Create a logger bound to a specific request + trace context. */
 export function createLogger(
   env: { DEBUG?: string },
   traceId: string,
   spanId: string,
   userId?: string,
+  /** HTTP method of the request (GET, POST, etc.) */
+  method?: string,
+  /** URL pathname of the request (/api/data/observations, etc.) */
+  path?: string,
 ): Logger {
   const isDebug = !!env.DEBUG
 
@@ -53,6 +57,8 @@ export function createLogger(
       spanId,
       operationName,
     }
+    if (method) entry.method = method
+    if (path) entry.path = path
     if (fields?.category) entry.category = fields.category
     if (fields?.resultType) entry.resultType = fields.resultType
     if (fields?.resultSignature !== undefined) entry.resultSignature = fields.resultSignature

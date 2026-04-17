@@ -9,7 +9,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return Response.json({ status: 'degraded', db: 'unexpected' }, { status: 503 })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    log?.error('health.dbError', { category: 'Health', resultType: 'Failed', resultSignature: 503, resultDescription: `D1 health check failed: ${message}`, properties: { error: message } })
+    log?.error('health.dbError', { category: 'Health', resultType: 'Failed', resultSignature: 503, resultDescription: `D1 health check failed: ${message}` })
     return Response.json({ status: 'degraded', db: 'error' }, { status: 503 })
   }
 }
