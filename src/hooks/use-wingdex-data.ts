@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Photo, Outing, Observation, DexEntry } from '@/lib/types'
 import { getUserStorageKey } from '@/lib/storage-keys'
 import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
+import { logClientFailure } from '@/lib/client-log'
 
 export type WingDexDataStore = ReturnType<typeof useWingDexData>
 
@@ -235,10 +236,11 @@ export function useWingDexData(userId: string) {
           body: JSON.stringify(requestBody),
         })
 
-      void postPhotos().catch(() => {
+      void postPhotos().catch(err => {
         window.setTimeout(() => {
-          void postPhotos().catch(() => undefined)
+          void postPhotos().catch(retryErr => logClientFailure('hooks.addPhotos', retryErr, { count: requestBody.length, retried: true }))
         }, 600)
+        logClientFailure('hooks.addPhotos', err, { count: requestBody.length, willRetry: true })
       })
     }
   }
@@ -267,7 +269,7 @@ export function useWingDexData(userId: string) {
             return next
           })
         })
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.addOuting', err, { outingId: outing.id }))
     }
   }
 
@@ -296,7 +298,7 @@ export function useWingDexData(userId: string) {
             }
           })
         })
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.updateOuting', err, { outingId }))
     }
   }
 
@@ -318,7 +320,7 @@ export function useWingDexData(userId: string) {
     if (storageMode === 'api') {
       void apiJson<{ dexUpdates: DexEntry[] }>(`/api/data/outings/${outingId}`, { method: 'DELETE' })
         .then(response => applyDexUpdates(response.dexUpdates))
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.deleteOuting', err, { outingId }))
     }
   }
 
@@ -351,7 +353,7 @@ export function useWingDexData(userId: string) {
             return next
           })
         })
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.addObservations', err, { count: newObservations.length }))
     }
   }
 
@@ -395,7 +397,7 @@ export function useWingDexData(userId: string) {
             }
           })
         })
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.updateObservation', err, { observationId }))
     }
   }
 
@@ -438,7 +440,7 @@ export function useWingDexData(userId: string) {
             }
           })
         })
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.bulkUpdateObservations', err, { count: ids.length }))
     }
   }
 
@@ -568,7 +570,7 @@ export function useWingDexData(userId: string) {
         body: JSON.stringify(patches),
       })
         .then(response => applyDexUpdates(response.dexUpdates))
-        .catch(() => undefined)
+        .catch(err => logClientFailure('hooks.importDexEntries', err, { count: patches.length }))
     }
   }
 
@@ -582,7 +584,8 @@ export function useWingDexData(userId: string) {
     applyPayload(next)
 
     if (storageMode === 'api') {
-      void apiJson<{ cleared: boolean }>('/api/data/clear', { method: 'DELETE' }).catch(() => undefined)
+      void apiJson<{ cleared: boolean }>('/api/data/clear', { method: 'DELETE' })
+        .catch(err => logClientFailure('hooks.clearAllData', err))
     }
 
     if (typeof window !== 'undefined' && window.localStorage) {

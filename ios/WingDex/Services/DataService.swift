@@ -199,7 +199,7 @@ final class DataService: Sendable {
         try await attachAuth(&request)
 
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: "api/import/ebird-csv", method: "POST", start: Date(), byteCount: responseData.count)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
         return preview.previews
@@ -236,10 +236,9 @@ final class DataService: Sendable {
         var request = URLRequest(url: url)
         try await attachAuth(&request)
 
-        log.debug("GET \(path)")
+        let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data)
-        log.debug("GET \(path) -> \(data.count) bytes")
+        try await validate(response, data: data, path: path, method: "GET", start: start, byteCount: data.count)
         return data
     }
 
@@ -252,8 +251,9 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
+        let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: path, method: "POST", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -266,8 +266,9 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
+        let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: path, method: "PATCH", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -278,8 +279,9 @@ final class DataService: Sendable {
         request.httpMethod = "DELETE"
         try await attachAuth(&request)
 
+        let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data)
+        try await validate(response, data: data, path: path, method: "DELETE", start: start, byteCount: data.count)
         return data
     }
 
@@ -303,15 +305,16 @@ final class DataService: Sendable {
         return "00-\(traceId)-\(spanId)-01"
     }
 
-    private func validate(_ response: URLResponse, data: Data) async throws {
+    private func validate(_ response: URLResponse, data: Data, path: String = "?", method: String = "?", start: Date? = nil, byteCount: Int? = nil) async throws {
         guard let http = response as? HTTPURLResponse else {
             throw DataServiceError.networkError("Invalid response")
         }
-        let path = http.url?.path ?? "?"
-        log.debug("Response: \(http.statusCode) for \(path)")
+        let durationMs = start.map { Int(Date().timeIntervalSince($0) * 1000) }
+        let durationFragment = durationMs.map { " \($0)ms" } ?? ""
+        let bytesFragment = byteCount.map { " \($0)B" } ?? ""
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("HTTP \(http.statusCode) \(http.url?.path ?? "?"): \(body)")
+            log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body)")
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.
             if http.statusCode == 401 {
@@ -319,6 +322,7 @@ final class DataService: Sendable {
             }
             throw DataServiceError.httpError(http.statusCode, body)
         }
+        log.debug("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment)")
     }
 }
 
