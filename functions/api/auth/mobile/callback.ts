@@ -45,6 +45,7 @@ function extractSignedSessionToken(cookieHeader: string | null): string | null {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const log = (context.data as RequestData).log
   // Try default mode first so localhost e2e/local cookies keep working.
   // If that does not resolve a session but the request carries a secure hosted
   // session cookie, retry in hosted-oauth mode so Better Auth uses the hosted
@@ -59,6 +60,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   if (!session?.user?.id || !session?.session?.token) {
+    log?.warn('mobileAuth.callbackNoSession', { category: 'Auth', resultType: 'Failed', resultDescription: 'Mobile OAuth callback could not resolve a session from cookies; the OAuth flow may have failed or cookies were lost' })
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
     return Response.redirect(errorUrl, 302)
   }

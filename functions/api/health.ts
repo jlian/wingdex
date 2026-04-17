@@ -1,11 +1,15 @@
 export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const log = (context.data as RequestData).log
   try {
     const result = await context.env.DB.prepare('SELECT 1 AS ok').first<{ ok: number }>()
     if (result?.ok === 1) {
       return Response.json({ status: 'ok', db: 'ok' })
     }
+    log?.warn('health.dbUnexpected', { category: 'Health', resultType: 'Failed', resultSignature: 503, resultDescription: 'D1 health check returned an unexpected result; the database may be in a degraded state' })
     return Response.json({ status: 'degraded', db: 'unexpected' }, { status: 503 })
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log?.error('health.dbError', { category: 'Health', resultType: 'Failed', resultSignature: 503, resultDescription: `D1 health check failed: ${message}`, properties: { error: message } })
     return Response.json({ status: 'degraded', db: 'error' }, { status: 503 })
   }
 }

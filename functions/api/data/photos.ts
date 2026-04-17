@@ -86,6 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   )
 
   await context.env.DB.batch(statements)
+  log?.debug('photos.batchInsert', { category: 'Data', resultDescription: `Inserted ${body.length} photos`, properties: { count: body.length } })
 
   return Response.json(
     body.map(photo => ({

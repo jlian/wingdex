@@ -136,6 +136,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {
+      log?.warn('birdId.rateLimited', { category: 'BirdId', resultType: 'Failed', resultSignature: 429, resultDescription: `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, properties: { retryAfterSeconds: error.retryAfterSeconds } })
       return new Response(error.message, {
         status: error.status,
         headers: {
@@ -145,6 +146,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }
 
     if (error instanceof HttpError) {
+      log?.warn('birdId.httpError', { category: 'BirdId', resultType: 'Failed', resultSignature: error.status, resultDescription: `Bird identification failed: ${error.message}` })
       return new Response(error.message, { status: error.status })
     }
 

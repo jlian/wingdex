@@ -19,6 +19,7 @@
 import { createAuth } from '../../../lib/auth'
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const log = (context.data as RequestData).log
   const url = new URL(context.request.url)
   const provider = url.searchParams.get('provider')
 
@@ -66,11 +67,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       const json = (await response.json()) as { url?: string; redirect?: boolean }
       redirectUrl = json.url || ''
     } catch {
+      log?.error('mobileAuth.startFailed', { category: 'Auth', resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned an unparseable response for provider ${provider}; check BETTER_AUTH_URL and provider configuration` })
       return new Response('Invalid response from auth', { status: 500 })
     }
   }
 
   if (!redirectUrl) {
+    log?.error('mobileAuth.noRedirect', { category: 'Auth', resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned no redirect URL for provider ${provider}; the provider may not be configured or the callbackURL may be wrong` })
     return new Response('No redirect URL from auth provider', { status: 500 })
   }
 

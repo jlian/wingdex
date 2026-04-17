@@ -23,10 +23,10 @@ interface Env {
 }
 
 /** Shape of context.data populated by _middleware.ts. */
-interface RequestData {
+interface RequestData extends Record<string, unknown> {
   user?: { id?: string; isAnonymous?: boolean }
   session?: { id: string }
-  traceId: string
-  spanId: string
-  log: import('./lib/log').Logger
+  traceId?: string
+  spanId?: string
+  log?: import('./lib/log').Logger
 }

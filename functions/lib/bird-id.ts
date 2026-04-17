@@ -4,7 +4,7 @@ import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 import { getRangePriors, adjustConfidence } from './range-filter'
 import type { Logger } from './log'
-import { formatTraceparent, randomSpanId } from './trace-context'
+import { formatTraceparent, childSpanId } from './trace-context'
 
 
 export const VISION_MODEL = 'gpt-5.4-mini'
@@ -50,7 +50,7 @@ async function callOpenAI(env: Env, body: unknown, traceId?: string, spanId?: st
     'Content-Type': 'application/json',
     Authorization: `Bearer ${env.OPENAI_API_KEY}`,
     ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
-    ...(traceId && spanId ? { traceparent: formatTraceparent(traceId, randomSpanId(), '01') } : {}),
+    ...(traceId && spanId ? { traceparent: formatTraceparent({ traceId, spanId: childSpanId(), traceFlags: '01' }) } : {}),
   }
   const response = await fetch(url, {
     method: 'POST',

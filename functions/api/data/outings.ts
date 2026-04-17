@@ -151,6 +151,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       .run()
   }
 
+  log?.debug('outings.insert', { category: 'Data', resultDescription: `Created outing at ${body.locationName}`, properties: { outingId: body.id, location: body.locationName } })
+
   return Response.json({
     id: body.id,
     userId,
