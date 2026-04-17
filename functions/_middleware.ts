@@ -113,7 +113,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
-    log.debug('WingDex/Auth/Session/Read', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token' })
+    log.debug('WingDex/Auth/Session/read', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token' })
     log.info(requestOp, { category: 'Request', resultType: 'Failed', resultSignature: 401, durationMs: Date.now() - start })
     return errorResponse('Unauthorized', 401)
   }

@@ -86,7 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   )
 
   await context.env.DB.batch(statements)
-  log?.debug('WingDex/Data/Photos/Write', { category: 'Data', resultDescription: `Inserted ${body.length} photos`, properties: { count: body.length } })
+  log?.debug('WingDex/Data/Photos/write', { category: 'Data', resultDescription: `Inserted ${body.length} photos`, properties: { count: body.length } })
 
   return Response.json(
     body.map(photo => ({

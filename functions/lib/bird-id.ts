@@ -121,7 +121,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
 
-  log?.debug('WingDex/BirdId/LlmCall/Action', { category: 'BirdId', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidates: parsed.candidates } })
+  log?.debug('WingDex/BirdId/LlmCall/action', { category: 'BirdId', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidates: parsed.candidates } })
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
@@ -158,11 +158,11 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     return true
   })
 
-  log?.debug('WingDex/BirdId/TaxonomyMatch/Action', { category: 'BirdId', resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, plumage: c.plumage ?? null, code: c.ebirdCode })) } })
+  log?.debug('WingDex/BirdId/TaxonomyMatch/action', { category: 'BirdId', resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, plumage: c.plumage ?? null, code: c.ebirdCode })) } })
 
   // Apply range-prior adjustment if location is available
   const hasRangeBucket = env.RANGE_PRIORS != null
-  log?.debug('WingDex/BirdId/RangeFilter/Action', { category: 'BirdId', resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { location: input.location ? `${input.location.lat},${input.location.lon}` : 'none', bucket: hasRangeBucket } })
+  log?.debug('WingDex/BirdId/RangeFilter/action', { category: 'BirdId', resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { location: input.location ? `${input.location.lat},${input.location.lon}` : 'none', bucket: hasRangeBucket } })
 
   let rangeAdjusted = false
 
@@ -175,7 +175,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       input.month,
       codes,
     )
-    log?.debug('WingDex/BirdId/RangePriors/Read', { category: 'BirdId', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { priors: Object.fromEntries(priors) } })
+    log?.debug('WingDex/BirdId/RangePriors/read', { category: 'BirdId', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { priors: Object.fromEntries(priors) } })
     rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
@@ -183,7 +183,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       return { ...c, confidence: adjustConfidence(c.confidence, range, input.month, input.location!.lat), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
-    log?.debug('WingDex/BirdId/RangeAdjust/Action', { category: 'BirdId', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, range: c.rangeStatus ?? 'n/a' })) } })
+    log?.debug('WingDex/BirdId/RangeAdjust/action', { category: 'BirdId', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, range: c.rangeStatus ?? 'n/a' })) } })
   }
 
   const result = {
@@ -195,6 +195,6 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     multipleBirds: parsed.multipleBirds === true,
     ...(rangeAdjusted ? { rangeAdjusted: true } : {}),
   }
-  log?.debug('WingDex/BirdId/Identify/Action', { category: 'BirdId', resultDescription: `Returning ${result.candidates.length} candidates, multipleBirds=${result.multipleBirds ?? false}, rangeAdjusted=${result.rangeAdjusted ?? false}`, properties: { candidateCount: result.candidates.length, multipleBirds: result.multipleBirds, rangeAdjusted: result.rangeAdjusted } })
+  log?.debug('WingDex/BirdId/Identify/action', { category: 'BirdId', resultDescription: `Returning ${result.candidates.length} candidates, multipleBirds=${result.multipleBirds ?? false}, rangeAdjusted=${result.rangeAdjusted ?? false}`, properties: { candidateCount: result.candidates.length, multipleBirds: result.multipleBirds, rangeAdjusted: result.rangeAdjusted } })
   return result
 }

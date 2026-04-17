@@ -88,9 +88,9 @@ Every log line is a single JSON object with this envelope:
 
 ### `operationName` conventions
 
-- **Request lifecycle (auto, emitted by middleware):** `<pathname>/<Action>` - e.g. `/api/auth/get-session/Read`, `/api/data/observations/Write`, `/api/data/outings/abc/Delete`.
-- **Per-route sub-operations (semantic):** `WingDex/<Resource>/<Sub>/<Action>` - e.g. `WingDex/Data/Observations/Write`, `WingDex/BirdId/RangeFilter/Action`, `WingDex/Health/DB/Read`.
-- `<Action>` is one of `Read | Write | Delete | Action`. HTTP methods map via `methodToAction()` in `functions/lib/log.ts`. Use `Action` for non-CRUD verbs (sign-in, identify, import preview, etc.).
+- **Request lifecycle (auto, emitted by middleware):** `<pathname>/<action>` - e.g. `/api/auth/get-session/read`, `/api/data/observations/write`, `/api/data/outings/abc/delete`.
+- **Per-route sub-operations (semantic):** `WingDex/<Resource>/<Sub>/<action>` - e.g. `WingDex/Data/Observations/write`, `WingDex/BirdId/RangeFilter/action`, `WingDex/Health/DB/read`.
+- `<action>` is one of `read | write | delete | action` (lowercase). HTTP methods map via `methodToAction()` in `functions/lib/log.ts`. Use `action` for non-CRUD verbs (sign-in, identify, import preview, etc.).
 
 ### Identity caveat
 

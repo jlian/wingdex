@@ -7,11 +7,11 @@
  *
  * operationName conventions (Azure Monitor inspired; we don't strictly mirror
  * Azure Resource Manager syntax):
- *   - Request lifecycle (auto, emitted by middleware):  `<pathname>/<Action>`
- *     e.g. `/api/auth/get-session/Read`, `/api/data/observations/Write`
- *   - Per-route sub-operations (semantic):              `WingDex/<Resource>/<Sub>/<Action>`
- *     e.g. `WingDex/Data/Observations/Write`, `WingDex/BirdId/RangeFilter/Action`
- *   `<Action>` is one of `Read | Write | Delete | Action` (HTTP method maps via
+ *   - Request lifecycle (auto, emitted by middleware):  `<pathname>/<action>`
+ *     e.g. `/api/auth/get-session/read`, `/api/data/observations/write`
+ *   - Per-route sub-operations (semantic):              `WingDex/<Resource>/<Sub>/<action>`
+ *     e.g. `WingDex/Data/Observations/write`, `WingDex/BirdId/RangeFilter/action`
+ *   `<action>` is one of `read | write | delete | action` (HTTP method maps via
  *   `methodToAction`). Path/method are intentionally NOT separate envelope
  *   fields - they're folded into operationName so queries pivot on a single
  *   dimension.
@@ -55,20 +55,20 @@ export interface TimedSpan {
 }
 
 /** Map an HTTP method to its operationName action suffix. */
-export function methodToAction(method: string): 'Read' | 'Write' | 'Delete' | 'Action' {
+export function methodToAction(method: string): 'read' | 'write' | 'delete' | 'action' {
   switch (method.toUpperCase()) {
     case 'GET':
     case 'HEAD':
     case 'OPTIONS':
-      return 'Read'
+      return 'read'
     case 'POST':
     case 'PUT':
     case 'PATCH':
-      return 'Write'
+      return 'write'
     case 'DELETE':
-      return 'Delete'
+      return 'delete'
     default:
-      return 'Action'
+      return 'action'
   }
 }
 

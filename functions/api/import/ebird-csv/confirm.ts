@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        log?.warn('WingDex/Import/EBirdCsvConfirm/Action', { category: 'Import', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
+        log?.warn('WingDex/Import/EBirdCsvConfirm/action', { category: 'Import', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
         return false
       }
       return true
@@ -188,7 +188,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
-  log?.debug('WingDex/Import/EBirdCsvConfirm/Write', { category: 'Import', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations in ${insertStatements.length} statements`, properties: { outings: outings.length, observations: observations.length, statements: insertStatements.length } })
+  log?.debug('WingDex/Import/EBirdCsvConfirm/write', { category: 'Import', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations in ${insertStatements.length} statements`, properties: { outings: outings.length, observations: observations.length, statements: insertStatements.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length
