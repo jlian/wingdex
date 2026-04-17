@@ -115,6 +115,10 @@ struct PerPhotoConfirmView: View {
         .onAppear { initializeSelection() }
         .onChange(of: viewModel.currentPhotoIndex) { initializeSelection() }
         .onChange(of: viewModel.currentCandidates.count) { initializeSelection() }
+        .onDisappear {
+            decodeTask?.cancel()
+            galleryTask?.cancel()
+        }
     }
 
     // MARK: - No Candidates
@@ -449,31 +453,53 @@ struct PerPhotoConfirmView: View {
     }
 
     /// Decode user photo images off the main thread so the view body never calls UIImage(data:).
+    /// Captures only Sendable values (Data, CropBoxResult, String) into the detached task.
     private func decodeUserImages() {
         decodeTask?.cancel()
-        let currentPhoto = photo
-        let photoId = currentPhoto?.id
         decodedCroppedImage = nil
         decodedThumbnail = nil
+        guard let currentPhoto = photo else { return }
+        let photoId = currentPhoto.id
+        let croppedData = currentPhoto.croppedImage
+        let fullData = currentPhoto.image
+        let cropBox = currentPhoto.aiCropBox
+        let thumbData = currentPhoto.thumbnail
         decodeTask = Task.detached(priority: .userInitiated) {
-            var cropped: UIImage?
-            var thumb: UIImage?
-            if let data = currentPhoto?.croppedImage {
-                cropped = UIImage(data: data)
-            } else if let p = currentPhoto, let box = p.aiCropBox {
-                cropped = Self.aiPreviewImage(from: p.image, cropBox: box)
-            }
-            guard !Task.isCancelled else { return }
-            if let data = currentPhoto?.thumbnail {
-                thumb = UIImage(data: data)
-            }
+            let decoded = Self.decodeImages(
+                croppedData: croppedData,
+                fullData: fullData,
+                cropBox: cropBox,
+                thumbData: thumbData
+            )
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard photo?.id == photoId else { return }
-                decodedCroppedImage = cropped
-                decodedThumbnail = thumb
+                decodedCroppedImage = decoded.cropped
+                decodedThumbnail = decoded.thumb
             }
         }
+    }
+
+    /// Sendable wrapper for the decoded UIImages crossing the actor boundary.
+    private struct DecodedImages: @unchecked Sendable {
+        let cropped: UIImage?
+        let thumb: UIImage?
+    }
+
+    private nonisolated static func decodeImages(
+        croppedData: Data?,
+        fullData: Data,
+        cropBox: CropBoxResult?,
+        thumbData: Data
+    ) -> DecodedImages {
+        var cropped: UIImage?
+        if let data = croppedData {
+            cropped = UIImage(data: data)
+        } else if let box = cropBox {
+            cropped = aiPreviewImage(from: fullData, cropBox: box)
+        }
+        let thumb = UIImage(data: thumbData)
+        return DecodedImages(cropped: cropped, thumb: thumb)
     }
 
     private func confirmWith(status: ObservationStatus) {
