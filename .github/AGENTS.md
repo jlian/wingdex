@@ -55,6 +55,8 @@ If you skip full verify, at minimum confirm `npm run build` succeeds.
 - Health check: `http://localhost:5000/` and `http://localhost:5000/api/auth/get-session`
 - If port state is stale, run `npm run kill` first, then start via task or `npm run dev`.
 - Playwright/e2e targets port 5000 by default.
+- The R2 binding `RANGE_PRIORS` is configured with `remote = true` in `wrangler.toml`, so local dev reads range priors directly from the production R2 bucket. No local R2 population step is needed. To use it you must be logged in via `npx wrangler login` AND have access to the `wingdex-range-priors` bucket on the Cloudflare account. Contributors without access can still run bird ID end-to-end: `range-filter.ts` catches R2 errors and `adjustConfidence` short-circuits on `no-data`, so identification proceeds with unadjusted confidences (no range filtering).
+- Local D1 state lives in `~/.cache/wingdex/wrangler-state` (set via `--persist-to`), not `.wrangler/state`. Fresh clones run `npm run db:migrate:local` to create the local DB.
 
 ## PR Workflow
 

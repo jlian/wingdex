@@ -24,13 +24,13 @@
         "dev:vite": "vite --port 5000 --strictPort",
         "dev:full": "bash scripts/dev-full.sh",
         "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
-        "dev:cf": "wrangler pages dev dist --show-interactive-dev-session=false",
+        "dev:cf": "wrangler pages dev dist --persist-to \"$HOME/.cache/wingdex/wrangler-state\" --show-interactive-dev-session=false",
         "dev:ensure-5000": "bash scripts/ensure-app-on-5000.sh",
         "kill": "bash scripts/kill-dev.sh",
         "setup:playwright": "npx playwright install --with-deps chromium",
         "build": "tsc -b && vite build",
         "deploy": "npm run build && wrangler pages deploy dist --project-name wingdex",
-        "db:migrate:local": "printf 'y\n' | wrangler d1 migrations apply wingdex-db --local",
+        "db:migrate:local": "printf 'y\n' | wrangler d1 migrations apply wingdex-db --local --persist-to \"$HOME/.cache/wingdex/wrangler-state\"",
         "typecheck": "tsc -b",
         "verify": "npm run lint && npm run test:unit && npm run setup:playwright && npm run test:e2e && npm run build",
         "lint": "eslint .",
@@ -123,7 +123,7 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.0.4",
         "@types/tz-lookup": "^6.1.2",
-        "@vitejs/plugin-react-swc": "^4.3.0",
+        "@vitejs/plugin-react": "^6.0.1",
         "better-sqlite3": "^12.8.0",
         "eslint": "^9.28.0",
         "eslint-plugin-react-hooks": "^7.0.1",
@@ -138,6 +138,6 @@
         "typescript-eslint": "^8.38.0",
         "vite": "^8.0.0",
         "vitest": "^4.1.0",
-        "wrangler": "^4.42.0"
+        "wrangler": "^4.83.0"
     }
 }

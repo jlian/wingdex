@@ -41,10 +41,10 @@ else
 fi
 
 echo "[dev:full] Applying local D1 migrations..."
-printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local
+printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local --persist-to "$HOME/.cache/wingdex/wrangler-state"
 
 echo "[dev:full] Building app..."
 npm run build
 
 echo "[dev:full] Starting full local app at ${BASE}..."
-exec npx wrangler pages dev dist --port "${PORT}" --show-interactive-dev-session=false
+exec npx wrangler pages dev dist --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false
