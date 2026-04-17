@@ -1,7 +1,7 @@
 import SwiftUI
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "PerPhotoConfirm")
+private let log = Logger(subsystem: Config.bundleID, category: "PerPhotoConfirm")
 
 /// Per-photo species confirmation view.
 ///

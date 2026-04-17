@@ -54,7 +54,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     ? { traceId: incoming.traceId, spanId: childSpanId(), traceFlags: incoming.traceFlags }
     : generateTraceContext()
   const method = context.request.method
-  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, undefined, method, pathname)
+  const hasBearer = !!context.request.headers.get('authorization')
+  const log = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, { authMethod: hasBearer ? 'bearer' : 'session' }, method, pathname)
 
   // Store on context.data for route handlers
   context.data.traceId = traceCtx.traceId
@@ -65,7 +66,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
-    log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
+    log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
     return errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -78,14 +79,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
-      log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
+      log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
       return errorResponse('Invalid Content-Length', 400)
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
-        log.warn('req.rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
+        log.warn('WingDex/Request/Rejected', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
         return errorResponse('Payload Too Large', 413)
       }
     }
@@ -96,7 +97,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      log.info('req.end', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, resultDescription: `Completed with ${response.status}`, durationMs: Date.now() - start })
+      log.info('WingDex/Request/End', { category: 'Auth', resultType: 'Succeeded', resultSignature: response.status, durationMs: Date.now() - start })
       return response
     } catch (err) {
       return handleUnexpectedError(err, log, traceCtx, method, pathname, start)
@@ -110,21 +111,26 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   })
 
   if (!session) {
-    log.debug('auth.rejected', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token', properties: { bearer: !!context.request.headers.get('authorization') } })
-    log.info('req.end', { category: 'Request', resultType: 'Failed', resultSignature: 401, resultDescription: 'Rejected: unauthorized', durationMs: Date.now() - start })
+    log.debug('WingDex/Auth/Session/Read', { category: 'Auth', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token' })
+    log.info('WingDex/Request/End', { category: 'Request', resultType: 'Failed', resultSignature: 401, durationMs: Date.now() - start })
     return errorResponse('Unauthorized', 401)
   }
 
   context.data.user = session.user
   context.data.session = session.session
-  // Re-create logger with userId for downstream logs
-  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, session.user.id, method, pathname)
+  // Re-create logger with identity for downstream logs
+  const identity: import('./lib/log').Identity = {
+    userId: session.user.id,
+    isAnonymous: !!(session.user as { isAnonymous?: boolean }).isAnonymous,
+    authMethod: hasBearer ? 'bearer' : 'session',
+  }
+  const authedLog = createLogger(context.env, traceCtx.traceId, traceCtx.spanId, identity, method, pathname)
   context.data.log = authedLog
 
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    authedLog.info('req.end', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, resultDescription: `Completed with ${response.status}`, durationMs: Date.now() - start })
+    authedLog.info('WingDex/Request/End', { category: 'Request', resultType: response.ok ? 'Succeeded' : 'Failed', resultSignature: response.status, durationMs: Date.now() - start })
     return response
   } catch (err) {
     return handleUnexpectedError(err, authedLog, traceCtx, method, pathname, start)
@@ -148,7 +154,7 @@ function handleUnexpectedError(
 ): Response {
   const message = err instanceof Error ? err.message : String(err)
   const stack = err instanceof Error ? err.stack : undefined
-  log.error('req.unhandled', {
+  log.error('WingDex/Request/Unhandled', {
     category: 'Request',
     resultType: 'Failed',
     resultSignature: 500,

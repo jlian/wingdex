@@ -5,17 +5,27 @@
  * Logs auto-indexes for the Query Builder. Schema inspired by Azure Monitor
  * resource logs: common envelope + extensible properties bag.
  *
+ * operationName follows Azure Monitor convention:
+ *   WingDex/<resourceType>/<subtype>/<Write|Read|Delete|Action>
+ *
  * Debug-level logs are gated on env.DEBUG.
  */
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 export type ResultType = 'Succeeded' | 'Failed' | 'InProgress'
 
+/** Identity of the caller, inspired by Azure Monitor's identity blob. */
+export interface Identity {
+  userId?: string
+  isAnonymous?: boolean
+  authMethod?: 'session' | 'bearer' | 'none'
+}
+
 export interface LogFields {
   category?: string
   resultType?: ResultType
   resultSignature?: number | string
-  /** Human-readable description: context of what was attempted, what happened, and how to fix (for errors). */
+  /** Human-readable description: context, what happened, mitigation. Omit when redundant with other fields. */
   resultDescription?: string
   durationMs?: number
   properties?: Record<string, unknown>
@@ -34,12 +44,12 @@ export interface TimedSpan {
   end(fields?: Omit<LogFields, 'durationMs' | 'category'>): void
 }
 
-/** Create a logger bound to a specific request + trace context. */
+/** Create a logger bound to a specific request context. */
 export function createLogger(
   env: { DEBUG?: string },
   traceId: string,
   spanId: string,
-  userId?: string,
+  identity?: Identity,
   /** HTTP method of the request (GET, POST, etc.) */
   method?: string,
   /** URL pathname of the request (/api/data/observations, etc.) */
@@ -64,7 +74,7 @@ export function createLogger(
     if (fields?.resultSignature !== undefined) entry.resultSignature = fields.resultSignature
     if (fields?.resultDescription) entry.resultDescription = fields.resultDescription
     if (fields?.durationMs !== undefined) entry.durationMs = fields.durationMs
-    if (userId) entry.userId = userId
+    if (identity?.userId) entry.identity = identity
     if (fields?.properties) entry.properties = fields.properties
 
     const json = JSON.stringify(entry)

@@ -2,7 +2,7 @@ import MapKit
 import SwiftUI
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "OutingReview")
+private let log = Logger(subsystem: Config.bundleID, category: "OutingReview")
 
 /// Outing review step in the Add Photos flow.
 ///

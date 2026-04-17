@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "DataService")
+private let log = Logger(subsystem: Config.bundleID, category: "DataService")
 
 /// Handles all REST API communication with the WingDex backend.
 ///
@@ -287,16 +287,28 @@ final class DataService: Sendable {
         let token = try await auth.validToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        request.setValue(Self.generateTraceparent(), forHTTPHeaderField: "traceparent")
         let method = request.httpMethod ?? "?"
         let path = request.url?.path ?? "?"
         log.debug("Request: \(method) \(path)")
+    }
+
+    /// Generate a W3C traceparent header value for distributed tracing.
+    private static func generateTraceparent() -> String {
+        var bytes = [UInt8](repeating: 0, count: 24)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let hex = bytes.map { String(format: "%02x", $0) }.joined()
+        let traceId = String(hex.prefix(32))
+        let spanId = String(hex.dropFirst(32).prefix(16))
+        return "00-\(traceId)-\(spanId)-01"
     }
 
     private func validate(_ response: URLResponse, data: Data) async throws {
         guard let http = response as? HTTPURLResponse else {
             throw DataServiceError.networkError("Invalid response")
         }
-        log.debug("Response: \(http.statusCode) for \(http.url?.path ?? "?")")
+        let path = http.url?.path ?? "?"
+        log.debug("Response: \(http.statusCode) for \(path)")
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
             log.error("HTTP \(http.statusCode) \(http.url?.path ?? "?"): \(body)")

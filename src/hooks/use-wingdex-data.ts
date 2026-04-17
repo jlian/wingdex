@@ -123,7 +123,8 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise
   })
 
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`)
+    const body = await response.text().catch(() => '')
+    throw new Error(body || `${response.status} ${response.statusText}`)
   }
 
   return response.json() as Promise<T>

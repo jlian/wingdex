@@ -185,7 +185,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       }
 
       if (!previewResponse.ok) {
-        throw new Error(`Preview failed (${previewResponse.status})`)
+        const body = await previewResponse.text().catch(() => '')
+        throw new Error(body || `Preview failed (${previewResponse.status})`)
       }
 
       const previewPayload = await previewResponse.json() as {
@@ -209,7 +210,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       })
 
       if (!confirmResponse.ok) {
-        throw new Error(`Confirm failed (${confirmResponse.status})`)
+        const body = await confirmResponse.text().catch(() => '')
+        throw new Error(body || `Confirm failed (${confirmResponse.status})`)
       }
 
       const confirmPayload = await confirmResponse.json() as {
@@ -242,7 +244,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     try {
       const response = await fetchWithLocalAuthRetry('/api/export/sightings', { credentials: 'include' })
       if (!response.ok) {
-        throw new Error(`Export failed (${response.status})`)
+        const body = await response.text().catch(() => '')
+        throw new Error(body || `Export failed (${response.status})`)
       }
 
       const blob = await response.blob()
