@@ -15,6 +15,7 @@ import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike, toStandardPasskeyLabel } from '@/lib/passkey-label'
 import { toast } from 'sonner'
+import { logClientFailure } from '@/lib/client-log'
 import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
@@ -149,7 +150,11 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         })))
       }
       setPasskeysLoading(false)
-    }).catch(() => setPasskeysLoading(false))
+    }).catch((err) => {
+      logClientFailure('settings/passkeys/list', err)
+      toast.error('Failed to load passkeys')
+      setPasskeysLoading(false)
+    })
   }, [user.isAnonymous, user.id])
 
   useEffect(() => {

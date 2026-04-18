@@ -122,6 +122,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
   const parsed = await parseIdentifyResponse(model)
 
   log?.debug('birdId/llmCall/invoke', { category: 'Application', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidateCount: Array.isArray(parsed.candidates) ? parsed.candidates.length : 0 } })
+  log?.trace('birdId/llmCall/invoke', { category: 'Application', resultDescription: 'Full LLM parsed response', properties: { parsed } })
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
@@ -176,6 +177,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       codes,
     )
     log?.debug('birdId/rangePriors/read', { category: 'Application', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { speciesCount: codes.length } })
+    log?.trace('birdId/rangePriors/read', { category: 'Application', resultDescription: 'Full range priors map', properties: { priors: Object.fromEntries(priors) } })
     rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
@@ -184,6 +186,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
     log?.debug('birdId/rangeAdjust/invoke', { category: 'Application', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates` })
+    log?.trace('birdId/rangeAdjust/invoke', { category: 'Application', resultDescription: 'Full adjusted candidates', properties: { candidates } })
   }
 
   const result = {
