@@ -1,5 +1,6 @@
 import { computeDex } from '../../../lib/dex-query'
 import { getOutingColumnNames } from '../../../lib/schema'
+import { createRouteResponder } from '../../../lib/log'
 
 type UpdateOutingBody = {
   startTime?: string
@@ -24,25 +25,31 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const outingId = context.params.id as string | undefined
+  const route = createRouteResponder(
+    (context.data as RequestData).log,
+    'data/outings/write', 'Application'
+  )
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const outingId = context.params.id as string | undefined
   if (!outingId) {
-    return new Response('Missing outing id', { status: 400 })
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
 
   let body: unknown
   try {
     body = await context.request.json()
   } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isObject(body)) {
-    return new Response('Invalid outing patch payload', { status: 400 })
+    return route.fail(400, 'Invalid outing patch payload', 'Outing patch payload is not a valid object')
   }
+
+  try {
 
   const updates = body as UpdateOutingBody
   const updateFields: string[] = []
@@ -119,7 +126,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   if (updateFields.length === 0) {
-    return new Response('No valid fields to update', { status: 400 })
+    return route.fail(400, 'No valid fields to update', `No valid fields to update for outing ${outingId}`, { outingId })
   }
 
   const updateStatement = `UPDATE outing SET ${updateFields.join(', ')} WHERE id = ? AND userId = ?`
@@ -128,7 +135,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     .run()
 
   if (updateResult.meta.changes === 0) {
-    return new Response('Not found', { status: 404 })
+    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`, { outingId })
   }
 
   const outingResult = await context.env.DB.prepare(
@@ -157,8 +164,10 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
 
   const outing = outingResult.results[0]
   if (!outing) {
-    return new Response('Not found', { status: 404 })
+    return route.fail(404, 'Not found', `Outing ${outingId} not found after successful update`, { outingId })
   }
+
+  route.debug(`Updated outing ${outingId}`, { outingId, fieldCount: updateFields.length })
 
   return Response.json({
     ...outing,
@@ -173,27 +182,41 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     effortDistanceMiles: outing.effortDistanceMiles ?? undefined,
     effortAreaAcres: outing.effortAreaAcres ?? undefined,
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Outing ${outingId} patch failed: ${message}`, { outingId, error: message })
+  }
 }
 
 export const onRequestDelete: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const outingId = context.params.id as string | undefined
+  const route = createRouteResponder(
+    (context.data as RequestData).log,
+    'data/outings/delete', 'Application'
+  )
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const outingId = context.params.id as string | undefined
   if (!outingId) {
-    return new Response('Missing outing id', { status: 400 })
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
 
-  const deleteResult = await context.env.DB.prepare('DELETE FROM outing WHERE id = ? AND userId = ?')
-    .bind(outingId, userId)
-    .run()
+  try {
+    const deleteResult = await context.env.DB.prepare('DELETE FROM outing WHERE id = ? AND userId = ?')
+      .bind(outingId, userId)
+      .run()
 
-  if (deleteResult.meta.changes === 0) {
-    return new Response('Not found', { status: 404 })
+    if (deleteResult.meta.changes === 0) {
+      return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user; it may have been deleted by another client`, { outingId })
+    }
+
+    route.debug(`Deleted outing ${outingId}`, { outingId })
+    const dexUpdates = await computeDex(context.env.DB, userId)
+    return Response.json({ dexUpdates })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Outing ${outingId} delete failed: ${message}`, { outingId, error: message })
   }
-
-  const dexUpdates = await computeDex(context.env.DB, userId)
-  return Response.json({ dexUpdates })
 }

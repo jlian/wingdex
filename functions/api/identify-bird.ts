@@ -1,5 +1,6 @@
 import { HttpError, identifyBird } from '../lib/bird-id'
 import { RateLimitError, enforceAiDailyLimit } from '../lib/ai-rate-limit'
+import { createRouteResponder } from '../lib/log'
 
 type BirdIdModelTier = 'fast' | 'strong'
 
@@ -38,14 +39,19 @@ function validateMonth(month: number | undefined): number | undefined {
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
+  let log = (context.data as RequestData).log
+  const traceId = (context.data as RequestData).traceId
+  const spanId = (context.data as RequestData).spanId
+  const traceFlags = (context.data as RequestData).traceFlags
+  let route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
-      return new Response('Unauthorized', { status: 401 })
+      return route.fail(401, 'Unauthorized', 'No authenticated user for bird identification')
     }
 
     if (user.isAnonymous) {
-      return new Response('Account required', { status: 403 })
+      return route.fail(403, 'Account required', 'Anonymous users cannot use bird identification; account required')
     }
 
     await enforceAiDailyLimit(context.env.DB, user.id, 'identify-bird', context.env.AI_DAILY_LIMIT_IDENTIFY)
@@ -120,6 +126,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     month = validateMonth(month)
 
+    // Scope logger with model context for all downstream logs (including bird-id sub-steps)
+    log = log?.withResource({ model, hasLocation: lat !== undefined && lon !== undefined })
+    route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
+
     const result = await identifyBird(context.env, {
       imageDataUrl,
       imageWidth,
@@ -128,29 +138,20 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       month,
       locationName,
       modelTier: model,
-    })
+    }, log, traceId, spanId, traceFlags)
 
+    route.debug(`Identified ${result.candidates.length} candidates${result.rangeAdjusted ? ' (range-adjusted)' : ''}`, { candidateCount: result.candidates.length, rangeAdjusted: !!result.rangeAdjusted, multipleBirds: !!result.multipleBirds })
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {
-      return new Response(error.message, {
-        status: error.status,
-        headers: {
-          'Retry-After': String(error.retryAfterSeconds),
-        },
-      })
+      return route.failWithHeaders(error.status, error.message, { 'Retry-After': String(error.retryAfterSeconds) }, `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, { retryAfterSeconds: error.retryAfterSeconds })
     }
 
     if (error instanceof HttpError) {
-      return new Response(error.message, { status: error.status })
+      return route.fail(error.status, error.message, `Bird identification failed: ${error.message}`)
     }
 
-    if (error instanceof Error) {
-      console.error('Unexpected error during bird identification:', error)
-    } else {
-      console.error('Unexpected non-Error thrown during bird identification:', error)
-    }
-
-    return new Response('An unexpected error occurred during bird identification', { status: 500 })
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'An unexpected error occurred during bird identification', `Bird identification failed unexpectedly: ${message}`, { error: message })
   }
 }

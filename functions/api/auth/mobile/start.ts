@@ -17,18 +17,20 @@
  *   5. OAuth flow proceeds... ends at /api/auth/mobile/callback
  */
 import { createAuth } from '../../../lib/auth'
+import { createRouteResponder } from '../../../lib/log'
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const route = createRouteResponder((context.data as RequestData).log, 'auth/mobileOAuth/invoke', 'Application')
   const url = new URL(context.request.url)
   const provider = url.searchParams.get('provider')
 
   if (!provider) {
-    return new Response('Missing provider parameter', { status: 400 })
+    return route.fail(400, 'Missing provider parameter', 'Missing provider query parameter for mobile OAuth')
   }
 
   const allowedProviders = new Set(['github', 'apple', 'google'])
   if (!allowedProviders.has(provider)) {
-    return new Response('Unsupported provider parameter', { status: 400 })
+    return route.fail(400, 'Unsupported provider parameter', `Unsupported OAuth provider: ${provider}; allowed: github, apple, google`)
   }
 
   // Mobile social OAuth must start in hosted-oauth mode so the provider sees
@@ -66,12 +68,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       const json = (await response.json()) as { url?: string; redirect?: boolean }
       redirectUrl = json.url || ''
     } catch {
-      return new Response('Invalid response from auth', { status: 500 })
+      return route.fail(500, 'Invalid response from auth', `Better Auth returned an unparseable response for provider ${provider}; check BETTER_AUTH_URL and provider configuration`, { provider })
     }
   }
 
   if (!redirectUrl) {
-    return new Response('No redirect URL from auth provider', { status: 500 })
+    return route.fail(500, 'No redirect URL from auth provider', `Better Auth returned no redirect URL for provider ${provider}; the provider may not be configured or the callbackURL may be wrong`, { provider })
   }
 
   // Build a 302 redirect, forwarding all Set-Cookie headers from Better Auth
@@ -91,5 +93,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     })
   }
 
+  route.debug(`OAuth redirect to ${provider}`, { provider })
   return new Response(null, { status: 302, headers })
 }

@@ -15,6 +15,7 @@ import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike, toStandardPasskeyLabel } from '@/lib/passkey-label'
 import { toast } from 'sonner'
+import { logClientFailure } from '@/lib/client-log'
 import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
@@ -149,7 +150,11 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         })))
       }
       setPasskeysLoading(false)
-    }).catch(() => setPasskeysLoading(false))
+    }).catch((err) => {
+      logClientFailure('settings/passkeys/list', err)
+      toast.error('Failed to load passkeys')
+      setPasskeysLoading(false)
+    })
   }, [user.isAnonymous, user.id])
 
   useEffect(() => {
@@ -185,7 +190,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       }
 
       if (!previewResponse.ok) {
-        throw new Error(`Preview failed (${previewResponse.status})`)
+        const body = await previewResponse.text().catch(() => '')
+        throw new Error(body || `Preview failed (${previewResponse.status})`)
       }
 
       const previewPayload = await previewResponse.json() as {
@@ -209,7 +215,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       })
 
       if (!confirmResponse.ok) {
-        throw new Error(`Confirm failed (${confirmResponse.status})`)
+        const body = await confirmResponse.text().catch(() => '')
+        throw new Error(body || `Confirm failed (${confirmResponse.status})`)
       }
 
       const confirmPayload = await confirmResponse.json() as {
@@ -230,7 +237,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to import eBird data: ${detail}`)
-      console.error(error)
+      if (import.meta.env.DEV) console.error(error)
     }
 
     if (importFileRef.current) {
@@ -242,7 +249,8 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     try {
       const response = await fetchWithLocalAuthRetry('/api/export/sightings', { credentials: 'include' })
       if (!response.ok) {
-        throw new Error(`Export failed (${response.status})`)
+        const body = await response.text().catch(() => '')
+        throw new Error(body || `Export failed (${response.status})`)
       }
 
       const blob = await response.blob()

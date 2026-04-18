@@ -377,7 +377,11 @@ final class AuthService: @unchecked Sendable {
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
             await MainActor.run { self.clearAPICookies() }
-            try? await self.updateProfile(name: birdName, image: avatarDataUrl)
+            do {
+                try await self.updateProfile(name: birdName, image: avatarDataUrl)
+            } catch {
+                log.warning("Post-signup profile update failed: \(error.localizedDescription)")
+            }
             await MainActor.run { self.clearAPICookies() }
         }
     }
@@ -429,11 +433,21 @@ final class AuthService: @unchecked Sendable {
 
         let (data, response) = try await Self.bearerSession.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200,
-              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard let httpResponse = response as? HTTPURLResponse else {
+            log.warning("fetchUserInfo: non-HTTP response, skipping user-info enrichment")
+            return
+        }
+        guard httpResponse.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            log.warning("fetchUserInfo: HTTP \(httpResponse.statusCode), body: \(body, privacy: .private)")
+            return
+        }
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let user = json["user"] as? [String: Any]
-        else { return }
+        else {
+            log.warning("fetchUserInfo: response 200 but body could not be decoded as { user: ... }")
+            return
+        }
 
         userId = user["id"] as? String
         userName = user["name"] as? String

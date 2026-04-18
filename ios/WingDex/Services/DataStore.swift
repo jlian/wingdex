@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "DataStore")
+private let log = Logger(subsystem: Config.bundleID, category: "DataStore")
 
 /// Typed update for outing fields. Only non-nil fields are sent.
 struct OutingUpdate: Codable, Sendable {
@@ -131,7 +131,7 @@ final class DataStore {
         do {
             try await service.deleteOuting(id: id)
         } catch {
-            // Reload to reconcile if server call fails
+            log.warning("deleteOuting failed, reconciling: \(error.localizedDescription)")
             await loadAll()
         }
     }
@@ -144,6 +144,7 @@ final class DataStore {
         do {
             try await service.rejectObservations(ids: ids)
         } catch {
+            log.warning("rejectObservations failed, reconciling: \(error.localizedDescription)")
             await loadAll()
         }
     }
@@ -175,6 +176,7 @@ final class DataStore {
         do {
             try await service.updateOuting(id: id, fields: fields)
         } catch {
+            log.warning("updateOuting failed, reconciling: \(error.localizedDescription)")
             await loadAll()
         }
     }

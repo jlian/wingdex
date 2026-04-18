@@ -5,7 +5,7 @@ import PhotosUI
 import SwiftUI
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "AddPhotos")
+private let log = Logger(subsystem: Config.bundleID, category: "AddPhotos")
 
 /// ViewModel for the multi-step Add Photos wizard flow.
 ///

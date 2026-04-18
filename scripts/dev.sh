@@ -6,7 +6,7 @@ VITE_PORT="${VITE_PORT:-5000}"
 
 running_full_app() {
   curl -fsS "http://localhost:${VITE_PORT}/" >/dev/null 2>&1 \
-    && curl -fsS "http://localhost:${VITE_PORT}/api/auth/get-session" >/dev/null 2>&1
+    && curl -fsS "http://localhost:${VITE_PORT}/api/health" >/dev/null 2>&1
 }
 
 pick_available_api_port() {

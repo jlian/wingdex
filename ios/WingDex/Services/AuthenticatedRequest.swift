@@ -78,4 +78,28 @@ enum AuthenticatedRequest {
         log.debug("Extracted cookies: \(cookies.map { $0.name }.joined(separator: ", "))")
         return result
     }
+
+    /// Validate an HTTP response, logging failures with private body redaction.
+    ///
+    /// Returns the HTTPURLResponse on success. Throws `PasskeyError.serverError`
+    /// with a user-friendly message (status code only) on failure. The raw response
+    /// body is logged at error level with `.private` privacy so it is redacted in
+    /// logs unless private data is explicitly enabled.
+    @discardableResult
+    static func validateHTTP(
+        _ response: URLResponse,
+        data: Data,
+        context: String,
+        logger: Logger = log
+    ) throws -> HTTPURLResponse {
+        guard let http = response as? HTTPURLResponse,
+              (200...299).contains(http.statusCode)
+        else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: data.prefix(512), encoding: .utf8) ?? ""
+            logger.error("\(context): HTTP \(status), body: \(body, privacy: .private)")
+            throw PasskeyError.serverError("\(context) (HTTP \(status))")
+        }
+        return http
+    }
 }

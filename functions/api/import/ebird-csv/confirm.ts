@@ -1,6 +1,7 @@
 import { computeDex } from '../../../lib/dex-query'
 import { groupPreviewsIntoOutings, type ImportPreview } from '../../../lib/ebird'
 import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
+import { createRouteResponder } from '../../../lib/log'
 
 type ConfirmBody = { previewIds: string[] }
 
@@ -25,6 +26,7 @@ function decodePreviewId(previewId: string): ImportPreview | null {
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'import/ebirdCsvConfirm/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -33,16 +35,23 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isConfirmBody(body)) {
-    return new Response('Invalid confirm payload', { status: 400 })
+    return route.fail(400, 'Invalid confirm payload', 'Expected { previewIds: string[] }')
   }
 
-  const selectedPreviews = body.previewIds
+  try {
+    const selectedPreviews = body.previewIds
     .map(previewId => decodePreviewId(previewId))
-    .filter((preview): preview is ImportPreview => !!preview)
+    .filter((preview): preview is ImportPreview => {
+      if (!preview) {
+        route.debug('A preview ID could not be decoded from base64; it will be skipped')
+        return false
+      }
+      return true
+    })
 
   if (selectedPreviews.length === 0) {
     const dexUpdates = await computeDex(context.env.DB, userId)
@@ -181,6 +190,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
+  route.info(`Imported ${outings.length} outings and ${observations.length} observations`, { outingCount: outings.length, observationCount: observations.length })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length
@@ -197,4 +207,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       bestPhotoId: row.bestPhotoId || undefined,
     })),
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `eBird import confirm failed: ${message}`, { error: message, previewCount: body.previewIds.length })
+  }
  }

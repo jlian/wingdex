@@ -1,5 +1,6 @@
 import { computeDex } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
+import { createRouteResponder } from '../../lib/log'
 
 type ObservationCertainty = 'confirmed' | 'possible' | 'pending' | 'rejected'
 
@@ -139,6 +140,7 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'data/observations/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -146,12 +148,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   let body: unknown
   try {
     body = await context.request.json()
-  } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    } catch {
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
-    return new Response('Invalid observations payload', { status: 400 })
+    return route.fail(400, 'Invalid observations payload', 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}', { count: Array.isArray(body) ? body.length : 0 })
   }
 
   if (body.length === 0) {
@@ -159,22 +161,41 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json({ observations: [], dexUpdates })
   }
 
-  const allOwned = await hasOwnedOutings(
-    context.env.DB,
-    userId,
-    body.map(observation => observation.outingId)
-  )
-  if (!allOwned) {
-    return new Response('Invalid outing reference', { status: 400 })
-  }
+  try {
+    const outingIds = [...new Set(body.map(o => o.outingId))]
+    const allOwned = await hasOwnedOutings(
+      context.env.DB,
+      userId,
+      outingIds
+    )
+    if (!allOwned) {
+      return route.fail(400, 'Invalid outing reference', `One or more outing IDs do not belong to the requesting user`, { outingIds })
+    }
 
-  const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
+    const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
 
-  const statements = body.map(observation => {
-    if (supportsSpeciesComments) {
+    const statements = body.map(observation => {
+      if (supportsSpeciesComments) {
+        return context.env.DB.prepare(
+          `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+        ).bind(
+          observation.id,
+          observation.outingId,
+          userId,
+          observation.speciesName,
+          observation.count,
+          observation.certainty,
+          observation.representativePhotoId ?? null,
+          observation.aiConfidence ?? null,
+          observation.speciesComments ?? null,
+          observation.notes ?? ''
+        )
+      }
+
       return context.env.DB.prepare(
-        `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+        `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
       ).bind(
         observation.id,
         observation.outingId,
@@ -184,43 +205,37 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         observation.certainty,
         observation.representativePhotoId ?? null,
         observation.aiConfidence ?? null,
-        observation.speciesComments ?? null,
         observation.notes ?? ''
       )
-    }
+    })
 
-    return context.env.DB.prepare(
-      `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
-    ).bind(
-      observation.id,
-      observation.outingId,
-      userId,
-      observation.speciesName,
-      observation.count,
-      observation.certainty,
-      observation.representativePhotoId ?? null,
-      observation.aiConfidence ?? null,
-      observation.notes ?? ''
-    )
-  })
+    await context.env.DB.batch(statements)
+    const speciesNames = [...new Set(body.map(o => o.speciesName))]
+    const scopedRoute = outingIds.length === 1
+      ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/observations`), 'data/observations/write', 'Application')
+      : route
+    scopedRoute.info(`Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
+    scopedRoute.debug('Observation insert details', { outingIds, speciesNames })
 
-  await context.env.DB.batch(statements)
+    const observations = body.map(observation => ({
+      ...observation,
+      representativePhotoId: observation.representativePhotoId || undefined,
+      aiConfidence: observation.aiConfidence ?? undefined,
+      speciesComments: supportsSpeciesComments ? (observation.speciesComments || undefined) : undefined,
+      notes: observation.notes ?? '',
+    }))
 
-  const observations = body.map(observation => ({
-    ...observation,
-    representativePhotoId: observation.representativePhotoId || undefined,
-    aiConfidence: observation.aiConfidence ?? undefined,
-    speciesComments: supportsSpeciesComments ? (observation.speciesComments || undefined) : undefined,
-    notes: observation.notes ?? '',
-  }))
-
-  const dexUpdates = await computeDex(context.env.DB, userId)
-  return Response.json({ observations, dexUpdates })
+    const dexUpdates = await computeDex(context.env.DB, userId)
+    return Response.json({ observations, dexUpdates })
+    } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Observation insert failed: ${message}`, { error: message, count: body.length })
+  }
 }
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'data/observations/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -228,18 +243,19 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   let body: unknown
   try {
     body = await context.request.json()
-  } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    } catch {
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isObject(body)) {
-    return new Response('Invalid patch payload', { status: 400 })
+    return route.fail(400, 'Invalid patch payload', 'PATCH payload is not a valid object; expected {id, ...patch} or {ids, patch}')
   }
 
-  const db = context.env.DB
-  const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
+  try {
+    const db = context.env.DB
+    const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
 
-  if (typeof body.id === 'string') {
+    if (typeof body.id === 'string') {
     const { id, ...rawPatch } = body
     const patch = rawPatch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
@@ -253,13 +269,13 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (updateFields.length === 0) {
-      return new Response('No valid fields to update', { status: 400 })
+      return route.fail(400, 'No valid fields to update', 'PATCH body contains no recognized fields; valid fields are outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        return new Response('Invalid outing reference', { status: 400 })
+        return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
 
@@ -269,16 +285,16 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       .run()
 
     if (updateResult.meta.changes === 0) {
-      return new Response('Not found', { status: 404 })
+      return route.fail(404, 'Not found', `Observation ${id} not found or not owned by user`, { observationId: id })
     }
 
     const updated = await listObservationsByIds(db, userId, [id])
     const dexUpdates = await computeDex(db, userId)
 
     return Response.json({ observation: updated[0], dexUpdates })
-  }
+    }
 
-  if (Array.isArray(body.ids) && body.ids.every(id => typeof id === 'string') && isObject(body.patch)) {
+    if (Array.isArray(body.ids) && body.ids.every(id => typeof id === 'string') && isObject(body.patch)) {
     const ids = body.ids as string[]
     const patch = body.patch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
@@ -292,16 +308,16 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (ids.length === 0) {
-      return new Response('No ids provided', { status: 400 })
+      return route.fail(400, 'No ids provided', 'Bulk PATCH requires at least one observation ID in the ids array', { count: 0 })
     }
     if (updateFields.length === 0) {
-      return new Response('No valid fields to update', { status: 400 })
+      return route.fail(400, 'No valid fields to update', 'Bulk PATCH body contains no recognized fields; valid fields are outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        return new Response('Invalid outing reference', { status: 400 })
+        return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
 
@@ -315,14 +331,18 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const updatedCount = updateResults.reduce((sum, result) => sum + (result.meta?.changes || 0), 0)
 
     if (updatedCount === 0) {
-      return new Response('Not found', { status: 404 })
+      return route.fail(404, 'Not found', `None of the ${ids.length} observations were found or owned by user`, { count: ids.length })
     }
 
     const observations = await listObservationsByIds(db, userId, ids)
     const dexUpdates = await computeDex(db, userId)
 
     return Response.json({ observations, dexUpdates })
-  }
+    }
 
-  return new Response('Invalid patch payload', { status: 400 })
+    return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
+    } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Observation patch failed: ${message}`, { error: message })
+  }
 }

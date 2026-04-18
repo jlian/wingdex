@@ -1,7 +1,8 @@
 import Foundation
 import os
+import Security
 
-private let log = Logger(subsystem: "app.wingdex", category: "DataService")
+private let log = Logger(subsystem: Config.bundleID, category: "DataService")
 
 /// Handles all REST API communication with the WingDex backend.
 ///
@@ -199,7 +200,7 @@ final class DataService: Sendable {
         try await attachAuth(&request)
 
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: "api/import/ebird-csv", method: "POST", start: Date(), byteCount: responseData.count)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
         return preview.previews
@@ -236,10 +237,9 @@ final class DataService: Sendable {
         var request = URLRequest(url: url)
         try await attachAuth(&request)
 
-        log.debug("GET \(path)")
+        let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data)
-        log.debug("GET \(path) -> \(data.count) bytes")
+        try await validate(response, data: data, path: path, method: "GET", start: start, byteCount: data.count)
         return data
     }
 
@@ -252,8 +252,9 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
+        let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: path, method: "POST", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -266,8 +267,9 @@ final class DataService: Sendable {
         request.httpBody = data
         try await attachAuth(&request)
 
+        let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData)
+        try await validate(response, data: responseData, path: path, method: "PATCH", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -278,8 +280,9 @@ final class DataService: Sendable {
         request.httpMethod = "DELETE"
         try await attachAuth(&request)
 
+        let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data)
+        try await validate(response, data: data, path: path, method: "DELETE", start: start, byteCount: data.count)
         return data
     }
 
@@ -287,37 +290,62 @@ final class DataService: Sendable {
         let token = try await auth.validToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        request.setValue(Self.generateTraceparent(), forHTTPHeaderField: "traceparent")
         let method = request.httpMethod ?? "?"
         let path = request.url?.path ?? "?"
         log.debug("Request: \(method) \(path)")
     }
 
-    private func validate(_ response: URLResponse, data: Data) async throws {
+    /// Generate a W3C traceparent header value for distributed tracing.
+    private static func generateTraceparent() -> String {
+        var bytes = [UInt8](repeating: 0, count: 24)
+        let status = bytes.withUnsafeMutableBufferPointer { buffer in
+            SecRandomCopyBytes(kSecRandomDefault, buffer.count, buffer.baseAddress!)
+        }
+        if status != errSecSuccess {
+            // Fallback: derive bytes from two UUIDs (32 bytes > 24 needed)
+            let fallback = (UUID().uuidString + UUID().uuidString)
+                .replacingOccurrences(of: "-", with: "")
+            let fallbackHex = String(fallback.prefix(48))
+            let traceId = String(fallbackHex.prefix(32))
+            let spanId = String(fallbackHex.dropFirst(32).prefix(16))
+            return "00-\(traceId.lowercased())-\(spanId.lowercased())-01"
+        }
+        let hex = bytes.map { String(format: "%02x", $0) }.joined()
+        let traceId = String(hex.prefix(32))
+        let spanId = String(hex.dropFirst(32).prefix(16))
+        return "00-\(traceId)-\(spanId)-01"
+    }
+
+    private func validate(_ response: URLResponse, data: Data, path: String = "?", method: String = "?", start: Date? = nil, byteCount: Int? = nil) async throws {
         guard let http = response as? HTTPURLResponse else {
             throw DataServiceError.networkError("Invalid response")
         }
-        log.debug("Response: \(http.statusCode) for \(http.url?.path ?? "?")")
+        let durationMs = start.map { Int(Date().timeIntervalSince($0) * 1000) }
+        let durationFragment = durationMs.map { " \($0)ms" } ?? ""
+        let bytesFragment = byteCount.map { " \($0)B" } ?? ""
         guard (200...299).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("HTTP \(http.statusCode) \(http.url?.path ?? "?"): \(body)")
+            let body = String(data: data.prefix(1024), encoding: .utf8) ?? ""
+            log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body, privacy: .private)")
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.
             if http.statusCode == 401 {
                 await auth.signOut()
             }
-            throw DataServiceError.httpError(http.statusCode, body)
+            throw DataServiceError.httpError(http.statusCode)
         }
+        log.debug("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment)")
     }
 }
 
 enum DataServiceError: LocalizedError {
     case networkError(String)
-    case httpError(Int, String)
+    case httpError(Int)
 
     var errorDescription: String? {
         switch self {
         case .networkError(let msg): msg
-        case .httpError(let code, let body): "HTTP \(code): \(body)"
+        case .httpError(let code): "HTTP \(code)"
         }
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import os
 
-private let log = Logger(subsystem: "app.wingdex", category: "EBirdImport")
+private let log = Logger(subsystem: Config.bundleID, category: "EBirdImport")
 
 /// eBird CSV import flow with timezone picker, help section, and conflict display.
 struct EBirdImportView: View {
