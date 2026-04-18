@@ -168,6 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     body.map(observation => observation.outingId)
   )
   if (!allOwned) {
+    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'One or more outing IDs do not belong to the requesting user' })
     return new Response('Invalid outing reference', { status: 400 })
   }
 
@@ -264,12 +265,14 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (updateFields.length === 0) {
+      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Single-observation PATCH has no valid fields to update' })
       return new Response('No valid fields to update', { status: 400 })
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
+        log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH outing reference does not belong to the requesting user' })
         return new Response('Invalid outing reference', { status: 400 })
       }
     }
@@ -280,6 +283,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       .run()
 
     if (updateResult.meta.changes === 0) {
+      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `Observation ${id} not found or not owned by user` })
       return new Response('Not found', { status: 404 })
     }
 
@@ -303,15 +307,18 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (ids.length === 0) {
+      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH provided empty ids array' })
       return new Response('No ids provided', { status: 400 })
     }
     if (updateFields.length === 0) {
+      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH has no valid fields to update' })
       return new Response('No valid fields to update', { status: 400 })
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
+        log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH outing reference does not belong to the requesting user' })
         return new Response('Invalid outing reference', { status: 400 })
       }
     }
@@ -326,6 +333,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const updatedCount = updateResults.reduce((sum, result) => sum + (result.meta?.changes || 0), 0)
 
     if (updatedCount === 0) {
+      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `None of the ${ids.length} observations were found or owned by user` })
       return new Response('Not found', { status: 404 })
     }
 
@@ -335,5 +343,6 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     return Response.json({ observations, dexUpdates })
   }
 
+  log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH payload does not match single-id or bulk-ids shape' })
   return new Response('Invalid patch payload', { status: 400 })
 }

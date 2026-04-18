@@ -257,7 +257,7 @@ function handleUnexpectedError(
     resultSignature: 500,
     resultDescription: `Unhandled error: ${message}`,
     durationMs: Date.now() - start,
-    properties: { error: message, stack },
+    properties: { error: message },
   })
   const response = errorResponse('Internal Server Error', 500)
   addTraceHeaders(response, traceCtx)

@@ -25,6 +25,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     passkeyId || undefined,
   )
   if (!ownsPasskey) {
+    log?.warn('auth/finalizePasskey/invoke', { category: 'Audit', resultType: 'Failed', resultSignature: 403, resultDescription: 'User does not own the specified passkey or no passkey found' })
     return new Response('Passkey required', { status: 403 })
   }
 

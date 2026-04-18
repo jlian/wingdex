@@ -24,11 +24,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const provider = url.searchParams.get('provider')
 
   if (!provider) {
+    log?.warn('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Missing provider query parameter for mobile OAuth' })
     return new Response('Missing provider parameter', { status: 400 })
   }
 
   const allowedProviders = new Set(['github', 'apple', 'google'])
   if (!allowedProviders.has(provider)) {
+    log?.warn('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: `Unsupported OAuth provider: ${provider}; allowed: github, apple, google` })
     return new Response('Unsupported provider parameter', { status: 400 })
   }
 

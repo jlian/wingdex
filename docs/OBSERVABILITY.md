@@ -13,7 +13,7 @@ Every log line is a JSON object (or a compact one-liner when `LOG_FORMAT=pretty`
 | `traceId` | yes | string | W3C trace-id (32 hex chars) |
 | `spanId` | yes | string | W3C span-id (16 hex chars) |
 | `operationName` | yes | string | `resourceType/subType/verb` (camelCase) |
-| `category` | yes | string | `Audit`, `Application`, or `Request` |
+| `category` | recommended | string | `Audit`, `Application`, or `Request` |
 | `userId` | when known | string | Top-level for easy querying |
 | `identity` | when known | object | `{ isAnonymous, authMethod }` |
 | `resourceId` | when applicable | string | `/users/{userId}/outings/{id}` etc. |

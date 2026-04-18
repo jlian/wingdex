@@ -45,10 +45,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
+      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 401, resultDescription: 'No authenticated user for bird identification' })
       return new Response('Unauthorized', { status: 401 })
     }
 
     if (user.isAnonymous) {
+      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 403, resultDescription: 'Anonymous users cannot use bird identification; account required' })
       return new Response('Account required', { status: 403 })
     }
 
