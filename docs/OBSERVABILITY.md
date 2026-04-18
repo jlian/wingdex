@@ -90,12 +90,16 @@ Verbs are specific to what the operation does: `read`, `write`, `delete`, `invok
 Auto-built by middleware after session check:
 
 ```
-/users/{userId}                              -- base for all authenticated requests
-/users/{userId}/outings/{outingId}           -- outing-specific operations
-/users/{userId}/dex                          -- dex operations
+/users/{userId}                                          -- base for all authenticated requests
+/users/{userId}/outings/{outingId}                       -- outing-specific (auto from URL params)
+/users/{userId}/outings/{outingId}/observations          -- observation batch ops (via withResourceId)
+/users/{userId}/outings/{outingId}/observations/{obsId}  -- single observation patch
+/users/{userId}/outings/{outingId}/photos                -- photo batch ops (via withResourceId)
+/users/{userId}/dex                                      -- dex read/write/export (via withResourceId)
+/users/{userId}/dex/{speciesName}                        -- single species dex patch
 ```
 
-Routes can extend with `log.withResourceId('outings/abc')` for body-derived entity IDs. Deep calls inherit the scoped logger automatically.
+Middleware auto-sets `/users/{userId}` and appends outing IDs from URL params (for `/api/data/outings/:id` and `/api/export/outing/:id`). Route handlers extend with `log.withResourceId('dex')` or `log.withResourceId('outings/' + body.id)` for body-derived entity IDs. Batch operations use the parent resource path and put individual IDs in `properties`.
 
 ## Error message quality
 

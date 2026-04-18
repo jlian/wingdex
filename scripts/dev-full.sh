@@ -47,4 +47,4 @@ echo "[dev:full] Building app..."
 npm run build
 
 echo "[dev:full] Starting full local app at ${BASE}..."
-exec npx wrangler pages dev dist --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false --log-level warn
+exec npx wrangler pages dev dist --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false

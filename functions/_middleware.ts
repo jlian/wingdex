@@ -12,9 +12,6 @@ const BODY_LIMITS: Array<{ prefix: string; maxBytes: number }> = [
 ]
 const DEFAULT_BODY_LIMIT = 1 * 1024 * 1024 // 1 MB for all other API routes
 
-/** Suppress Informational completion logs for these high-frequency polling endpoints. */
-const SUPPRESS_SUCCESS_LOG = new Set(['/api/auth/get-session'])
-
 /** Route map: pathname prefix + optional method -> operationName + category.
  *  Ordered longest-prefix-first so /api/data/outings/ beats /api/data/outings. */
 const ROUTE_MAP: Array<{ prefix: string; method?: string; op: string; category: Category }> = [
@@ -157,10 +154,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      const suppress = SUPPRESS_SUCCESS_LOG.has(pathname) && response.ok
-      if (!suppress) {
-        emitCompletionLog(log, op, response.status, Date.now() - start)
-      }
+      emitCompletionLog(log, op, response.status, Date.now() - start)
       return response
     } catch (err) {
       return handleUnexpectedError(err, log, traceCtx, op, start)

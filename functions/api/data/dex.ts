@@ -50,7 +50,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const dex = await computeDex(context.env.DB, userId)
-  log?.info('data/dex/read', { category: 'Application', resultDescription: `Computed dex with ${dex.length} species`, properties: { speciesCount: dex.length } })
+  log?.withResourceId('dex')?.info('data/dex/read', { category: 'Application', resultDescription: `Computed dex with ${dex.length} species`, properties: { speciesCount: dex.length } })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -82,7 +82,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   for (const patch of patches) {
     await upsertDexMetaPatch(context.env.DB, userId, patch)
   }
-  log?.info('data/dex/write', { category: 'Application', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length } })
+  log?.withResourceId('dex')?.info('data/dex/write', { category: 'Application', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({

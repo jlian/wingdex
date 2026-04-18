@@ -24,7 +24,7 @@
         "dev:vite": "vite --port 5000 --strictPort",
         "dev:full": "bash scripts/dev-full.sh",
         "dev:full:restart": "FORCE_RESTART=true bash scripts/dev-full.sh",
-        "dev:cf": "wrangler pages dev dist --persist-to \"$HOME/.cache/wingdex/wrangler-state\" --show-interactive-dev-session=false --log-level warn",
+        "dev:cf": "wrangler pages dev dist --persist-to \"$HOME/.cache/wingdex/wrangler-state\" --show-interactive-dev-session=false",
         "dev:ensure-5000": "bash scripts/ensure-app-on-5000.sh",
         "kill": "bash scripts/kill-dev.sh",
         "setup:playwright": "npx playwright install --with-deps chromium",

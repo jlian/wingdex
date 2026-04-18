@@ -47,7 +47,7 @@ release_lock() {
 }
 
 is_healthy() {
-  curl -fsS "${BASE_URL}" >/dev/null 2>&1 && curl -fsS "${BASE_URL}/api/auth/get-session" >/dev/null 2>&1
+  curl -fsS "${BASE_URL}" >/dev/null 2>&1 && curl -fsS "${BASE_URL}/api/health" >/dev/null 2>&1
 }
 
 start_dev() {
