@@ -566,9 +566,7 @@ struct PerPhotoConfirmView: View {
             let query = "\"\(displayName)\"".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? displayName
             let urlStr = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=\(query)&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=extmetadata%7Curl&iiurlwidth=500&format=json&origin=*"
             guard let url = URL(string: urlStr) else {
-                #if DEBUG
-                print("[Wiki] Invalid URL: \(urlStr)")
-                #endif
+                log.debug("Commons gallery: invalid URL: \(urlStr)")
                 await MainActor.run { isLoadingWikiImage = false }
                 return
             }
@@ -579,10 +577,8 @@ struct PerPhotoConfirmView: View {
 
             let response = try JSONDecoder().decode(CommonsResponse.self, from: data)
             guard !Task.isCancelled else { return }
-            #if DEBUG
             let pageCount = response.query?.pages?.count ?? 0
-            print("[Wiki] Commons returned \(pageCount) pages for '\(displayName)'")
-            #endif
+            log.debug("Commons gallery: \(pageCount) pages for '\(displayName)'")
 
             // Score: featured > quality > relevance
             var scored: [(page: CommonsResponse.Page, score: Int, relevance: Int)] = []
@@ -612,9 +608,7 @@ struct PerPhotoConfirmView: View {
                 if urls.count >= 6 { break }
             }
             guard !Task.isCancelled else { return }
-            #if DEBUG
-            print("[Wiki] After filtering: \(urls.count) URLs")
-            #endif
+            log.debug("Commons gallery: \(urls.count) URLs after filtering")
             let items = zip(urls, plumages).map { (url, plumage) in (url: url, plumage: plumage) }
             await MainActor.run {
                 galleryItems = sortedByPlumage(items)

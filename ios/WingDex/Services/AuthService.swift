@@ -377,7 +377,11 @@ final class AuthService: @unchecked Sendable {
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
             await MainActor.run { self.clearAPICookies() }
-            try? await self.updateProfile(name: birdName, image: avatarDataUrl)
+            do {
+                try await self.updateProfile(name: birdName, image: avatarDataUrl)
+            } catch {
+                log.warning("Post-signup profile update failed: \(error.localizedDescription)")
+            }
             await MainActor.run { self.clearAPICookies() }
         }
     }
@@ -435,7 +439,7 @@ final class AuthService: @unchecked Sendable {
         }
         guard httpResponse.statusCode == 200 else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.warning("fetchUserInfo: HTTP \(httpResponse.statusCode), body=\(body, privacy: .public)")
+            log.warning("fetchUserInfo: HTTP \(httpResponse.statusCode), body: \(body, privacy: .private)")
             return
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],

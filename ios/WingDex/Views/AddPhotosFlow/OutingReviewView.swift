@@ -608,7 +608,14 @@ struct OutingReviewView: View {
         guard let searchRequest else { return }
         Task {
             let search = MKLocalSearch(request: searchRequest)
-            guard let mapItem = try? await search.start().mapItems.first else { return }
+            let mapItem: MKMapItem?
+            do {
+                mapItem = try await search.start().mapItems.first
+            } catch {
+                log.debug("Place search failed: \(error.localizedDescription)")
+                return
+            }
+            guard let mapItem else { return }
 
             let coord = mapItem.location.coordinate
             if CLLocationCoordinate2DIsValid(coord) {
@@ -819,7 +826,11 @@ final class PlaceSearchCompleter: NSObject {
     func resolve(_ result: PlaceResult) async -> MKMapItem? {
         guard let request = buildRequest(for: result) else { return nil }
         let search = MKLocalSearch(request: request)
-        return try? await search.start().mapItems.first
+        do {
+            return try await search.start().mapItems.first
+        } catch {
+            return nil
+        }
     }
 
     /// Build an MKLocalSearch.Request from the captured snapshot. Call synchronously

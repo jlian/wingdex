@@ -52,8 +52,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         else {
             let status = (optionsResponse as? HTTPURLResponse)?.statusCode ?? -1
             let body = String(data: optionsData, encoding: .utf8) ?? ""
-            log.error("Authenticate options failed: HTTP \(status) - \(body)")
-            throw PasskeyError.serverError("Failed to get authentication options (HTTP \(status)): \(body)")
+            log.error("Authenticate options failed: HTTP \(status), body: \(body, privacy: .private)")
+            throw PasskeyError.serverError("Failed to get authentication options (HTTP \(status))")
         }
 
         let challengeCookies = AuthenticatedRequest.extractCookies(from: httpResponse, for: optionsURL)
@@ -237,8 +237,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("List passkeys failed: HTTP \(status) - \(body)")
-            throw PasskeyError.serverError("Failed to list passkeys (HTTP \(status)): \(body)")
+            log.error("List passkeys failed: HTTP \(status), body: \(body, privacy: .private)")
+            throw PasskeyError.serverError("Failed to list passkeys (HTTP \(status))")
         }
 
         return try JSONDecoder().decode([PasskeyInfo].self, from: data)
@@ -263,8 +263,8 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("Delete passkey failed: HTTP \(status) - \(body)")
-            throw PasskeyError.serverError("Failed to delete passkey (HTTP \(status)): \(body)")
+            log.error("Delete passkey failed: HTTP \(status), body: \(body, privacy: .private)")
+            throw PasskeyError.serverError("Failed to delete passkey (HTTP \(status))")
         }
     }
 

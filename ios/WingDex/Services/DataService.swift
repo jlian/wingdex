@@ -298,7 +298,16 @@ final class DataService: Sendable {
     /// Generate a W3C traceparent header value for distributed tracing.
     private static func generateTraceparent() -> String {
         var bytes = [UInt8](repeating: 0, count: 24)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        if status != errSecSuccess {
+            // Fallback: derive bytes from two UUIDs (32 bytes > 24 needed)
+            let fallback = (UUID().uuidString + UUID().uuidString)
+                .replacingOccurrences(of: "-", with: "")
+            let fallbackHex = String(fallback.prefix(48))
+            let traceId = String(fallbackHex.prefix(32))
+            let spanId = String(fallbackHex.dropFirst(32).prefix(16))
+            return "00-\(traceId.lowercased())-\(spanId.lowercased())-01"
+        }
         let hex = bytes.map { String(format: "%02x", $0) }.joined()
         let traceId = String(hex.prefix(32))
         let spanId = String(hex.dropFirst(32).prefix(16))
