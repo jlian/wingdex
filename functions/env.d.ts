@@ -37,4 +37,6 @@ interface RequestData extends Record<string, unknown> {
   log?: import('./lib/log').Logger
   operationName?: string
   category?: import('./lib/log').Category
+  /** True when middleware already appended an entity segment (e.g. outings/{id}) to resourceId from URL params. Handlers should NOT call withResourceId for the same entity. */
+  autoScopedResourceId?: boolean
 }

@@ -200,6 +200,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   let resourceId = `/users/${session.user.id}`
   const entitySegment = extractEntitySegment(pathname)
   if (entitySegment) resourceId += `/${entitySegment}`
+  context.data.autoScopedResourceId = !!entitySegment
 
   log = createLogger({
     env: context.env,

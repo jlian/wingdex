@@ -154,7 +154,7 @@ Auto-built by middleware after session check:
 /users/{userId}/dex/{speciesName}                        -- single species dex patch
 ```
 
-Middleware auto-sets `/users/{userId}` and appends outing IDs from URL params (for `/api/data/outings/:id` and `/api/export/outing/:id`). Route handlers extend with `log.withResourceId('dex')` or `log.withResourceId('outings/' + body.id)` for body-derived entity IDs. Batch operations use the parent resource path and put individual IDs in `properties`.
+Middleware auto-sets `/users/{userId}` and appends outing IDs from URL params (for `/api/data/outings/:id` and `/api/export/outing/:id`). When middleware scopes resourceId from URL params, it sets `context.data.autoScopedResourceId = true` so handlers know NOT to call `withResourceId` for the same entity. Route handlers extend with `log.withResourceId('dex')` or `log.withResourceId('outings/' + body.id)` only for body-derived entity IDs. Batch operations use the parent resource path and put individual IDs in `properties`.
 
 ## Error message quality
 

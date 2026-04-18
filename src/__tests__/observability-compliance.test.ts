@@ -94,6 +94,23 @@ describe('handler instrumentation compliance', () => {
     expect(violations).toEqual([])
   })
 
+  it('URL-param routes do not duplicate withResourceId (middleware already scopes)', () => {
+    // Middleware extractEntitySegment already appends outings/{id} for these routes.
+    // Handlers must NOT call withResourceId('outings/...') again.
+    const urlParamRoutes = [
+      'data/outings/[id].ts',
+      'export/outing/[id].ts',
+    ]
+    const violations: string[] = []
+    for (const h of handlers) {
+      if (!urlParamRoutes.includes(h.rel)) continue
+      if (h.content.includes("withResourceId(`outings/") || h.content.includes("withResourceId('outings/")) {
+        violations.push(`${h.rel}: has withResourceId('outings/...') but middleware already scopes via extractEntitySegment`)
+      }
+    }
+    expect(violations).toEqual([])
+  })
+
   it('every route.fail() has a detail argument (3rd arg)', () => {
     const violations: string[] = []
     for (const h of handlers) {
