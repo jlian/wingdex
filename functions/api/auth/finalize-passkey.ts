@@ -16,7 +16,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json() as { name?: string; passkeyId?: string }
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   const passkeyId = typeof body.passkeyId === 'string' ? body.passkeyId.trim() : ''
@@ -26,7 +26,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     passkeyId || undefined,
   )
   if (!ownsPasskey) {
-    return route.fail(403, 'Passkey required', 'User does not own the specified passkey or no passkey found', { passkeyId: passkeyId || undefined })
+    return route.fail(403, 'Passkey required', `User does not own passkey ${passkeyId || '(none)'} or no passkey found for this user`, { passkeyId: passkeyId || undefined })
   }
 
   try {

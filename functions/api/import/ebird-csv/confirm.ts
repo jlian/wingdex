@@ -35,7 +35,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isConfirmBody(body)) {

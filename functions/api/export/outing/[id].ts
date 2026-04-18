@@ -14,7 +14,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   if (!outingId) {
-    return route.fail(400, 'Missing outing id')
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
 
   try {

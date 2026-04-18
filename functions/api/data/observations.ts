@@ -149,7 +149,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
@@ -244,7 +244,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isObject(body)) {
@@ -269,13 +269,13 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (updateFields.length === 0) {
-      return route.fail(400, 'No valid fields to update')
+      return route.fail(400, 'No valid fields to update', 'PATCH body contains no recognized fields; valid fields are outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        return route.fail(400, 'Invalid outing reference', 'PATCH outing reference does not belong to the requesting user')
+        return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
 
@@ -308,16 +308,16 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (ids.length === 0) {
-      return route.fail(400, 'No ids provided')
+      return route.fail(400, 'No ids provided', 'Bulk PATCH requires at least one observation ID in the ids array')
     }
     if (updateFields.length === 0) {
-      return route.fail(400, 'No valid fields to update')
+      return route.fail(400, 'No valid fields to update', 'Bulk PATCH body contains no recognized fields; valid fields are outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        return route.fail(400, 'Invalid outing reference', 'Bulk PATCH outing reference does not belong to the requesting user')
+        return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
 

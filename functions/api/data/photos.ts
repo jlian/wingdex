@@ -49,7 +49,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!Array.isArray(body) || !body.every(isCreatePhotoInput)) {
@@ -67,7 +67,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     body.map(photo => photo.outingId)
   )
   if (!allOwned) {
-    return route.fail(400, 'Invalid outing reference', 'One or more outing references are not owned by user or do not exist')
+    const failOutingIds = [...new Set(body.map(p => p.outingId))]
+    return route.fail(400, 'Invalid outing reference', `One or more outing IDs are not owned by user or do not exist`, { outingIds: failOutingIds })
   }
 
   const statements = body.map(photo =>

@@ -35,14 +35,14 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   if (!outingId) {
-    return route.fail(400, 'Missing outing id')
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
 
   let body: unknown
   try {
     body = await context.request.json()
   } catch {
-    return route.fail(400, 'Invalid JSON body')
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   if (!isObject(body)) {
@@ -198,7 +198,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
   }
 
   if (!outingId) {
-    return route.fail(400, 'Missing outing id')
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
 
   try {
