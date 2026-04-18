@@ -27,7 +27,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   const outingId = context.params.id as string | undefined
   const route = createRouteResponder(
-    outingId ? (context.data as RequestData).log?.withResourceId(`outings/${outingId}`) : (context.data as RequestData).log,
+    (context.data as RequestData).log,
     'data/outings/write', 'Application'
   )
   if (!userId) {
@@ -192,7 +192,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   const outingId = context.params.id as string | undefined
   const route = createRouteResponder(
-    outingId ? (context.data as RequestData).log?.withResourceId(`outings/${outingId}`) : (context.data as RequestData).log,
+    (context.data as RequestData).log,
     'data/outings/delete', 'Application'
   )
   if (!userId) {

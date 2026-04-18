@@ -6,7 +6,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
   const outingId = context.params.id as string | undefined
   const route = createRouteResponder(
-    outingId ? (context.data as RequestData).log?.withResourceId(`outings/${outingId}`) : (context.data as RequestData).log,
+    (context.data as RequestData).log,
     'export/outingCsv/export', 'Application'
   )
   if (!userId) {
