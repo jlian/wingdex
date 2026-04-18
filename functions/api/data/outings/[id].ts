@@ -167,6 +167,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     return route.fail(404, 'Not found', `Outing ${outingId} not found after successful update`, { outingId })
   }
 
+  route.debug(`Updated outing ${outingId}`, { outingId, fieldCount: updateFields.length })
+
   return Response.json({
     ...outing,
     defaultLocationName: outing.defaultLocationName || undefined,

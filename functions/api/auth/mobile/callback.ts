@@ -86,5 +86,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   const callbackUrl = `${APP_SCHEME}://auth/callback?${parts.join('&')}`
+  route.debug(`OAuth callback redirecting to app for user ${session.user.id}`, { userId: session.user.id })
   return Response.redirect(callbackUrl, 302)
 }

@@ -140,6 +140,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       modelTier: model,
     }, log, traceId, spanId, traceFlags)
 
+    route.debug(`Identified ${result.candidates.length} candidates${result.rangeAdjusted ? ' (range-adjusted)' : ''}`, { candidateCount: result.candidates.length, rangeAdjusted: !!result.rangeAdjusted, multipleBirds: !!result.multipleBirds })
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {

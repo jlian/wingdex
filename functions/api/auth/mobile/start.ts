@@ -93,5 +93,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     })
   }
 
+  route.debug(`OAuth redirect to ${provider}`, { provider })
   return new Response(null, { status: 302, headers })
 }
