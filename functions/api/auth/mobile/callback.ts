@@ -20,7 +20,7 @@
  *   4. ASWebAuthenticationSession captures the custom scheme URL
  */
 import { createAuth } from '../../../lib/auth'
-import { createRouteResponder } from '../../../lib/log'
+import { createRouteResponder, createLogger } from '../../../lib/log'
 
 const APP_SCHEME = 'wingdex'
 
@@ -46,7 +46,7 @@ function extractSignedSessionToken(cookieHeader: string | null): string | null {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const route = createRouteResponder((context.data as RequestData).log, 'auth/mobileOAuth/invoke', 'Application')
+  let route = createRouteResponder((context.data as RequestData).log, 'auth/mobileOAuth/invoke', 'Application')
   // Try default mode first so localhost e2e/local cookies keep working.
   // If that does not resolve a session but the request carries a secure hosted
   // session cookie, retry in hosted-oauth mode so Better Auth uses the hosted
@@ -65,6 +65,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
     return Response.redirect(errorUrl, 302)
   }
+
+  // Enrich logger with userId after auth (middleware skips session check for /api/auth/* routes)
+  const enrichedLog = createLogger({
+    env: context.env,
+    traceId: (context.data as RequestData).traceId || '',
+    spanId: (context.data as RequestData).spanId || '',
+    userId: session.user.id,
+    identity: { authMethod: 'session' },
+    resourceId: `/users/${session.user.id}`,
+  })
+  route = createRouteResponder(enrichedLog, 'auth/mobileOAuth/invoke', 'Application')
 
   // Build callback URL with proper percent-encoding (not form-encoding).
   // URLSearchParams encodes spaces as + which Swift's URLComponents doesn't decode.
