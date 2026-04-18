@@ -1,80 +1,70 @@
 /**
  * Schematized structured logger for Cloudflare Workers.
  *
- * Emits JSON log lines via console.log/console.error that Cloudflare Workers
- * Logs auto-indexes for the Query Builder.
+ * Schema aligned with Azure Monitor resource logs. operationName uses
+ * camelCase resource hierarchy: `resourceType/subType/verb`.
  *
- * See `.github/AGENTS.md` (Observability) for the full schema, operationName
- * conventions, enrichment pattern, and required practices for new code.
+ * Level values follow Azure Monitor severity:
+ *   Informational - happy-path events (gated on env.DEBUG unless Audit)
+ *   Warning       - client errors (4xx), validation failures (always emitted)
+ *   Error         - server errors (5xx), unexpected exceptions (always emitted)
+ *   Critical      - reserved for data loss, security breach (always emitted)
  *
- * Quick reference:
- *   - Request lifecycle log (auto, one per request):
- *       operationName = `<METHOD> <route>`     e.g. `GET /api/auth/get-session`
- *   - Sub-step log (handler/lib emitted):
- *       operationName = `<area>.<step>[.<sub>]` e.g. `birdId.llm.call`
- *   - Drop `category` (always derivable from operationName prefix).
- *   - Omit `resultDescription` on success (the rest of the row already says so).
- *   - To attach context to the request log instead of emitting a duplicate
- *     "did the obvious thing" log, mutate `context.data.requestProperties`.
- *
- * Debug-level logs are gated on env.DEBUG.
+ * See `docs/OBSERVABILITY.md` for full schema, operationName table,
+ * category reference, resourceId hierarchy, and required practices.
  */
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
+export type LogLevel = 'Informational' | 'Warning' | 'Error' | 'Critical'
 export type ResultType = 'Succeeded' | 'Failed'
+export type Category = 'Audit' | 'Application' | 'Request'
 
-/** Identity of the caller, inspired by Azure Monitor's identity blob. */
+/** Identity of the caller (authMethod + isAnonymous detail). */
 export interface Identity {
-  userId?: string
   isAnonymous?: boolean
   authMethod?: 'session' | 'bearer' | 'none'
 }
 
 export interface LogFields {
+  category?: Category
   resultType?: ResultType
   resultSignature?: number | string
-  /** Human-readable message: cause + mitigation. Omit on success. */
+  /** Human-readable: cause + mitigation. Omit on success. */
   resultDescription?: string
   durationMs?: number
   properties?: Record<string, unknown>
 }
 
 export interface Logger {
+  /** Informational - gated on DEBUG unless category is Audit. */
   info(operationName: string, fields?: LogFields): void
+  /** Warning - always emitted. Use for 4xx, validation failures. */
   warn(operationName: string, fields?: LogFields): void
+  /** Error - always emitted. Use for 5xx, unexpected exceptions. */
   error(operationName: string, fields?: LogFields): void
-  debug(operationName: string, fields?: LogFields): void
-  /** Start a timed span. Call `.end()` on the result to log with durationMs. */
-  time(operationName: string): TimedSpan
+  /** Returns a child logger with additional properties merged into every log. */
+  withResource(extra: Record<string, unknown>): Logger
+  /** Returns a child logger with resourceId extended (e.g. 'outings/abc'). */
+  withResourceId(segment: string): Logger
 }
 
-export interface TimedSpan {
-  end(fields?: Omit<LogFields, 'durationMs'>): void
-}
-
-/**
- * Build the request-lifecycle operationName: `<METHOD> <normalized route>`.
- * Dynamic ID segments are collapsed to `:id` so cardinality stays bounded.
- * Whitelist-based: only known dynamic-segment parents are normalized.
- */
-export function operationNameForRequest(method: string, pathname: string): string {
-  const normalized = pathname
-    .replace(/^\/api\/data\/outings\/[^/]+/, '/api/data/outings/:id')
-    .replace(/^\/api\/export\/outing\/[^/]+/, '/api/export/outing/:id')
-  return `${method.toUpperCase()} ${normalized}`
+export interface LoggerContext {
+  env: { DEBUG?: string }
+  traceId: string
+  spanId: string
+  userId?: string
+  identity?: Identity
+  resourceId?: string
+  baseProperties?: Record<string, unknown>
 }
 
 /** Create a logger bound to a specific request context. */
-export function createLogger(
-  env: { DEBUG?: string },
-  traceId: string,
-  spanId: string,
-  identity?: Identity,
-): Logger {
+export function createLogger(ctx: LoggerContext): Logger {
+  const { env, traceId, spanId, userId, identity, resourceId, baseProperties } = ctx
   const isDebug = !!env.DEBUG
 
   function emit(level: LogLevel, operationName: string, fields?: LogFields): void {
-    if (level === 'debug' && !isDebug) return
+    // Informational is DEBUG-gated UNLESS category is Audit
+    if (level === 'Informational' && !isDebug && fields?.category !== 'Audit') return
 
     const entry: Record<string, unknown> = {
       time: new Date().toISOString(),
@@ -83,34 +73,49 @@ export function createLogger(
       spanId,
       operationName,
     }
+    if (fields?.category) entry.category = fields.category
+    if (userId) entry.userId = userId
+    if (identity) entry.identity = identity
+    if (resourceId) entry.resourceId = resourceId
     if (fields?.resultType) entry.resultType = fields.resultType
     if (fields?.resultSignature !== undefined) entry.resultSignature = fields.resultSignature
     if (fields?.resultDescription) entry.resultDescription = fields.resultDescription
     if (fields?.durationMs !== undefined) entry.durationMs = fields.durationMs
-    if (identity && (identity.userId || identity.authMethod)) entry.identity = identity
-    if (fields?.properties && Object.keys(fields.properties).length > 0) entry.properties = fields.properties
+
+    // Merge base properties (from withResource) with per-call properties
+    const merged = baseProperties || fields?.properties
+      ? { ...baseProperties, ...fields?.properties }
+      : undefined
+    if (merged && Object.keys(merged).length > 0) entry.properties = merged
 
     const json = JSON.stringify(entry)
-    if (level === 'error') {
+    if (level === 'Error' || level === 'Critical') {
       console.error(json)
     } else {
       console.log(json)
     }
   }
 
-  return {
-    info: (op, f) => emit('info', op, f),
-    warn: (op, f) => emit('warn', op, f),
-    error: (op, f) => emit('error', op, f),
-    debug: (op, f) => emit('debug', op, f),
-    time(operationName: string): TimedSpan {
-      const start = Date.now()
-      return {
-        end(fields) {
-          const durationMs = Date.now() - start
-          emit('info', operationName, { ...fields, durationMs })
-        },
-      }
-    },
+  function makeLogger(currentCtx: LoggerContext): Logger {
+    return {
+      info: (op, f) => emit('Informational', op, f),
+      warn: (op, f) => emit('Warning', op, f),
+      error: (op, f) => emit('Error', op, f),
+      withResource(extra) {
+        return createLogger({
+          ...currentCtx,
+          baseProperties: { ...currentCtx.baseProperties, ...extra },
+        })
+      },
+      withResourceId(segment) {
+        const base = currentCtx.resourceId || ''
+        return createLogger({
+          ...currentCtx,
+          resourceId: `${base}/${segment}`,
+        })
+      },
+    }
   }
+
+  return makeLogger(ctx)
 }

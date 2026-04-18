@@ -67,13 +67,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       const json = (await response.json()) as { url?: string; redirect?: boolean }
       redirectUrl = json.url || ''
     } catch {
-      log?.error('auth.mobile.start', { resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned an unparseable response for provider ${provider}; check BETTER_AUTH_URL and provider configuration`, properties: { provider } })
+      log?.error('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned an unparseable response for provider ${provider}; check BETTER_AUTH_URL and provider configuration`, properties: { provider } })
       return new Response('Invalid response from auth', { status: 500 })
     }
   }
 
   if (!redirectUrl) {
-    log?.error('auth.mobile.start', { resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned no redirect URL for provider ${provider}; the provider may not be configured or the callbackURL may be wrong`, properties: { provider } })
+    log?.error('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 500, resultDescription: `Better Auth returned no redirect URL for provider ${provider}; the provider may not be configured or the callbackURL may be wrong`, properties: { provider } })
     return new Response('No redirect URL from auth provider', { status: 500 })
   }
 

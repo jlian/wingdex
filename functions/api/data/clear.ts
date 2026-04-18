@@ -9,7 +9,6 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     context.env.DB.prepare('DELETE FROM outing WHERE userId = ?').bind(userId),
     context.env.DB.prepare('DELETE FROM dex_meta WHERE userId = ?').bind(userId),
   ])
-  void log
 
   return Response.json({ cleared: true })
 }

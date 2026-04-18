@@ -3,7 +3,6 @@ import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }

@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        log?.warn('import.ebirdCsv.confirmInvalid', { resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
+        log?.warn('import/ebirdCsvConfirm/write', { category: 'Application', resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
         return false
       }
       return true
@@ -188,7 +188,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
-  Object.assign((context.data as RequestData).requestProperties ?? {}, { outings: outings.length, observations: observations.length, statements: insertStatements.length })
+  log?.info('import/ebirdCsvConfirm/write', { category: 'Application', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations`, properties: { outingCount: outings.length, observationCount: observations.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length

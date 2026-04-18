@@ -148,12 +148,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data.observations.invalid', { resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body is not valid JSON' })
+    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body is not valid JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
-    log?.warn('data.observations.invalid', { resultType: 'Failed', resultSignature: 400, resultDescription: 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}' })
+    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}' })
     return new Response('Invalid observations payload', { status: 400 })
   }
 
@@ -209,7 +209,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   })
 
   await context.env.DB.batch(statements)
-  Object.assign((context.data as RequestData).requestProperties ?? {}, { count: body.length })
+  log?.info('data/observations/write', { category: 'Application', resultDescription: `Inserted ${body.length} observations`, properties: { observationCount: body.length } })
 
   const observations = body.map(observation => ({
     ...observation,

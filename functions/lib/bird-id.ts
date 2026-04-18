@@ -121,7 +121,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
 
-  log?.debug('birdId.llm.call', { resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidates: parsed.candidates } })
+  log?.info('birdId/llmCall/invoke', { category: 'Application', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidateCount: Array.isArray(parsed.candidates) ? parsed.candidates.length : 0 } })
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
@@ -158,11 +158,11 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
     return true
   })
 
-  log?.debug('birdId.taxonomy.match', { resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, plumage: c.plumage ?? null, code: c.ebirdCode })) } })
+  log?.info('birdId/taxonomyMatch/invoke', { category: 'Application', resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidateCount: candidates.length } })
 
   // Apply range-prior adjustment if location is available
   const hasRangeBucket = env.RANGE_PRIORS != null
-  log?.debug('birdId.range.filter', { resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { location: input.location ? `${input.location.lat},${input.location.lon}` : 'none', bucket: hasRangeBucket } })
+  log?.info('birdId/rangeFilter/invoke', { category: 'Application', resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { hasLocation: !!input.location, hasBucket: hasRangeBucket } })
 
   let rangeAdjusted = false
 
@@ -175,7 +175,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       input.month,
       codes,
     )
-    log?.debug('birdId.range.priorsRead', { resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { priors: Object.fromEntries(priors) } })
+    log?.info('birdId/rangePriors/read', { category: 'Application', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { speciesCount: codes.length } })
     rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
@@ -183,7 +183,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       return { ...c, confidence: adjustConfidence(c.confidence, range, input.month, input.location!.lat), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
-    log?.debug('birdId.range.adjust', { resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates`, properties: { candidates: candidates.map(c => ({ species: c.species, confidence: c.confidence, range: c.rangeStatus ?? 'n/a' })) } })
+    log?.info('birdId/rangeAdjust/invoke', { category: 'Application', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates` })
   }
 
   const result = {

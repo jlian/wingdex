@@ -100,13 +100,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     speciesComments: observation.speciesComments || undefined,
   }))
 
-  Object.assign((context.data as RequestData).requestProperties ?? {}, {
-    outings: outings.length,
-    photos: photos.length,
-    observations: observations.length,
-    dex: dex.length,
-  })
-  void log
+  log?.info('data/all/read', { category: 'Application', resultDescription: `Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, properties: { outingCount: outings.length, photoCount: photos.length, observationCount: observations.length, dexCount: dex.length } })
 
   return Response.json({
     outings,

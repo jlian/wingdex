@@ -66,62 +66,13 @@ If you skip full verify, at minimum confirm `npm run build` succeeds.
 
 ## Observability (Structured Logging)
 
-WingDex emits Azure-Monitor-inspired structured logs from every Cloudflare Pages Function. The schema and conventions below are required for all new and changed routes - reviewers should reject diffs that regress them.
+Full schema, operationName table, category reference, resourceId hierarchy, e2e debugging scenarios, and error message guidelines are in **[docs/OBSERVABILITY.md](../docs/OBSERVABILITY.md)**.
 
-### Schema
+**Critical rules (enforced in code review):**
 
-Every log line is a single JSON object. Fields are emitted only when meaningful (the logger drops empty/undefined values).
-
-| Field | When | Notes |
-|---|---|---|
-| `time` | always | ISO 8601 timestamp. |
-| `level` | always | `info \| warn \| error \| debug` (debug gated on `env.DEBUG`). |
-| `traceId`, `spanId` | always | W3C Trace Context, propagated from incoming `traceparent` (or generated). |
-| `operationName` | always | See conventions below. The single dimension you pivot on. |
-| `resultType` | always | `Succeeded \| Failed`. |
-| `resultSignature` | always | HTTP status (request log) or domain code (sub-step). |
-| `resultDescription` | warn/error only | Human-readable: cause + mitigation. **Omit on success** - the rest of the row already says so. |
-| `durationMs` | when measured | Set by middleware on the request log and by `log.time(...)` spans. |
-| `identity` | when known | `{ userId?, isAnonymous?, authMethod }`. Always present after the session check; auth routes carry only `authMethod`. |
-| `properties` | optional | Machine-queryable bag (counts, IDs, enums). Do not duplicate envelope fields. |
-
-There is **no** `category` field. Always derivable from the operationName prefix.
-
-### `operationName` (one rule per log type)
-
-| Log type | Format | Example |
-|---|---|---|
-| Request lifecycle (one per request, auto-emitted by middleware) | `<METHOD> <route>` | `GET /api/auth/get-session`, `DELETE /api/data/outings/:id` |
-| Sub-step event (handler/lib emitted) | `<area>.<step>[.<sub>]`, lowercase camelCase | `birdId.llm.call`, `birdId.range.filter`, `import.ebirdCsv.preview` |
-
-- **Path normalization:** dynamic ID segments are collapsed to `:id` so cardinality stays bounded. Whitelist-based; new dynamic-route templates must be added to `operationNameForRequest()` in `functions/lib/log.ts`.
-- **Sub-step ops never repeat the path** - the `traceId` stitches them. They describe the *step*, not the route.
-- **Method stays uppercase** (HTTP convention); steps are lowercase camelCase.
-
-### Enrich the request log instead of duplicating it
-
-A handler that wants to record "computed dex with 87 species" must NOT emit a second log row that echoes the request's outcome. Instead, mutate `context.data.requestProperties`:
-
-```ts
-Object.assign((context.data as RequestData).requestProperties ?? {}, { count: dex.length })
-```
-
-Middleware merges this bag into the request lifecycle log's `properties`. One row per request - all the context you need.
-
-Sub-step logs (`birdId.llm.call`, `birdId.range.filter`, etc.) are reserved for things with their own duration or an independent failure mode; not for "I successfully did the obvious thing."
-
-### Identity caveat
-
-Middleware only resolves the session (and therefore `identity.userId`) for non-`/api/auth/*` routes. Logs emitted while handling `/api/auth/*` (including `/api/auth/get-session`) carry only `authMethod` - `userId` will be absent even for signed-in callers. This is intentional: those routes own session lookup themselves and we don't want to double-call Better Auth.
-
-### Required practices for new/changed code
-
-1. **Always use the request-scoped logger** from `context.data.log` in route handlers - never `console.log`/`console.error` directly. This guarantees `traceId`/`spanId`/`identity` flow.
-2. **Log every error path** at `warn` (client/validation) or `error` (server/unexpected) with `resultType: 'Failed'`, `resultSignature`, and a `resultDescription` that names the cause (and mitigation when possible). Silent `catch {}` and `.catch(() => undefined)` swallows are bugs.
-3. **Read response bodies on client errors.** When the client surfaces a fetch failure, read `response.text()` (or JSON) so the server's `resultDescription` reaches the user/log instead of a bare status code.
-4. **Use `log.time(op)`** for any operation whose latency matters (DB calls, R2 reads, LLM calls). Call `.end({ resultType, resultSignature, ... })` once.
-5. **Propagate `traceparent`** on outbound calls between WingDex tiers (web -> API, iOS -> API). Middleware accepts incoming `traceparent` and echoes back response trace headers.
-6. **Don't emit a "summary success" sub-step log.** Enrich `requestProperties` instead. Sub-step logs are for actual sub-steps (LLM call, range filter) or for warn/error paths that need their own dimension.
-7. **Keep `properties` machine-queryable.** Counts, IDs, enum values yes; long prose no - that belongs in `resultDescription`.
-
-If a route doesn't yet follow these rules, fix it as part of any nearby change. Patterns are exercised across `functions/api/**` and `functions/_middleware.ts` - copy from there.
+1. **Use the request-scoped logger** from `context.data.log` - never `console.log`/`console.error` directly.
+2. **Log every error path** at `warn` (4xx) or `error` (5xx) with `resultType: 'Failed'`, `resultSignature`, and a `resultDescription` that names the specific resource, cause, and mitigation.
+3. **`level` uses Azure Monitor severity:** `Informational` (DEBUG-gated), `Warning` (4xx, always), `Error` (5xx, always). Audit-category events always emit regardless of DEBUG.
+4. **`operationName`** is camelCase resource hierarchy: `resourceType/subType/verb` (e.g. `data/observations/write`, `birdId/identify/invoke`).
+5. **`category`** is one of `Audit` (security/compliance), `Application` (normal logic), or `Request` (middleware lifecycle).
+6. **Propagate `traceparent`** on outbound calls. Read `response.text()` on client-side errors to surface server error details.

@@ -29,10 +29,6 @@ interface RequestData extends Record<string, unknown> {
   traceId?: string
   spanId?: string
   log?: import('./lib/log').Logger
-  /**
-   * Bag of properties merged into the request lifecycle log emitted by middleware.
-   * Handlers may mutate this to attach context (counts, ids, etc.) without
-   * emitting a duplicate "did the obvious thing" sub-step log.
-   */
-  requestProperties?: Record<string, unknown>
+  operationName?: string
+  category?: import('./lib/log').Category
 }

@@ -86,8 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   )
 
   await context.env.DB.batch(statements)
-  Object.assign((context.data as RequestData).requestProperties ?? {}, { count: body.length })
-  void log
+  log?.info('data/photos/write', { category: 'Application', resultDescription: `Inserted ${body.length} photos`, properties: { photoCount: body.length } })
 
   return Response.json(
     body.map(photo => ({
