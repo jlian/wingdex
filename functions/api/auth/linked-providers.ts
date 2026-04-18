@@ -21,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         .filter((providerId): providerId is string => Boolean(providerId))
     )
   )
-  log?.info('auth/linkedProviders/read', { category: 'Application', resultDescription: `User has ${providers.length} linked auth providers`, properties: { providerCount: providers.length } })
+  log?.debug('auth/linkedProviders/read', { category: 'Application', resultDescription: `User has ${providers.length} linked auth providers`, properties: { providerCount: providers.length } })
 
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },

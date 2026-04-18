@@ -19,7 +19,12 @@ interface Env {
   AI_DAILY_LIMIT_IDENTIFY?: string
   AI_DAILY_LIMIT_SUGGEST?: string
   TRUSTED_ORIGINS?: string
+  /** @deprecated Use LOG_LEVEL instead. Kept for backwards compat (DEBUG=1 maps to LOG_LEVEL=debug). */
   DEBUG?: string
+  /** Log level: trace, debug, info (default), warn, error. */
+  LOG_LEVEL?: string
+  /** Log format: 'pretty' for compact terminal output, omit for JSON. */
+  LOG_FORMAT?: string
 }
 
 /** Shape of context.data populated by _middleware.ts. */

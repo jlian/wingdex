@@ -197,7 +197,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     return new Response('Not found', { status: 404 })
   }
 
-  log?.info('data/outings/delete', { category: 'Application', resultDescription: `Deleted outing ${outingId}`, properties: { outingId } })
+  log?.debug('data/outings/delete', { category: 'Application', resultDescription: `Deleted outing ${outingId}`, properties: { outingId } })
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({ dexUpdates })
 }

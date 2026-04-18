@@ -1,22 +1,27 @@
 /**
  * Schematized structured logger for Cloudflare Workers.
  *
- * Schema aligned with Azure Monitor resource logs. operationName uses
- * camelCase resource hierarchy: `resourceType/subType/verb`.
+ * Standard 6-level hierarchy: Trace < Debug < Info < Warning < Error < Critical
+ * Controlled by LOG_LEVEL env var (default: Info).
+ * Optional LOG_FORMAT=pretty for compact terminal output in local dev.
  *
- * Level values follow Azure Monitor severity:
- *   Informational - happy-path events (gated on env.DEBUG unless Audit)
- *   Warning       - client errors (4xx), validation failures (always emitted)
- *   Error         - server errors (5xx), unexpected exceptions (always emitted)
- *   Critical      - reserved for data loss, security breach (always emitted)
- *
- * See `docs/OBSERVABILITY.md` for full schema, operationName table,
- * category reference, resourceId hierarchy, and required practices.
+ * See `docs/OBSERVABILITY.md` for full schema, operationName table, and practices.
  */
 
-export type LogLevel = 'Informational' | 'Warning' | 'Error' | 'Critical'
+export type LogLevel = 'Trace' | 'Debug' | 'Info' | 'Warning' | 'Error' | 'Critical'
 export type ResultType = 'Succeeded' | 'Failed'
 export type Category = 'Audit' | 'Application' | 'Request'
+
+const LEVEL_RANK: Record<LogLevel, number> = {
+  Trace: 0, Debug: 1, Info: 2, Warning: 3, Error: 4, Critical: 5,
+}
+
+function parseLogLevel(raw?: string): LogLevel {
+  if (!raw) return 'Info'
+  const normalized = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
+  if (normalized in LEVEL_RANK) return normalized as LogLevel
+  return 'Info'
+}
 
 /** Identity of the caller (authMethod + isAnonymous detail). */
 export interface Identity {
@@ -35,11 +40,15 @@ export interface LogFields {
 }
 
 export interface Logger {
-  /** Informational - gated on DEBUG unless category is Audit. */
+  /** Info - significant business events. Production baseline. */
   info(operationName: string, fields?: LogFields): void
-  /** Warning - always emitted. Use for 4xx, validation failures. */
+  /** Debug - sub-step diagnostic detail. Local dev. */
+  debug(operationName: string, fields?: LogFields): void
+  /** Trace - ultra-verbose data dumps. Deep debugging only. */
+  trace(operationName: string, fields?: LogFields): void
+  /** Warning - 4xx, validation failures. Always emitted. */
   warn(operationName: string, fields?: LogFields): void
-  /** Error - always emitted. Use for 5xx, unexpected exceptions. */
+  /** Error - 5xx, unexpected exceptions. Always emitted. */
   error(operationName: string, fields?: LogFields): void
   /** Returns a child logger with additional properties merged into every log. */
   withResource(extra: Record<string, unknown>): Logger
@@ -48,7 +57,7 @@ export interface Logger {
 }
 
 export interface LoggerContext {
-  env: { DEBUG?: string }
+  env: { LOG_LEVEL?: string; LOG_FORMAT?: string; DEBUG?: string }
   traceId: string
   spanId: string
   userId?: string
@@ -60,12 +69,24 @@ export interface LoggerContext {
 /** Create a logger bound to a specific request context. */
 export function createLogger(ctx: LoggerContext): Logger {
   const { env, traceId, spanId, userId, identity, resourceId, baseProperties } = ctx
-  const isDebug = !!env.DEBUG
+  // Support both LOG_LEVEL and legacy DEBUG (DEBUG=1 maps to Debug level)
+  const minLevel = env.LOG_LEVEL
+    ? parseLogLevel(env.LOG_LEVEL)
+    : env.DEBUG ? 'Debug' : 'Info'
+  const minRank = LEVEL_RANK[minLevel]
+  const isPretty = env.LOG_FORMAT?.toLowerCase() === 'pretty'
 
   function emit(level: LogLevel, operationName: string, fields?: LogFields): void {
-    // Informational is DEBUG-gated UNLESS category is Audit
-    if (level === 'Informational' && !isDebug && fields?.category !== 'Audit') return
+    if (LEVEL_RANK[level] < minRank) return
 
+    if (isPretty) {
+      emitPretty(level, operationName, fields)
+    } else {
+      emitJson(level, operationName, fields)
+    }
+  }
+
+  function emitJson(level: LogLevel, operationName: string, fields?: LogFields): void {
     const entry: Record<string, unknown> = {
       time: new Date().toISOString(),
       level,
@@ -82,7 +103,6 @@ export function createLogger(ctx: LoggerContext): Logger {
     if (fields?.resultDescription) entry.resultDescription = fields.resultDescription
     if (fields?.durationMs !== undefined) entry.durationMs = fields.durationMs
 
-    // Merge base properties (from withResource) with per-call properties
     const merged = baseProperties || fields?.properties
       ? { ...baseProperties, ...fields?.properties }
       : undefined
@@ -96,9 +116,27 @@ export function createLogger(ctx: LoggerContext): Logger {
     }
   }
 
+  function emitPretty(level: LogLevel, operationName: string, fields?: LogFields): void {
+    const time = new Date().toLocaleTimeString('en-GB', { hour12: false })
+    const lvl = level.toUpperCase().padEnd(8)
+    const sig = fields?.resultSignature !== undefined ? ` ${fields.resultSignature}` : ''
+    const dur = fields?.durationMs !== undefined ? ` ${fields.durationMs}ms` : ''
+    const uid = userId ? ` [${userId.slice(0, 8)}]` : ''
+    const desc = fields?.resultDescription ? ` ${fields.resultDescription}` : ''
+    const line = `${time} ${lvl} ${operationName}${sig}${dur}${uid}${desc}`
+
+    if (level === 'Error' || level === 'Critical') {
+      console.error(line)
+    } else {
+      console.log(line)
+    }
+  }
+
   function makeLogger(currentCtx: LoggerContext): Logger {
     return {
-      info: (op, f) => emit('Informational', op, f),
+      info: (op, f) => emit('Info', op, f),
+      debug: (op, f) => emit('Debug', op, f),
+      trace: (op, f) => emit('Trace', op, f),
       warn: (op, f) => emit('Warning', op, f),
       error: (op, f) => emit('Error', op, f),
       withResource(extra) {

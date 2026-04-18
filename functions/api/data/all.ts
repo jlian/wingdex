@@ -100,7 +100,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     speciesComments: observation.speciesComments || undefined,
   }))
 
-  log?.info('data/all/read', { category: 'Application', resultDescription: `Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, properties: { outingCount: outings.length, photoCount: photos.length, observationCount: observations.length, dexCount: dex.length } })
+  log?.debug('data/all/read', { category: 'Application', resultDescription: `Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, properties: { outingCount: outings.length, photoCount: photos.length, observationCount: observations.length, dexCount: dex.length } })
 
   return Response.json({
     outings,
