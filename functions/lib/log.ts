@@ -18,7 +18,11 @@ const LEVEL_RANK: Record<LogLevel, number> = {
 
 function parseLogLevel(raw?: string): LogLevel {
   if (!raw) return 'Info'
-  const normalized = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
+  const lower = raw.toLowerCase()
+  // Handle common aliases
+  if (lower === 'warn') return 'Warning'
+  if (lower === 'err') return 'Error'
+  const normalized = lower.charAt(0).toUpperCase() + lower.slice(1)
   if (normalized in LEVEL_RANK) return normalized as LogLevel
   return 'Info'
 }
@@ -50,6 +54,8 @@ export interface Logger {
   warn(operationName: string, fields?: LogFields): void
   /** Error - 5xx, unexpected exceptions. Always emitted. */
   error(operationName: string, fields?: LogFields): void
+  /** Critical - data loss, security breach. Always emitted. */
+  critical(operationName: string, fields?: LogFields): void
   /** Returns a child logger with additional properties merged into every log. */
   withResource(extra: Record<string, unknown>): Logger
   /** Returns a child logger with resourceId extended (e.g. 'outings/abc'). */
@@ -139,6 +145,7 @@ export function createLogger(ctx: LoggerContext): Logger {
       trace: (op, f) => emit('Trace', op, f),
       warn: (op, f) => emit('Warning', op, f),
       error: (op, f) => emit('Error', op, f),
+      critical: (op, f) => emit('Critical', op, f),
       withResource(extra) {
         return createLogger({
           ...currentCtx,

@@ -1,15 +1,15 @@
 # Observability: Structured Logging Reference
 
-WingDex emits Azure-Monitor-inspired structured logs from every Cloudflare Pages Function. This document is the canonical reference for the schema, conventions, and required practices.
+WingDex emits structured logs from every Cloudflare Pages Function using a standard 6-level hierarchy. This document is the canonical reference for the schema, conventions, and operational practices.
 
 ## Schema
 
-Every log line is a JSON object with these fields:
+Every log line is a JSON object (or a compact one-liner when `LOG_FORMAT=pretty`):
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `time` | yes | string | ISO 8601 UTC timestamp |
-| `level` | yes | string | `Informational`, `Warning`, `Error`, `Critical` |
+| `level` | yes | string | `Trace`, `Debug`, `Info`, `Warning`, `Error`, `Critical` |
 | `traceId` | yes | string | W3C trace-id (32 hex chars) |
 | `spanId` | yes | string | W3C span-id (16 hex chars) |
 | `operationName` | yes | string | `resourceType/subType/verb` (camelCase) |
@@ -23,22 +23,73 @@ Every log line is a JSON object with these fields:
 | `durationMs` | on completion | number | Wall-clock time (ms) |
 | `properties` | optional | object | Machine-queryable extras (counts, IDs, enums) |
 
-## Level (severity)
+## Log levels
 
-| Value | When | Gated on DEBUG? |
+Standard 6-level hierarchy, controlled by `LOG_LEVEL` env var:
+
+| Level | Purpose | When to use |
 |---|---|---|
-| `Informational` | Happy-path events, sub-step progress | Yes (unless category is Audit) |
-| `Warning` | Client errors (4xx), validation failures, degraded paths | No |
-| `Error` | Server errors (5xx), unexpected exceptions | No |
-| `Critical` | Reserved for data loss, security breach | No |
+| `Trace` | Ultra-verbose data dumps | Full candidate arrays, range prior maps. Deep debugging only. |
+| `Debug` | Sub-step diagnostic detail | Bird-id pipeline stages, batch counts, import parsing. Local dev. |
+| `Info` | Significant business events | Request completion (1 per request), audit events. **Production baseline.** |
+| `Warning` | Client errors, degraded paths | 4xx responses, validation failures. Always emitted. |
+| `Error` | Server errors, exceptions | 5xx responses, unhandled exceptions. Always emitted. |
+| `Critical` | System-level failures | Reserved for data loss, security breach. Always emitted. |
 
-In production (without `env.DEBUG`), only Warning, Error, Critical, and Audit-category Informational logs are visible.
+### LOG_LEVEL env var
+
+| Value | What's visible | Where to use |
+|---|---|---|
+| `trace` | Everything | On-demand deep debugging sessions |
+| `debug` | Debug + Info + Warning + Error + Critical | **Local dev** (set in `.dev.vars`) |
+| `info` (default) | Info + Warning + Error + Critical | **Production** and **preview** |
+| `warn` (or `warning`) | Warning + Error + Critical | Quiet mode (errors and warnings only) |
+| `error` | Error + Critical only | Minimal output |
+
+Legacy `DEBUG=1` maps to `LOG_LEVEL=debug` for backwards compatibility.
+
+### LOG_FORMAT env var
+
+| Value | Output format | Where to use |
+|---|---|---|
+| (not set) | JSON (one object per line) | **Production**, preview, log analytics |
+| `pretty` | Compact one-liner | **Local dev** terminal |
+
+Pretty format example:
+```
+19:04:24 INFO     data/all/read 200 42ms [u1234567] Fetched 5 outings, 12 photos
+19:04:24 DEBUG    birdId/llmCall/invoke [u1234567] LLM returned 3 raw candidates
+19:04:27 WARNING  import/ebirdCsv/import 400 [u1234567] No CSV file in form field
+19:04:27 ERROR    birdId/identify/invoke 502 2500ms [u1234567] AI returned unparseable response
+```
+
+## Environment-specific configuration
+
+### Production
+No env vars needed. Defaults to `LOG_LEVEL=info`, JSON format. You see request completions (1 line each with durationMs + status + userId), audit events, and all warnings/errors.
+
+### Preview / staging
+Same as production: `LOG_LEVEL=info`, JSON format. Preview deployments use the same log config so you can verify the production log experience before merging.
+
+### Local dev
+Add to `.dev.vars`:
+```
+LOG_LEVEL=debug
+LOG_FORMAT=pretty
+```
+You see sub-step detail (bird-id pipeline, import parsing, batch counts) in a compact terminal-friendly format.
+
+### Deep debugging
+Temporarily set `LOG_LEVEL=trace` to see full data dumps (candidate arrays, range prior maps). Revert when done.
+
+### Tracing a specific user in production
+Query CF Workers Logs (or log analytics) by `userId` at Info level - it's a top-level field on every log line. If you need sub-step detail for a production issue, temporarily set `LOG_LEVEL=debug` in Cloudflare Pages env vars and redeploy. Revert after investigation.
 
 ## Category
 
 | Value | Meaning | Examples |
 |---|---|---|
-| `Audit` | Security/compliance-relevant changes. Always emits (bypasses DEBUG gate). | Sign-in, passkey finalization, account deletion, data clear |
+| `Audit` | Security/compliance-relevant changes. Info-level Audit events are the production baseline - always visible. | Passkey finalization, data clear |
 | `Application` | Normal application logic. | CRUD, bird ID, import/export, species lookup, health check |
 | `Request` | Middleware request lifecycle. | Completion log with durationMs, pre-auth rejections (405/413), unhandled 500s |
 
@@ -113,9 +164,9 @@ Every error message should include:
 2. **The error itself**: what specifically failed (with entity names/IDs)
 3. **Mitigation**: what to do about it
 
-## get-session suppression
+## Health endpoint
 
-`/api/auth/get-session` fires constantly (Better Auth's `useSession()` hook). Successful (2xx) completion logs are suppressed in middleware. Failures still log at Warning/Error level.
+`/api/health` is polled every 30 seconds by the dev server health check script. Successful (2xx) completion logs are suppressed in middleware to avoid noise. Failures still log at Warning/Error level.
 
 ## Identity caveat
 
@@ -124,9 +175,14 @@ Middleware resolves the session (and therefore `userId`) for non-`/api/auth/*` r
 ## Required practices for new/changed code
 
 1. **Always use the request-scoped logger** from `context.data.log` - never `console.log`/`console.error`.
-2. **Log every error path** at `warn` (4xx) or `error` (5xx) with `resultType: 'Failed'`, `resultSignature`, and a descriptive `resultDescription`.
-3. **Use `log.withResource()`** to attach entity-specific context (outingId, model, tier) that flows to all downstream logs.
-4. **Use `log.withResourceId()`** to extend the resourceId path for entity-specific operations.
-5. **Propagate `traceparent`** on outbound calls (web -> API, iOS -> API).
-6. **Read `response.text()`** on client-side errors to surface server error details.
-7. **Keep `properties` machine-queryable** - counts, IDs, enum values. Long prose goes in `resultDescription`.
+2. **Choose the right level**: `info()` for production-visible business events (the middleware completion log handles most of this automatically). `debug()` for sub-step diagnostic detail. `trace()` for full data dumps. `warn()` for 4xx. `error()` for 5xx.
+3. **Log every error path** at `warn` (4xx) or `error` (5xx) with `resultType: 'Failed'`, `resultSignature`, and a descriptive `resultDescription` that names the specific resource, cause, and mitigation.
+4. **Use `log.withResource()`** to attach entity-specific context (outingId, model, tier) that flows to all downstream logs.
+5. **Use `log.withResourceId()`** to extend the resourceId path for entity-specific operations.
+6. **Propagate `traceparent`** on outbound calls (web -> API, iOS -> API).
+7. **Read `response.text()`** on client-side errors to surface server error details to the user.
+8. **Keep `properties` machine-queryable** - counts, IDs, enum values. Long prose goes in `resultDescription`.
+
+### Choosing info vs debug
+
+Ask: "Would an ops engineer need to see this for every request in production?" If yes -> `info()`. If only useful when debugging -> `debug()`. If it's a giant data dump -> `trace()`.

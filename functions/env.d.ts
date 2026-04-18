@@ -21,7 +21,7 @@ interface Env {
   TRUSTED_ORIGINS?: string
   /** @deprecated Use LOG_LEVEL instead. Kept for backwards compat (DEBUG=1 maps to LOG_LEVEL=debug). */
   DEBUG?: string
-  /** Log level: trace, debug, info (default), warn, error. */
+  /** Log level: trace, debug, info (default), warn/warning, error, critical. */
   LOG_LEVEL?: string
   /** Log format: 'pretty' for compact terminal output, omit for JSON. */
   LOG_FORMAT?: string
