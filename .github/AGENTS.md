@@ -63,3 +63,16 @@ If you skip full verify, at minimum confirm `npm run build` succeeds.
 - Owner/repo: `jlian/wingdex`, default branch: `main`
 - PR titles must follow Conventional Commits (e.g., `feat: ...`, `fix: ...`).
 - Before pushing to a branch with an open PR, fetch unresolved review comments and address them or reply with rationale.
+
+## Observability (Structured Logging)
+
+Full schema, operationName table, category reference, resourceId hierarchy, e2e debugging scenarios, and error message guidelines are in **[docs/OBSERVABILITY.md](../docs/OBSERVABILITY.md)**.
+
+**Critical rules (enforced in code review):**
+
+1. **Use the request-scoped logger** from `context.data.log` - never `console.log`/`console.error` directly.
+2. **Log every error path** at `warn` (4xx) or `error` (5xx) with `resultType: 'Failed'`, `resultSignature`, and a `resultDescription` that names the specific resource, cause, and mitigation.
+3. **`level` uses standard 6-level hierarchy:** `Trace` (deep debug), `Debug` (local dev), `Info` (production baseline), `Warning` (4xx, always), `Error` (5xx, always), `Critical` (reserved). Controlled by `LOG_LEVEL` env var.
+4. **`operationName`** is camelCase resource hierarchy: `resourceType/subType/verb` (e.g. `data/observations/write`, `birdId/identify/invoke`).
+5. **`category`** is one of `Audit` (security/compliance), `Application` (normal logic), or `Request` (middleware lifecycle).
+6. **Propagate `traceparent`** on outbound calls. Read `response.text()` on client-side errors to surface server error details.

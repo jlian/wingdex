@@ -1,4 +1,5 @@
 import { computeDex } from '../../lib/dex-query'
+import { createRouteResponder } from '../../lib/log'
 
 type DexMetaPatch = {
   speciesName: string
@@ -44,11 +45,14 @@ async function upsertDexMetaPatch(db: D1Database, userId: string, patch: DexMeta
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log?.withResourceId('dex'), 'data/dex/read', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const dex = await computeDex(context.env.DB, userId)
+  try {
+    const dex = await computeDex(context.env.DB, userId)
+    route.debug(`Computed dex with ${dex.length} species`, { speciesCount: dex.length })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -56,10 +60,15 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       bestPhotoId: entry.bestPhotoId || undefined,
     }))
   )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Dex read failed: ${message}`, { error: message })
+  }
 }
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log?.withResourceId('dex'), 'data/dex/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -68,24 +77,30 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
   const patches = Array.isArray(body) ? body : [body]
   if (!patches.every(isDexMetaPatch)) {
-    return new Response('Invalid dex patch payload', { status: 400 })
+    return route.fail(400, 'Invalid dex patch payload', 'Dex patch payload failed validation; expected {speciesName} with optional addedDate, bestPhotoId, notes')
   }
 
-  for (const patch of patches) {
-    await upsertDexMetaPatch(context.env.DB, userId, patch)
-  }
+  try {
+    for (const patch of patches) {
+      await upsertDexMetaPatch(context.env.DB, userId, patch)
+    }
+    route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) })
 
-  const dexUpdates = await computeDex(context.env.DB, userId)
-  return Response.json({
-    dexUpdates: dexUpdates.map(entry => ({
-      ...entry,
-      addedDate: entry.addedDate || undefined,
-      bestPhotoId: entry.bestPhotoId || undefined,
-    })),
-  })
+    const dexUpdates = await computeDex(context.env.DB, userId)
+    return Response.json({
+      dexUpdates: dexUpdates.map(entry => ({
+        ...entry,
+        addedDate: entry.addedDate || undefined,
+        bestPhotoId: entry.bestPhotoId || undefined,
+      })),
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Dex patch failed: ${message}`, { error: message, patchCount: patches.length })
+  }
 }

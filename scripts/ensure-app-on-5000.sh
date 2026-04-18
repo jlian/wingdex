@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5000}"
-CHECK_INTERVAL_SECONDS="${CHECK_INTERVAL_SECONDS:-8}"
+CHECK_INTERVAL_SECONDS="${CHECK_INTERVAL_SECONDS:-30}"
 STARTUP_GRACE_SECONDS="${STARTUP_GRACE_SECONDS:-15}"
 LOCK_DIR="/tmp/wingdex-ensure-app-on-5000.lock"
 
@@ -47,7 +47,7 @@ release_lock() {
 }
 
 is_healthy() {
-  curl -fsS "${BASE_URL}" >/dev/null 2>&1 && curl -fsS "${BASE_URL}/api/auth/get-session" >/dev/null 2>&1
+  curl -fsS "${BASE_URL}" >/dev/null 2>&1 && curl -fsS "${BASE_URL}/api/health" >/dev/null 2>&1
 }
 
 start_dev() {

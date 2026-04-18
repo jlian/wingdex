@@ -1,4 +1,5 @@
 import { getOutingColumnNames } from '../../lib/schema'
+import { createRouteResponder } from '../../lib/log'
 
 type CreateOutingBody = {
   id: string
@@ -44,6 +45,7 @@ function normalizeCountryCode(countryCode?: string, stateProvince?: string): str
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'data/outings/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -52,12 +54,14 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body', 'Could not parse request body as JSON; check Content-Type is application/json')
   }
 
   if (!isValidCreateOutingBody(body)) {
-    return new Response('Invalid outing payload', { status: 400 })
+    return route.fail(400, 'Invalid outing payload', 'Outing payload missing required fields: id, startTime, endTime, locationName, createdAt')
   }
+
+  try {
 
   const notes = body.notes ?? ''
   const stateProvince = body.stateProvince?.trim() || null
@@ -150,6 +154,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       .run()
   }
 
+  const scopedRoute = createRouteResponder(route.log?.withResourceId(`outings/${body.id}`), 'data/outings/write', 'Application')
+  scopedRoute.debug(`Created outing '${body.locationName}'`, { outingId: body.id, locationName: body.locationName })
+
   return Response.json({
     id: body.id,
     userId,
@@ -170,4 +177,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     notes,
     createdAt: body.createdAt,
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Outing creation failed: ${message}`, { error: message, outingId: body.id })
+  }
 }

@@ -1,16 +1,23 @@
 import { exportOutingToEBirdCSV } from '../../../lib/ebird'
 import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
+import { createRouteResponder } from '../../../lib/log'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const outingId = context.params.id as string | undefined
+  const route = createRouteResponder(
+    (context.data as RequestData).log,
+    'export/outingCsv/export', 'Application'
+  )
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const outingId = context.params.id as string | undefined
   if (!outingId) {
-    return new Response('Missing outing id', { status: 400 })
+    return route.fail(400, 'Missing outing id', 'URL path must include an outing ID segment')
   }
+
+  try {
 
   const columnNames = await getOutingColumnNames(context.env.DB)
   const outingQuery = `SELECT
@@ -52,7 +59,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const outing = outingResult.results[0]
   if (!outing) {
-    return new Response('Not found', { status: 404 })
+    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`, { outingId })
   }
 
   const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
@@ -83,6 +90,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     true
   )
   const safeOutingId = outingId.replace(/[^a-zA-Z0-9._-]/g, '_')
+  route.debug(`Exported outing ${outingId} with ${observationsResult.results.length} observations`, { outingId, observationCount: observationsResult.results.length })
 
   return new Response(csv, {
     headers: {
@@ -91,4 +99,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       'cache-control': 'no-store',
     },
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Export failed', `Outing ${outingId} export failed: ${message}`, { outingId, error: message })
+  }
 }

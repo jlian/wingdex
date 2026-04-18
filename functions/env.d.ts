@@ -19,5 +19,24 @@ interface Env {
   AI_DAILY_LIMIT_IDENTIFY?: string
   AI_DAILY_LIMIT_SUGGEST?: string
   TRUSTED_ORIGINS?: string
+  /** @deprecated Use LOG_LEVEL instead. Kept for backwards compat (DEBUG=1 maps to LOG_LEVEL=debug). */
   DEBUG?: string
+  /** Log level: trace, debug, info (default), warn/warning, error, critical. */
+  LOG_LEVEL?: string
+  /** Log format: 'pretty' for compact terminal output, omit for JSON. */
+  LOG_FORMAT?: string
+}
+
+/** Shape of context.data populated by _middleware.ts. */
+interface RequestData extends Record<string, unknown> {
+  user?: { id?: string; isAnonymous?: boolean }
+  session?: { id: string }
+  traceId?: string
+  spanId?: string
+  traceFlags?: string
+  log?: import('./lib/log').Logger
+  operationName?: string
+  category?: import('./lib/log').Category
+  /** True when middleware already appended an entity segment (e.g. outings/{id}) to resourceId from URL params. Handlers should NOT call withResourceId for the same entity. */
+  autoScopedResourceId?: boolean
 }

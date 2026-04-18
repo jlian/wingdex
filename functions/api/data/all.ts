@@ -1,6 +1,7 @@
 import { computeDex } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
 import { getWikiMetadata } from '../../lib/taxonomy'
+import { createRouteResponder } from '../../lib/log'
 
 type OutingRow = {
   id: string
@@ -46,9 +47,12 @@ type ObservationRow = {
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'data/all/read', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
+
+  try {
 
   const db = context.env.DB
   const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
@@ -99,6 +103,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     speciesComments: observation.speciesComments || undefined,
   }))
 
+  route.debug(`Fetched ${outings.length} outings, ${photos.length} photos, ${observations.length} observations, ${dex.length} dex entries`, { outingCount: outings.length, photoCount: photos.length, observationCount: observations.length, dexCount: dex.length })
+
   return Response.json({
     outings,
     photos,
@@ -114,4 +120,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       }
     }),
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Data fetch failed: ${message}`, { error: message })
+  }
 }

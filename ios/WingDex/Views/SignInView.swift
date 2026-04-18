@@ -1,6 +1,9 @@
 import AuthenticationServices
 import CoreMotion
+import os
 import SwiftUI
+
+private let log = Logger(subsystem: Config.bundleID, category: "SignIn")
 
 // MARK: - Sign-In Collage Parameters
 
@@ -339,9 +342,7 @@ struct SignInView: View {
                 errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription
-                #if DEBUG
-                print("[SignIn] Error: \(error)")
-                #endif
+                log.debug("Sign-in error: \(error.localizedDescription)")
             }
             isSigningIn = false
         }

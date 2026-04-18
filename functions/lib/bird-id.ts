@@ -3,6 +3,8 @@ import { buildBirdIdPrompt, BIRD_ID_INSTRUCTIONS, BIRD_ID_SCHEMA } from './bird-
 import { HttpError } from './http-error'
 import { safeParseJSON, extractAssistantContent, buildCropBox } from './bird-id-helpers'
 import { getRangePriors, adjustConfidence } from './range-filter'
+import type { Logger } from './log'
+import { formatTraceparent, childSpanId } from './trace-context'
 
 
 export const VISION_MODEL = 'gpt-5.4-mini'
@@ -35,7 +37,7 @@ type IdentifyBirdInput = {
 
 export { HttpError } from './http-error'
 
-async function callOpenAI(env: Env, body: unknown): Promise<string> {
+async function callOpenAI(env: Env, body: unknown, traceId?: string, spanId?: string, traceFlags?: string): Promise<string> {
   if (!env.CF_ACCOUNT_ID || !env.AI_GATEWAY_ID) {
     throw new HttpError(503, 'CF_ACCOUNT_ID and AI_GATEWAY_ID are required')
   }
@@ -48,6 +50,7 @@ async function callOpenAI(env: Env, body: unknown): Promise<string> {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${env.OPENAI_API_KEY}`,
     ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
+    ...(traceId && spanId ? { traceparent: formatTraceparent({ traceId, spanId: childSpanId(), traceFlags: traceFlags || '01' }) } : {}),
   }
   const response = await fetch(url, {
     method: 'POST',
@@ -80,7 +83,7 @@ function withSamplingOptions(model: string): { temperature?: number; top_p?: num
   }
 }
 
-export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<IdentifyBirdResult> {
+export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Logger, traceId?: string, spanId?: string, traceFlags?: string): Promise<IdentifyBirdResult> {
   const prompt = buildBirdIdPrompt(input.location, input.month)
 
   const parseIdentifyResponse = async (model: string): Promise<any> => {
@@ -103,7 +106,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       ],
     })
 
-    const content = await callOpenAI(env, buildVisionBody())
+    const content = await callOpenAI(env, buildVisionBody(), traceId, spanId, traceFlags)
     const parsed = safeParseJSON(content)
 
     if (!parsed) {
@@ -117,9 +120,9 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     ? (env.OPENAI_MODEL_STRONG || VISION_MODEL_STRONG)
     : (env.OPENAI_MODEL || VISION_MODEL)
   const parsed = await parseIdentifyResponse(model)
-  const debug = !!env.DEBUG
 
-  if (debug) console.log('[bird-id] LLM raw candidates:', JSON.stringify(parsed.candidates))
+  log?.debug('birdId/llmCall/invoke', { category: 'Application', resultDescription: `LLM returned ${Array.isArray(parsed.candidates) ? parsed.candidates.length : 0} raw candidates`, properties: { candidateCount: Array.isArray(parsed.candidates) ? parsed.candidates.length : 0 } })
+  log?.trace('birdId/llmCall/invoke', { category: 'Application', resultDescription: 'Full LLM parsed response', properties: { parsed } })
 
   let candidates = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
     .map((candidate: any) => ({
@@ -156,11 +159,11 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     return true
   })
 
-  if (debug) console.log('[bird-id] After taxonomy match:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} code=${c.ebirdCode}`))
+  log?.debug('birdId/taxonomyMatch/invoke', { category: 'Application', resultDescription: `${candidates.length} candidates survived taxonomy matching`, properties: { candidateCount: candidates.length } })
 
   // Apply range-prior adjustment if location is available
   const hasRangeBucket = env.RANGE_PRIORS != null
-  if (debug) console.log('[bird-id] Range filter: location=%s, bucket=%s', input.location ? `${input.location.lat},${input.location.lon}` : 'none', hasRangeBucket)
+  log?.debug('birdId/rangeFilter/invoke', { category: 'Application', resultDescription: `Range filter: location=${input.location ? 'present' : 'absent'}, R2 bucket=${hasRangeBucket ? 'available' : 'unavailable'}`, properties: { hasLocation: !!input.location, hasBucket: hasRangeBucket } })
 
   let rangeAdjusted = false
 
@@ -173,7 +176,8 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       input.month,
       codes,
     )
-    if (debug) console.log('[bird-id] Range priors:', Object.fromEntries(priors))
+    log?.debug('birdId/rangePriors/read', { category: 'Application', resultDescription: `Retrieved range priors for ${codes.length} species`, properties: { speciesCount: codes.length } })
+    log?.trace('birdId/rangePriors/read', { category: 'Application', resultDescription: 'Full range priors map', properties: { priors: Object.fromEntries(priors) } })
     rangeAdjusted = [...priors.values()].some(r => r.status !== 'no-data')
     candidates = candidates.map(c => {
       const range = priors.get(c.ebirdCode)
@@ -181,7 +185,8 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
       return { ...c, confidence: adjustConfidence(c.confidence, range, input.month, input.location!.lat), rangeStatus: range.status }
     })
     candidates.sort((a, b) => b.confidence - a.confidence)
-    if (debug) console.log('[bird-id] After range adjustment:', candidates.map(c => `${c.species} ${c.confidence} plumage=${c.plumage ?? 'null'} range=${c.rangeStatus ?? 'n/a'}`))
+    log?.debug('birdId/rangeAdjust/invoke', { category: 'Application', resultDescription: `Confidence adjusted by range priors for ${candidates.length} candidates` })
+    log?.trace('birdId/rangeAdjust/invoke', { category: 'Application', resultDescription: 'Full adjusted candidates', properties: { candidates } })
   }
 
   const result = {
@@ -193,6 +198,5 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput): Promise<
     multipleBirds: parsed.multipleBirds === true,
     ...(rangeAdjusted ? { rangeAdjusted: true } : {}),
   }
-  if (debug) console.log('[bird-id] Final response:', JSON.stringify(result))
   return result
 }
