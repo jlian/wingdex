@@ -47,10 +47,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
+    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!Array.isArray(body) || !body.every(isCreatePhotoInput)) {
+    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Photos payload failed validation; expected array of {id, outingId, fileHash, fileName}' })
     return new Response('Invalid photos payload', { status: 400 })
   }
 
@@ -64,6 +66,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     body.map(photo => photo.outingId)
   )
   if (!allOwned) {
+    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'One or more outing references are not owned by user or do not exist' })
     return new Response('Invalid outing reference', { status: 400 })
   }
 
@@ -87,7 +90,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   await context.env.DB.batch(statements)
   const outingIds = [...new Set(body.map(p => p.outingId))]
-  log?.withResourceId(`outings/${outingIds[0]}`)?.info('data/photos/write', { category: 'Application', resultDescription: `Inserted ${body.length} photos into ${outingIds.length} outings`, properties: { photoCount: body.length, outingIds } })
+  log?.withResourceId(`outings/${outingIds[0]}`)?.debug('data/photos/write', { category: 'Application', resultDescription: `Inserted ${body.length} photos into ${outingIds.length} outings`, properties: { photoCount: body.length, outingIds } })
 
   return Response.json(
     body.map(photo => ({

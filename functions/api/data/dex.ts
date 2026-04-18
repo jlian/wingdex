@@ -50,7 +50,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   const dex = await computeDex(context.env.DB, userId)
-  log?.withResourceId('dex')?.info('data/dex/read', { category: 'Application', resultDescription: `Computed dex with ${dex.length} species`, properties: { speciesCount: dex.length } })
+  log?.withResourceId('dex')?.debug('data/dex/read', { category: 'Application', resultDescription: `Computed dex with ${dex.length} species`, properties: { speciesCount: dex.length } })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -71,18 +71,20 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
+    log?.warn('data/dex/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   const patches = Array.isArray(body) ? body : [body]
   if (!patches.every(isDexMetaPatch)) {
+    log?.warn('data/dex/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Dex patch payload failed validation; expected {speciesName} with optional addedDate, bestPhotoId, notes' })
     return new Response('Invalid dex patch payload', { status: 400 })
   }
 
   for (const patch of patches) {
     await upsertDexMetaPatch(context.env.DB, userId, patch)
   }
-  log?.withResourceId('dex')?.info('data/dex/write', { category: 'Application', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) } })
+  log?.withResourceId('dex')?.debug('data/dex/write', { category: 'Application', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({

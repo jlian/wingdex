@@ -188,7 +188,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
-  log?.debug('import/ebirdCsvConfirm/write', { category: 'Application', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations`, properties: { outingCount: outings.length, observationCount: observations.length } })
+  log?.info('import/ebirdCsvConfirm/write', { category: 'Application', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations`, properties: { outingCount: outings.length, observationCount: observations.length } })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length

@@ -38,10 +38,12 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!isObject(body)) {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Outing patch payload is not a valid object' })
     return new Response('Invalid outing patch payload', { status: 400 })
   }
 
@@ -120,6 +122,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   if (updateFields.length === 0) {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: `No valid fields to update for outing ${outingId}` })
     return new Response('No valid fields to update', { status: 400 })
   }
 
@@ -129,6 +132,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     .run()
 
   if (updateResult.meta.changes === 0) {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `Outing ${outingId} not found or not owned by user` })
     return new Response('Not found', { status: 404 })
   }
 

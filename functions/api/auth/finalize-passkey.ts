@@ -14,6 +14,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json() as { name?: string; passkeyId?: string }
   } catch {
+    log?.warn('auth/finalizePasskey/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 

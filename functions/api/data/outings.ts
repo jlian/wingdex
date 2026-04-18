@@ -53,10 +53,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON; check Content-Type is application/json' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!isValidCreateOutingBody(body)) {
+    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Outing payload missing required fields: id, startTime, endTime, locationName, createdAt' })
     return new Response('Invalid outing payload', { status: 400 })
   }
 
@@ -151,7 +153,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       .run()
   }
 
-  log?.withResourceId(`outings/${body.id}`)?.info('data/outings/write', { category: 'Application', resultDescription: `Created outing '${body.locationName}'`, properties: { outingId: body.id, locationName: body.locationName } })
+  log?.withResourceId(`outings/${body.id}`)?.debug('data/outings/write', { category: 'Application', resultDescription: `Created outing '${body.locationName}'`, properties: { outingId: body.id, locationName: body.locationName } })
 
   return Response.json({
     id: body.id,

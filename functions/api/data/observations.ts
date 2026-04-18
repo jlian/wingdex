@@ -236,10 +236,12 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
+    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse PATCH request body as JSON' })
     return new Response('Invalid JSON body', { status: 400 })
   }
 
   if (!isObject(body)) {
+    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH payload is not a valid object; expected {id, ...patch} or {ids, patch}' })
     return new Response('Invalid patch payload', { status: 400 })
   }
 

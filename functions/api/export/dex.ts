@@ -10,7 +10,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const dex = await computeDex(context.env.DB, userId)
   const csv = exportDexToCSV(dex)
-  log?.withResourceId('dex')?.info('export/dex/export', { category: 'Application', resultDescription: `Exported dex CSV with ${dex.length} species (${csv.length} bytes)`, properties: { speciesCount: dex.length, csvLength: csv.length } })
+  log?.withResourceId('dex')?.debug('export/dex/export', { category: 'Application', resultDescription: `Exported dex CSV with ${dex.length} species (${csv.length} bytes)`, properties: { speciesCount: dex.length, csvLength: csv.length } })
 
   return new Response(csv, {
     headers: {
