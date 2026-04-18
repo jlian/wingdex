@@ -151,7 +151,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       .run()
   }
 
-  log?.info('data/outings/write', { category: 'Application', resultDescription: `Created outing at ${body.locationName}`, properties: { outingId: body.id, locationName: body.locationName } })
+  log?.withResourceId(`outings/${body.id}`)?.info('data/outings/write', { category: 'Application', resultDescription: `Created outing '${body.locationName}'`, properties: { outingId: body.id, locationName: body.locationName } })
 
   return Response.json({
     id: body.id,

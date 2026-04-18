@@ -38,7 +38,7 @@ function validateMonth(month: number | undefined): number | undefined {
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
-  const log = (context.data as RequestData).log
+  let log = (context.data as RequestData).log
   const traceId = (context.data as RequestData).traceId
   const spanId = (context.data as RequestData).spanId
   try {
@@ -122,6 +122,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }
 
     month = validateMonth(month)
+
+    // Scope logger with model context for all downstream logs (including bird-id sub-steps)
+    log = log?.withResource({ model, hasLocation: lat !== undefined && lon !== undefined })
 
     const result = await identifyBird(context.env, {
       imageDataUrl,
