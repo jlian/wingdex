@@ -41,6 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   let log = (context.data as RequestData).log
   const traceId = (context.data as RequestData).traceId
   const spanId = (context.data as RequestData).spanId
+  const traceFlags = (context.data as RequestData).traceFlags
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
@@ -134,7 +135,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       month,
       locationName,
       modelTier: model,
-    }, log, traceId, spanId)
+    }, log, traceId, spanId, traceFlags)
 
     return Response.json(result)
   } catch (error) {

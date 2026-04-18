@@ -33,6 +33,7 @@ interface RequestData extends Record<string, unknown> {
   session?: { id: string }
   traceId?: string
   spanId?: string
+  traceFlags?: string
   log?: import('./lib/log').Logger
   operationName?: string
   category?: import('./lib/log').Category

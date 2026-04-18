@@ -78,7 +78,7 @@ export function createLogger(ctx: LoggerContext): Logger {
   // Support both LOG_LEVEL and legacy DEBUG (DEBUG=1 maps to Debug level)
   const minLevel = env.LOG_LEVEL
     ? parseLogLevel(env.LOG_LEVEL)
-    : env.DEBUG ? 'Debug' : 'Info'
+    : env.DEBUG === '1' ? 'Debug' : 'Info'
   const minRank = LEVEL_RANK[minLevel]
   const isPretty = env.LOG_FORMAT?.toLowerCase() === 'pretty'
 

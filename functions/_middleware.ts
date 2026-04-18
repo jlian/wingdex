@@ -49,7 +49,7 @@ function resolveOperation(pathname: string, method: string): { op: string; categ
       return { op: route.op, category: route.category }
     }
   }
-  return { op: `unknown${pathname}`, category: 'Application' }
+  return { op: 'requests/unknown', category: 'Application' }
 }
 
 /** Extract entity ID segment from dynamic route paths for resourceId. */
@@ -118,6 +118,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   context.data.traceId = traceCtx.traceId
   context.data.spanId = traceCtx.spanId
+  context.data.traceFlags = traceCtx.traceFlags
   context.data.log = log
   context.data.operationName = op
   context.data.category = routeCategory

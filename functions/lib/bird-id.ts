@@ -37,7 +37,7 @@ type IdentifyBirdInput = {
 
 export { HttpError } from './http-error'
 
-async function callOpenAI(env: Env, body: unknown, traceId?: string, spanId?: string): Promise<string> {
+async function callOpenAI(env: Env, body: unknown, traceId?: string, spanId?: string, traceFlags?: string): Promise<string> {
   if (!env.CF_ACCOUNT_ID || !env.AI_GATEWAY_ID) {
     throw new HttpError(503, 'CF_ACCOUNT_ID and AI_GATEWAY_ID are required')
   }
@@ -50,7 +50,7 @@ async function callOpenAI(env: Env, body: unknown, traceId?: string, spanId?: st
     'Content-Type': 'application/json',
     Authorization: `Bearer ${env.OPENAI_API_KEY}`,
     ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
-    ...(traceId && spanId ? { traceparent: formatTraceparent({ traceId, spanId: childSpanId(), traceFlags: '01' }) } : {}),
+    ...(traceId && spanId ? { traceparent: formatTraceparent({ traceId, spanId: childSpanId(), traceFlags: traceFlags || '01' }) } : {}),
   }
   const response = await fetch(url, {
     method: 'POST',
@@ -83,7 +83,7 @@ function withSamplingOptions(model: string): { temperature?: number; top_p?: num
   }
 }
 
-export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Logger, traceId?: string, spanId?: string): Promise<IdentifyBirdResult> {
+export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Logger, traceId?: string, spanId?: string, traceFlags?: string): Promise<IdentifyBirdResult> {
   const prompt = buildBirdIdPrompt(input.location, input.month)
 
   const parseIdentifyResponse = async (model: string): Promise<any> => {
@@ -106,7 +106,7 @@ export async function identifyBird(env: Env, input: IdentifyBirdInput, log?: Log
       ],
     })
 
-    const content = await callOpenAI(env, buildVisionBody(), traceId, spanId)
+    const content = await callOpenAI(env, buildVisionBody(), traceId, spanId, traceFlags)
     const parsed = safeParseJSON(content)
 
     if (!parsed) {
