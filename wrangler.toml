@@ -26,12 +26,13 @@ remote = true
 
 [vars]
 
-[observability]
-enabled = true
-
-[observability.traces]
-enabled = true
-head_sampling_rate = 1
+# NOTE: [observability] is not supported by Pages projects.
+# Enable after Workers migration (#186). See issue #246.
+# [observability]
+# enabled = true
+# [observability.traces]
+# enabled = true
+# head_sampling_rate = 1
 
 # Preview/dev, uses a separate database
 [env.preview]
