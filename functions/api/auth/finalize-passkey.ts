@@ -1,16 +1,25 @@
 import { createAuth } from '../../lib/auth'
 import { waitForPasskeyOwnership } from '../../lib/passkey-ownership'
-import { createRouteResponder } from '../../lib/log'
+import { createRouteResponder, createLogger } from '../../lib/log'
 
 export const onRequestPost: PagesFunction<Env> = async context => {
-  const log = (context.data as RequestData).log
-  const route = createRouteResponder(log, 'auth/finalizePasskey/invoke', 'Audit')
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 })
   }
+
+  // Enrich logger with userId after auth (middleware skips session check for /api/auth/* routes)
+  const enrichedLog = (context.data as RequestData).log ? createLogger({
+    env: context.env,
+    traceId: (context.data as RequestData).traceId || '',
+    spanId: (context.data as RequestData).spanId || '',
+    userId: session.user.id,
+    identity: { authMethod: 'session' },
+    resourceId: `/users/${session.user.id}`,
+  }) : undefined
+  const route = createRouteResponder(enrichedLog, 'auth/finalizePasskey/invoke', 'Audit')
 
   let body: { name?: string; passkeyId?: string }
   try {

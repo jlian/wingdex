@@ -1,14 +1,25 @@
 import { createAuth } from '../../lib/auth'
-import { createRouteResponder } from '../../lib/log'
+import { createRouteResponder, createLogger } from '../../lib/log'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
-  const route = createRouteResponder((context.data as RequestData).log, 'auth/linkedProviders/read', 'Application')
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 })
   }
+
+  // Enrich logger with userId after auth (middleware skips session check for /api/auth/* routes)
+  const log = (context.data as RequestData).log
+  const enrichedLog = log ? createLogger({
+    env: context.env,
+    traceId: (context.data as RequestData).traceId || '',
+    spanId: (context.data as RequestData).spanId || '',
+    userId: session.user.id,
+    identity: { authMethod: 'session' },
+    resourceId: `/users/${session.user.id}`,
+  }) : undefined
+  const route = createRouteResponder(enrichedLog, 'auth/linkedProviders/read', 'Application')
 
   try {
 

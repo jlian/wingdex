@@ -23,7 +23,7 @@ function parseLogLevel(raw?: string): LogLevel {
   if (lower === 'warn') return 'Warning'
   if (lower === 'err') return 'Error'
   const normalized = lower.charAt(0).toUpperCase() + lower.slice(1)
-  if (normalized in LEVEL_RANK) return normalized as LogLevel
+  if (Object.prototype.hasOwnProperty.call(LEVEL_RANK, normalized)) return normalized as LogLevel
   return 'Info'
 }
 

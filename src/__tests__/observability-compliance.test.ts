@@ -9,7 +9,10 @@
  */
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'fs'
-import { join, relative } from 'path'
+import { join, relative, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const FUNCTIONS_API_DIR = join(__dirname, '../../functions/api')
 const MIDDLEWARE_PATH = join(__dirname, '../../functions/_middleware.ts')
