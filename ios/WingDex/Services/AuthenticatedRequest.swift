@@ -83,8 +83,8 @@ enum AuthenticatedRequest {
     ///
     /// Returns the HTTPURLResponse on success. Throws `PasskeyError.serverError`
     /// with a user-friendly message (status code only) on failure. The raw response
-    /// body is logged at error level with `.private` privacy so it never appears in
-    /// production device logs but is visible in Xcode.
+    /// body is logged at error level with `.private` privacy so it is redacted in
+    /// logs unless private data is explicitly enabled.
     @discardableResult
     static func validateHTTP(
         _ response: URLResponse,

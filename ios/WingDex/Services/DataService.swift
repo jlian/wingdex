@@ -329,7 +329,7 @@ final class DataService: Sendable {
             if http.statusCode == 401 {
                 await auth.signOut()
             }
-            throw DataServiceError.httpError(http.statusCode, body)
+            throw DataServiceError.httpError(http.statusCode)
         }
         log.debug("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment)")
     }
@@ -337,12 +337,12 @@ final class DataService: Sendable {
 
 enum DataServiceError: LocalizedError {
     case networkError(String)
-    case httpError(Int, String)
+    case httpError(Int)
 
     var errorDescription: String? {
         switch self {
         case .networkError(let msg): msg
-        case .httpError(let code, let body): "HTTP \(code): \(body)"
+        case .httpError(let code): "HTTP \(code)"
         }
     }
 }

@@ -154,7 +154,7 @@ Middleware auto-sets `/users/{userId}` and appends outing IDs from URL params (f
 
 ## Error message quality
 
-Every `resultDescription` must follow the "include the file name" principle:
+Every `resultDescription` must follow the "include the affected entity" principle:
 
 **Bad:** `"Invalid outing reference"`
 **Good:** `"Outing outing_abc123 referenced by 3 observations is not owned by user or does not exist; the outing may have been deleted by another client"`
