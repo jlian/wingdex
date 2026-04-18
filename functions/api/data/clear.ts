@@ -7,11 +7,16 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  await context.env.DB.batch([
-    context.env.DB.prepare('DELETE FROM outing WHERE userId = ?').bind(userId),
-    context.env.DB.prepare('DELETE FROM dex_meta WHERE userId = ?').bind(userId),
-  ])
-  route.info('Deleted all outings and dex metadata for user')
+  try {
+    await context.env.DB.batch([
+      context.env.DB.prepare('DELETE FROM outing WHERE userId = ?').bind(userId),
+      context.env.DB.prepare('DELETE FROM dex_meta WHERE userId = ?').bind(userId),
+    ])
+    route.info('Deleted all outings and dex metadata for user')
 
-  return Response.json({ cleared: true })
+    return Response.json({ cleared: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Data clear failed: ${message}`, { error: message })
+  }
 }

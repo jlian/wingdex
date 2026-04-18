@@ -60,7 +60,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json([])
   }
 
-  const allOwned = await hasOwnedOutings(
+  try {
+    const allOwned = await hasOwnedOutings(
     context.env.DB,
     userId,
     body.map(photo => photo.outingId)
@@ -101,4 +102,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       gps: photo.gps ? { lat: photo.gps.lat, lon: photo.gps.lon } : undefined,
     }))
   )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Photo insert failed: ${message}`, { error: message, count: body.length })
+  }
 }

@@ -174,15 +174,47 @@ Middleware resolves the session (and therefore `userId`) for non-`/api/auth/*` r
 
 ## Required practices for new/changed code
 
-1. **Always use the request-scoped logger** from `context.data.log` - never `console.log`/`console.error`.
-2. **Choose the right level**: `info()` for production-visible business events (the middleware completion log handles most of this automatically). `debug()` for sub-step diagnostic detail. `trace()` for full data dumps. `warn()` for 4xx. `error()` for 5xx.
-3. **Log every error path** at `warn` (4xx) or `error` (5xx) with `resultType: 'Failed'`, `resultSignature`, and a descriptive `resultDescription` that names the specific resource, cause, and mitigation.
-4. **Use `log.withResource()`** to attach entity-specific context (outingId, model, tier) that flows to all downstream logs.
-5. **Use `log.withResourceId()`** to extend the resourceId path for entity-specific operations.
-6. **Propagate `traceparent`** on outbound calls (web -> API, iOS -> API).
-7. **Read `response.text()`** on client-side errors to surface server error details to the user.
-8. **Keep `properties` machine-queryable** - counts, IDs, enum values. Long prose goes in `resultDescription`.
+1. **Use `createRouteResponder`** at the top of every handler to bind operationName and category once:
+   ```ts
+   const route = createRouteResponder((context.data as RequestData).log, 'data/outings/write', 'Application')
+   ```
+2. **Use `route.fail(status, body, detail?, properties?)`** for all error responses. It logs + returns Response in one call - impossible to forget a log site:
+   ```ts
+   return route.fail(400, 'Invalid JSON body')
+   return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`, { outingId })
+   ```
+3. **Use `route.info()`, `route.debug()`, `route.trace()`** for success/diagnostic logging. Never repeat operationName or category.
+4. **Wrap all DB operations in try/catch** with `route.fail(500, 'Internal server error', detail, properties)` in the catch block.
+5. **Include entity context** in error messages: outing IDs, observation IDs, counts. Use the `detail` parameter for rich descriptions and `properties` for machine-queryable data.
+6. **Scope resourceId** when operating on a specific entity: `createRouteResponder(log?.withResourceId('outings/' + outingId), ...)`
+7. **Propagate `traceparent`** on outbound calls (web -> API, iOS -> API).
+8. **Read `response.text()`** on client-side errors to surface server error details to the user.
+
+### Route handler template
+
+```ts
+export const onRequestPost: PagesFunction<Env> = async context => {
+  const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'data/outings/write', 'Application')
+  if (!userId) return new Response('Unauthorized', { status: 401 })
+
+  let body: unknown
+  try { body = await context.request.json() }
+  catch { return route.fail(400, 'Invalid JSON body') }
+
+  if (!isValid(body)) return route.fail(400, 'Invalid payload', 'Detailed description of what is wrong')
+
+  try {
+    // ... DB operations ...
+    route.debug('Created outing', { outingId: body.id })
+    return Response.json(result)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Operation failed: ${message}`, { error: message })
+  }
+}
+```
 
 ### Choosing info vs debug
 
-Ask: "Would an ops engineer need to see this for every request in production?" If yes -> `info()`. If only useful when debugging -> `debug()`. If it's a giant data dump -> `trace()`.
+Ask: "Would an ops engineer need to see this for every request in production?" If yes -> `route.info()`. If only useful when debugging -> `route.debug()`. If it's a giant data dump -> `route.trace()`.

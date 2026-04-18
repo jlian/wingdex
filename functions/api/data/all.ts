@@ -52,6 +52,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
+  try {
+
   const db = context.env.DB
   const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
   const observationSpeciesCommentsSelect = supportsSpeciesComments
@@ -118,4 +120,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       }
     }),
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Data fetch failed: ${message}`, { error: message })
+  }
 }

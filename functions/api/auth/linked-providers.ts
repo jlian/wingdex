@@ -10,6 +10,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
+  try {
+
   const result = await context.env.DB
     .prepare('SELECT providerId FROM account WHERE userId = ?')
     .bind(session.user.id)
@@ -27,4 +29,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Linked providers fetch failed: ${message}`, { error: message })
+  }
 }

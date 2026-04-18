@@ -26,17 +26,22 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     passkeyId || undefined,
   )
   if (!ownsPasskey) {
-    return route.fail(403, 'Passkey required', 'User does not own the specified passkey or no passkey found')
+    return route.fail(403, 'Passkey required', 'User does not own the specified passkey or no passkey found', { passkeyId: passkeyId || undefined })
   }
 
-  const requestedName = typeof body.name === 'string' ? body.name.trim() : ''
-  const nextName = requestedName.length > 0 ? requestedName : (session.user.name || 'Bird Enthusiast')
+  try {
+    const requestedName = typeof body.name === 'string' ? body.name.trim() : ''
+    const nextName = requestedName.length > 0 ? requestedName : (session.user.name || 'Bird Enthusiast')
 
-  await context.env.DB
-    .prepare('UPDATE "user" SET isAnonymous = 0, name = ?, updatedAt = datetime(\'now\') WHERE id = ?')
-    .bind(nextName, session.user.id)
-    .run()
-  route.info('User finalized passkey upgrade and is no longer anonymous')
+    await context.env.DB
+      .prepare('UPDATE "user" SET isAnonymous = 0, name = ?, updatedAt = datetime(\'now\') WHERE id = ?')
+      .bind(nextName, session.user.id)
+      .run()
+    route.info('User finalized passkey upgrade and is no longer anonymous')
 
-  return Response.json({ success: true })
+    return Response.json({ success: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Passkey finalization failed: ${message}`, { error: message })
+  }
 }

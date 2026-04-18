@@ -1,5 +1,6 @@
 import { exportOutingToEBirdCSV } from '../../lib/ebird'
 import { getOutingColumnNames, hasObservationColumn } from '../../lib/schema'
+import { createRouteResponder } from '../../lib/log'
 
 type ExportRow = {
   outingId: string
@@ -24,10 +25,12 @@ type ExportRow = {
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
+  const route = createRouteResponder((context.data as RequestData).log, 'export/sightings/export', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
+  try {
   const columnNames = await getOutingColumnNames(context.env.DB)
   const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
   const observationNotesSelect = supportsSpeciesCommentsColumn
@@ -130,6 +133,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const csv = csvChunks.join('\n')
 
+  route.debug(`Exported ${rows.length} sightings across ${byOuting.size} outings`, { sightingCount: rows.length, outingCount: byOuting.size })
+
   return new Response(csv, {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
@@ -137,4 +142,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       'cache-control': 'no-store',
     },
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Export failed', `Sightings export failed: ${message}`, { error: message })
+  }
 }

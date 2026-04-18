@@ -61,6 +61,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return route.fail(400, 'Invalid outing payload', 'Outing payload missing required fields: id, startTime, endTime, locationName, createdAt')
   }
 
+  try {
+
   const notes = body.notes ?? ''
   const stateProvince = body.stateProvince?.trim() || null
   const countryCode = normalizeCountryCode(body.countryCode, stateProvince || undefined)
@@ -175,4 +177,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     notes,
     createdAt: body.createdAt,
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Outing creation failed: ${message}`, { error: message, outingId: body.id })
+  }
 }

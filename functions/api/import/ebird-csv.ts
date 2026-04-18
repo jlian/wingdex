@@ -41,7 +41,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   const profileTimezone = formData.get('profileTimezone')
-  const csvContent = await file.text()
+  try {
+    const csvContent = await file.text()
   const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
   route.debug(`Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, { fileSize: file.size, rowCount: previews.length })
 
@@ -62,4 +63,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   return Response.json({ previews: previewsWithIds, summary })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `eBird CSV import failed: ${message}`, { error: message })
+  }
 }

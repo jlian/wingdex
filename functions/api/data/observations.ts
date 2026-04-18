@@ -153,7 +153,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
-    return route.fail(400, 'Invalid observations payload', 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}')
+    return route.fail(400, 'Invalid observations payload', 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}', { count: Array.isArray(body) ? body.length : 0 })
   }
 
   if (body.length === 0) {
@@ -161,22 +161,41 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json({ observations: [], dexUpdates })
   }
 
-  const allOwned = await hasOwnedOutings(
-    context.env.DB,
-    userId,
-    body.map(observation => observation.outingId)
-  )
-  if (!allOwned) {
-    return route.fail(400, 'Invalid outing reference', 'One or more outing IDs do not belong to the requesting user')
-  }
+  try {
+    const outingIds = [...new Set(body.map(o => o.outingId))]
+    const allOwned = await hasOwnedOutings(
+      context.env.DB,
+      userId,
+      outingIds
+    )
+    if (!allOwned) {
+      return route.fail(400, 'Invalid outing reference', `One or more outing IDs do not belong to the requesting user`, { outingIds })
+    }
 
-  const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
+    const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
 
-  const statements = body.map(observation => {
-    if (supportsSpeciesComments) {
+    const statements = body.map(observation => {
+      if (supportsSpeciesComments) {
+        return context.env.DB.prepare(
+          `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+        ).bind(
+          observation.id,
+          observation.outingId,
+          userId,
+          observation.speciesName,
+          observation.count,
+          observation.certainty,
+          observation.representativePhotoId ?? null,
+          observation.aiConfidence ?? null,
+          observation.speciesComments ?? null,
+          observation.notes ?? ''
+        )
+      }
+
       return context.env.DB.prepare(
-        `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+        `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
       ).bind(
         observation.id,
         observation.outingId,
@@ -186,46 +205,32 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         observation.certainty,
         observation.representativePhotoId ?? null,
         observation.aiConfidence ?? null,
-        observation.speciesComments ?? null,
         observation.notes ?? ''
       )
-    }
+    })
 
-    return context.env.DB.prepare(
-      `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
-    ).bind(
-      observation.id,
-      observation.outingId,
-      userId,
-      observation.speciesName,
-      observation.count,
-      observation.certainty,
-      observation.representativePhotoId ?? null,
-      observation.aiConfidence ?? null,
-      observation.notes ?? ''
-    )
-  })
+    await context.env.DB.batch(statements)
+    const speciesNames = [...new Set(body.map(o => o.speciesName))]
+    const scopedRoute = outingIds.length === 1
+      ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/observations`), 'data/observations/write', 'Application')
+      : route
+    scopedRoute.info(`Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
+    scopedRoute.debug('Observation insert details', { outingIds, speciesNames })
 
-  await context.env.DB.batch(statements)
-  const outingIds = [...new Set(body.map(o => o.outingId))]
-  const speciesNames = [...new Set(body.map(o => o.speciesName))]
-  const scopedRoute = outingIds.length === 1
-    ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/observations`), 'data/observations/write', 'Application')
-    : route
-  scopedRoute.info(`Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
-  scopedRoute.debug('Observation insert details', { outingIds, speciesNames })
+    const observations = body.map(observation => ({
+      ...observation,
+      representativePhotoId: observation.representativePhotoId || undefined,
+      aiConfidence: observation.aiConfidence ?? undefined,
+      speciesComments: supportsSpeciesComments ? (observation.speciesComments || undefined) : undefined,
+      notes: observation.notes ?? '',
+    }))
 
-  const observations = body.map(observation => ({
-    ...observation,
-    representativePhotoId: observation.representativePhotoId || undefined,
-    aiConfidence: observation.aiConfidence ?? undefined,
-    speciesComments: supportsSpeciesComments ? (observation.speciesComments || undefined) : undefined,
-    notes: observation.notes ?? '',
-  }))
-
-  const dexUpdates = await computeDex(context.env.DB, userId)
-  return Response.json({ observations, dexUpdates })
+    const dexUpdates = await computeDex(context.env.DB, userId)
+    return Response.json({ observations, dexUpdates })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Observation insert failed: ${message}`, { error: message, count: body.length })
+  }
 }
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
@@ -246,7 +251,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     return route.fail(400, 'Invalid patch payload', 'PATCH payload is not a valid object; expected {id, ...patch} or {ids, patch}')
   }
 
-  const db = context.env.DB
+  try {
+    const db = context.env.DB
   const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
 
   if (typeof body.id === 'string') {
@@ -335,4 +341,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Observation patch failed: ${message}`, { error: message })
+  }
 }

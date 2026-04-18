@@ -50,8 +50,9 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const dex = await computeDex(context.env.DB, userId)
-  route.debug(`Computed dex with ${dex.length} species`, { speciesCount: dex.length })
+  try {
+    const dex = await computeDex(context.env.DB, userId)
+    route.debug(`Computed dex with ${dex.length} species`, { speciesCount: dex.length })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -59,6 +60,10 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       bestPhotoId: entry.bestPhotoId || undefined,
     }))
   )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Dex read failed: ${message}`, { error: message })
+  }
 }
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
@@ -78,20 +83,24 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   const patches = Array.isArray(body) ? body : [body]
   if (!patches.every(isDexMetaPatch)) {
     return route.fail(400, 'Invalid dex patch payload', 'Dex patch payload failed validation; expected {speciesName} with optional addedDate, bestPhotoId, notes')
-    return new Response('Invalid dex patch payload', { status: 400 })
   }
 
-  for (const patch of patches) {
-    await upsertDexMetaPatch(context.env.DB, userId, patch)
-  }
-  route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) })
+  try {
+    for (const patch of patches) {
+      await upsertDexMetaPatch(context.env.DB, userId, patch)
+    }
+    route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) })
 
-  const dexUpdates = await computeDex(context.env.DB, userId)
-  return Response.json({
-    dexUpdates: dexUpdates.map(entry => ({
-      ...entry,
-      addedDate: entry.addedDate || undefined,
-      bestPhotoId: entry.bestPhotoId || undefined,
-    })),
-  })
+    const dexUpdates = await computeDex(context.env.DB, userId)
+    return Response.json({
+      dexUpdates: dexUpdates.map(entry => ({
+        ...entry,
+        addedDate: entry.addedDate || undefined,
+        bestPhotoId: entry.bestPhotoId || undefined,
+      })),
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `Dex patch failed: ${message}`, { error: message })
+  }
 }

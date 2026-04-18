@@ -39,10 +39,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   if (!isConfirmBody(body)) {
-    return route.fail(400, 'Invalid confirm payload')
+    return route.fail(400, 'Invalid confirm payload', 'Expected { previewIds: string[] }')
   }
 
-  const selectedPreviews = body.previewIds
+  try {
+    const selectedPreviews = body.previewIds
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
@@ -206,4 +207,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       bestPhotoId: row.bestPhotoId || undefined,
     })),
   })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'Internal server error', `eBird import confirm failed: ${message}`, { error: message })
+  }
  }
