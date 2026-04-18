@@ -47,14 +47,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
-        guard let httpResponse = optionsResponse as? HTTPURLResponse,
-              httpResponse.statusCode == 200
-        else {
-            let status = (optionsResponse as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: optionsData, encoding: .utf8) ?? ""
-            log.error("Authenticate options failed: HTTP \(status), body: \(body, privacy: .private)")
-            throw PasskeyError.serverError("Failed to get authentication options (HTTP \(status))")
-        }
+        let httpResponse = try AuthenticatedRequest.validateHTTP(
+            optionsResponse, data: optionsData,
+            context: "Failed to get authentication options", logger: log
+        )
 
         let challengeCookies = AuthenticatedRequest.extractCookies(from: httpResponse, for: optionsURL)
         let options = try JSONDecoder().decode(AuthenticationOptions.self, from: optionsData)
@@ -99,14 +95,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
 
-        guard let verifyHttp = verifyResponse as? HTTPURLResponse,
-              verifyHttp.statusCode == 200
-        else {
-            let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: verifyData, encoding: .utf8) ?? ""
-            log.error("Authenticate verify failed: HTTP \(status), body: \(body, privacy: .private)")
-            throw PasskeyError.authenticationFailed
-        }
+        let verifyHttp = try AuthenticatedRequest.validateHTTP(
+            verifyResponse, data: verifyData,
+            context: "Passkey authentication failed", logger: log
+        )
 
         // Response shape: { session: { token, userId, expiresAt, ... } }
         guard let json = try JSONSerialization.jsonObject(with: verifyData) as? [String: Any],
@@ -156,13 +148,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
 
-        guard let httpResponse = optionsResponse as? HTTPURLResponse,
-              httpResponse.statusCode == 200
-        else {
-            let status = (optionsResponse as? HTTPURLResponse)?.statusCode ?? -1
-            log.error("Registration options failed: HTTP \(status)")
-            throw PasskeyError.serverError("Failed to get registration options (HTTP \(status))")
-        }
+        let httpResponse = try AuthenticatedRequest.validateHTTP(
+            optionsResponse, data: optionsData,
+            context: "Failed to get registration options", logger: log
+        )
 
         let challengeCookies = AuthenticatedRequest.extractCookies(from: httpResponse, for: optionsURL)
         log.info("Registration options received, challenge cookie: \(challengeCookies != nil)")
@@ -213,14 +202,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
 
-        guard let verifyHttp = verifyResponse as? HTTPURLResponse,
-              verifyHttp.statusCode == 200
-        else {
-            let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: verifyData, encoding: .utf8) ?? ""
-            log.error("Registration verify failed: HTTP \(status), body: \(body, privacy: .private)")
-            throw PasskeyError.serverError("Passkey registration failed (HTTP \(status))")
-        }
+        try AuthenticatedRequest.validateHTTP(
+            verifyResponse, data: verifyData,
+            context: "Passkey registration failed", logger: log
+        )
         log.info("Passkey registration succeeded")
     }
 
@@ -232,14 +217,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200
-        else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("List passkeys failed: HTTP \(status), body: \(body, privacy: .private)")
-            throw PasskeyError.serverError("Failed to list passkeys (HTTP \(status))")
-        }
+        try AuthenticatedRequest.validateHTTP(
+            response, data: data,
+            context: "Failed to list passkeys", logger: log
+        )
 
         return try JSONDecoder().decode([PasskeyInfo].self, from: data)
     }
@@ -258,14 +239,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200
-        else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("Delete passkey failed: HTTP \(status), body: \(body, privacy: .private)")
-            throw PasskeyError.serverError("Failed to delete passkey (HTTP \(status))")
-        }
+        try AuthenticatedRequest.validateHTTP(
+            response, data: data,
+            context: "Failed to delete passkey", logger: log
+        )
     }
 
     // MARK: - ASAuthorizationController Bridge
