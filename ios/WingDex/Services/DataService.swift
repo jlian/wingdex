@@ -1,5 +1,6 @@
 import Foundation
 import os
+import Security
 
 private let log = Logger(subsystem: Config.bundleID, category: "DataService")
 
@@ -298,7 +299,9 @@ final class DataService: Sendable {
     /// Generate a W3C traceparent header value for distributed tracing.
     private static func generateTraceparent() -> String {
         var bytes = [UInt8](repeating: 0, count: 24)
-        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let status = bytes.withUnsafeMutableBufferPointer { buffer in
+            SecRandomCopyBytes(kSecRandomDefault, buffer.count, buffer.baseAddress!)
+        }
         if status != errSecSuccess {
             // Fallback: derive bytes from two UUIDs (32 bytes > 24 needed)
             let fallback = (UUID().uuidString + UUID().uuidString)
@@ -322,7 +325,7 @@ final class DataService: Sendable {
         let durationFragment = durationMs.map { " \($0)ms" } ?? ""
         let bytesFragment = byteCount.map { " \($0)B" } ?? ""
         guard (200...299).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
+            let body = String(data: data.prefix(1024), encoding: .utf8) ?? ""
             log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body, privacy: .private)")
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.

@@ -7,11 +7,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (result?.ok === 1) {
       return Response.json({ status: 'ok', db: 'ok' })
     }
-    route.fail(503, '', 'D1 health check returned an unexpected result; the database may be in a degraded state')
+    route.log?.warn('health/database/read', { category: 'Application', resultType: 'Failed', resultSignature: 503, resultDescription: 'D1 health check returned an unexpected result; the database may be in a degraded state' })
     return Response.json({ status: 'degraded', db: 'unexpected' }, { status: 503 })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    route.fail(503, '', `D1 health check failed: ${message}`)
+    route.log?.error('health/database/read', { category: 'Application', resultType: 'Failed', resultSignature: 503, resultDescription: `D1 health check failed: ${message}` })
     return Response.json({ status: 'degraded', db: 'error' }, { status: 503 })
   }
 }

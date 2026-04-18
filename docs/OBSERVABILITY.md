@@ -32,9 +32,9 @@ Standard 6-level hierarchy, controlled by `LOG_LEVEL` env var:
 | `Trace` | Ultra-verbose data dumps | Full candidate arrays, range prior maps. Deep debugging only. |
 | `Debug` | Sub-step diagnostic detail | Bird-id pipeline stages, batch counts, import parsing. Local dev. |
 | `Info` | Significant business events | Request completion (1 per request), audit events. **Production baseline.** |
-| `Warning` | Client errors, degraded paths | 4xx responses, validation failures. Always emitted. |
-| `Error` | Server errors, exceptions | 5xx responses, unhandled exceptions. Always emitted. |
-| `Critical` | System-level failures | Reserved for data loss, security breach. Always emitted. |
+| `Warning` | Client errors, degraded paths | 4xx responses, validation failures. Emitted at `warn` level and above. |
+| `Error` | Server errors, exceptions | 5xx responses, unhandled exceptions. Emitted at `error` level and above. |
+| `Critical` | System-level failures | Reserved for data loss, security breach. Emitted at all levels. |
 
 ### LOG_LEVEL env var
 

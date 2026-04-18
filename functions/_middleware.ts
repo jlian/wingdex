@@ -8,7 +8,7 @@ const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'])
 /** Max request body sizes in bytes, keyed by path prefix. */
 const BODY_LIMITS: Array<{ prefix: string; maxBytes: number }> = [
   { prefix: '/api/identify-bird', maxBytes: 10 * 1024 * 1024 }, // 10 MB (photos)
-  { prefix: '/api/import/', maxBytes: 5 * 1024 * 1024 }, // 5 MB (CSV)
+  { prefix: '/api/import/', maxBytes: 10 * 1024 * 1024 }, // 10 MB (CSV)
 ]
 const DEFAULT_BODY_LIMIT = 1 * 1024 * 1024 // 1 MB for all other API routes
 
@@ -20,7 +20,6 @@ const ROUTE_MAP: Array<{ prefix: string; method?: string; op: string; category: 
   { prefix: '/api/data/outings/', method: 'DELETE', op: 'data/outings/delete', category: 'Application' },
   { prefix: '/api/data/outings/', method: 'PATCH', op: 'data/outings/write', category: 'Application' },
   { prefix: '/api/data/outings', method: 'POST', op: 'data/outings/write', category: 'Application' },
-  { prefix: '/api/data/outings', method: 'GET', op: 'data/outings/read', category: 'Application' },
   { prefix: '/api/data/observations', method: 'POST', op: 'data/observations/write', category: 'Application' },
   { prefix: '/api/data/observations', method: 'PATCH', op: 'data/observations/write', category: 'Application' },
   { prefix: '/api/data/photos', method: 'POST', op: 'data/photos/write', category: 'Application' },
@@ -250,7 +249,6 @@ function handleUnexpectedError(
   start: number,
 ): Response {
   const message = err instanceof Error ? err.message : String(err)
-  const stack = err instanceof Error ? err.stack : undefined
   log.error(operationName, {
     category: 'Request',
     resultType: 'Failed',

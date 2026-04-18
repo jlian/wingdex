@@ -43,7 +43,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const traceId = (context.data as RequestData).traceId
   const spanId = (context.data as RequestData).spanId
   const traceFlags = (context.data as RequestData).traceFlags
-  const route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
+  let route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
@@ -128,6 +128,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     // Scope logger with model context for all downstream logs (including bird-id sub-steps)
     log = log?.withResource({ model, hasLocation: lat !== undefined && lon !== undefined })
+    route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
 
     const result = await identifyBird(context.env, {
       imageDataUrl,

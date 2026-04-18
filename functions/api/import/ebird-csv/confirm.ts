@@ -47,7 +47,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        route.log?.warn('import/ebirdCsvConfirm/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
+        route.debug('A preview ID could not be decoded from base64; it will be skipped')
         return false
       }
       return true

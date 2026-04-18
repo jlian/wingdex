@@ -50,11 +50,11 @@ export interface Logger {
   debug(operationName: string, fields?: LogFields): void
   /** Trace - ultra-verbose data dumps. Deep debugging only. */
   trace(operationName: string, fields?: LogFields): void
-  /** Warning - 4xx, validation failures. Always emitted. */
+  /** Warning - 4xx, validation failures. Emitted at Warning level and above. */
   warn(operationName: string, fields?: LogFields): void
-  /** Error - 5xx, unexpected exceptions. Always emitted. */
+  /** Error - 5xx, unexpected exceptions. Emitted at Error level and above. */
   error(operationName: string, fields?: LogFields): void
-  /** Critical - data loss, security breach. Always emitted. */
+  /** Critical - data loss, security breach. Emitted at all levels except when LOG_LEVEL suppresses. */
   critical(operationName: string, fields?: LogFields): void
   /** Returns a child logger with additional properties merged into every log. */
   withResource(extra: Record<string, unknown>): Logger
