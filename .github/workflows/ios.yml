@@ -44,15 +44,15 @@ jobs:
         run: npm run build
 
       - name: Apply local D1 migrations
-        run: printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local
+        run: npm run db:migrate:local
 
       - name: Start dev server
         run: |
           npm run dev &
           for i in $(seq 1 30); do
-            curl -sf http://localhost:5000/api/auth/get-session > /dev/null 2>&1 && break || sleep 1
+            curl -sf http://localhost:5000/api/health > /dev/null 2>&1 && break || sleep 1
           done
-          curl -sf http://localhost:5000/api/auth/get-session > /dev/null 2>&1 || (echo "Server failed to start within 30s"; exit 1)
+          curl -sf http://localhost:5000/api/health > /dev/null 2>&1 || (echo "Server failed to start within 30s"; exit 1)
           echo "Server ready on :5000"
 
       # -- Xcode build + test --

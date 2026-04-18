@@ -103,6 +103,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     : generateTraceContext()
   const method = context.request.method
   const hasBearer = !!context.request.headers.get('authorization')
+  const hasCookie = !!context.request.headers.get('cookie')
   const { op, category: routeCategory } = resolveOperation(pathname, method)
 
   // Build logger with pre-auth identity (no userId yet)
@@ -110,7 +111,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     env: context.env,
     traceId: traceCtx.traceId,
     spanId: traceCtx.spanId,
-    identity: { authMethod: hasBearer ? 'bearer' : 'session' },
+    identity: { authMethod: hasBearer ? 'bearer' : hasCookie ? 'session' : 'none' },
   })
 
   context.data.traceId = traceCtx.traceId
@@ -184,7 +185,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   // Re-create logger with full identity + resourceId
   const identity: Identity = {
     isAnonymous: !!(session.user as { isAnonymous?: boolean }).isAnonymous,
-    authMethod: hasBearer ? 'bearer' : 'session',
+    authMethod: hasBearer ? 'bearer' : hasCookie ? 'session' : 'none',
   }
   let resourceId = `/users/${session.user.id}`
   const entitySegment = extractEntitySegment(pathname)

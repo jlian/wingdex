@@ -104,7 +104,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         else {
             let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
             let body = String(data: verifyData, encoding: .utf8) ?? ""
-            log.error("Authenticate verify failed: HTTP \(status) - \(body)")
+            log.error("Authenticate verify failed: HTTP \(status), body: \(body, privacy: .private)")
             throw PasskeyError.authenticationFailed
         }
 
@@ -218,7 +218,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         else {
             let status = (verifyResponse as? HTTPURLResponse)?.statusCode ?? -1
             let body = String(data: verifyData, encoding: .utf8) ?? ""
-            log.error("Registration verify failed: HTTP \(status) - \(body)")
+            log.error("Registration verify failed: HTTP \(status), body: \(body, privacy: .private)")
             throw PasskeyError.serverError("Passkey registration failed (HTTP \(status))")
         }
         log.info("Passkey registration succeeded")

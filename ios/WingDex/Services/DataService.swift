@@ -323,7 +323,7 @@ final class DataService: Sendable {
         let bytesFragment = byteCount.map { " \($0)B" } ?? ""
         guard (200...299).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body)")
+            log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body, privacy: .private)")
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.
             if http.statusCode == 401 {
