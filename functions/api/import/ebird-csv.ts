@@ -27,7 +27,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   let formData: FormData
   try {
     formData = await context.request.formData()
-  } catch {
+    } catch {
     return route.fail(400, 'Invalid form payload', 'Could not parse request body as multipart/form-data; ensure the request uses multipart encoding with a file field')
   }
 
@@ -43,27 +43,27 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const profileTimezone = formData.get('profileTimezone')
   try {
     const csvContent = await file.text()
-  const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
-  route.debug(`Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, { fileSize: file.size, rowCount: previews.length })
+    const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
+    route.debug(`Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, { fileSize: file.size, rowCount: previews.length })
 
-  const existingDexRows = await computeDex(context.env.DB, userId)
-  const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))
-  const withConflicts = detectImportConflicts(previews, existingDex)
+    const existingDexRows = await computeDex(context.env.DB, userId)
+    const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))
+    const withConflicts = detectImportConflicts(previews, existingDex)
 
-  const previewsWithIds: EncodedPreview[] = withConflicts.map(preview => ({
+    const previewsWithIds: EncodedPreview[] = withConflicts.map(preview => ({
     ...preview,
     previewId: encodePreviewId(preview),
-  }))
+    }))
 
-  const summary = {
+    const summary = {
     total: previewsWithIds.length,
     new: previewsWithIds.filter(preview => preview.conflict === 'new').length,
     duplicates: previewsWithIds.filter(preview => preview.conflict === 'duplicate').length,
     updates: previewsWithIds.filter(preview => preview.conflict === 'update_dates').length,
-  }
+    }
 
-  return Response.json({ previews: previewsWithIds, summary })
-  } catch (error) {
+    return Response.json({ previews: previewsWithIds, summary })
+    } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return route.fail(500, 'Internal server error', `eBird CSV import failed: ${message}`, { error: message, fileSize: file.size })
   }

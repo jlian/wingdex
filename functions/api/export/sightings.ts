@@ -31,12 +31,12 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   try {
-  const columnNames = await getOutingColumnNames(context.env.DB)
-  const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
-  const observationNotesSelect = supportsSpeciesCommentsColumn
+    const columnNames = await getOutingColumnNames(context.env.DB)
+    const supportsSpeciesCommentsColumn = await hasObservationColumn(context.env.DB, 'speciesComments')
+    const observationNotesSelect = supportsSpeciesCommentsColumn
     ? 'COALESCE(ob.speciesComments, ob.notes)'
     : 'ob.notes'
-  const rowsQuery = `SELECT
+    const rowsQuery = `SELECT
          o.id as outingId,
          o.startTime,
          o.endTime,
@@ -60,13 +60,13 @@ export const onRequestGet: PagesFunction<Env> = async context => {
        WHERE ob.userId = ?
        ORDER BY o.startTime ASC, o.id ASC, ob.id ASC`
 
-  const rowsResult = await context.env.DB
+    const rowsResult = await context.env.DB
     .prepare(rowsQuery)
     .bind(userId)
     .all<ExportRow>()
 
-  const rows = rowsResult.results
-  if (rows.length === 0) {
+    const rows = rowsResult.results
+    if (rows.length === 0) {
     const emptyCsv = exportOutingToEBirdCSV(
       {
         id: 'empty',
@@ -85,19 +85,19 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         'cache-control': 'no-store',
       },
     })
-  }
+    }
 
-  const byOuting = new Map<string, ExportRow[]>()
-  for (const row of rows) {
+    const byOuting = new Map<string, ExportRow[]>()
+    for (const row of rows) {
     const existing = byOuting.get(row.outingId)
     if (existing) existing.push(row)
     else byOuting.set(row.outingId, [row])
-  }
+    }
 
-  const csvChunks: string[] = []
-  let includeHeader = true
+    const csvChunks: string[] = []
+    let includeHeader = true
 
-  for (const outingRows of byOuting.values()) {
+    for (const outingRows of byOuting.values()) {
     const first = outingRows[0]
     const csv = exportOutingToEBirdCSV(
       {
@@ -129,20 +129,20 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     if (csv.trim()) {
       csvChunks.push(csv)
     }
-  }
+    }
 
-  const csv = csvChunks.join('\n')
+    const csv = csvChunks.join('\n')
 
-  route.debug(`Exported ${rows.length} sightings across ${byOuting.size} outings`, { sightingCount: rows.length, outingCount: byOuting.size })
+    route.debug(`Exported ${rows.length} sightings across ${byOuting.size} outings`, { sightingCount: rows.length, outingCount: byOuting.size })
 
-  return new Response(csv, {
+    return new Response(csv, {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="wingdex-sightings-${new Date().toISOString().split('T')[0]}.csv"`,
       'cache-control': 'no-store',
     },
-  })
-  } catch (error) {
+    })
+    } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return route.fail(500, 'Export failed', `Sightings export failed: ${message}`, { error: message })
   }

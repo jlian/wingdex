@@ -148,7 +148,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   let body: unknown
   try {
     body = await context.request.json()
-  } catch {
+    } catch {
     return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
@@ -227,7 +227,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     const dexUpdates = await computeDex(context.env.DB, userId)
     return Response.json({ observations, dexUpdates })
-  } catch (error) {
+    } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return route.fail(500, 'Internal server error', `Observation insert failed: ${message}`, { error: message, count: body.length })
   }
@@ -243,7 +243,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   let body: unknown
   try {
     body = await context.request.json()
-  } catch {
+    } catch {
     return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
@@ -253,9 +253,9 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
 
   try {
     const db = context.env.DB
-  const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
+    const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
 
-  if (typeof body.id === 'string') {
+    if (typeof body.id === 'string') {
     const { id, ...rawPatch } = body
     const patch = rawPatch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
@@ -292,9 +292,9 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const dexUpdates = await computeDex(db, userId)
 
     return Response.json({ observation: updated[0], dexUpdates })
-  }
+    }
 
-  if (Array.isArray(body.ids) && body.ids.every(id => typeof id === 'string') && isObject(body.patch)) {
+    if (Array.isArray(body.ids) && body.ids.every(id => typeof id === 'string') && isObject(body.patch)) {
     const ids = body.ids as string[]
     const patch = body.patch as ObservationPatch
     const { updateFields, bindings } = getPatchBindings(patch)
@@ -338,10 +338,10 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const dexUpdates = await computeDex(db, userId)
 
     return Response.json({ observations, dexUpdates })
-  }
+    }
 
-  return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
-  } catch (error) {
+    return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
+    } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return route.fail(500, 'Internal server error', `Observation patch failed: ${message}`, { error: message })
   }

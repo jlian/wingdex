@@ -48,7 +48,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   let body: unknown
   try {
     body = await context.request.json()
-  } catch {
+    } catch {
     return route.fail(400, 'Invalid JSON body', 'Request body could not be parsed as JSON; check Content-Type is application/json and body is valid JSON')
   }
 
@@ -65,13 +65,13 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     context.env.DB,
     userId,
     body.map(photo => photo.outingId)
-  )
-  if (!allOwned) {
+    )
+    if (!allOwned) {
     const failOutingIds = [...new Set(body.map(p => p.outingId))]
     return route.fail(400, 'Invalid outing reference', `One or more outing IDs are not owned by user or do not exist`, { outingIds: failOutingIds })
-  }
+    }
 
-  const statements = body.map(photo =>
+    const statements = body.map(photo =>
     context.env.DB.prepare(
       `INSERT INTO photo (id, outingId, userId, dataUrl, thumbnail, exifTime, gpsLat, gpsLon, fileHash, fileName)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
@@ -87,23 +87,23 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       photo.fileHash,
       photo.fileName
     )
-  )
+    )
 
-  await context.env.DB.batch(statements)
-  const outingIds = [...new Set(body.map(p => p.outingId))]
-  const scopedRoute = outingIds.length === 1
+    await context.env.DB.batch(statements)
+    const outingIds = [...new Set(body.map(p => p.outingId))]
+    const scopedRoute = outingIds.length === 1
     ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/photos`), 'data/photos/write', 'Application')
     : route
-  scopedRoute.debug(`Inserted ${body.length} photos into ${outingIds.length} outings`, { photoCount: body.length, outingCount: outingIds.length })
+    scopedRoute.debug(`Inserted ${body.length} photos into ${outingIds.length} outings`, { photoCount: body.length, outingCount: outingIds.length })
 
-  return Response.json(
+    return Response.json(
     body.map(photo => ({
       ...photo,
       exifTime: photo.exifTime || undefined,
       gps: photo.gps ? { lat: photo.gps.lat, lon: photo.gps.lon } : undefined,
     }))
-  )
-  } catch (error) {
+    )
+    } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return route.fail(500, 'Internal server error', `Photo insert failed: ${message}`, { error: message, count: body.length })
   }
