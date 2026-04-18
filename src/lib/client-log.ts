@@ -11,7 +11,7 @@
  * can pick them up.
  */
 
-export type ClientLogLevel = 'info' | 'warn' | 'error' | 'debug'
+export type ClientLogLevel = 'Info' | 'Warning' | 'Error' | 'Debug'
 export type ClientResultType = 'Succeeded' | 'Failed'
 
 export interface ClientLogFields {
@@ -34,7 +34,7 @@ function emit(level: ClientLogLevel, operationName: string, fields?: ClientLogFi
   if (fields?.properties && Object.keys(fields.properties).length > 0) entry.properties = fields.properties
 
   const json = JSON.stringify(entry)
-  if (level === 'error' || level === 'warn') {
+  if (level === 'Error' || level === 'Warning') {
     console.error(json)
   } else {
     console.log(json)
@@ -42,10 +42,10 @@ function emit(level: ClientLogLevel, operationName: string, fields?: ClientLogFi
 }
 
 export const clientLog = {
-  info: (operationName: string, fields?: ClientLogFields) => emit('info', operationName, fields),
-  warn: (operationName: string, fields?: ClientLogFields) => emit('warn', operationName, fields),
-  error: (operationName: string, fields?: ClientLogFields) => emit('error', operationName, fields),
-  debug: (operationName: string, fields?: ClientLogFields) => emit('debug', operationName, fields),
+  info: (operationName: string, fields?: ClientLogFields) => emit('Info', operationName, fields),
+  warn: (operationName: string, fields?: ClientLogFields) => emit('Warning', operationName, fields),
+  error: (operationName: string, fields?: ClientLogFields) => emit('Error', operationName, fields),
+  debug: (operationName: string, fields?: ClientLogFields) => emit('Debug', operationName, fields),
 }
 
 /**

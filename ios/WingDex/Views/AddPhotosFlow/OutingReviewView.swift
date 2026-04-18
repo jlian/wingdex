@@ -829,6 +829,7 @@ final class PlaceSearchCompleter: NSObject {
         do {
             return try await search.start().mapItems.first
         } catch {
+            log.debug("Failed to resolve place search result: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

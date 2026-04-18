@@ -13,7 +13,7 @@ export interface TraceContext {
   traceFlags: string
 }
 
-/** Generate 16 random hex characters. */
+/** Generate a random hex string for the requested number of bytes (2 hex chars per byte). */
 function randomHex(bytes: number): string {
   const buf = new Uint8Array(bytes)
   crypto.getRandomValues(buf)

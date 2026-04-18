@@ -211,8 +211,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   await context.env.DB.batch(statements)
   const outingIds = [...new Set(body.map(o => o.outingId))]
   const speciesNames = [...new Set(body.map(o => o.speciesName))]
-  log?.withResourceId(`outings/${outingIds[0]}`)?.info('data/observations/write', { category: 'Application', resultDescription: `Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, properties: { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length } })
-  log?.withResourceId(`outings/${outingIds[0]}`)?.debug('data/observations/write', { category: 'Application', resultDescription: 'Observation insert details', properties: { outingIds, speciesNames } })
+  const observationsLog = outingIds.length === 1 ? log?.withResourceId(`outings/${outingIds[0]}/observations`) : log
+  observationsLog?.info('data/observations/write', { category: 'Application', resultDescription: `Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, properties: { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length } })
+  observationsLog?.debug('data/observations/write', { category: 'Application', resultDescription: 'Observation insert details', properties: { outingIds, speciesNames } })
 
   const observations = body.map(observation => ({
     ...observation,
