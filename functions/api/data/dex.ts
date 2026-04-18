@@ -101,6 +101,6 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Dex patch failed: ${message}`, { error: message })
+    return route.fail(500, 'Internal server error', `Dex patch failed: ${message}`, { error: message, patchCount: patches.length })
   }
 }

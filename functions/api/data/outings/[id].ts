@@ -126,7 +126,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   if (updateFields.length === 0) {
-    return route.fail(400, 'No valid fields to update', `No valid fields to update for outing ${outingId}`)
+    return route.fail(400, 'No valid fields to update', `No valid fields to update for outing ${outingId}`, { outingId })
   }
 
   const updateStatement = `UPDATE outing SET ${updateFields.join(', ')} WHERE id = ? AND userId = ?`
@@ -135,7 +135,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     .run()
 
   if (updateResult.meta.changes === 0) {
-    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`)
+    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`, { outingId })
   }
 
   const outingResult = await context.env.DB.prepare(
@@ -207,7 +207,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
       .run()
 
     if (deleteResult.meta.changes === 0) {
-      return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user; it may have been deleted by another client`)
+      return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user; it may have been deleted by another client`, { outingId })
     }
 
     route.debug(`Deleted outing ${outingId}`, { outingId })

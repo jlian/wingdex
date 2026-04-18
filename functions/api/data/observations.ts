@@ -285,7 +285,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       .run()
 
     if (updateResult.meta.changes === 0) {
-      return route.fail(404, 'Not found', `Observation ${id} not found or not owned by user`)
+      return route.fail(404, 'Not found', `Observation ${id} not found or not owned by user`, { observationId: id })
     }
 
     const updated = await listObservationsByIds(db, userId, [id])
@@ -308,7 +308,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (ids.length === 0) {
-      return route.fail(400, 'No ids provided', 'Bulk PATCH requires at least one observation ID in the ids array')
+      return route.fail(400, 'No ids provided', 'Bulk PATCH requires at least one observation ID in the ids array', { count: 0 })
     }
     if (updateFields.length === 0) {
       return route.fail(400, 'No valid fields to update', 'Bulk PATCH body contains no recognized fields; valid fields are outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes')
@@ -331,7 +331,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const updatedCount = updateResults.reduce((sum, result) => sum + (result.meta?.changes || 0), 0)
 
     if (updatedCount === 0) {
-      return route.fail(404, 'Not found', `None of the ${ids.length} observations were found or owned by user`)
+      return route.fail(404, 'Not found', `None of the ${ids.length} observations were found or owned by user`, { count: ids.length })
     }
 
     const observations = await listObservationsByIds(db, userId, ids)

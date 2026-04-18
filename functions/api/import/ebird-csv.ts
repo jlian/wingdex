@@ -65,6 +65,6 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   return Response.json({ previews: previewsWithIds, summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `eBird CSV import failed: ${message}`, { error: message })
+    return route.fail(500, 'Internal server error', `eBird CSV import failed: ${message}`, { error: message, fileSize: file.size })
   }
 }

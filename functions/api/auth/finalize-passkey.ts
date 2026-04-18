@@ -42,6 +42,6 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json({ success: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Passkey finalization failed: ${message}`, { error: message })
+    return route.fail(500, 'Internal server error', `Passkey finalization failed: ${message}`, { error: message, userId: session.user.id })
   }
 }

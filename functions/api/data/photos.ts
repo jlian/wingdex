@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   if (!Array.isArray(body) || !body.every(isCreatePhotoInput)) {
-    return route.fail(400, 'Invalid photos payload', 'Photos payload failed validation; expected array of {id, outingId, fileHash, fileName}')
+    return route.fail(400, 'Invalid photos payload', 'Photos payload failed validation; expected array of {id, outingId, fileHash, fileName}', { count: Array.isArray(body) ? body.length : 0 })
   }
 
   if (body.length === 0) {
