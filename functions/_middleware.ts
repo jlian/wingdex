@@ -128,9 +128,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
     log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
-    return errorResponse('Method Not Allowed', 405, {
+    const methodResponse = errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
+    addTraceHeaders(methodResponse, traceCtx)
+    return methodResponse
   }
 
   // --- Request body size limit ---
@@ -141,14 +143,18 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
       log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
-      return errorResponse('Invalid Content-Length', 400)
+      const clResponse = errorResponse('Invalid Content-Length', 400)
+      addTraceHeaders(clResponse, traceCtx)
+      return clResponse
     }
     if (parsedLength > 0) {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
         log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
-        return errorResponse('Payload Too Large', 413)
+        const sizeResponse = errorResponse('Payload Too Large', 413)
+        addTraceHeaders(sizeResponse, traceCtx)
+        return sizeResponse
       }
     }
   }
@@ -179,7 +185,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   if (!session) {
     log.warn('auth/sessions/validate', { category: 'Request', resultType: 'Failed', resultSignature: 401, resultDescription: 'No valid session cookie or bearer token; check that the request includes session cookies or an Authorization: Bearer header', durationMs: Date.now() - start, properties: { hasBearer } })
-    return errorResponse('Unauthorized', 401)
+    const authResponse = errorResponse('Unauthorized', 401)
+    addTraceHeaders(authResponse, traceCtx)
+    return authResponse
   }
 
   context.data.user = session.user
@@ -217,7 +225,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 /** Emit the single request-lifecycle completion log with dynamic level. */
 function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, status: number, durationMs: number): void {
   const resultType = status < 400 ? 'Succeeded' : 'Failed'
-  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, durationMs }
+  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: `HTTP ${status}`, durationMs }
   if (status >= 500) {
     log.error(op, fields)
   } else if (status >= 400) {
