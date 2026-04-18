@@ -154,7 +154,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     try {
       const response = withSecurityHeaders(await context.next())
       addTraceHeaders(response, traceCtx)
-      emitCompletionLog(log, op, response.status, Date.now() - start)
+      // Suppress completion log for /api/health (internal infra polling, not user-triggered)
+      if (pathname !== '/api/health') {
+        emitCompletionLog(log, op, response.status, Date.now() - start)
+      } else if (!response.ok) {
+        // Always log health failures
+        emitCompletionLog(log, op, response.status, Date.now() - start)
+      }
       return response
     } catch (err) {
       return handleUnexpectedError(err, log, traceCtx, op, start)
