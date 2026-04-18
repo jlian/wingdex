@@ -1,5 +1,6 @@
 import { computeDex } from '../../lib/dex-query'
 import { detectImportConflicts, parseEBirdCSV, type ImportPreview } from '../../lib/ebird'
+import { createRouteResponder } from '../../lib/log'
 
 type EncodedPreview = ImportPreview & { previewId: string }
 
@@ -18,7 +19,7 @@ function encodePreviewId(preview: ImportPreview): string {
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'import/ebirdCsv/import', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -27,25 +28,22 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     formData = await context.request.formData()
   } catch {
-    log?.warn('import/ebirdCsv/import', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as multipart/form-data; ensure the request uses multipart encoding with a file field' })
-    return new Response('Invalid form payload', { status: 400 })
+    return route.fail(400, 'Invalid form payload', 'Could not parse request body as multipart/form-data; ensure the request uses multipart encoding with a file field')
   }
 
   const file = formData.get('file')
   if (!(file instanceof File)) {
-    log?.warn('import/ebirdCsv/import', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'No CSV file found in the file form field; include a file field with the eBird CSV export' })
-    return new Response('Missing CSV file', { status: 400 })
+    return route.fail(400, 'Missing CSV file', 'No CSV file found in the file form field; include a file field with the eBird CSV export')
   }
 
   if (file.size > MAX_CSV_SIZE_BYTES) {
-    log?.warn('import/ebirdCsv/import', { category: 'Application', resultType: 'Failed', resultSignature: 413, resultDescription: `CSV file is ${file.size} bytes, exceeding the ${MAX_CSV_SIZE_BYTES}-byte limit; try exporting a smaller date range from eBird`, properties: { fileSize: file.size, limit: MAX_CSV_SIZE_BYTES } })
-    return new Response('CSV file too large (max 10MB)', { status: 413 })
+    return route.fail(413, 'CSV file too large (max 10MB)', `CSV file is ${file.size} bytes, exceeding the ${MAX_CSV_SIZE_BYTES}-byte limit; try exporting a smaller date range from eBird`, { fileSize: file.size, limit: MAX_CSV_SIZE_BYTES })
   }
 
   const profileTimezone = formData.get('profileTimezone')
   const csvContent = await file.text()
   const previews = parseEBirdCSV(csvContent, typeof profileTimezone === 'string' ? profileTimezone : undefined)
-  log?.debug('import/ebirdCsv/import', { category: 'Application', resultDescription: `Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, properties: { fileSize: file.size, rowCount: previews.length } })
+  route.debug(`Parsed ${previews.length} sighting rows from ${file.size}-byte CSV`, { fileSize: file.size, rowCount: previews.length })
 
   const existingDexRows = await computeDex(context.env.DB, userId)
   const existingDex = new Map(existingDexRows.map(row => [row.speciesName, row]))

@@ -1,4 +1,5 @@
 import { computeDex } from '../../lib/dex-query'
+import { createRouteResponder } from '../../lib/log'
 
 type DexMetaPatch = {
   speciesName: string
@@ -44,13 +45,13 @@ async function upsertDexMetaPatch(db: D1Database, userId: string, patch: DexMeta
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log?.withResourceId('dex'), 'data/dex/read', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const dex = await computeDex(context.env.DB, userId)
-  log?.withResourceId('dex')?.debug('data/dex/read', { category: 'Application', resultDescription: `Computed dex with ${dex.length} species`, properties: { speciesCount: dex.length } })
+  route.debug(`Computed dex with ${dex.length} species`, { speciesCount: dex.length })
   return Response.json(
     dex.map(entry => ({
       ...entry,
@@ -62,7 +63,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log?.withResourceId('dex'), 'data/dex/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -71,20 +72,19 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data/dex/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   const patches = Array.isArray(body) ? body : [body]
   if (!patches.every(isDexMetaPatch)) {
-    log?.warn('data/dex/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Dex patch payload failed validation; expected {speciesName} with optional addedDate, bestPhotoId, notes' })
+    return route.fail(400, 'Invalid dex patch payload', 'Dex patch payload failed validation; expected {speciesName} with optional addedDate, bestPhotoId, notes')
     return new Response('Invalid dex patch payload', { status: 400 })
   }
 
   for (const patch of patches) {
     await upsertDexMetaPatch(context.env.DB, userId, patch)
   }
-  log?.withResourceId('dex')?.debug('data/dex/write', { category: 'Application', resultDescription: `Upserted ${patches.length} dex metadata patches`, properties: { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) } })
+  route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({

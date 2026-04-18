@@ -1,7 +1,8 @@
 import { createAuth } from '../../lib/auth'
+import { createRouteResponder } from '../../lib/log'
 
 export const onRequestGet: PagesFunction<Env> = async context => {
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'auth/linkedProviders/read', 'Application')
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
@@ -21,7 +22,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         .filter((providerId): providerId is string => Boolean(providerId))
     )
   )
-  log?.debug('auth/linkedProviders/read', { category: 'Application', resultDescription: `User has ${providers.length} linked auth providers`, properties: { providerCount: providers.length } })
+  route.debug(`User has ${providers.length} linked auth providers`, { providerCount: providers.length })
 
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },

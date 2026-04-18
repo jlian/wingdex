@@ -1,5 +1,6 @@
 import { computeDex } from '../../../lib/dex-query'
 import { getOutingColumnNames } from '../../../lib/schema'
+import { createRouteResponder } from '../../../lib/log'
 
 type UpdateOutingBody = {
   startTime?: string
@@ -24,27 +25,25 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/outings/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const outingId = context.params.id as string | undefined
   if (!outingId) {
-    return new Response('Missing outing id', { status: 400 })
+    return route.fail(400, 'Missing outing id')
   }
 
   let body: unknown
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   if (!isObject(body)) {
-    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Outing patch payload is not a valid object' })
-    return new Response('Invalid outing patch payload', { status: 400 })
+    return route.fail(400, 'Invalid outing patch payload', 'Outing patch payload is not a valid object')
   }
 
   const updates = body as UpdateOutingBody
@@ -122,8 +121,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   }
 
   if (updateFields.length === 0) {
-    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: `No valid fields to update for outing ${outingId}` })
-    return new Response('No valid fields to update', { status: 400 })
+    return route.fail(400, 'No valid fields to update', `No valid fields to update for outing ${outingId}`)
   }
 
   const updateStatement = `UPDATE outing SET ${updateFields.join(', ')} WHERE id = ? AND userId = ?`
@@ -132,8 +130,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     .run()
 
   if (updateResult.meta.changes === 0) {
-    log?.warn('data/outings/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `Outing ${outingId} not found or not owned by user` })
-    return new Response('Not found', { status: 404 })
+    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user`)
   }
 
   const outingResult = await context.env.DB.prepare(
@@ -182,14 +179,14 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
 
 export const onRequestDelete: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/outings/delete', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const outingId = context.params.id as string | undefined
   if (!outingId) {
-    return new Response('Missing outing id', { status: 400 })
+    return route.fail(400, 'Missing outing id')
   }
 
   const deleteResult = await context.env.DB.prepare('DELETE FROM outing WHERE id = ? AND userId = ?')
@@ -197,11 +194,10 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     .run()
 
   if (deleteResult.meta.changes === 0) {
-    log?.warn('data/outings/delete', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `Outing ${outingId} not found or not owned by user; it may have been deleted by another client`, properties: { outingId } })
-    return new Response('Not found', { status: 404 })
+    return route.fail(404, 'Not found', `Outing ${outingId} not found or not owned by user; it may have been deleted by another client`)
   }
 
-  log?.debug('data/outings/delete', { category: 'Application', resultDescription: `Deleted outing ${outingId}`, properties: { outingId } })
+  route.debug(`Deleted outing ${outingId}`, { outingId })
   const dexUpdates = await computeDex(context.env.DB, userId)
   return Response.json({ dexUpdates })
 }

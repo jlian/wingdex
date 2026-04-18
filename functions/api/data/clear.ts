@@ -1,6 +1,8 @@
+import { createRouteResponder } from '../../lib/log'
+
 export const onRequestDelete: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/clear/delete', 'Audit')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -9,7 +11,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     context.env.DB.prepare('DELETE FROM outing WHERE userId = ?').bind(userId),
     context.env.DB.prepare('DELETE FROM dex_meta WHERE userId = ?').bind(userId),
   ])
-  log?.info('data/clear/delete', { category: 'Audit', resultType: 'Succeeded', resultDescription: 'Deleted all outings and dex metadata for user' })
+  route.info('Deleted all outings and dex metadata for user')
 
   return Response.json({ cleared: true })
 }

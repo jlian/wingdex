@@ -164,3 +164,66 @@ export function createLogger(ctx: LoggerContext): Logger {
 
   return makeLogger(ctx)
 }
+
+/**
+ * Route-level responder that eliminates boilerplate in route handlers.
+ *
+ * Binds operationName and category once so every log call and error response
+ * gets them automatically. The fail() method logs + returns a Response in
+ * one call, making it impossible to forget a log site.
+ *
+ * Usage:
+ *   const route = createRouteResponder(log, 'data/outings/write', 'Application')
+ *   return route.fail(400, 'Invalid JSON body')
+ *   route.debug('Created outing', { outingId })
+ */
+export interface RouteResponder {
+  /** Log + return an error Response. Uses body as resultDescription unless detail is provided. */
+  fail(status: number, body: string, detail?: string, properties?: Record<string, unknown>): Response
+  /** Log + return an error Response with extra headers (e.g. Retry-After). */
+  failWithHeaders(status: number, body: string, headers: Record<string, string>, detail?: string, properties?: Record<string, unknown>): Response
+  /** Info-level business event. */
+  info(resultDescription: string, properties?: Record<string, unknown>): void
+  /** Debug-level sub-step detail. */
+  debug(resultDescription: string, properties?: Record<string, unknown>): void
+  /** Trace-level data dump. */
+  trace(resultDescription: string, properties?: Record<string, unknown>): void
+  /** Underlying logger for advanced patterns (withResource, withResourceId). */
+  log: Logger | undefined
+}
+
+export function createRouteResponder(
+  log: Logger | undefined,
+  operationName: string,
+  category: Category,
+): RouteResponder {
+  function emitFail(status: number, resultDescription: string, properties?: Record<string, unknown>): void {
+    const fields: LogFields = { category, resultType: 'Failed', resultSignature: status, resultDescription, ...(properties ? { properties } : {}) }
+    if (status >= 500) {
+      log?.error(operationName, fields)
+    } else {
+      log?.warn(operationName, fields)
+    }
+  }
+
+  return {
+    fail(status, body, detail, properties) {
+      emitFail(status, detail || body, properties)
+      return new Response(body, { status })
+    },
+    failWithHeaders(status, body, headers, detail, properties) {
+      emitFail(status, detail || body, properties)
+      return new Response(body, { status, headers })
+    },
+    info(resultDescription, properties) {
+      log?.info(operationName, { category, resultDescription, ...(properties ? { properties } : {}) })
+    },
+    debug(resultDescription, properties) {
+      log?.debug(operationName, { category, resultDescription, ...(properties ? { properties } : {}) })
+    },
+    trace(resultDescription, properties) {
+      log?.trace(operationName, { category, resultDescription, ...(properties ? { properties } : {}) })
+    },
+    log,
+  }
+}

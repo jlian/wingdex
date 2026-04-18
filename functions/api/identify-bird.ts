@@ -1,5 +1,6 @@
 import { HttpError, identifyBird } from '../lib/bird-id'
 import { RateLimitError, enforceAiDailyLimit } from '../lib/ai-rate-limit'
+import { createRouteResponder } from '../lib/log'
 
 type BirdIdModelTier = 'fast' | 'strong'
 
@@ -42,16 +43,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const traceId = (context.data as RequestData).traceId
   const spanId = (context.data as RequestData).spanId
   const traceFlags = (context.data as RequestData).traceFlags
+  const route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
   try {
     const user = (context.data as { user?: { id?: string; isAnonymous?: boolean } }).user
     if (!user?.id) {
-      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 401, resultDescription: 'No authenticated user for bird identification' })
-      return new Response('Unauthorized', { status: 401 })
+      return route.fail(401, 'Unauthorized', 'No authenticated user for bird identification')
     }
 
     if (user.isAnonymous) {
-      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 403, resultDescription: 'Anonymous users cannot use bird identification; account required' })
-      return new Response('Account required', { status: 403 })
+      return route.fail(403, 'Account required', 'Anonymous users cannot use bird identification; account required')
     }
 
     await enforceAiDailyLimit(context.env.DB, user.id, 'identify-bird', context.env.AI_DAILY_LIMIT_IDENTIFY)
@@ -142,26 +142,14 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {
-      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 429, resultDescription: `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, properties: { retryAfterSeconds: error.retryAfterSeconds } })
-      return new Response(error.message, {
-        status: error.status,
-        headers: {
-          'Retry-After': String(error.retryAfterSeconds),
-        },
-      })
+      return route.failWithHeaders(error.status, error.message, { 'Retry-After': String(error.retryAfterSeconds) }, `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, { retryAfterSeconds: error.retryAfterSeconds })
     }
 
     if (error instanceof HttpError) {
-      log?.warn('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: error.status, resultDescription: `Bird identification failed: ${error.message}` })
-      return new Response(error.message, { status: error.status })
+      return route.fail(error.status, error.message, `Bird identification failed: ${error.message}`)
     }
 
-    if (error instanceof Error) {
-      log?.error('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 500, resultDescription: `Bird identification failed unexpectedly: ${error.message}`, properties: { error: error.message, stack: error.stack } })
-    } else {
-      log?.error('birdId/identify/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 500, resultDescription: `Bird identification failed with non-Error value: ${String(error)}`, properties: { error: String(error) } })
-    }
-
-    return new Response('An unexpected error occurred during bird identification', { status: 500 })
+    const message = error instanceof Error ? error.message : String(error)
+    return route.fail(500, 'An unexpected error occurred during bird identification', `Bird identification failed unexpectedly: ${message}`, { error: message })
   }
 }

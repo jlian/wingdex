@@ -1,5 +1,6 @@
 import { computeDex } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
+import { createRouteResponder } from '../../lib/log'
 
 type ObservationCertainty = 'confirmed' | 'possible' | 'pending' | 'rejected'
 
@@ -139,7 +140,7 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/observations/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -148,13 +149,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Request body is not valid JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   if (!Array.isArray(body) || !body.every(isCreateObservationInput)) {
-    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}' })
-    return new Response('Invalid observations payload', { status: 400 })
+    return route.fail(400, 'Invalid observations payload', 'Observations payload failed validation; expected array of {id, outingId, speciesName, count, certainty}')
   }
 
   if (body.length === 0) {
@@ -168,8 +167,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     body.map(observation => observation.outingId)
   )
   if (!allOwned) {
-    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'One or more outing IDs do not belong to the requesting user' })
-    return new Response('Invalid outing reference', { status: 400 })
+    return route.fail(400, 'Invalid outing reference', 'One or more outing IDs do not belong to the requesting user')
   }
 
   const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
@@ -212,9 +210,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   await context.env.DB.batch(statements)
   const outingIds = [...new Set(body.map(o => o.outingId))]
   const speciesNames = [...new Set(body.map(o => o.speciesName))]
-  const observationsLog = outingIds.length === 1 ? log?.withResourceId(`outings/${outingIds[0]}/observations`) : log
-  observationsLog?.info('data/observations/write', { category: 'Application', resultDescription: `Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, properties: { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length } })
-  observationsLog?.debug('data/observations/write', { category: 'Application', resultDescription: 'Observation insert details', properties: { outingIds, speciesNames } })
+  const scopedRoute = outingIds.length === 1
+    ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/observations`), 'data/observations/write', 'Application')
+    : route
+  scopedRoute.info(`Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
+  scopedRoute.debug('Observation insert details', { outingIds, speciesNames })
 
   const observations = body.map(observation => ({
     ...observation,
@@ -230,7 +230,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
 export const onRequestPatch: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/observations/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -239,13 +239,11 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse PATCH request body as JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   if (!isObject(body)) {
-    log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH payload is not a valid object; expected {id, ...patch} or {ids, patch}' })
-    return new Response('Invalid patch payload', { status: 400 })
+    return route.fail(400, 'Invalid patch payload', 'PATCH payload is not a valid object; expected {id, ...patch} or {ids, patch}')
   }
 
   const db = context.env.DB
@@ -265,15 +263,13 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (updateFields.length === 0) {
-      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Single-observation PATCH has no valid fields to update' })
-      return new Response('No valid fields to update', { status: 400 })
+      return route.fail(400, 'No valid fields to update')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH outing reference does not belong to the requesting user' })
-        return new Response('Invalid outing reference', { status: 400 })
+        return route.fail(400, 'Invalid outing reference', 'PATCH outing reference does not belong to the requesting user')
       }
     }
 
@@ -283,8 +279,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
       .run()
 
     if (updateResult.meta.changes === 0) {
-      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `Observation ${id} not found or not owned by user` })
-      return new Response('Not found', { status: 404 })
+      return route.fail(404, 'Not found', `Observation ${id} not found or not owned by user`)
     }
 
     const updated = await listObservationsByIds(db, userId, [id])
@@ -307,19 +302,16 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     }
 
     if (ids.length === 0) {
-      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH provided empty ids array' })
-      return new Response('No ids provided', { status: 400 })
+      return route.fail(400, 'No ids provided')
     }
     if (updateFields.length === 0) {
-      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH has no valid fields to update' })
-      return new Response('No valid fields to update', { status: 400 })
+      return route.fail(400, 'No valid fields to update')
     }
 
     if (typeof patch.outingId === 'string') {
       const hasOuting = await hasOwnedOutings(db, userId, [patch.outingId])
       if (!hasOuting) {
-        log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Bulk PATCH outing reference does not belong to the requesting user' })
-        return new Response('Invalid outing reference', { status: 400 })
+        return route.fail(400, 'Invalid outing reference', 'Bulk PATCH outing reference does not belong to the requesting user')
       }
     }
 
@@ -333,8 +325,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const updatedCount = updateResults.reduce((sum, result) => sum + (result.meta?.changes || 0), 0)
 
     if (updatedCount === 0) {
-      log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 404, resultDescription: `None of the ${ids.length} observations were found or owned by user` })
-      return new Response('Not found', { status: 404 })
+      return route.fail(404, 'Not found', `None of the ${ids.length} observations were found or owned by user`)
     }
 
     const observations = await listObservationsByIds(db, userId, ids)
@@ -343,6 +334,5 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     return Response.json({ observations, dexUpdates })
   }
 
-  log?.warn('data/observations/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'PATCH payload does not match single-id or bulk-ids shape' })
-  return new Response('Invalid patch payload', { status: 400 })
+  return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
 }

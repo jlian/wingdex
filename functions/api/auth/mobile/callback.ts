@@ -20,6 +20,7 @@
  *   4. ASWebAuthenticationSession captures the custom scheme URL
  */
 import { createAuth } from '../../../lib/auth'
+import { createRouteResponder } from '../../../lib/log'
 
 const APP_SCHEME = 'wingdex'
 
@@ -45,7 +46,7 @@ function extractSignedSessionToken(cookieHeader: string | null): string | null {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'auth/mobileOAuth/invoke', 'Application')
   // Try default mode first so localhost e2e/local cookies keep working.
   // If that does not resolve a session but the request carries a secure hosted
   // session cookie, retry in hosted-oauth mode so Better Auth uses the hosted
@@ -60,7 +61,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   if (!session?.user?.id || !session?.session?.token) {
-    log?.warn('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 302, resultDescription: 'Mobile OAuth callback could not resolve a session from cookies; the OAuth flow may have failed or cookies were lost' })
+    route.log?.warn('auth/mobileOAuth/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 302, resultDescription: 'Mobile OAuth callback could not resolve a session from cookies; the OAuth flow may have failed or cookies were lost' })
     const errorUrl = `${APP_SCHEME}://auth/callback?error=no_session`
     return Response.redirect(errorUrl, 302)
   }

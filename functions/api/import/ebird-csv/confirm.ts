@@ -1,6 +1,7 @@
 import { computeDex } from '../../../lib/dex-query'
 import { groupPreviewsIntoOutings, type ImportPreview } from '../../../lib/ebird'
 import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
+import { createRouteResponder } from '../../../lib/log'
 
 type ConfirmBody = { previewIds: string[] }
 
@@ -25,7 +26,7 @@ function decodePreviewId(previewId: string): ImportPreview | null {
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'import/ebirdCsvConfirm/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -34,18 +35,18 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   if (!isConfirmBody(body)) {
-    return new Response('Invalid confirm payload', { status: 400 })
+    return route.fail(400, 'Invalid confirm payload')
   }
 
   const selectedPreviews = body.previewIds
     .map(previewId => decodePreviewId(previewId))
     .filter((preview): preview is ImportPreview => {
       if (!preview) {
-        log?.warn('import/ebirdCsvConfirm/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
+        route.log?.warn('import/ebirdCsvConfirm/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'A preview ID could not be decoded from base64; the preview may have been tampered with or corrupted' })
         return false
       }
       return true
@@ -188,7 +189,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (insertStatements.length > 0) {
     await context.env.DB.batch(insertStatements)
   }
-  log?.info('import/ebirdCsvConfirm/write', { category: 'Application', resultDescription: `Imported ${outings.length} outings and ${observations.length} observations`, properties: { outingCount: outings.length, observationCount: observations.length } })
+  route.info(`Imported ${outings.length} outings and ${observations.length} observations`, { outingCount: outings.length, observationCount: observations.length })
 
   const dexUpdates = await computeDex(context.env.DB, userId)
   const newSpecies = dexUpdates.filter(row => !priorSpecies.has(row.speciesName)).length

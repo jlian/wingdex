@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createLogger } from '../../functions/lib/log'
+import { createLogger, createRouteResponder } from '../../functions/lib/log'
 
 describe('createLogger schema', () => {
   function captureLogs(fn: (log: ReturnType<typeof createLogger>) => void, logLevel = 'debug'): unknown[] {
@@ -147,5 +147,110 @@ describe('createLogger schema', () => {
     expect(out[0]).toContain('Fetched 5 outings')
     // Should NOT be JSON
     expect(out[0]).not.toContain('{')
+  })
+})
+
+describe('createRouteResponder', () => {
+  function captureLogs(fn: (log: ReturnType<typeof createLogger>) => void, logLevel = 'debug'): unknown[] {
+    const out: unknown[] = []
+    const spyLog = vi.spyOn(console, 'log').mockImplementation((s: string) => { out.push(JSON.parse(s)) })
+    const spyErr = vi.spyOn(console, 'error').mockImplementation((s: string) => { out.push(JSON.parse(s)) })
+    try {
+      const log = createLogger({ env: { LOG_LEVEL: logLevel }, traceId: 't1', spanId: 's1' })
+      fn(log)
+    } finally {
+      spyLog.mockRestore()
+      spyErr.mockRestore()
+    }
+    return out
+  }
+
+  it('fail() returns Response with correct status and body', () => {
+    const logs: unknown[] = []
+    const spy = vi.spyOn(console, 'log').mockImplementation((s: string) => { logs.push(JSON.parse(s)) })
+    const spyErr = vi.spyOn(console, 'error').mockImplementation((s: string) => { logs.push(JSON.parse(s)) })
+    try {
+      const log = createLogger({ env: { LOG_LEVEL: 'debug' }, traceId: 't1', spanId: 's1' })
+      const route = createRouteResponder(log, 'data/outings/write', 'Application')
+      const response = route.fail(400, 'Invalid JSON body')
+      expect(response.status).toBe(400)
+      expect(logs[0]).toMatchObject({
+        level: 'Warning',
+        operationName: 'data/outings/write',
+        category: 'Application',
+        resultType: 'Failed',
+        resultSignature: 400,
+        resultDescription: 'Invalid JSON body',
+      })
+    } finally {
+      spy.mockRestore()
+      spyErr.mockRestore()
+    }
+  })
+
+  it('fail() uses detail as resultDescription when provided', () => {
+    const [entry] = captureLogs(log => {
+      const route = createRouteResponder(log, 'data/outings/write', 'Application')
+      route.fail(400, 'Invalid outing', 'Outing payload missing required field: locationName')
+    })
+    expect(entry).toMatchObject({
+      resultDescription: 'Outing payload missing required field: locationName',
+      resultSignature: 400,
+    })
+  })
+
+  it('fail() uses error level for 5xx', () => {
+    const [entry] = captureLogs(log => {
+      const route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
+      route.fail(500, 'Server error')
+    })
+    expect(entry).toMatchObject({ level: 'Error', resultSignature: 500 })
+  })
+
+  it('info() emits with bound operationName and category', () => {
+    const [entry] = captureLogs(log => {
+      const route = createRouteResponder(log, 'data/clear/delete', 'Audit')
+      route.info('Deleted all data')
+    })
+    expect(entry).toMatchObject({
+      level: 'Info',
+      operationName: 'data/clear/delete',
+      category: 'Audit',
+      resultDescription: 'Deleted all data',
+    })
+  })
+
+  it('debug() emits with properties', () => {
+    const [entry] = captureLogs(log => {
+      const route = createRouteResponder(log, 'data/dex/read', 'Application')
+      route.debug('Fetched dex', { count: 42 })
+    })
+    expect(entry).toMatchObject({
+      level: 'Debug',
+      operationName: 'data/dex/read',
+      properties: { count: 42 },
+    })
+  })
+
+  it('failWithHeaders() returns Response with custom headers', () => {
+    const logs: unknown[] = []
+    const spy = vi.spyOn(console, 'log').mockImplementation((s: string) => { logs.push(JSON.parse(s)) })
+    const spyErr = vi.spyOn(console, 'error').mockImplementation((s: string) => { logs.push(JSON.parse(s)) })
+    try {
+      const log = createLogger({ env: { LOG_LEVEL: 'debug' }, traceId: 't1', spanId: 's1' })
+      const route = createRouteResponder(log, 'birdId/identify/invoke', 'Application')
+      const response = route.failWithHeaders(429, 'Rate limited', { 'Retry-After': '60' })
+      expect(response.status).toBe(429)
+      expect(response.headers.get('Retry-After')).toBe('60')
+    } finally {
+      spy.mockRestore()
+      spyErr.mockRestore()
+    }
+  })
+
+  it('exposes underlying logger via .log', () => {
+    const log = createLogger({ env: { LOG_LEVEL: 'debug' }, traceId: 't1', spanId: 's1' })
+    const route = createRouteResponder(log, 'test/op', 'Application')
+    expect(route.log).toBe(log)
   })
 })

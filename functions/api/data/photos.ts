@@ -1,3 +1,5 @@
+import { createRouteResponder } from '../../lib/log'
+
 type CreatePhotoInput = {
   id: string
   outingId: string
@@ -38,7 +40,7 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const userId = (context.data as { user?: { id?: string } }).user?.id
-  const log = (context.data as RequestData).log
+  const route = createRouteResponder((context.data as RequestData).log, 'data/photos/write', 'Application')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
   }
@@ -47,13 +49,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json()
   } catch {
-    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   if (!Array.isArray(body) || !body.every(isCreatePhotoInput)) {
-    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Photos payload failed validation; expected array of {id, outingId, fileHash, fileName}' })
-    return new Response('Invalid photos payload', { status: 400 })
+    return route.fail(400, 'Invalid photos payload', 'Photos payload failed validation; expected array of {id, outingId, fileHash, fileName}')
   }
 
   if (body.length === 0) {
@@ -66,8 +66,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     body.map(photo => photo.outingId)
   )
   if (!allOwned) {
-    log?.warn('data/photos/write', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'One or more outing references are not owned by user or do not exist' })
-    return new Response('Invalid outing reference', { status: 400 })
+    return route.fail(400, 'Invalid outing reference', 'One or more outing references are not owned by user or do not exist')
   }
 
   const statements = body.map(photo =>
@@ -90,8 +89,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   await context.env.DB.batch(statements)
   const outingIds = [...new Set(body.map(p => p.outingId))]
-  const photosLog = outingIds.length === 1 ? log?.withResourceId(`outings/${outingIds[0]}/photos`) : log
-  photosLog?.debug('data/photos/write', { category: 'Application', resultDescription: `Inserted ${body.length} photos into ${outingIds.length} outings`, properties: { photoCount: body.length, outingCount: outingIds.length } })
+  const scopedRoute = outingIds.length === 1
+    ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/photos`), 'data/photos/write', 'Application')
+    : route
+  scopedRoute.debug(`Inserted ${body.length} photos into ${outingIds.length} outings`, { photoCount: body.length, outingCount: outingIds.length })
 
   return Response.json(
     body.map(photo => ({

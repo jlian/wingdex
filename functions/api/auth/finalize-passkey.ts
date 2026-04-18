@@ -1,8 +1,10 @@
 import { createAuth } from '../../lib/auth'
 import { waitForPasskeyOwnership } from '../../lib/passkey-ownership'
+import { createRouteResponder } from '../../lib/log'
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   const log = (context.data as RequestData).log
+  const route = createRouteResponder(log, 'auth/finalizePasskey/invoke', 'Audit')
   const auth = createAuth(context.env, { request: context.request })
   const session = await auth.api.getSession({ headers: context.request.headers })
 
@@ -14,8 +16,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   try {
     body = await context.request.json() as { name?: string; passkeyId?: string }
   } catch {
-    log?.warn('auth/finalizePasskey/invoke', { category: 'Application', resultType: 'Failed', resultSignature: 400, resultDescription: 'Could not parse request body as JSON' })
-    return new Response('Invalid JSON body', { status: 400 })
+    return route.fail(400, 'Invalid JSON body')
   }
 
   const passkeyId = typeof body.passkeyId === 'string' ? body.passkeyId.trim() : ''
@@ -25,8 +26,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     passkeyId || undefined,
   )
   if (!ownsPasskey) {
-    log?.warn('auth/finalizePasskey/invoke', { category: 'Audit', resultType: 'Failed', resultSignature: 403, resultDescription: 'User does not own the specified passkey or no passkey found' })
-    return new Response('Passkey required', { status: 403 })
+    return route.fail(403, 'Passkey required', 'User does not own the specified passkey or no passkey found')
   }
 
   const requestedName = typeof body.name === 'string' ? body.name.trim() : ''
@@ -36,7 +36,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     .prepare('UPDATE "user" SET isAnonymous = 0, name = ?, updatedAt = datetime(\'now\') WHERE id = ?')
     .bind(nextName, session.user.id)
     .run()
-  log?.info('auth/finalizePasskey/invoke', { category: 'Audit', resultType: 'Succeeded', resultDescription: 'User finalized passkey upgrade and is no longer anonymous' })
+  route.info('User finalized passkey upgrade and is no longer anonymous')
 
   return Response.json({ success: true })
 }
