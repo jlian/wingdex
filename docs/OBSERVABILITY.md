@@ -23,6 +23,10 @@ Every log line is a JSON object (or a compact one-liner when `LOG_FORMAT=pretty`
 | `durationMs` | on completion | number | Wall-clock time (ms) |
 | `properties` | optional | object | Machine-queryable extras (counts, IDs, enums) |
 
+Middleware completion logs include OTel-convention transport fields in `properties`:
+- `http.method` - HTTP request method (GET, POST, PATCH, DELETE)
+- `http.route` - URL pathname (e.g. `/api/auth/callback/github`, `/api/data/outings/outing_123`)
+
 ## Log levels
 
 Standard 6-level hierarchy, controlled by `LOG_LEVEL` env var:

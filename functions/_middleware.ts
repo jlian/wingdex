@@ -165,10 +165,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       addTraceHeaders(response, traceCtx)
       // Suppress completion log for /api/health (internal infra polling, not user-triggered)
       if (pathname !== '/api/health') {
-        emitCompletionLog(log, op, response.status, Date.now() - start)
+        emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
       } else if (!response.ok) {
         // Always log health failures
-        emitCompletionLog(log, op, response.status, Date.now() - start)
+        emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
       }
       return response
     } catch (err) {
@@ -214,7 +214,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    emitCompletionLog(log, op, response.status, Date.now() - start)
+    emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
     return response
   } catch (err) {
     return handleUnexpectedError(err, log, traceCtx, op, start)
@@ -222,9 +222,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 }
 
 /** Emit the single request-lifecycle completion log with dynamic level. */
-function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, status: number, durationMs: number): void {
+function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, status: number, durationMs: number, method: string, pathname: string): void {
   const resultType = status < 400 ? 'Succeeded' : 'Failed'
-  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: `HTTP ${status}`, durationMs }
+  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: `HTTP ${status}`, durationMs, properties: { 'http.method': method, 'http.route': pathname } }
   if (status >= 500) {
     log.error(op, fields)
   } else if (status >= 400) {
