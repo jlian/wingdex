@@ -62,7 +62,7 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` now starts both local API runtime (`wrangler pages dev` on `:8788`) and Vite HMR (`:5000`) in one command.
+`npm run dev` now starts both local API runtime (`wrangler dev` on `:8787`) and Vite HMR (`:5000`) in one command.
 
 ### Local auth modes
 

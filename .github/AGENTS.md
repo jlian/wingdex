@@ -9,10 +9,10 @@ Always prefer using the internet to get the most up-to-date information, documen
 
 ## Project Overview
 
-WingDex is a photo-first bird identification and life-list tracker, deployed on Cloudflare Pages.
+WingDex is a photo-first bird identification and life-list tracker, deployed on Cloudflare Workers.
 
 - **Frontend:** React 19, Vite, Tailwind v4, shadcn/ui (Radix primitives)
-- **Backend:** Cloudflare Pages Functions (Wrangler), D1 database, better-auth
+- **Backend:** Cloudflare Workers (Wrangler), D1 database, better-auth
 - **Tests:** Vitest (unit), Playwright (e2e)
 - **Node:** >= 25 required
 
@@ -26,7 +26,7 @@ WingDex is a photo-first bird identification and life-list tracker, deployed on 
 | `src/hooks/` | Custom React hooks |
 | `src/lib/` | Client-side utilities |
 | `src/__tests__/` | Vitest unit/integration tests |
-| `functions/api/` | Cloudflare Pages Functions (API routes) |
+| `functions/api/` | Cloudflare Workers API routes (compiled from file-based routing) |
 | `functions/lib/` | Server-side shared logic |
 | `migrations/` | D1 SQL migrations |
 | `e2e/` | Playwright specs |
@@ -50,9 +50,9 @@ If you skip full verify, at minimum confirm `npm run build` succeeds.
 
 ## Dev Server
 
-- Two-process setup: Vite on `http://localhost:5000`, Wrangler Functions behind `/api/*`.
+- Two-process setup: Vite on `http://localhost:5000`, Wrangler Workers behind `/api/*`.
 - Prefer VS Code task `ensure-app-on-5000` (or `bootstrap-workspace`) instead of manually launching servers.
-- Health check: `http://localhost:5000/` and `http://localhost:5000/api/auth/get-session`
+- Health check: `http://localhost:5000/` and `http://localhost:5000/api/health`
 - If port state is stale, run `npm run kill` first, then start via task or `npm run dev`.
 - Playwright/e2e targets port 5000 by default.
 - The R2 binding `RANGE_PRIORS` is configured with `remote = true` in `wrangler.toml`, so local dev reads range priors directly from the production R2 bucket. No local R2 population step is needed. To use it you must be logged in via `npx wrangler login` AND have access to the `wingdex-range-priors` bucket on the Cloudflare account. Contributors without access can still run bird ID end-to-end: `range-filter.ts` catches R2 errors and `adjustConfidence` short-circuits on `no-data`, so identification proceeds with unadjusted confidences (no range filtering).

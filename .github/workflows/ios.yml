@@ -43,6 +43,9 @@ jobs:
       - name: Build web app
         run: npm run build
 
+      - name: Write .dev.vars for local dev server
+        run: echo "BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}" > .dev.vars
+
       - name: Apply local D1 migrations
         run: npm run db:migrate:local
 

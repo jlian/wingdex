@@ -1,6 +1,6 @@
 # Observability: Structured Logging Reference
 
-WingDex emits structured logs from every Cloudflare Pages Function using a standard 6-level hierarchy. This document is the canonical reference for the schema, conventions, and operational practices.
+WingDex emits structured logs from every Cloudflare Worker using a standard 6-level hierarchy. This document is the canonical reference for the schema, conventions, and operational practices.
 
 ## Schema
 
@@ -87,7 +87,7 @@ You see sub-step detail (bird-id pipeline, import parsing, batch counts) in a co
 Temporarily set `LOG_LEVEL=trace` to see full data dumps (candidate arrays, range prior maps). Revert when done.
 
 ### Tracing a specific user in production
-Query CF Workers Logs (or log analytics) by `userId` at Info level - it's a top-level field on every log line. If you need sub-step detail for a production issue, temporarily set `LOG_LEVEL=debug` in Cloudflare Pages env vars and redeploy. Revert after investigation.
+Query CF Workers Logs (or log analytics) by `userId` at Info level - it's a top-level field on every log line. If you need sub-step detail for a production issue, temporarily set `LOG_LEVEL=debug` in Cloudflare Workers env vars and redeploy. Revert after investigation.
 
 ## Category
 
@@ -204,7 +204,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   let body: unknown
   try { body = await context.request.json() }
-  catch { return route.fail(400, 'Invalid JSON body') }
+  catch { return route.fail(400, 'Invalid JSON body', 'Request body is not valid JSON') }
 
   if (!isValid(body)) return route.fail(400, 'Invalid payload', 'Detailed description of what is wrong')
 

@@ -1,7 +1,15 @@
-name = "wingdex"
+name = "wingdex-app"
 compatibility_date = "2025-11-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
+main = "./dist/worker/index.js"
+preview_urls = true
+workers_dev = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 # Production (default), uses the main database
 [[d1_databases]]
@@ -26,16 +34,24 @@ remote = true
 
 [vars]
 
-# NOTE: [observability] is not supported by Pages projects.
-# Enable after Workers migration (#186). See issue #246.
-# [observability]
-# enabled = true
-# [observability.traces]
-# enabled = true
-# head_sampling_rate = 1
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
 
 # Preview/dev, uses a separate database
 [env.preview]
+main = "./dist/worker/index.js"
+workers_dev = true
+
+[env.preview.assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
 [env.preview.vars]
 
 [[env.preview.d1_databases]]

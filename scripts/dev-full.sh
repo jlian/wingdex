@@ -10,7 +10,7 @@ is_port_listening() {
 }
 
 running_full_app() {
-  curl -fsS "${BASE}/" >/dev/null 2>&1 && curl -fsS "${BASE}/api/auth/get-session" >/dev/null 2>&1
+  curl -fsS "${BASE}/" >/dev/null 2>&1 && curl -fsS "${BASE}/api/health" >/dev/null 2>&1
 }
 
 if [[ "${FORCE_RESTART}" == "true" ]]; then
@@ -47,4 +47,4 @@ echo "[dev:full] Building app..."
 npm run build
 
 echo "[dev:full] Starting full local app at ${BASE}..."
-exec npx wrangler pages dev dist --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false
+exec npx wrangler dev --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false
