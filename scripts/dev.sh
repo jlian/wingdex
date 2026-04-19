@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_PORT="${API_PORT:-8788}"
+API_PORT="${API_PORT:-8787}"
 VITE_PORT="${VITE_PORT:-5000}"
 
 running_full_app() {
@@ -39,7 +39,7 @@ ensure_vite_port_available() {
     local cmd
     cmd="$(ps -p "${pid}" -o comm= | xargs)"
     if [[ "${cmd}" == "workerd" ]]; then
-      echo "[dev] Port ${VITE_PORT} is occupied by workerd (likely wrangler pages dev). Stopping it for Vite HMR..."
+      echo "[dev] Port ${VITE_PORT} is occupied by workerd (likely wrangler dev). Stopping it for Vite HMR..."
       kill "${pid}" >/dev/null 2>&1 || true
     else
       echo "[dev] Port ${VITE_PORT} is already in use by PID ${pid} (${cmd})."
