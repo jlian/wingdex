@@ -1,3 +1,11 @@
+# [1.21.0](https://github.com/jlian/wingdex/compare/v1.20.0...v1.21.0) (2026-04-19)
+
+
+### Features
+
+* **Observability:** structured logging, W3C trace context, error handling ([#251](https://github.com/jlian/wingdex/issues/251)) ([2a8e6a8](https://github.com/jlian/wingdex/commit/2a8e6a8c4e0c27ddc034cc38bf8aeecd0d8c6a4b))
+* **Workers:** migrate from Cloudflare Pages to Workers ([98b137a](https://github.com/jlian/wingdex/commit/98b137a038b0df55cde2fc614ff07ad44fb51de6)), closes [#186](https://github.com/jlian/wingdex/issues/186)
+
 # [1.20.0](https://github.com/jlian/wingdex/compare/v1.19.2...v1.20.0) (2026-04-17)
 
 
