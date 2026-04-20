@@ -82,8 +82,7 @@ test.describe('App smoke tests', () => {
     // Settings page should show expected sections
     await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Import & Export' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Data Storage & Privacy' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Data Management' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account Management' })).toBeVisible();
 
     // Filter out known non-critical errors
     const criticalErrors = errors.filter(

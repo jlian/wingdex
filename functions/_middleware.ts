@@ -165,10 +165,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       addTraceHeaders(response, traceCtx)
       // Suppress completion log for /api/health (internal infra polling, not user-triggered)
       if (pathname !== '/api/health') {
-        emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
+        context.waitUntil(emitCompletionLog(log, op, response, Date.now() - start, method, pathname))
       } else if (!response.ok) {
         // Always log health failures
-        emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
+        context.waitUntil(emitCompletionLog(log, op, response, Date.now() - start, method, pathname))
       }
       return response
     } catch (err) {
@@ -215,7 +215,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   try {
     const response = withSecurityHeaders(await context.next())
     addTraceHeaders(response, traceCtx)
-    emitCompletionLog(log, op, response.status, Date.now() - start, method, pathname)
+    context.waitUntil(emitCompletionLog(log, op, response, Date.now() - start, method, pathname))
     return response
   } catch (err) {
     return handleUnexpectedError(err, log, traceCtx, op, start)
@@ -223,9 +223,34 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 }
 
 /** Emit the single request-lifecycle completion log with dynamic level. */
-function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, status: number, durationMs: number, method: string, pathname: string): void {
+async function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, response: Response, durationMs: number, method: string, pathname: string): Promise<void> {
+  const status = response.status
+  // For error responses, try to extract a meaningful description from the body
+  let description = `HTTP ${status}`
+  if (status >= 400) {
+    try {
+      const contentType = response.headers.get('content-type') || ''
+      const contentLength = parseInt(response.headers.get('content-length') || '', 10)
+      // Only read small text/json bodies with a known size to avoid logging large or binary payloads
+      if ((contentType.includes('json') || contentType.includes('text')) && !isNaN(contentLength) && contentLength <= 4096) {
+        const cloned = response.clone()
+        const body = await cloned.text()
+        if (body) {
+          try {
+            const json = JSON.parse(body) as Record<string, unknown>
+            const msg = json.message || json.error || json.detail
+            if (typeof msg === 'string') description = msg.slice(0, 200)
+          } catch {
+            if (body.length <= 200) description = body
+          }
+        }
+      }
+    } catch {
+      // Ignore read failures; keep default description
+    }
+  }
   const resultType = status < 400 ? 'Succeeded' : 'Failed'
-  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: `HTTP ${status}`, durationMs, properties: { 'http.method': method, 'http.route': pathname } }
+  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: description, durationMs, properties: { 'http.method': method, 'http.route': pathname } }
   if (status >= 500) {
     log.error(op, fields)
   } else if (status >= 400) {

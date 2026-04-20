@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { OutingNameAutocomplete } from '@/components/ui/outing-name-autocomplete'
-import { CalendarBlank, CheckCircle, XCircle, PencilSimple, MagnifyingGlass } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, XCircle, PencilSimple } from '@phosphor-icons/react'
 import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
 import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
@@ -103,10 +102,11 @@ export default function OutingReview({
   const [overriddenStartTime, setOverriddenStartTime] = useState<Date | null>(null)
 
   // Place search (#13)
-  const [placeQuery, setPlaceQuery] = useState('')
-  const [placeResults, setPlaceResults] = useState<Array<{ display_name: string; lat: string; lon: string; address?: Record<string, string> }>>([])
+  const [placeResults, setPlaceResults] = useState<Array<{ place_id: number; display_name: string; lat: string; lon: string; address?: Record<string, string> }>>([])
   const [isSearchingPlace, setIsSearchingPlace] = useState(false)
   const [overriddenCoords, setOverriddenCoords] = useState<{ lat: number; lon: number } | null>(null)
+  const [isEditingLocation, setIsEditingLocation] = useState(false)
+  const [locationSearchQuery, setLocationSearchQuery] = useState('')
 
   // Effective coordinates (manual override or cluster GPS)
   const effectiveLat = overriddenCoords?.lat ?? cluster.centerLat
@@ -379,42 +379,67 @@ export default function OutingReview({
     }
   }
 
-  const searchPlace = async () => {
-    if (!placeQuery.trim()) return
+  const searchAbortRef = useRef<AbortController | null>(null)
+
+  const searchPlace = useCallback(async (query: string) => {
+    if (!query.trim()) return
+    searchAbortRef.current?.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
     setIsSearchingPlace(true)
     try {
       const url = new URL('https://nominatim.openstreetmap.org/search')
       url.searchParams.set('format', 'jsonv2')
-      url.searchParams.set('q', placeQuery)
+      url.searchParams.set('q', query)
       url.searchParams.set('limit', '5')
       url.searchParams.set('addressdetails', '1')
       url.searchParams.set('accept-language', 'en')
-      const res = await fetch(url.toString())
+      const res = await fetch(url.toString(), { signal: controller.signal })
       if (!res.ok) throw new Error(`Nominatim ${res.status}`)
       const results = await res.json()
-      setPlaceResults(results)
+      if (!controller.signal.aborted) setPlaceResults(results)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       if (import.meta.env.DEV) console.error('Place search failed:', error)
       toast.error('Place search failed')
     } finally {
-      setIsSearchingPlace(false)
+      if (!controller.signal.aborted) setIsSearchingPlace(false)
     }
-  }
+  }, [])
 
-  const selectPlace = (place: { display_name: string; lat: string; lon: string; address?: Record<string, string> }) => {
+  const selectPlace = (place: { place_id: number; display_name: string; lat: string; lon: string; address?: Record<string, string> }) => {
+    searchAbortRef.current?.abort()
+    setIsSearchingPlace(false)
     const lat = parseFloat(place.lat)
     const lon = parseFloat(place.lon)
     setOverriddenCoords({ lat, lon })
     // Use the first part of the display name as location name
     const shortName = place.display_name.split(',').slice(0, 3).join(',').trim()
     setLocationName(shortName)
-    setSuggestedLocation(shortName)
     const region = extractRegionCodes(place)
     setInferredStateProvince(region.stateProvince)
     setInferredCountryCode(region.countryCode)
     setPlaceResults([])
-    setPlaceQuery('')
+    setIsEditingLocation(false)
+    setLocationSearchQuery('')
   }
+
+  // Debounced place search: trigger Nominatim when user types in search field
+  useEffect(() => {
+    if (!locationSearchQuery.trim() || locationSearchQuery.trim().length < 3) {
+      searchAbortRef.current?.abort()
+      setIsSearchingPlace(false)
+      setPlaceResults([])
+      return
+    }
+    const timer = setTimeout(() => {
+      void searchPlace(locationSearchQuery)
+    }, 500)
+    return () => {
+      clearTimeout(timer)
+      searchAbortRef.current?.abort()
+    }
+  }, [locationSearchQuery, searchPlace])
 
 
   return (
@@ -520,67 +545,83 @@ export default function OutingReview({
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span>Identifying location from GPS...</span>
               </div>
-            ) : (
-              <>
-                <OutingNameAutocomplete
+            ) : isEditingLocation ? (
+              <div className="relative space-y-2">
+                <Input
                   id="location-name"
-                  value={locationName}
-                  onChange={setLocationName}
-                  outings={data.outings}
-                  placeholder="e.g., Central Park, NYC"
+                  autoFocus
+                  placeholder="Search for a place..."
+                  value={locationSearchQuery}
+                  onChange={e => setLocationSearchQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && locationSearchQuery.trim()) {
+                      setLocationName(locationSearchQuery.trim())
+                      setOverriddenCoords(null)
+                      setInferredStateProvince(undefined)
+                      setInferredCountryCode(undefined)
+                      setIsEditingLocation(false)
+                      setLocationSearchQuery('')
+                      setPlaceResults([])
+                    }
+                    if (e.key === 'Escape') {
+                      setIsEditingLocation(false)
+                      setLocationSearchQuery('')
+                      setPlaceResults([])
+                    }
+                  }}
                 />
-                {suggestedLocation && (
-                  <p className="text-xs text-muted-foreground">
-                    Suggested: {suggestedLocation}
-                  </p>
-                )}
-
-                {/* Place search (#13), search for a place by name */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search for a place..."
-                      value={placeQuery}
-                      onChange={e => setPlaceQuery(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') searchPlace() }}
-                      className="h-8 text-sm flex-1"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={searchPlace}
-                      disabled={isSearchingPlace || !placeQuery.trim()}
-                    >
-                      <MagnifyingGlass size={14} />
-                    </Button>
+                {(placeResults.length > 0 || isSearchingPlace) && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border bg-popover shadow-md max-h-40 overflow-y-auto">
+                    {isSearchingPlace && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-2">
+                        <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        Searching...
+                      </div>
+                    )}
+                    {placeResults.map((place) => (
+                      <button
+                        type="button"
+                        key={place.place_id}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-accent/50 active:bg-accent transition-colors"
+                        onClick={() => selectPlace(place)}
+                      >
+                        {place.display_name}
+                      </button>
+                    ))}
                   </div>
-                  {isSearchingPlace && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      Searching...
-                    </div>
-                  )}
-                  {placeResults.length > 0 && (
-                    <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
-                      {placeResults.map((place, i) => (
-                        <button
-                          key={i}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-muted active:bg-muted/80 transition-colors"
-                          onClick={() => selectPlace(place)}
-                        >
-                          {place.display_name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {overriddenCoords && (
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      Location set: {overriddenCoords.lat.toFixed(4)}, {overriddenCoords.lon.toFixed(4)}
-                    </p>
-                  )}
-                </div>
-              </>
+                )}
+                {suggestedLocation && locationSearchQuery && suggestedLocation !== locationName && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => {
+                      setLocationName(suggestedLocation)
+                      setOverriddenCoords(null)
+                      setInferredStateProvince(undefined)
+                      setInferredCountryCode(undefined)
+                      setIsEditingLocation(false)
+                      setLocationSearchQuery('')
+                      setPlaceResults([])
+                    }}
+                  >
+                    Use GPS: {suggestedLocation}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent/50 transition-colors text-left"
+                onClick={() => {
+                  setIsEditingLocation(true)
+                  setLocationSearchQuery(locationName)
+                }}
+              >
+                <span className={locationName ? 'text-foreground' : 'text-muted-foreground'}>
+                  {locationName || 'Tap to set location'}
+                </span>
+                <PencilSimple size={14} className="text-muted-foreground shrink-0" />
+              </button>
             )}
           </div>
           )}
