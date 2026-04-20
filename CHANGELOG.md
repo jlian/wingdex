@@ -1,3 +1,10 @@
+## [1.21.1](https://github.com/jlian/wingdex/compare/v1.21.0...v1.21.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* Settings page UX, location search, and error handling improvements ([#219](https://github.com/jlian/wingdex/issues/219), [#234](https://github.com/jlian/wingdex/issues/234)) ([18b8b82](https://github.com/jlian/wingdex/commit/18b8b826a579706ad6af75485ae1731f9c263143))
+
 # [1.21.0](https://github.com/jlian/wingdex/compare/v1.20.0...v1.21.0) (2026-04-19)
 
 
