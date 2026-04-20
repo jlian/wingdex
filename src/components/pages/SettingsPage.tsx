@@ -56,6 +56,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
   const [showEBirdHelp, setShowEBirdHelp] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<'choose' | 'confirm-account' | null>(null)
   const [useGeoContext, setUseGeoContext] = useState(() => {
     const stored = localStorage.getItem('wingdex_useGeoContext')
     return stored === null ? true : stored === 'true'
@@ -279,7 +280,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
 
       {user.isAnonymous && (
       <Card className="p-4 space-y-3">
-        <h3 className="font-semibold text-foreground">Account</h3>
+        <h3 className="font-semibold text-foreground">Profile</h3>
         <p className="text-sm text-muted-foreground">
           Create account or sign in to access your saved sightings and passkeys.
         </p>
@@ -293,7 +294,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
       {!user.isAnonymous && (
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Account</h3>
+          <h3 className="font-semibold text-foreground">Profile</h3>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             Welcome, <button
               type="button"
@@ -364,30 +365,6 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
           })}
         </div>
 
-        {/* -- Log out -- */}
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={async () => {
-              try {
-                const result = await authClient.signOut()
-                if (result.error) {
-                  toast.error(result.error.message || 'Failed to log out')
-                  return
-                }
-              } catch {
-                toast.error('Failed to log out')
-                return
-              }
-              toast.success('Logged out')
-              onSignedOut?.()
-            }}
-          >
-            <SignOut size={20} className="mr-2" />
-            Log out
-          </Button>
-        </div>
       </Card>
       )}
 
@@ -690,57 +667,12 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         </div>
       </Card>
 
-      {/* Data Storage & Privacy */}
+      {/* Account Management */}
       <Card className="p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data Storage &amp; Privacy</h3>
+          <h3 className="font-semibold text-foreground">Account Management</h3>
           <p className="text-sm text-muted-foreground">
-            How your data is handled and stored
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground space-y-3 leading-relaxed">
-          <p>
-            <strong>Your photos are not retained.</strong>{' '}During identification,
-            compressed images are sent to WingDex&apos;s server-side AI endpoint for processing, then
-            discarded. We do store a file fingerprint hash to detect duplicate uploads.
-          </p>
-          <p>
-            Your birding records (outings, species, and sightings) are saved
-            to WingDex&apos;s Cloudflare-backed database, scoped to your account.
-          </p>
-          <p>
-            Location lookups use OpenStreetMap Nominatim to resolve GPS
-            coordinates into place names. Species images are loaded on-demand
-            from Wikimedia Commons. Species range data from{' '}
-            <a href="https://datazone.birdlife.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              BirdLife International
-            </a>{' '}
-            is used to refine identification confidence.
-          </p>
-          <p>
-            Learn more in our{' '}
-            <a href="#privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              Privacy Policy
-            </a>{' '}
-            and{' '}
-            <a href="#terms" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              Terms of Use
-            </a>
-            . Questions or feedback can be shared on{' '}
-            <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              GitHub
-            </a>
-            .
-          </p>
-        </div>
-      </Card>
-
-      {/* Data Management */}
-      <Card className="p-4 space-y-4">
-        <div className="space-y-2">
-          <h3 className="font-semibold text-foreground">Data Management</h3>
-          <p className="text-sm text-muted-foreground">
-            Load sample data or clear your account
+            Manage your data and account
           </p>
         </div>
         <div className="space-y-3">
@@ -777,7 +709,10 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                         credentials: 'include',
                         body: formData,
                       })
-                      if (!previewRes.ok) throw new Error(`Preview failed (${previewRes.status})`)
+                      if (!previewRes.ok) {
+                        const body = await previewRes.text().catch(() => '')
+                        throw new Error(body || `Preview failed (${previewRes.status})`)
+                      }
 
                       const { previews } = await previewRes.json() as {
                         previews: Array<{ previewId: string }>
@@ -789,7 +724,10 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ previewIds: previews.map(p => p.previewId) }),
                       })
-                      if (!confirmRes.ok) throw new Error(`Confirm failed (${confirmRes.status})`)
+                      if (!confirmRes.ok) {
+                        const body = await confirmRes.text().catch(() => '')
+                        throw new Error(body || `Confirm failed (${confirmRes.status})`)
+                      }
 
                       const { imported } = await confirmRes.json() as {
                         imported: { outings: number; newSpecies: number }
@@ -809,102 +747,121 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             </AlertDialogContent>
           </AlertDialog>
 
-          <AlertDialog>
+          <AlertDialog open={deleteStep !== null} onOpenChange={open => { if (!open) setDeleteStep(null) }}>
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
                 className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setDeleteStep('choose')}
               >
                 <Trash size={20} className="mr-2" />
-                Delete All Data
+                Delete Data...
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete all data?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete all your outings, observations,
-                  and WingDex entries. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => {
-                    data.clearAllData()
-                    toast.success('All data deleted')
-                  }}
-                >
-                  Delete Everything
-                </AlertDialogAction>
-              </AlertDialogFooter>
+              {deleteStep === 'choose' && (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Permanently delete data{!user.isAnonymous ? ' or account' : ''}?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>These actions are <strong className="text-foreground">permanent and irreversible</strong>.</p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-2">
+                    <AlertDialogAction
+                      className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => {
+                        data.clearAllData()
+                        toast.success('All data deleted')
+                        setDeleteStep(null)
+                      }}
+                    >
+                      Delete All Data
+                    </AlertDialogAction>
+                    {!user.isAnonymous && (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={() => setDeleteStep('confirm-account')}
+                      >
+                        Delete Account &amp; All Data
+                      </Button>
+                    )}
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  </AlertDialogFooter>
+                </>
+              )}
+              {deleteStep === 'confirm-account' && (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-destructive">Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>The following will be deleted immediately:</p>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-left">
+                          <li>All your outings and observations</li>
+                          <li>Your entire WingDex species list</li>
+                          <li>Your passkeys and login credentials</li>
+                          <li>Your account and profile</li>
+                        </ul>
+                        <p className="font-medium text-destructive">There is no way to recover your data after this.</p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteStep('choose')}>Go back</Button>
+                    <Button
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={async () => {
+                        try {
+                          const result = await authClient.deleteUser()
+                          if (result.error) {
+                            toast.error(result.error.message || 'Failed to delete account')
+                            return
+                          }
+                          data.clearAllData()
+                          setDeleteStep(null)
+                          toast.success('Account deleted')
+                          onSignedOut?.()
+                        } catch {
+                          toast.error('Failed to delete account')
+                        }
+                      }}
+                    >
+                      Delete my account forever
+                    </Button>
+                  </AlertDialogFooter>
+                </>
+              )}
             </AlertDialogContent>
           </AlertDialog>
 
           {!user.isAnonymous && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
-                >
-                  <Trash size={20} className="mr-2" weight="fill" />
-                  Delete Account &amp; All Data
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-destructive">⚠️ Delete your entire account?</AlertDialogTitle>
-                  <AlertDialogDescription asChild>
-                    <div className="space-y-3">
-                      <p>This is <strong className="text-foreground">permanent and irreversible</strong>. The following will be deleted immediately:</p>
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-left">
-                        <li>All your outings and observations</li>
-                        <li>Your entire WingDex species list</li>
-                        <li>Your passkeys and login credentials</li>
-                        <li>Your account and profile</li>
-                      </ul>
-                      <p className="font-medium text-destructive">There is no way to recover your data after this.</p>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">I understand, continue</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-destructive">Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete your account and all associated data. You will be signed out immediately. This cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Go back</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={async () => {
-                            try {
-                              data.clearAllData()
-                              await authClient.deleteUser()
-                              toast.success('Account deleted')
-                              onSignedOut?.()
-                            } catch {
-                              toast.error('Failed to delete account')
-                            }
-                          }}
-                        >
-                          Delete my account forever
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={async () => {
+                try {
+                  const result = await authClient.signOut()
+                  if (result.error) {
+                    toast.error(result.error.message || 'Failed to log out')
+                    return
+                  }
+                } catch {
+                  toast.error('Failed to log out')
+                  return
+                }
+                toast.success('Logged out')
+                onSignedOut?.()
+              }}
+            >
+              <SignOut size={20} className="mr-2" />
+              Log out
+            </Button>
           )}
         </div>
       </Card>

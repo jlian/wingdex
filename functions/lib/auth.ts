@@ -114,7 +114,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
 
   const inferredLocalAppOrigin = (() => {
     if (!requestOrigin || !requestUrl) return null
-    const isWranglerApiOrigin = isLoopbackOrigin(requestOrigin) && requestUrl.port === '8788'
+    const isWranglerApiOrigin = isLoopbackOrigin(requestOrigin) && requestUrl.port !== '5000'
     if (!isWranglerApiOrigin) return null
 
     if (headerOrigin && isLoopbackOrigin(headerOrigin)) {

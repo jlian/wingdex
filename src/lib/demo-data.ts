@@ -13,7 +13,10 @@ export async function loadDemoData(data: WingDexDataStore): Promise<void> {
     credentials: 'include',
     body: formData,
   })
-  if (!previewRes.ok) throw new Error(`Preview failed (${previewRes.status})`)
+  if (!previewRes.ok) {
+    const body = await previewRes.text().catch(() => '')
+    throw new Error(body || `Preview failed (${previewRes.status})`)
+  }
 
   const { previews } = await previewRes.json() as { previews: Array<{ previewId: string }> }
 
@@ -23,7 +26,10 @@ export async function loadDemoData(data: WingDexDataStore): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ previewIds: previews.map((p) => p.previewId) }),
   })
-  if (!confirmRes.ok) throw new Error(`Confirm failed (${confirmRes.status})`)
+  if (!confirmRes.ok) {
+    const body = await confirmRes.text().catch(() => '')
+    throw new Error(body || `Confirm failed (${confirmRes.status})`)
+  }
 
   await data.refresh()
 }

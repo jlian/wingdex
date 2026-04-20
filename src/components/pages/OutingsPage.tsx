@@ -392,7 +392,8 @@ function OutingDetail({
     try {
       const response = await fetchWithLocalAuthRetry(`/api/export/outing/${outing.id}`, { credentials: 'include' })
       if (!response.ok) {
-        throw new Error(`Export failed (${response.status})`)
+        const body = await response.text().catch(() => '')
+        throw new Error(body || `Export failed (${response.status})`)
       }
 
       const blob = await response.blob()
