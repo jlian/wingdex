@@ -43,7 +43,7 @@ ensure_vite_port_available() {
       kill "${pid}" >/dev/null 2>&1 || true
     else
       echo "[dev] Port ${VITE_PORT} is already in use by PID ${pid} (${cmd})."
-      echo "[dev] Stop it first (or run: npm run kill), then retry npm run dev."
+      echo "[dev] Stop that process, or free port ${VITE_PORT}, then retry npm run dev."
       exit 1
     fi
   done
@@ -63,14 +63,32 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+if [[ ! -d "node_modules" ]]; then
+  echo "[dev] node_modules not found. Run 'npm install' first."
+  exit 1
+fi
+
+if [[ ! -f ".dev.vars" ]]; then
+  echo "[dev] Creating .dev.vars from .dev.vars.example..."
+  cp .dev.vars.example .dev.vars
+fi
+
 ensure_vite_port_available
 pick_available_api_port
 
+echo "[dev] Building worker bundle..."
+npx wrangler pages functions build --outdir=./dist/worker/
+
+if ! npx wrangler whoami >/dev/null 2>&1; then
+  echo "[dev] Not logged into Cloudflare. AI and range priors won't work."
+  echo "[dev] Run 'npx wrangler login' to enable them."
+fi
+
 echo "[dev] Starting Cloudflare Functions on :${API_PORT}..."
-npm run dev:cf -- --port "${API_PORT}" &
+npx wrangler dev --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false --port "${API_PORT}" &
 CF_PID=$!
 
 sleep 1
 
 echo "[dev] Starting Vite with HMR..."
-exec npm run dev:vite
+exec npx vite --port "${VITE_PORT}" --strictPort

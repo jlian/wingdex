@@ -4,7 +4,6 @@ import path from 'node:path'
 
 const API_BASE = 'http://localhost:5000'
 const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://localhost.wingdex.app'
-const runLivePreviewAuth = process.env.RUN_LIVE_E2E === '1'
 
 function buildCookieHeader(setCookieHeaders: string[]) {
   return setCookieHeaders
@@ -493,8 +492,7 @@ test.describe('API smoke (request context)', () => {
   })
 })
 
-test.describe('API smoke (live preview auth)', () => {
-  test.skip(!runLivePreviewAuth, 'Set RUN_LIVE_E2E=1 to run deployed preview auth smoke test')
+test.describe('API smoke @live (preview auth)', () => {
 
   test('preview social OAuth emits hosted callback URI', async () => {
     const api = await request.newContext()

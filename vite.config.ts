@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from "vite";
 import { execSync } from 'child_process'
 import packageJson from './package.json'
 
-const apiPort = process.env.API_PORT || '8788'
+const apiPort = process.env.API_PORT || '8787'
 
 function gitInfo() {
   try {

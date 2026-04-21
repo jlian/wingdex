@@ -15,7 +15,7 @@ running_full_app() {
 
 if [[ "${FORCE_RESTART}" == "true" ]]; then
   if is_port_listening; then
-    echo "[dev:full] Port ${PORT} is in use. Force-restarting listener(s)..."
+    echo "[start] Port ${PORT} is in use. Force-restarting listener(s)..."
     PIDS="$(lsof -t -nP -iTCP:"${PORT}" -sTCP:LISTEN | tr '\n' ' ')"
     if [[ -n "${PIDS// }" ]]; then
       kill ${PIDS} >/dev/null 2>&1 || true
@@ -23,28 +23,28 @@ if [[ "${FORCE_RESTART}" == "true" ]]; then
     fi
 
     if is_port_listening; then
-      echo "[dev:full] Failed to free port ${PORT}."
+      echo "[start] Failed to free port ${PORT}."
       exit 1
     fi
   fi
 else
   if running_full_app; then
-    echo "[dev:full] App already running at ${BASE}. Reusing existing server."
+    echo "[start] App already running at ${BASE}. Reusing existing server."
     exit 0
   fi
 
   if is_port_listening; then
-    echo "[dev:full] Port ${PORT} is already in use by another process."
-    echo "[dev:full] If you want a fresh full-app server on this port, run: npm run dev:full:restart"
+    echo "[start] Port ${PORT} is already in use by another process."
+    echo "[start] To force-restart, run: FORCE_RESTART=true npm start"
     exit 1
   fi
 fi
 
-echo "[dev:full] Applying local D1 migrations..."
+echo "[start] Applying local D1 migrations..."
 printf 'y\n' | npx wrangler d1 migrations apply wingdex-db --local --persist-to "$HOME/.cache/wingdex/wrangler-state"
 
-echo "[dev:full] Building app..."
+echo "[start] Building app..."
 npm run build
 
-echo "[dev:full] Starting full local app at ${BASE}..."
+echo "[start] Starting full local app at ${BASE}..."
 exec npx wrangler dev --port "${PORT}" --persist-to "$HOME/.cache/wingdex/wrangler-state" --show-interactive-dev-session=false

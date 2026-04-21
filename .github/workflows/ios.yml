@@ -47,7 +47,7 @@ jobs:
         run: echo "BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}" > .dev.vars
 
       - name: Apply local D1 migrations
-        run: npm run db:migrate:local
+        run: npm run db:migrate
 
       - name: Start dev server
         run: |

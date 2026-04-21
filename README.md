@@ -1,8 +1,8 @@
 # WingDex
 
-A photo-first bird identification and life list tracker built on Cloudflare Pages + D1. Upload your bird photos, let AI identify the species, and build your personal WingDex over time.
+A photo-first bird identification and life list tracker built on Cloudflare Workers + D1. Upload your bird photos, let AI identify the species, and build your personal WingDex over time.
 
-**[Try it →](https://wingdex.app)**
+**[Try it ->](https://wingdex.app)**
 
 <img width="1150" height="1142" alt="image" src="https://github.com/user-attachments/assets/79c364ae-e4f3-49ba-9fed-6e5966470304" />
 
@@ -17,19 +17,21 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 - **Privacy-first** - Photos are never stored; all bird imagery comes from Wikipedia
 - **Batch upload** - Drop a day's photos; they're auto-grouped into outings by time/GPS proximity, merged with existing sessions, and deduplicated by hash
 - **EXIF extraction** - GPS, timestamps, and thumbnails parsed client-side
-- **AI species ID** - GPT-4.1 vision returns ranked candidates with confidence scores and bounding boxes, grounded against ~11,000 eBird species
-- **WingDex Life list** - First/last seen, total sightings, Wikipedia imagery; searchable and sortable
+- **AI species ID** - GPT-5.4-mini vision returns ranked candidates with confidence scores and bounding boxes, grounded against ~11,000 eBird species via range-prior filtering
+- **WingDex life list** - First/last seen, total sightings, Wikipedia imagery; searchable and sortable
 - **Species detail** - Hero image, Wikipedia summary, sighting history, and links to eBird / All About Birds
 - **Outing management** - Editable locations/notes, taxonomy autocomplete, per-observation delete, eBird CSV export, Google Maps links
 - **eBird integration** - Import/export checklists and life lists in eBird Record Format
+- **Auth** - Anonymous sessions, passkeys (WebAuthn), and social OAuth (GitHub, Google, Apple)
 - **Dark mode** - Light, dark, and system themes
 - **Saved locations** - Bookmark birding spots with geolocation and nearby outing counts
 - **Dashboard** - Stats, recent activity, and highlights at a glance
+- **iOS app** - Native companion app (see `ios/`)
 
 ## How it works
 
 1. **Upload** bird photos from your device
-2. **EXIF** GPS & timestamps are extracted and photos are clustered into outings
+2. **EXIF** GPS and timestamps are extracted and photos are clustered into outings
 3. **Review** the outing, confirm date, location (auto-geocoded), and notes
 4. **AI identifies** each bird with ranked suggestions, confidence scores, and a crop box
 5. **Confirm**, accept, mark as possible, pick an alternative, re-crop, or skip
@@ -39,107 +41,70 @@ WingDex is for **reverse birding**: people who take photos first and identify sp
 
 | Layer | Technology |
 |-------|------------|
-| Platform | Cloudflare Pages + Pages Functions + D1 |
-| Frontend | React 19, TypeScript, Vite 7 |
+| Platform | Cloudflare Workers, D1 (SQLite), R2 (range priors), AI Gateway |
+| Frontend | React 19, TypeScript, Vite 8 |
 | Styling | Tailwind CSS 4, Radix UI primitives, Phosphor Icons |
-| AI | GPT-4.1-mini (vision) via server-owned `/api/identify-bird` endpoint |
+| Auth | better-auth (anonymous, passkeys, GitHub/Google/Apple OAuth) |
+| AI | GPT-5.4-mini (vision) via Cloudflare AI Gateway |
 | Geocoding | OpenStreetMap Nominatim |
 | Bird imagery | Wikipedia REST API |
 | Testing | Vitest (unit), Playwright (e2e) |
+| iOS | Swift, XcodeGen |
 
 ## Development
 
 ### Prerequisites
 
-Use Node 24+ (`node --version`) and install dependencies with `npm ci`.
+- Node 24+ (`node --version`)
 
 ### Running locally
 
 ```bash
 git clone https://github.com/jlian/wingdex.git
 cd wingdex
-npm ci
+npm install
 npm run dev
 ```
 
-`npm run dev` now starts both local API runtime (`wrangler dev` on `:8787`) and Vite HMR (`:5000`) in one command.
+`npm run dev` starts both the local API runtime (`wrangler dev` on `:8787`) and Vite HMR (`:5000`) in one command. On first run it auto-builds the worker bundle and creates `.dev.vars` from the example file.
 
-### Local auth modes
+The first time you visit the app, run `npm run db:migrate` to create the local D1 database tables.
 
-Local auth intentionally uses two different origins depending on the flow:
+**Optional:** Run `npx wrangler login` to enable AI identification and range-prior filtering. The app works without it - those features just won't be available.
 
-1. `localhost` for normal local web usage, passkeys, and Playwright e2e. This keeps the WebAuthn RP ID aligned with the page the browser is actually on.
-2. `BETTER_AUTH_URL` for social OAuth flows that must present a hosted public callback URL to GitHub, Google, or Apple.
+### AI provider setup
 
-Operationally, that means:
-
-1. Local web on `http://localhost:5000` keeps localhost semantics by default.
-2. Hosted web on `https://localhost.wingdex.app` uses the hosted domain normally.
-3. Mobile social OAuth started through `/api/auth/mobile/start` uses the hosted callback domain from `BETTER_AUTH_URL`, even during local dev.
-
-If GitHub or Google reports an invalid redirect URI during local mobile testing, verify that:
-
-1. `BETTER_AUTH_URL` matches the hosted callback domain registered with the provider.
-2. The provider app allows `https://.../api/auth/callback/github` or `.../google` on that hosted domain.
-3. You are not expecting plain localhost web social OAuth to use the hosted callback domain; that path still behaves like localhost web unless you test on the hosted site.
-
-### AI provider setup (local)
-
-AI calls run through the server endpoint (`/api/identify-bird`) via
-[Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) and
-require local env vars.
-
-1. Copy `.dev.vars.example` to `.dev.vars`
-2. Set `CF_ACCOUNT_ID` and `AI_GATEWAY_ID`
-3. Fill `OPENAI_API_KEY` and (optionally) `OPENAI_MODEL`
-
-```dotenv
-CF_ACCOUNT_ID=...
-AI_GATEWAY_ID=wingdex-prod
-OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4.1-mini
-```
-
-Optional per-user daily limits for AI endpoints (UTC day):
-
-```dotenv
-AI_DAILY_LIMIT_IDENTIFY=150
-```
+AI identification runs through `/api/identify-bird` via [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/). To enable it locally, fill in the AI section of your `.dev.vars` (see [.dev.vars.example](.dev.vars.example) for all options).
 
 ### Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start full local dev loop: Functions API (`:8788`) + Vite HMR (`:5000`) |
-| `npm run dev:vite` | Start Vite only |
-| `npm run dev:cf` | Start Cloudflare Pages Functions runtime only |
+| `npm run dev` | Start local dev: API (`:8787`) + Vite HMR (`:5000`) |
+| `npm start` | Production-like build + serve on `:5000` |
+| `npm stop` | Stop all dev processes |
 | `npm run build` | Type-check and production build |
-| `npm run test` | Run all tests (Vitest) |
-| `npm run test:unit` | Run unit tests only |
-| `npm run test:e2e` | Run end-to-end tests (Playwright) |
-| `npm run setup:playwright` | Install Playwright Chromium + Linux deps |
-| `npm run test:watch` | Run tests in watch mode |
+| `npm run deploy` | Build and deploy to Cloudflare |
 | `npm run lint` | Lint with ESLint |
-| `npm run preview` | Preview production build |
+| `npm run typecheck` | Type-check with TypeScript |
+| `npm test` | Run all Vitest tests |
+| `npm run test:e2e` | Playwright e2e tests (skips `@live` tests) |
+| `npm run test:e2e:live` | Playwright e2e tests that require AI credentials |
+| `npm run check` | Quick gate: lint + typecheck + test |
+| `npm run check:all` | Full gate: check + e2e + build |
+| `npm run db:migrate` | Apply D1 migrations to local database |
+| `npm run fixtures` | LLM fixture tools (`-- benchmark`, `-- analyze`, `-- promote`) |
+| `npm run taxonomy` | Taxonomy pipeline (`-- ebird`, `-- hydrate`, `-- validate`) |
 
-In Codespaces, `.vscode/tasks.json` runs `bootstrap-workspace` on folder open to bootstrap ephemeral environments. It installs Playwright dependencies and only starts `npm run dev` when nothing is already serving `http://localhost:5000`. If prompted, allow automatic tasks for this workspace.
+To run `@live` tests (require AI credentials): `npm run test:e2e:live`
 
-### Releases (automated semver + tags)
+### Releases
 
-- PR titles must follow semantic commit style (for example `feat: add outing merge UX` or `fix: handle wiki 404 fallback`).
-- On push to `main`, Release Please opens/updates a release PR and calculates the next semantic version:
-  - `feat` → minor
-  - `fix`/`perf`/`refactor` and other non-breaking types → patch
-  - `!` or `BREAKING CHANGE:` → major
-- Merging the release PR updates `package.json`, updates `CHANGELOG.md`, and creates the Git tag/release (for example `v1.3.0`).
+PR titles must follow Conventional Commits (e.g., `feat: add outing merge UX`, `fix: handle wiki 404 fallback`). On merge to `main`, Release Please calculates the next version, updates `CHANGELOG.md`, and creates a Git tag.
 
-## Security notes
+## Contributing
 
-- WingDex is designed for **low-sensitivity personal birding data** (outings, observations, notes).
-- Data separation is enforced server-side with authenticated session user IDs on all protected `/api/*` endpoints.
-- Production/preview persistence uses D1 (with user-scoped queries) rather than client-only key partitioning.
-- In local/dev fallback mode, some flows may use browser localStorage and should be treated as development-only data storage.
-- If you need strong tenant isolation for sensitive data, use a backend that enforces per-user access server-side.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

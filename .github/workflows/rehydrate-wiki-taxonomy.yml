@@ -32,10 +32,10 @@ jobs:
         run: npm ci
 
       - name: Rehydrate wiki metadata
-        run: npm run taxonomy:hydrate-wiki -- ${{ inputs.images_only == true && '--images-only' || '' }}
+        run: npm run taxonomy -- hydrate ${{ inputs.images_only == true && '--images-only' || '' }}
 
       - name: Validate wiki metadata
-        run: npm run taxonomy:validate-wiki
+        run: npm run taxonomy -- validate
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7

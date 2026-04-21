@@ -2,6 +2,8 @@
 
 Guidelines to reduce common LLM coding mistakes. Bias toward caution over speed; for trivial tasks, use judgment.
 
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for project setup, commit conventions, and code style.
+
 ## Think Before Coding
 - State assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
@@ -24,11 +26,8 @@ Guidelines to reduce common LLM coding mistakes. Bias toward caution over speed;
 ## Commits
 - Don't commit too optimistically. Always verify correctness first.
 - Don't push without asking.
-- Use Conventional Commit format with a **required** scope: `type(scope): description`.
-- Valid types: `feat`, `fix`, `docs`, `chore`, `perf`, `refactor`, `test`, `ci`, `build`, `revert`.
-- Scope should be a short PascalCase or lowercase label for the area changed, for example: `feat(Outings):`, `fix(Auth):`, `docs(README):`, `test(CSV):`.
-- Never omit the scope.
+- Follow the commit convention in [CONTRIBUTING.md](../CONTRIBUTING.md#commits).
 
 ## Text Encoding
-- Use commas, colons, semicolons, or hyphens (`-`) instead of em-dashes or en-dashes. They look unnatural and cause encoding corruption in CLI tools (e.g., `gh` heredocs) and terminal output.
+- Use commas, colons, semicolons, or hyphens (`-`) instead of em-dashes or en-dashes.
 - Stick to ASCII punctuation in commit messages, PR descriptions, issue comments, and code comments.
