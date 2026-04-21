@@ -24,7 +24,7 @@ Thanks for your interest in contributing!
    npm run db:migrate
    ```
 
-> **Optional:** Run `npx wrangler login` to enable AI identification and range-prior filtering. The app works without it.
+> **Optional:** AI identification requires the AI env vars in `.dev.vars`. Run `npx wrangler login` only if you need remote bindings such as range-prior filtering. The app works without it.
 
 ## Project Structure
 

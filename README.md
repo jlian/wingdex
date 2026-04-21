@@ -70,7 +70,7 @@ npm run dev
 
 The first time you visit the app, run `npm run db:migrate` to create the local D1 database tables.
 
-**Optional:** Run `npx wrangler login` to enable AI identification and range-prior filtering. The app works without it - those features just won't be available.
+**Optional:** Fill in the AI section of `.dev.vars` to enable AI identification locally. Run `npx wrangler login` only if you want remote bindings such as R2-backed range-prior filtering during local development. The app works without either - those features just won't be available.
 
 ### AI provider setup
 
