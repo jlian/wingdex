@@ -52,7 +52,7 @@ is_healthy() {
 
 start_dev() {
   echo "App unhealthy/missing on :5000, restarting dev server"
-  npm run kill >/dev/null 2>&1 || true
+  npm stop >/dev/null 2>&1 || true
 
   npm run dev &
   dev_pid="$!"
@@ -83,7 +83,7 @@ cleanup() {
   stop_dev
 
   if [[ "${managed_stack}" == "true" ]]; then
-    npm run kill >/dev/null 2>&1 || true
+    npm stop >/dev/null 2>&1 || true
   fi
 
   release_lock

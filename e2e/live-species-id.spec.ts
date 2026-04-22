@@ -2,12 +2,7 @@ import { test, expect } from '@playwright/test'
 import path from 'path'
 import { loadApp } from './helpers'
 
-const isCI = !!process.env.CI
-
-test.describe('Live Species ID', () => {
-  // Locally the wrangler dev server has OPENAI_API_KEY via .dev.vars,
-  // so always run. In CI, skip unless explicitly opted in.
-  test.skip(isCI && process.env.RUN_LIVE_E2E !== '1', 'Skipped in CI - set RUN_LIVE_E2E=1 to run')
+test.describe('Live Species ID @live', () => {
 
   test('hits live /api/identify-bird and reaches species step', async ({ page }) => {
     await loadApp(page)

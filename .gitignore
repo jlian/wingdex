@@ -24,8 +24,10 @@ dist-ssr
 *.sw?
 
 .env
+.env.local
 .dev.vars
 .dev.vars.*
+!.dev.vars.example
 **/agent-eval-report*
 packages
 pids

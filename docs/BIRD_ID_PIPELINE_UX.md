@@ -32,9 +32,9 @@
 - [x] **Refresh the fixture capture README** -- Updated [src/__tests__/fixtures/README.md](../src/__tests__/fixtures/README.md) with matrix-first refresh flow, baseline promotion commands, updated env requirements, and fixture field semantics.
 
 - [x] **Consolidated fixture workflows into single script** -- [capture-llm-fixtures.mjs](../scripts/capture-llm-fixtures.mjs) handles capture, benchmark (6 variants), analysis, and promotion. Calls CF AI Gateway with production-matching image resize. Refresh flow:
-    - `npm run fixtures:benchmark` (capture all variants)
-    - `npm run fixtures:analyze` (compare results)
-    - `npm run fixtures:promote -- <variant>` (promote to golden baseline)
+    - `npm run fixtures -- benchmark` (capture all variants)
+    - `npm run fixtures -- analyze` (compare results)
+    - `npm run fixtures -- promote <variant>` (promote to golden baseline)
 
 ---
 

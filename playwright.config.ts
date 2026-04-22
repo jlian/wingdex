@@ -20,7 +20,7 @@ export default defineConfig({
     // --ip 127.0.0.1 works around wrangler hanging in Docker (cloudflare/workers-sdk#6280)
     command: isCI
       ? 'npx wrangler dev --port 5000 --ip 127.0.0.1 --show-interactive-dev-session=false'
-      : 'npm run dev:full:restart',
+      : 'FORCE_RESTART=true bash scripts/dev-full.sh',
     url: 'http://localhost:5000',
     reuseExistingServer: !isCI,
     timeout: isCI ? 45_000 : 20_000,

@@ -1,0 +1,45 @@
+# Local secrets for wrangler dev
+# Auto-copied to .dev.vars when running npm run dev. Edit .dev.vars with your values.
+
+# --- Required ---
+
+BETTER_AUTH_SECRET=local-dev-secret
+
+# --- AI identification (optional, app works without these) ---
+
+LLM_PROVIDER=openai
+OPENAI_API_KEY=
+CF_ACCOUNT_ID=
+AI_GATEWAY_ID=wingdex-dev
+
+# --- Observability (optional) ---
+
+# LOG_LEVEL=Debug
+# LOG_FORMAT=pretty
+
+# --- Social OAuth (optional, anonymous auth works without these) ---
+
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# APPLE_CLIENT_ID=
+# APPLE_CLIENT_SECRET=
+
+# --- AI rate limits (optional, per-user daily caps, UTC day) ---
+
+# AI_DAILY_LIMIT_IDENTIFY=150
+# AI_DAILY_LIMIT_SUGGEST=300
+
+# --- Auth overrides (optional, for hosted OAuth testing) ---
+
+# Hosted callback URL for social OAuth providers.
+# Local dev uses localhost by default; only set this for hosted OAuth flows.
+# If you set this, also add the hostname (not full URL) to VITE_ALLOWED_HOSTS
+# in a .env.local file so Vite accepts requests on that host:
+#   echo "VITE_ALLOWED_HOSTS=localhost.wingdex.app" > .env.local
+# BETTER_AUTH_URL=https://localhost.wingdex.app
+
+# Extra trusted browser origins for LAN dev (comma-separated).
+# Does not affect OAuth redirect URIs.
+# TRUSTED_ORIGINS=
