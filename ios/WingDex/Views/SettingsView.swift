@@ -68,6 +68,7 @@ struct SettingsView: View {
     @State private var exportItem: ExportFileItem?
     @State private var isEditingName = false
     @State private var editedName = ""
+    @State private var celebration: LiferCelebration?
 
     private var profile: ProfileEditor { editor! }
 
@@ -85,6 +86,7 @@ struct SettingsView: View {
         .onDisappear {
             editor?.syncToAuth()
         }
+        .celebration($celebration)
     }
 
     private var formContent: some View {
@@ -144,7 +146,13 @@ struct SettingsView: View {
             }
         }
         .sheet(isPresented: $showingEBirdImport) {
-            EBirdImportView(auth: auth)
+            EBirdImportView(auth: auth) { newSpeciesCount, newSpeciesNames in
+                guard newSpeciesCount > 0 else { return }
+                celebration = LiferCelebration(
+                    newSpeciesCount: newSpeciesCount,
+                    speciesNames: newSpeciesNames
+                )
+            }
         }
         .sheet(item: $exportItem) { item in
             ActivityView(activityItems: [item.url])

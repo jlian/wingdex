@@ -7,6 +7,8 @@ private let log = Logger(subsystem: Config.bundleID, category: "EBirdImport")
 /// eBird CSV import flow with timezone picker, help section, and conflict display.
 struct EBirdImportView: View {
     let auth: AuthService
+    /// Called after a successful import with the new-species count and their display names.
+    var onImported: ((Int, [String]) -> Void)? = nil
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
@@ -245,14 +247,21 @@ struct EBirdImportView: View {
 
         do {
             let service = DataService(auth: auth)
+            let priorSpecies = Set(store.dex.map(\.speciesName))
             let result = try await service.confirmImport(previewIds: Array(selectedPreviewIds))
 
             await store.loadAll()
+
+            let newSpeciesNames = store.dex
+                .map(\.speciesName)
+                .filter { !priorSpecies.contains($0) }
+                .map { getDisplayName($0) }
 
             let message = "Imported eBird data across \(result.imported.outings) outing\(result.imported.outings == 1 ? "" : "s")"
                 + (result.imported.newSpecies > 0 ? " (\(result.imported.newSpecies) new!)" : "")
             log.info("\(message)")
 
+            onImported?(result.imported.newSpecies, newSpeciesNames)
             dismiss()
         } catch {
             importError = "Import failed: \(error.localizedDescription)"

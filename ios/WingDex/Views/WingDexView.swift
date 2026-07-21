@@ -86,6 +86,8 @@ struct WingDexView: View {
                 .navigationDestination(item: $contextMenuSpecies) { entry in
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }
+                .sensoryFeedback(.selection, trigger: sortField)
+                .sensoryFeedback(.selection, trigger: sortAscending)
         }
     }
 
