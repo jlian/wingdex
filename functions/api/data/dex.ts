@@ -1,4 +1,4 @@
-import { computeDex } from '../../lib/dex-query'
+import { computeDex, enrichDexEntries } from '../../lib/dex-query'
 import { createRouteResponder } from '../../lib/log'
 
 type DexMetaPatch = {
@@ -53,16 +53,9 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   try {
     const dex = await computeDex(context.env.DB, userId)
     route.debug(`Computed dex with ${dex.length} species`, { speciesCount: dex.length })
-  return Response.json(
-    dex.map(entry => ({
-      ...entry,
-      addedDate: entry.addedDate || undefined,
-      bestPhotoId: entry.bestPhotoId || undefined,
-    }))
-  )
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Dex read failed: ${message}`, { error: message })
+  return Response.json(enrichDexEntries(dex))
+  } catch {
+    return route.fail(500, 'Internal server error', 'Dex read failed; inspect the trace and database query')
   }
 }
 
@@ -89,18 +82,13 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     for (const patch of patches) {
       await upsertDexMetaPatch(context.env.DB, userId, patch)
     }
-    route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length, speciesNames: patches.map(p => p.speciesName) })
+    route.debug(`Upserted ${patches.length} dex metadata patches`, { patchCount: patches.length })
 
     const dexUpdates = await computeDex(context.env.DB, userId)
     return Response.json({
-      dexUpdates: dexUpdates.map(entry => ({
-        ...entry,
-        addedDate: entry.addedDate || undefined,
-        bestPhotoId: entry.bestPhotoId || undefined,
-      })),
+      dexUpdates: enrichDexEntries(dexUpdates),
     })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Dex patch failed: ${message}`, { error: message, patchCount: patches.length })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Dex patch failed; inspect the trace and database batch', { patchCount: patches.length })
   }
 }

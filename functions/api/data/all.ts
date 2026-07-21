@@ -1,6 +1,5 @@
-import { computeDex } from '../../lib/dex-query'
+import { computeDex, enrichDexEntries } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
-import { getWikiMetadata } from '../../lib/taxonomy'
 import { createRouteResponder } from '../../lib/log'
 
 type OutingRow = {
@@ -109,16 +108,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     outings,
     photos,
     observations,
-    dex: dex.map(entry => {
-      const { wikiTitle, thumbnailUrl } = getWikiMetadata(entry.speciesName)
-      return {
-        ...entry,
-        addedDate: entry.addedDate || undefined,
-        bestPhotoId: entry.bestPhotoId || undefined,
-        wikiTitle,
-        thumbnailUrl,
-      }
-    }),
+    dex: enrichDexEntries(dex),
   })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

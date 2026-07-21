@@ -1,4 +1,4 @@
-import { computeDex } from '../../../lib/dex-query'
+import { computeDex, enrichDexEntries } from '../../../lib/dex-query'
 import { groupPreviewsIntoOutings, type ImportPreview } from '../../../lib/ebird'
 import { getOutingColumnNames, hasObservationColumn } from '../../../lib/schema'
 import { createRouteResponder } from '../../../lib/log'
@@ -55,7 +55,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   if (selectedPreviews.length === 0) {
     const dexUpdates = await computeDex(context.env.DB, userId)
-    return Response.json({ imported: { outings: 0, observations: 0, newSpecies: 0 }, dexUpdates })
+    return Response.json({
+      imported: { outings: 0, observations: 0, newSpecies: 0 },
+      dexUpdates: enrichDexEntries(dexUpdates),
+    })
   }
 
   // Snapshot species already in the user's dex before inserting
@@ -201,11 +204,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       observations: observations.length,
       newSpecies,
     },
-    dexUpdates: dexUpdates.map(row => ({
-      ...row,
-      addedDate: row.addedDate || undefined,
-      bestPhotoId: row.bestPhotoId || undefined,
-    })),
+    dexUpdates: enrichDexEntries(dexUpdates),
   })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

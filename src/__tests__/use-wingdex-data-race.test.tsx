@@ -7,10 +7,39 @@ import { waitFor } from '@testing-library/dom'
 import { useEffect } from 'react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 
-import { useWingDexData } from '@/hooks/use-wingdex-data'
+import { rollbackItemsById, useWingDexData } from '@/hooks/use-wingdex-data'
 import type { Outing } from '@/lib/types'
 import type { Observation } from '@/lib/types'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
+
+describe('rollbackItemsById', () => {
+  it('preserves unrelated concurrent items while removing a failed optimistic insert', () => {
+    const previous = [{ id: 'existing', value: 'before' }]
+    const current = [
+      { id: 'existing', value: 'before' },
+      { id: 'optimistic', value: 'pending' },
+      { id: 'concurrent', value: 'new' },
+    ]
+
+    expect(rollbackItemsById(current, previous, new Set(['optimistic']))).toEqual([
+      { id: 'existing', value: 'before' },
+      { id: 'concurrent', value: 'new' },
+    ])
+  })
+
+  it('restores only the prior touched value and preserves unrelated changes', () => {
+    const previous = [{ id: 'edited', value: 'before' }]
+    const current = [
+      { id: 'edited', value: 'optimistic' },
+      { id: 'concurrent', value: 'new' },
+    ]
+
+    expect(rollbackItemsById(current, previous, new Set(['edited']))).toEqual([
+      { id: 'edited', value: 'before' },
+      { id: 'concurrent', value: 'new' },
+    ])
+  })
+})
 
 type Deferred<T> = {
   promise: Promise<T>
@@ -99,7 +128,7 @@ describe('useWingDexData addOuting race handling', () => {
     }
 
     act(() => {
-      latest!.addOuting(outing)
+      void latest!.addOuting(outing).catch(() => undefined)
     })
 
     await waitFor(() => {

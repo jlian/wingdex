@@ -1,4 +1,4 @@
-import { computeDex } from '../../../lib/dex-query'
+import { computeDex, enrichDexEntries } from '../../../lib/dex-query'
 import { getOutingColumnNames } from '../../../lib/schema'
 import { createRouteResponder } from '../../../lib/log'
 
@@ -182,9 +182,8 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     effortDistanceMiles: outing.effortDistanceMiles ?? undefined,
     effortAreaAcres: outing.effortAreaAcres ?? undefined,
   })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Outing ${outingId} patch failed: ${message}`, { outingId, error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Outing patch failed; inspect the trace and database operation', { outingId })
   }
 }
 
@@ -214,9 +213,8 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
 
     route.debug(`Deleted outing ${outingId}`, { outingId })
     const dexUpdates = await computeDex(context.env.DB, userId)
-    return Response.json({ dexUpdates })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Outing ${outingId} delete failed: ${message}`, { outingId, error: message })
+    return Response.json({ dexUpdates: enrichDexEntries(dexUpdates) })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Outing deletion failed; inspect the trace and database operation', { outingId })
   }
 }

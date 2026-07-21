@@ -62,123 +62,150 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   try {
+    const existing = await context.env.DB
+      .prepare('SELECT userId, createdAt FROM outing WHERE id = ?')
+      .bind(body.id)
+      .first<{ userId: string; createdAt: string }>()
+    if (existing && existing.userId !== userId) {
+      return route.fail(409, 'Outing ID conflict', 'Outing ID already belongs to another account', { outingId: body.id })
+    }
+    const persistedCreatedAt = existing?.createdAt ?? body.createdAt
 
-  const notes = body.notes ?? ''
-  const stateProvince = body.stateProvince?.trim() || null
-  const countryCode = normalizeCountryCode(body.countryCode, stateProvince || undefined)
-  const protocol = body.protocol?.trim() || null
-  const numberObservers =
-    typeof body.numberObservers === 'number' && Number.isFinite(body.numberObservers)
-      ? Math.max(0, Math.trunc(body.numberObservers))
-      : null
-  const allObsReported = typeof body.allObsReported === 'boolean' ? (body.allObsReported ? 1 : 0) : null
-  const effortDistanceMiles =
-    typeof body.effortDistanceMiles === 'number' && Number.isFinite(body.effortDistanceMiles)
-      ? body.effortDistanceMiles
-      : null
-  const effortAreaAcres =
-    typeof body.effortAreaAcres === 'number' && Number.isFinite(body.effortAreaAcres)
-      ? body.effortAreaAcres
-      : null
-  const columnNames = await getOutingColumnNames(context.env.DB)
-  const supportsRegionColumns = columnNames.has('stateProvince') && columnNames.has('countryCode')
-  const supportsChecklistColumns =
-    columnNames.has('protocol') &&
-    columnNames.has('numberObservers') &&
-    columnNames.has('allObsReported') &&
-    columnNames.has('effortDistanceMiles') &&
-    columnNames.has('effortAreaAcres')
+    const notes = body.notes ?? ''
+    const stateProvince = body.stateProvince?.trim() || null
+    const countryCode = normalizeCountryCode(body.countryCode, stateProvince || undefined)
+    const protocol = body.protocol?.trim() || null
+    const numberObservers =
+      typeof body.numberObservers === 'number' && Number.isFinite(body.numberObservers)
+        ? Math.max(0, Math.trunc(body.numberObservers))
+        : null
+    const allObsReported = typeof body.allObsReported === 'boolean' ? (body.allObsReported ? 1 : 0) : null
+    const effortDistanceMiles =
+      typeof body.effortDistanceMiles === 'number' && Number.isFinite(body.effortDistanceMiles)
+        ? body.effortDistanceMiles
+        : null
+    const effortAreaAcres =
+      typeof body.effortAreaAcres === 'number' && Number.isFinite(body.effortAreaAcres)
+        ? body.effortAreaAcres
+        : null
+    const columnNames = await getOutingColumnNames(context.env.DB)
+    const supportsRegionColumns = columnNames.has('stateProvince') && columnNames.has('countryCode')
+    const supportsChecklistColumns =
+      columnNames.has('protocol') &&
+      columnNames.has('numberObservers') &&
+      columnNames.has('allObsReported') &&
+      columnNames.has('effortDistanceMiles') &&
+      columnNames.has('effortAreaAcres')
 
-  if (supportsRegionColumns && supportsChecklistColumns) {
-    await context.env.DB.prepare(
-      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes, createdAt)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`
-    )
-      .bind(
-        body.id,
-        userId,
-        body.startTime,
-        body.endTime,
-        body.locationName,
-        body.defaultLocationName ?? null,
-        body.lat ?? null,
-        body.lon ?? null,
-        stateProvince,
-        countryCode,
-        protocol,
-        numberObservers,
-        allObsReported,
-        effortDistanceMiles,
-        effortAreaAcres,
-        notes,
-        body.createdAt
+    if (supportsRegionColumns && supportsChecklistColumns) {
+      await context.env.DB.prepare(
+        `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, protocol, numberObservers, allObsReported, effortDistanceMiles, effortAreaAcres, notes, createdAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+         ON CONFLICT(id) DO UPDATE SET
+           startTime = excluded.startTime, endTime = excluded.endTime,
+           locationName = excluded.locationName, defaultLocationName = excluded.defaultLocationName,
+           lat = excluded.lat, lon = excluded.lon, stateProvince = excluded.stateProvince,
+           countryCode = excluded.countryCode, protocol = excluded.protocol,
+           numberObservers = excluded.numberObservers, allObsReported = excluded.allObsReported,
+           effortDistanceMiles = excluded.effortDistanceMiles, effortAreaAcres = excluded.effortAreaAcres,
+           notes = excluded.notes
+         WHERE outing.userId = excluded.userId`
       )
-      .run()
-  } else if (supportsRegionColumns) {
-    await context.env.DB.prepare(
-      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
-    )
-      .bind(
-        body.id,
-        userId,
-        body.startTime,
-        body.endTime,
-        body.locationName,
-        body.defaultLocationName ?? null,
-        body.lat ?? null,
-        body.lon ?? null,
-        stateProvince,
-        countryCode,
-        notes,
-        body.createdAt
+        .bind(
+          body.id,
+          userId,
+          body.startTime,
+          body.endTime,
+          body.locationName,
+          body.defaultLocationName ?? null,
+          body.lat ?? null,
+          body.lon ?? null,
+          stateProvince,
+          countryCode,
+          protocol,
+          numberObservers,
+          allObsReported,
+          effortDistanceMiles,
+          effortAreaAcres,
+          notes,
+          body.createdAt
+        )
+        .run()
+    } else if (supportsRegionColumns) {
+      await context.env.DB.prepare(
+        `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, stateProvince, countryCode, notes, createdAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+         ON CONFLICT(id) DO UPDATE SET
+           startTime = excluded.startTime, endTime = excluded.endTime,
+           locationName = excluded.locationName, defaultLocationName = excluded.defaultLocationName,
+           lat = excluded.lat, lon = excluded.lon, stateProvince = excluded.stateProvince,
+           countryCode = excluded.countryCode, notes = excluded.notes
+         WHERE outing.userId = excluded.userId`
       )
-      .run()
-  } else {
-    await context.env.DB.prepare(
-      `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
-    )
-      .bind(
-        body.id,
-        userId,
-        body.startTime,
-        body.endTime,
-        body.locationName,
-        body.defaultLocationName ?? null,
-        body.lat ?? null,
-        body.lon ?? null,
-        notes,
-        body.createdAt
+        .bind(
+          body.id,
+          userId,
+          body.startTime,
+          body.endTime,
+          body.locationName,
+          body.defaultLocationName ?? null,
+          body.lat ?? null,
+          body.lon ?? null,
+          stateProvince,
+          countryCode,
+          notes,
+          body.createdAt
+        )
+        .run()
+    } else {
+      await context.env.DB.prepare(
+        `INSERT INTO outing (id, userId, startTime, endTime, locationName, defaultLocationName, lat, lon, notes, createdAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+         ON CONFLICT(id) DO UPDATE SET
+           startTime = excluded.startTime, endTime = excluded.endTime,
+           locationName = excluded.locationName, defaultLocationName = excluded.defaultLocationName,
+           lat = excluded.lat, lon = excluded.lon, notes = excluded.notes
+         WHERE outing.userId = excluded.userId`
       )
-      .run()
-  }
+        .bind(
+          body.id,
+          userId,
+          body.startTime,
+          body.endTime,
+          body.locationName,
+          body.defaultLocationName ?? null,
+          body.lat ?? null,
+          body.lon ?? null,
+          notes,
+          body.createdAt
+        )
+        .run()
+    }
 
-  const scopedRoute = createRouteResponder(route.log?.withResourceId(`outings/${body.id}`), 'data/outings/write', 'Application')
-  scopedRoute.debug(`Created outing '${body.locationName}'`, { outingId: body.id, locationName: body.locationName })
+    const scopedRoute = createRouteResponder(route.log?.withResourceId(`outings/${body.id}`), 'data/outings/write', 'Application')
+    scopedRoute.debug('Created outing', { outingId: body.id })
 
-  return Response.json({
-    id: body.id,
-    userId,
-    startTime: body.startTime,
-    endTime: body.endTime,
-    locationName: body.locationName,
-    defaultLocationName: body.defaultLocationName,
-    lat: body.lat,
-    lon: body.lon,
-    stateProvince: supportsRegionColumns ? (stateProvince ?? undefined) : undefined,
-    countryCode: supportsRegionColumns ? (countryCode ?? undefined) : undefined,
-    protocol: supportsChecklistColumns ? (protocol ?? undefined) : undefined,
-    numberObservers: supportsChecklistColumns ? (numberObservers ?? undefined) : undefined,
-    allObsReported:
-      supportsChecklistColumns && typeof body.allObsReported === 'boolean' ? body.allObsReported : undefined,
-    effortDistanceMiles: supportsChecklistColumns ? (effortDistanceMiles ?? undefined) : undefined,
-    effortAreaAcres: supportsChecklistColumns ? (effortAreaAcres ?? undefined) : undefined,
-    notes,
-    createdAt: body.createdAt,
-  })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Outing creation failed: ${message}`, { error: message, outingId: body.id })
+    return Response.json({
+      id: body.id,
+      userId,
+      startTime: body.startTime,
+      endTime: body.endTime,
+      locationName: body.locationName,
+      defaultLocationName: body.defaultLocationName,
+      lat: body.lat,
+      lon: body.lon,
+      stateProvince: supportsRegionColumns ? (stateProvince ?? undefined) : undefined,
+      countryCode: supportsRegionColumns ? (countryCode ?? undefined) : undefined,
+      protocol: supportsChecklistColumns ? (protocol ?? undefined) : undefined,
+      numberObservers: supportsChecklistColumns ? (numberObservers ?? undefined) : undefined,
+      allObsReported:
+        supportsChecklistColumns && typeof body.allObsReported === 'boolean' ? body.allObsReported : undefined,
+      effortDistanceMiles: supportsChecklistColumns ? (effortDistanceMiles ?? undefined) : undefined,
+      effortAreaAcres: supportsChecklistColumns ? (effortAreaAcres ?? undefined) : undefined,
+      notes,
+      createdAt: persistedCreatedAt,
+    })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Outing creation failed; inspect the trace and database operation', { outingId: body.id })
   }
 }
