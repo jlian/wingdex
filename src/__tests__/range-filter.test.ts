@@ -165,6 +165,21 @@ describe('getRangePriors', () => {
     expect(result.get('baleag')?.status).toBe('present')
   })
 
+  it('uses the closest neighbor when a species is in multiple ring cells', async () => {
+    // For self cell 96-272, the ring is ordered closest-first as
+    // 96-273 (closest edge) then 95-273 (a diagonal). norcar is absent from
+    // the self cell but present in BOTH neighbors with different attributes;
+    // the closest-first scan must win, so the 96-273 record (RESIDENT) is used,
+    // not the farther 95-273 record (BREEDING).
+    const bucket = mockBucketByCell({
+      [SELF_KEY]: [makeRecord('baleag', EXTANT, NATIVE, RESIDENT)],
+      'range-priors/96-273.bin.gz': [makeRecord('norcar', EXTANT, NATIVE, RESIDENT)],
+      'range-priors/95-273.bin.gz': [makeRecord('norcar', EXTANT, VAGRANT, BREEDING)],
+    })
+    const result = await getRangePriors(bucket, SEATTLE_LAT, SEATTLE_LON, 5, ['norcar'])
+    expect(result.get('norcar')).toEqual({ status: 'near-range', presence: EXTANT, origin: NATIVE, seasonal: RESIDENT })
+  })
+
   it('stays out-of-range when absent from self cell and all 8 neighbors', async () => {
     const bucket = mockBucketByCell({
       [SELF_KEY]: [makeRecord('baleag', EXTANT, NATIVE, RESIDENT)],

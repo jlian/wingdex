@@ -73,10 +73,10 @@ export function nearestNeighborCell(x, y, row, col) {
  * range-edge points frequently fall in a cell that lacks a species whose
  * range polygon covers an adjacent (often diagonal) cell.
  *
-  * `nearestNeighborCell` only returns the single closest edge cell, which
-  * misses diagonals and the other three edges; a point right on a coastline
-  * can read out-of-range for a species that is plainly present one cell over.
-  * This returns up to 8 cells so callers can scan the full ring.
+ * `nearestNeighborCell` only returns the single closest edge cell, which
+ * misses diagonals and the other three edges; a point right on a coastline
+ * can read out-of-range for a species that is plainly present one cell over.
+ * This returns up to 8 cells so callers can scan the full ring.
  */
 export function neighborCells(x, y, row, col) {
   const fx = (x - (GRID_ORIGIN_X + col * GRID_CELL_SIZE)) / GRID_CELL_SIZE

@@ -35,8 +35,10 @@ async function decompressBlob(compressed: ArrayBuffer): Promise<ArrayBuffer> {
 /**
  * Look up range status for multiple species at a single location.
  *
- * For species not found in the primary cell, checks the nearest neighbor
- * cell (based on point position) and upgrades those to 'near-range'.
+ * For species not found in the primary cell, scans the full 3x3 ring of
+ * neighbor cells (up to 8) in parallel, closest-first, and upgrades a species
+ * to 'near-range' on the first neighbor cell that contains it. Species absent
+ * from the primary cell and every neighbor are marked 'out-of-range'.
  */
 export async function getRangePriors(
   bucket: R2Bucket,
@@ -88,21 +90,31 @@ export async function getRangePriors(
       const neighbors = neighborCells(x, y, cell.row, cell.col)
       const remaining = new Set(outOfRange)
       if (neighbors.length > 0) {
-        const neighborData = await Promise.all(
+        // Fetch all ring cells in parallel (network latency dominates), but
+        // defer decompression: decompress + parse sequentially closest-first
+        // and stop as soon as every species is resolved, so a hit in the
+        // nearest cell avoids decompressing the farther ones.
+        const neighborBlobs = await Promise.all(
           neighbors.map(async n => {
             try {
               const nObj = await bucket.get(`range-priors/${n.row}-${n.col}.bin.gz`)
               if (!nObj) return null
-              return new Uint8Array(await decompressBlob(await nObj.arrayBuffer()))
+              return await nObj.arrayBuffer()
             } catch {
               return null
             }
           }),
         )
         // Scan closest-first so the nearest containing cell wins.
-        for (const nData of neighborData) {
+        for (const blob of neighborBlobs) {
           if (remaining.size === 0) break
-          if (!nData) continue
+          if (!blob) continue
+          let nData: Uint8Array
+          try {
+            nData = new Uint8Array(await decompressBlob(blob))
+          } catch {
+            continue
+          }
           const nMap = parseCellBlob(nData, remaining)
           for (const code of [...remaining]) {
             const attrs = nMap.get(code)
