@@ -24,6 +24,7 @@
 		27F3FC5181B71ADB687A56CC /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26C4686392C96AAB515199 /* CropView.swift */; };
 		28C700594AF36399A460FAAB /* CollageImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1D850B642C51F0AEA560F3 /* CollageImageCache.swift */; };
 		2CDDDF5ED153526ADF124174 /* collage21.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7A292B9762D444579B157E2C /* collage21.jpg */; };
+		32A90BB7899AF9413E1466ED /* CelebrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDBF72550893F931771EA36 /* CelebrationTests.swift */; };
 		3765CB91633BD6B909098629 /* AddPhotosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61DFE3278988BC58601C97F3 /* AddPhotosViewModel.swift */; };
 		3AD082AB856689D48C4E9C72 /* DataManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA379E90DE3BD99B508BCD7 /* DataManagementView.swift */; };
 		3E0B15C139B971B778758337 /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF3BE4EAF4D781A2029593E /* DataStore.swift */; };
@@ -38,6 +39,7 @@
 		61E5088EFD9DB2B036AA1F61 /* OutingReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A830FC9081930F984391A2BC /* OutingReviewView.swift */; };
 		6541BF20FA6B0465C6AA8204 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584DE950D0BBC4D9543B7EB4 /* HomeView.swift */; };
 		6A3E3A8BE6F89235D4E0ED32 /* collage1.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BC6ADC80E561240BA8BF7D7E /* collage1.jpg */; };
+		701F62DDB95D5BDF65E3E23D /* CelebrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1934AFCA827070FC4A689F84 /* CelebrationOverlay.swift */; };
 		71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */ = {isa = PBXBuildFile; fileRef = 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */; };
 		735564E615ECED94D844C13B /* TaxonomyOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */; };
 		76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */ = {isa = PBXBuildFile; fileRef = B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */; };
@@ -104,6 +106,7 @@
 		1758F97178B6D85D64F1363D /* collage19.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage19.jpg; sourceTree = "<group>"; };
 		181CAF182184C0BF767EC8E4 /* collage16.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage16.jpg; sourceTree = "<group>"; };
 		190E573E0224A499A6CEB58C /* AddPhotosFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPhotosFlow.swift; sourceTree = "<group>"; };
+		1934AFCA827070FC4A689F84 /* CelebrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlay.swift; sourceTree = "<group>"; };
 		19D47136847CF32C6251A4BD /* FunNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunNames.swift; sourceTree = "<group>"; };
 		1A4472F76A8259376EBEA738 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1AAEF45D13FB117DED5ED47F /* WingDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WingDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -118,6 +121,7 @@
 		452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunNamesTests.swift; sourceTree = "<group>"; };
 		487950E4852A38D4FFA3B405 /* collage24.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage24.jpg; sourceTree = "<group>"; };
 		494CD419AD323D541E04D2AB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		4BDBF72550893F931771EA36 /* CelebrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationTests.swift; sourceTree = "<group>"; };
 		4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaxonomyOrderTests.swift; sourceTree = "<group>"; };
 		557A070AA631D1A44FE4F407 /* GitInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitInfo.swift; sourceTree = "<group>"; };
 		584DE950D0BBC4D9543B7EB4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -267,6 +271,7 @@
 			isa = PBXGroup;
 			children = (
 				8E0885077F6EE158317DCAC6 /* AppIconView.swift */,
+				1934AFCA827070FC4A689F84 /* CelebrationOverlay.swift */,
 				8BA379E90DE3BD99B508BCD7 /* DataManagementView.swift */,
 				A167BA0320720274AA15EF34 /* EBirdImportView.swift */,
 				584DE950D0BBC4D9543B7EB4 /* HomeView.swift */,
@@ -328,6 +333,7 @@
 			children = (
 				40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */,
 				DE1613DCCF3480F9644D0D29 /* AuthServiceTests.swift */,
+				4BDBF72550893F931771EA36 /* CelebrationTests.swift */,
 				452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */,
 				4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */,
 			);
@@ -523,6 +529,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				0C26BD71C3D1128D41123339 /* AppModels.swift in Sources */,
 				4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */,
 				78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */,
+				701F62DDB95D5BDF65E3E23D /* CelebrationOverlay.swift in Sources */,
 				28C700594AF36399A460FAAB /* CollageImageCache.swift in Sources */,
 				2300C447E8E145BFE9E12FA5 /* Config.swift in Sources */,
 				FE52C5B543CE063EF47FEFF5 /* CropService.swift in Sources */,
@@ -561,6 +568,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 			files = (
 				58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */,
 				8EE17A4E87495C877151768B /* AuthServiceTests.swift in Sources */,
+				32A90BB7899AF9413E1466ED /* CelebrationTests.swift in Sources */,
 				E2DEFBDD3B36FEB4C7CFCC96 /* FunNamesTests.swift in Sources */,
 				735564E615ECED94D844C13B /* TaxonomyOrderTests.swift in Sources */,
 			);

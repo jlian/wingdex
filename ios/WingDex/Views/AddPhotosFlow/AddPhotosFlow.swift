@@ -11,6 +11,7 @@ struct AddPhotosFlow: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showCloseConfirm = false
+    @State private var celebration: LiferCelebration?
 
     /// Whether the current step needs a close confirmation (user has unsaved progress).
     private var needsCloseConfirmation: Bool {
@@ -81,6 +82,15 @@ struct AddPhotosFlow: View {
                 Text(dupCount == 1
                      ? "This photo has already been imported."
                      : "All \(dupCount) photos have already been imported.")
+            }
+        }
+        .celebration($celebration)
+        .onChange(of: viewModel.currentStep) { _, step in
+            if step == .done, !viewModel.newSpeciesNames.isEmpty {
+                celebration = LiferCelebration(
+                    newSpeciesCount: viewModel.newSpeciesNames.count,
+                    speciesNames: viewModel.newSpeciesNames
+                )
             }
         }
     }

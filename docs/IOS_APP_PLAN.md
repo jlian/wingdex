@@ -780,27 +780,27 @@ The web shows confetti + lifer toasts when new species are added. iOS has none o
 
 ### 7.1: Confetti Animation
 
-- [ ] **Trigger**: Fire confetti animation when `newSpeciesCount > 0` after AddPhotos save, or after eBird import adds new species
-- [ ] **Implementation**: Native SwiftUI particle effect or lightweight confetti modifier. Duration ~1.4s matching web
-- [ ] **Reduce Motion**: If `UIAccessibility.isReduceMotionEnabled`, skip confetti and show a subtle fade-in banner instead
+- [x] **Trigger**: Fire confetti animation when `newSpeciesCount > 0` after AddPhotos save, or after eBird import adds new species
+- [x] **Implementation**: Native SwiftUI Canvas + TimelineView confetti burst, ~1.4s, closed-form projectile motion
+- [x] **Reduce Motion**: When `accessibilityReduceMotion` is on, skip confetti and fade the banner in (opacity-only transition)
 
-**Files**: New `ConfettiModifier.swift` or similar, applied in `AddPhotosFlow` (done screen) and `SettingsView` (after eBird import)
+**Files**: New `CelebrationOverlay.swift` (`LiferCelebration` + `.celebration()` modifier), applied in `AddPhotosFlow` (done screen) and `SettingsView` (after eBird import)
 
 ### 7.2: Lifer Toast
 
-- [ ] **Message**: "Species added to your WingDex" banner when a species is first recorded (new to the user's life list)
-- [ ] **Implementation**: SwiftUI toast/banner overlay (environment-based) that auto-dismisses after ~3 seconds
-- [ ] **Haptic**: Pair with `.sensoryFeedback(.success)` haptic
+- [x] **Message**: Banner lists the new species names ("+N more" past three), falling back to a count ("N new species added to your WingDex")
+- [x] **Implementation**: SwiftUI banner overlay via the `.celebration()` modifier, auto-dismisses after ~3 seconds
+- [x] **Haptic**: Paired with `.sensoryFeedback(.success)` on trigger
+- [x] **Accessibility**: Posts a VoiceOver announcement with the banner message
 
-**Files**: Toast/notification overlay system (environment-based, reusable across the app)
+**Files**: `CelebrationOverlay.swift` (reusable `.celebration()` view modifier)
 
 ### 7.3: Haptic Feedback
 
-- **Success haptic** (`.sensoryFeedback(.success)`): On save confirmations (AddPhotos, outing edit, species add, import)
-- **Impact haptic** (`.sensoryFeedback(.impact)`): On milestones (new species, first outing)
-- [ ] **Selection haptic**: On sort/filter changes, tab switches
+- [x] **Success haptic** (`.sensoryFeedback(.success)`): Fires on the new-species celebration (AddPhotos save, eBird import)
+- [x] **Selection haptic**: On WingDex sort field/direction changes
 
-**Files**: Various views where save/milestone actions occur
+**Files**: `CelebrationOverlay.swift`, `WingDexView.swift`
 
 ### Phase 7 Verification
 

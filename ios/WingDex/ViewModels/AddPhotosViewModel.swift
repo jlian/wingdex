@@ -131,6 +131,8 @@ final class AddPhotosViewModel {
     var savedOutingCount = 0
     var savedObservationCount = 0
     var newSpeciesCount = 0
+    /// Display names of species newly added to the dex during this upload session.
+    var newSpeciesNames: [String] = []
 
     // MARK: - Dependencies
 
@@ -186,6 +188,7 @@ final class AddPhotosViewModel {
 
         // Reset accumulated stats for this upload session
         uploadSummary = nil
+        newSpeciesNames = []
 
         var newPhotos: [ProcessedPhoto] = []
         var duplicatePhotos: [ProcessedPhoto] = []
@@ -636,6 +639,7 @@ final class AddPhotosViewModel {
             var clusterNewSpecies = 0
             for obs in observations where !existingSpecies.contains(obs.speciesName) {
                 clusterNewSpecies += 1
+                newSpeciesNames.append(getDisplayName(obs.speciesName))
             }
             newSpeciesCount += clusterNewSpecies
             savedOutingCount += 1
