@@ -39,6 +39,8 @@ struct OutingReviewView: View {
     /// Whether to add photos to an existing matching outing
     @State private var matchingOuting: Outing?
     @State private var useExistingOuting = false
+    @State private var isCreatingOuting = false
+    @State private var preparedOuting: Outing?
 
     /// Tracks whether the view has initiated geocoding for the current cluster.
     @State private var didInitialize = false
@@ -119,7 +121,7 @@ struct OutingReviewView: View {
                 }
                 .accessibilityLabel("Continue")
                 .buttonStyle(.borderedProminent)
-                .disabled(isLoadingLocation)
+                .disabled(isLoadingLocation || isCreatingOuting)
             }
         }
         .onAppear { initializeIfNeeded() }
@@ -381,6 +383,8 @@ struct OutingReviewView: View {
         matchingOuting = nil
         useExistingOuting = false
         isLoadingLocation = false
+        isCreatingOuting = false
+        preparedOuting = nil
     }
 
     /// Initialize location lookup and matching outing detection.
@@ -440,7 +444,7 @@ struct OutingReviewView: View {
             locationName = fallback
             suggestedLocation = fallback
         } catch {
-            log.error("Reverse geocoding failed: \(error.localizedDescription)")
+            log.error("Reverse geocoding failed")
             let fallback = viewModel.lastLocationName.isEmpty
                 ? "\(roundedLat)deg, \(roundedLon)deg"
                 : viewModel.lastLocationName
@@ -612,7 +616,7 @@ struct OutingReviewView: View {
             do {
                 mapItem = try await search.start().mapItems.first
             } catch {
-                log.debug("Place search failed: \(error.localizedDescription)")
+                log.debug("Place search failed")
                 return
             }
             guard let mapItem else { return }
@@ -653,6 +657,7 @@ struct OutingReviewView: View {
 
     /// Confirm the outing and proceed to species identification.
     private func handleConfirm() {
+        guard !isCreatingOuting else { return }
         if useExistingOuting, let existing = matchingOuting {
             // Merge into existing outing
             viewModel.outingConfirmed(outingId: existing.id, locationName: existing.locationName)
@@ -660,12 +665,11 @@ struct OutingReviewView: View {
         }
 
         // Create new outing
-        let outingId = "outing_\(Int(Date().timeIntervalSince1970 * 1000))"
         let formatter = ISO8601DateFormatter()
 
         let finalLocationName = locationName.isEmpty ? "Unknown Location" : locationName
-        let outing = Outing(
-            id: outingId,
+        let outing = preparedOuting ?? Outing(
+            id: "outing_\(UUID().uuidString)",
             userId: "",
             startTime: formatter.string(from: effectiveStartTime),
             endTime: formatter.string(from: effectiveEndTime),
@@ -678,15 +682,19 @@ struct OutingReviewView: View {
             notes: "",
             createdAt: formatter.string(from: Date())
         )
+        preparedOuting = outing
+        isCreatingOuting = true
 
         Task {
+            defer { isCreatingOuting = false }
             do {
                 let service = DataService(auth: auth)
                 let saved = try await service.createOuting(outing)
+                preparedOuting = nil
                 viewModel.outingConfirmed(outingId: saved.id, locationName: finalLocationName)
             } catch {
-                log.error("Failed to create outing: \(error.localizedDescription)")
-                viewModel.error = error.localizedDescription
+                log.error("Failed to create outing")
+                viewModel.error = AppError.map(error, fallback: "Could not create this outing. Try again.")
             }
         }
     }
@@ -829,7 +837,7 @@ final class PlaceSearchCompleter: NSObject {
         do {
             return try await search.start().mapItems.first
         } catch {
-            log.debug("Failed to resolve place search result: \(error.localizedDescription)")
+            log.debug("Failed to resolve place search result")
             return nil
         }
     }

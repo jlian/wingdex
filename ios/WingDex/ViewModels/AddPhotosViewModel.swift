@@ -116,7 +116,11 @@ final class AddPhotosViewModel {
     var processedCount = 0
     var totalCount = 0
     var extractionProgress: Double = 0
-    var error: String?
+    var error: AppError?
+    private var errorRecovery: ErrorRecovery?
+    private var preparedObservations: [BirdObservation]?
+
+    var canRetryError: Bool { errorRecovery != nil }
 
     // MARK: - Duplicate Detection
 
@@ -226,7 +230,7 @@ final class AddPhotosViewModel {
                     newPhotos.append(photo)
                 }
             } catch {
-                log.error("Failed to load photo: \(error.localizedDescription)")
+                log.error("Failed to load a selected photo")
             }
             processedCount += 1
             extractionProgress = Double(processedCount) / Double(totalCount) * 100
@@ -256,7 +260,7 @@ final class AddPhotosViewModel {
         cameraPhotos = []
 
         if newPhotos.isEmpty && duplicatePhotos.isEmpty {
-            error = "No photos to process"
+            error = .message("No photos to process.")
             currentStep = .selectPhotos
             isProcessing = false
             return
@@ -335,15 +339,25 @@ final class AddPhotosViewModel {
         // Save photo metadata to server BEFORE AI identification starts.
         // The observation table has a FK to photo(id), so photos must exist first.
         Task {
-            await createPhotoMetadata(outingId: outingId)
-            await runSpeciesId(photoIndex: 0)
+            do {
+                try await createPhotoMetadata(outingId: outingId)
+                await runSpeciesId(photoIndex: 0)
+            } catch {
+                log.error("Failed to save photo metadata")
+                self.error = AppError.map(error, fallback: "Could not save photo details. Try again.")
+                errorRecovery = .photoMetadata
+                processingMessage = "Photo details could not be saved"
+                currentStep = .photoProcessing
+            }
         }
     }
 
     /// Persist photo metadata for the current cluster to the server.
     /// Must be called before creating observations (FK constraint on representativePhotoId).
-    private func createPhotoMetadata(outingId: String) async {
-        guard let service = dataService else { return }
+    private func createPhotoMetadata(outingId: String) async throws {
+        guard let service = dataService else {
+            throw AppError.message("Photo service isn't available.")
+        }
         let photos = clusterPhotos
         let formatter = ISO8601DateFormatter()
         let payloads = photos.map { photo in
@@ -358,12 +372,8 @@ final class AddPhotosViewModel {
                 fileName: photo.fileName
             )
         }
-        do {
-            try await service.createPhotos(payloads)
-            log.info("Saved \(payloads.count) photo metadata records for outing \(outingId)")
-        } catch {
-            log.error("Failed to save photo metadata: \(error.localizedDescription)")
-        }
+        try await service.createPhotos(payloads)
+        log.info("Saved \(payloads.count) photo metadata records for outing \(outingId)")
     }
 
     // MARK: - Step 3: Species Identification (Two-Tier AI)
@@ -380,6 +390,8 @@ final class AddPhotosViewModel {
         let photo = photos[photoIndex]
 
         currentPhotoIndex = photoIndex
+        error = nil
+        errorRecovery = nil
         photoProgress = 0
         currentStep = .photoProcessing
         photoProgressTauMs = 1200
@@ -519,8 +531,13 @@ final class AddPhotosViewModel {
                 currentStep = .perPhotoConfirm
             }
         } catch {
-            log.error("Species ID failed for photo \(photoIndex + 1): \(error.localizedDescription)")
-            self.error = error.localizedDescription
+            log.error("Species identification failed for photo index \(photoIndex + 1)")
+            self.error = AppError.map(
+                error,
+                fallback: "Could not identify this photo. Try again or skip it.",
+                rateLimit: Config.aiDailyRateLimit
+            )
+            errorRecovery = .speciesIdentification(photoIndex: photoIndex, croppedImageData: croppedImageData)
             currentCandidates = []
             rangeAdjusted = false
             currentStep = .perPhotoConfirm
@@ -599,6 +616,7 @@ final class AddPhotosViewModel {
         isProcessing = true
         processingMessage = "Saving..."
         error = nil
+        errorRecovery = nil
 
         let confirmed = photoResults.filter { $0.status == .confirmed || $0.status == .possible }
         let existingSpecies = Set(store.dex.map(\.speciesName))
@@ -613,17 +631,18 @@ final class AddPhotosViewModel {
             }
         }
 
-        let observations = speciesMap.map { species, info in
-            BirdObservation(
-                id: "obs_\(UUID().uuidString)",
-                outingId: currentOutingId,
-                speciesName: species,
-                count: info.count,
-                certainty: info.status,
-                representativePhotoId: info.photoId,
-                notes: ""
-            )
-        }
+        let observations = preparedObservations ?? speciesMap.map { species, info in
+                BirdObservation(
+                    id: "obs_\(UUID().uuidString)",
+                    outingId: currentOutingId,
+                    speciesName: species,
+                    count: info.count,
+                    certainty: info.status,
+                    representativePhotoId: info.photoId,
+                    notes: ""
+                )
+            }
+        preparedObservations = observations
 
         do {
             if !observations.isEmpty {
@@ -674,6 +693,7 @@ final class AddPhotosViewModel {
 
             // Move to next cluster or finish
             if currentClusterIndex < clusters.count - 1 {
+                preparedObservations = nil
                 currentClusterIndex += 1
                 currentPhotoIndex = 0
                 photoResults = []
@@ -683,13 +703,39 @@ final class AddPhotosViewModel {
                 currentStep = .outingReview
             } else {
                 await store.loadAll()
+                preparedObservations = nil
                 currentStep = .done
             }
         } catch {
-            self.error = error.localizedDescription
-            log.error("Save failed: \(error.localizedDescription)")
+            self.error = AppError.map(error, fallback: "Could not save this outing. Try again.")
+            errorRecovery = .saveCluster
+            log.error("Failed to save the current photo cluster")
         }
         isProcessing = false
+    }
+
+    func retryCurrentError() {
+        let recovery = errorRecovery
+        error = nil
+        errorRecovery = nil
+        switch recovery {
+        case .photoMetadata:
+            Task {
+                do {
+                    try await createPhotoMetadata(outingId: currentOutingId)
+                    await runSpeciesId(photoIndex: currentPhotoIndex)
+                } catch {
+                    self.error = AppError.map(error, fallback: "Could not save photo details. Try again.")
+                    errorRecovery = .photoMetadata
+                }
+            }
+        case .speciesIdentification(let photoIndex, let croppedImageData):
+            Task { await runSpeciesId(photoIndex: photoIndex, croppedImageData: croppedImageData) }
+        case .saveCluster:
+            Task { await saveCurrentCluster() }
+        case nil:
+            break
+        }
     }
 
     // MARK: - Helpers
@@ -749,6 +795,12 @@ final class AddPhotosViewModel {
         let digest = hasher.finalize()
         return digest.map { String(format: "%02x", $0) }.joined()
     }
+}
+
+private enum ErrorRecovery {
+    case photoMetadata
+    case speciesIdentification(photoIndex: Int, croppedImageData: Data?)
+    case saveCluster
 }
 
 // MARK: - Supporting Types

@@ -1,6 +1,5 @@
 import Foundation
 import os
-import Security
 
 private let log = Logger(subsystem: Config.bundleID, category: "DataService")
 
@@ -77,15 +76,15 @@ final class DataService: Sendable {
             URLQueryItem(name: "limit", value: String(limit)),
         ]
         guard let url = components?.url else {
-            throw DataServiceError.networkError("Invalid species search URL")
+            throw DataServiceError.invalidResponse
         }
 
         var request = URLRequest(url: url)
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
         let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data, path: "api/species/search", method: "GET", start: start, byteCount: data.count)
+        try await validate(response, data: data, rejectedToken: token, path: "api/species/search", method: "GET", start: start, byteCount: data.count)
         return try JSONDecoder().decode(SpeciesSearchResponse.self, from: data).results
     }
 
@@ -235,10 +234,11 @@ final class DataService: Sendable {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
+        let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData, path: "api/import/ebird-csv", method: "POST", start: Date(), byteCount: responseData.count)
+        try await validate(response, data: responseData, rejectedToken: token, path: "api/import/ebird-csv", method: "POST", start: start, byteCount: responseData.count)
 
         let preview = try JSONDecoder().decode(ImportPreviewResponse.self, from: responseData)
         return preview.previews
@@ -273,11 +273,11 @@ final class DataService: Sendable {
     private func getRaw(_ path: String) async throws -> Data {
         let url = Config.apiBaseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
         let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data, path: path, method: "GET", start: start, byteCount: data.count)
+        try await validate(response, data: data, rejectedToken: token, path: path, method: "GET", start: start, byteCount: data.count)
         return data
     }
 
@@ -288,11 +288,11 @@ final class DataService: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
         let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData, path: path, method: "POST", start: start, byteCount: responseData.count)
+        try await validate(response, data: responseData, rejectedToken: token, path: path, method: "POST", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -303,11 +303,11 @@ final class DataService: Sendable {
         request.httpMethod = "PATCH"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
         let start = Date()
         let (responseData, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: responseData, path: path, method: "PATCH", start: start, byteCount: responseData.count)
+        try await validate(response, data: responseData, rejectedToken: token, path: path, method: "PATCH", start: start, byteCount: responseData.count)
         return responseData
     }
 
@@ -316,74 +316,74 @@ final class DataService: Sendable {
         let url = Config.apiBaseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        try await attachAuth(&request)
+        let token = try await attachAuth(&request)
 
         let start = Date()
         let (data, response) = try await Self.bearerSession.data(for: request)
-        try await validate(response, data: data, path: path, method: "DELETE", start: start, byteCount: data.count)
+        try await validate(response, data: data, rejectedToken: token, path: path, method: "DELETE", start: start, byteCount: data.count)
         return data
     }
 
-    private func attachAuth(_ request: inout URLRequest) async throws {
+    private func attachAuth(_ request: inout URLRequest) async throws -> String {
         let token = try await auth.validToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
-        request.setValue(Self.generateTraceparent(), forHTTPHeaderField: "traceparent")
+        AuthenticatedRequest.instrument(&request)
         let method = request.httpMethod ?? "?"
         let path = request.url?.path ?? "?"
         log.debug("Request: \(method) \(path)")
+        return token
     }
 
-    /// Generate a W3C traceparent header value for distributed tracing.
-    private static func generateTraceparent() -> String {
-        var bytes = [UInt8](repeating: 0, count: 24)
-        let status = bytes.withUnsafeMutableBufferPointer { buffer in
-            SecRandomCopyBytes(kSecRandomDefault, buffer.count, buffer.baseAddress!)
-        }
-        if status != errSecSuccess {
-            // Fallback: derive bytes from two UUIDs (32 bytes > 24 needed)
-            let fallback = (UUID().uuidString + UUID().uuidString)
-                .replacingOccurrences(of: "-", with: "")
-            let fallbackHex = String(fallback.prefix(48))
-            let traceId = String(fallbackHex.prefix(32))
-            let spanId = String(fallbackHex.dropFirst(32).prefix(16))
-            return "00-\(traceId.lowercased())-\(spanId.lowercased())-01"
-        }
-        let hex = bytes.map { String(format: "%02x", $0) }.joined()
-        let traceId = String(hex.prefix(32))
-        let spanId = String(hex.dropFirst(32).prefix(16))
-        return "00-\(traceId)-\(spanId)-01"
-    }
-
-    private func validate(_ response: URLResponse, data: Data, path: String = "?", method: String = "?", start: Date? = nil, byteCount: Int? = nil) async throws {
+    private func validate(_ response: URLResponse, data: Data, rejectedToken: String, path: String = "?", method: String = "?", start: Date? = nil, byteCount: Int? = nil) async throws {
         guard let http = response as? HTTPURLResponse else {
-            throw DataServiceError.networkError("Invalid response")
+            throw DataServiceError.invalidResponse
         }
         let durationMs = start.map { Int(Date().timeIntervalSince($0) * 1000) }
         let durationFragment = durationMs.map { " \($0)ms" } ?? ""
         let bytesFragment = byteCount.map { " \($0)B" } ?? ""
         guard (200...299).contains(http.statusCode) else {
-            let body = String(data: data.prefix(1024), encoding: .utf8) ?? ""
-            log.error("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment): \(body, privacy: .private)")
+            let status = http.statusCode
+            if (400...499).contains(status) {
+                log.warning("\(method) \(path) -> HTTP \(status)\(durationFragment)\(bytesFragment)")
+            } else {
+                log.error("\(method) \(path) -> HTTP \(status)\(durationFragment)\(bytesFragment)")
+            }
             // Server rejected the session - clear stale local auth state
             // so the UI shows the sign-in screen instead of a broken homepage.
-            if http.statusCode == 401 {
-                await auth.signOut()
+            if status == 401 {
+                await auth.invalidateSession(rejectedToken: rejectedToken)
             }
-            throw DataServiceError.httpError(http.statusCode)
+            throw DataServiceError.http(
+                status: status,
+                message: Self.safePublicMessage(status: status, data: data),
+                retryAfter: http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+            )
         }
         log.debug("\(method) \(path) -> HTTP \(http.statusCode)\(durationFragment)\(bytesFragment)")
+    }
+
+    private static func safePublicMessage(status: Int, data: Data) -> String? {
+        guard [400, 409, 422].contains(status), data.count <= 512,
+              let message = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !message.isEmpty,
+              !message.contains("<")
+        else { return nil }
+        return message
     }
 }
 
 enum DataServiceError: LocalizedError {
-    case networkError(String)
-    case httpError(Int)
+    case network(URLError)
+    case invalidResponse
+    case http(status: Int, message: String?, retryAfter: TimeInterval?)
 
     var errorDescription: String? {
         switch self {
-        case .networkError(let msg): msg
-        case .httpError(let code): "HTTP \(code)"
+        case .network(let error): error.localizedDescription
+        case .invalidResponse: "Invalid response"
+        case .http(let status, let message, _): message ?? "HTTP \(status)"
         }
     }
 }

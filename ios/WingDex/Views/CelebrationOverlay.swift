@@ -77,7 +77,9 @@ private struct CelebrationModifier: ViewModifier {
                     confettiRunID = newValue.id
                     Task {
                         try? await Task.sleep(for: .milliseconds(1400))
-                        confettiRunID = nil
+                        if confettiRunID == newValue.id {
+                            confettiRunID = nil
+                        }
                     }
                 }
 

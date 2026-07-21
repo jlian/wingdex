@@ -40,6 +40,12 @@ struct HomeView: View {
                 .refreshable {
                     await store.loadAll()
                 }
+                .alert("Could Not Refresh", isPresented: cachedLoadErrorBinding) {
+                    Button("Retry") { Task { await store.loadAll() } }
+                    Button("OK", role: .cancel) { store.error = nil }
+                } message: {
+                    Text(store.error?.message ?? "Something went wrong. Try again.")
+                }
                 .navigationDestination(for: DexEntry.self) { entry in
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }
@@ -55,11 +61,27 @@ struct HomeView: View {
         }
     }
 
+    private var cachedLoadErrorBinding: Binding<Bool> {
+        Binding(
+            get: { store.error != nil && !store.dex.isEmpty },
+            set: { if !$0 { store.error = nil } }
+        )
+    }
+
     @ViewBuilder
     private var rootContent: some View {
         if store.isLoading && store.dex.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.error, store.dex.isEmpty {
+            ContentUnavailableView {
+                Label("Could Not Load WingDex", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(error.message)
+            } actions: {
+                Button("Retry") { Task { await store.loadAll() } }
+                    .buttonStyle(.borderedProminent)
+            }
         } else if store.dex.isEmpty {
             emptyState
         } else {
@@ -275,4 +297,5 @@ struct HomeView: View {
         .environment(AuthService())
         .environment(previewStore(empty: true))
 }
+
 #endif

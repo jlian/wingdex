@@ -1,5 +1,6 @@
 import Foundation
 import os
+import Security
 
 private let log = Logger(subsystem: Config.bundleID, category: "API")
 
@@ -15,6 +16,33 @@ private let log = Logger(subsystem: Config.bundleID, category: "API")
 ///
 /// This helper encapsulates both patterns so callers don't need to know which to use.
 enum AuthenticatedRequest {
+
+    static func instrument(_ request: inout URLRequest) {
+        if request.value(forHTTPHeaderField: "Origin") == nil {
+            request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        }
+        request.setValue(generateTraceparent(), forHTTPHeaderField: "traceparent")
+    }
+
+    static func data(
+        for request: URLRequest,
+        session: URLSession = .shared,
+        context: String,
+        logger: Logger = log
+    ) async throws -> (Data, URLResponse) {
+        let start = Date()
+        do {
+            let (data, response) = try await session.data(for: request)
+            let durationMs = Int(Date().timeIntervalSince(start) * 1000)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            logger.debug("\(context): HTTP \(status) \(durationMs)ms \(data.count)B")
+            return (data, response)
+        } catch {
+            let durationMs = Int(Date().timeIntervalSince(start) * 1000)
+            logger.error("\(context): transport failure after \(durationMs)ms")
+            throw error
+        }
+    }
 
     /// Build a request with Bearer token auth (for middleware-protected routes).
     static func withBearer(
@@ -32,6 +60,7 @@ enum AuthenticatedRequest {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
         request.httpBody = body
+        instrument(&request)
         return request
     }
 
@@ -64,6 +93,7 @@ enum AuthenticatedRequest {
             cookieParts.append(extra)
         }
         request.setValue(cookieParts.joined(separator: "; "), forHTTPHeaderField: "Cookie")
+        instrument(&request)
 
         return request
     }
@@ -79,12 +109,7 @@ enum AuthenticatedRequest {
         return result
     }
 
-    /// Validate an HTTP response, logging failures with private body redaction.
-    ///
-    /// Returns the HTTPURLResponse on success. Throws `PasskeyError.serverError`
-    /// with a user-friendly message (status code only) on failure. The raw response
-    /// body is logged at error level with `.private` privacy so it is redacted in
-    /// logs unless private data is explicitly enabled.
+    /// Validate an HTTP response without logging response bodies.
     @discardableResult
     static func validateHTTP(
         _ response: URLResponse,
@@ -96,10 +121,28 @@ enum AuthenticatedRequest {
               (200...299).contains(http.statusCode)
         else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: data.prefix(512), encoding: .utf8) ?? ""
-            logger.error("\(context): HTTP \(status), body: \(body, privacy: .private)")
+            if (400...499).contains(status) {
+                logger.warning("\(context): HTTP \(status)")
+            } else {
+                logger.error("\(context): HTTP \(status)")
+            }
             throw PasskeyError.serverError("\(context) (HTTP \(status))")
         }
         return http
+    }
+
+    private static func generateTraceparent() -> String {
+        var bytes = [UInt8](repeating: 0, count: 24)
+        let status = bytes.withUnsafeMutableBufferPointer { buffer in
+            SecRandomCopyBytes(kSecRandomDefault, buffer.count, buffer.baseAddress!)
+        }
+        if status != errSecSuccess {
+            let fallback = (UUID().uuidString + UUID().uuidString)
+                .replacingOccurrences(of: "-", with: "")
+                .lowercased()
+            return "00-\(fallback.prefix(32))-\(fallback.dropFirst(32).prefix(16))-01"
+        }
+        let hex = bytes.map { String(format: "%02x", $0) }.joined()
+        return "00-\(hex.prefix(32))-\(hex.dropFirst(32).prefix(16))-01"
     }
 }

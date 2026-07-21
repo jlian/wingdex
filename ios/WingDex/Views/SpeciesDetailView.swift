@@ -194,7 +194,7 @@ struct SpeciesDetailView: View {
                 if entry?.wikiTitle != nil {
                     Text("Source: \(Text("Wikipedia").foregroundStyle(Color.accentColor)). Text and images available under \(Text("CC BY-SA 4.0").foregroundStyle(Color.accentColor)).")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.mutedText.opacity(0.6))
+                        .foregroundStyle(Color.mutedText)
                 }
             }
         }
@@ -250,21 +250,23 @@ struct SpeciesDetailView: View {
 }
 
 #if DEBUG
-#Preview("Species Detail - Cardinal") {
+#Preview("Species Detail - Light") {
     PreviewTabs(.wingdex) {
         NavigationStack {
             SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
                 .environment(previewStore())
         }
     }
+    .preferredColorScheme(.light)
 }
 
-#Preview("Species Detail - Bald Eagle") {
+#Preview("Species Detail - Dark") {
     PreviewTabs(.wingdex) {
         NavigationStack {
-            SpeciesDetailView(speciesName: "Bald Eagle (Haliaeetus leucocephalus)")
+            SpeciesDetailView(speciesName: PreviewData.sampleSpecies)
                 .environment(previewStore())
         }
     }
+    .preferredColorScheme(.dark)
 }
 #endif

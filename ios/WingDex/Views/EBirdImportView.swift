@@ -55,7 +55,7 @@ struct EBirdImportView: View {
     @State private var showFilePicker = false
     @State private var showHelp = false
     @State private var isImporting = false
-    @State private var importError: String?
+    @State private var importError: AppError?
 
     // Preview state
     @State private var previews: [DataService.ImportPreview] = []
@@ -132,7 +132,7 @@ struct EBirdImportView: View {
 
                 if let importError {
                     Section {
-                        Text(importError)
+                        Text(importError.message)
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
@@ -206,13 +206,13 @@ struct EBirdImportView: View {
 
         switch result {
         case .failure(let error):
-            importError = error.localizedDescription
+            importError = AppError.map(error, fallback: "Could not open the selected file.")
             return
         case .success(let urls):
             guard let fileURL = urls.first else { return }
 
             guard fileURL.startAccessingSecurityScopedResource() else {
-                importError = "Cannot access the selected file"
+                importError = .message("Cannot access the selected file.")
                 return
             }
             defer { fileURL.stopAccessingSecurityScopedResource() }
@@ -234,7 +234,7 @@ struct EBirdImportView: View {
                 showPreview = true
                 isImporting = false
             } catch {
-                importError = "Failed to preview CSV: \(error.localizedDescription)"
+                importError = AppError.map(error, fallback: "Could not preview this CSV. Check the file and try again.")
                 isImporting = false
             }
         }
@@ -264,7 +264,7 @@ struct EBirdImportView: View {
             onImported?(result.imported.newSpecies, newSpeciesNames)
             dismiss()
         } catch {
-            importError = "Import failed: \(error.localizedDescription)"
+            importError = AppError.map(error, fallback: "Could not import this CSV. Try again.")
             isImporting = false
         }
     }

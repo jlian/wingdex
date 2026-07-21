@@ -44,8 +44,12 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let optionsURL = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/generate-authenticate-options")
         var optionsRequest = URLRequest(url: optionsURL)
         optionsRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
+        AuthenticatedRequest.instrument(&optionsRequest)
 
-        let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
+        let (optionsData, optionsResponse) = try await AuthenticatedRequest.data(
+            for: optionsRequest,
+            context: "Passkey authentication options", logger: log
+        )
 
         let httpResponse = try AuthenticatedRequest.validateHTTP(
             optionsResponse, data: optionsData,
@@ -92,8 +96,12 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             verifyRequest.setValue(cookies, forHTTPHeaderField: "Cookie")
         }
         verifyRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+        AuthenticatedRequest.instrument(&verifyRequest)
 
-        let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
+        let (verifyData, verifyResponse) = try await AuthenticatedRequest.data(
+            for: verifyRequest,
+            context: "Passkey authentication verify", logger: log
+        )
 
         let verifyHttp = try AuthenticatedRequest.validateHTTP(
             verifyResponse, data: verifyData,
@@ -146,7 +154,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let optionsURL = components.url!
         let optionsRequest = AuthenticatedRequest.withCookieOnly(url: optionsURL, signedToken: signed)
 
-        let (optionsData, optionsResponse) = try await URLSession.shared.data(for: optionsRequest)
+        let (optionsData, optionsResponse) = try await AuthenticatedRequest.data(
+            for: optionsRequest,
+            context: "Passkey registration options", logger: log
+        )
 
         let httpResponse = try AuthenticatedRequest.validateHTTP(
             optionsResponse, data: optionsData,
@@ -200,7 +211,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         )
         log.debug("Verify request: challenge=\(challengeCookies != nil)")
 
-        let (verifyData, verifyResponse) = try await URLSession.shared.data(for: verifyRequest)
+        let (verifyData, verifyResponse) = try await AuthenticatedRequest.data(
+            for: verifyRequest,
+            context: "Passkey registration verify", logger: log
+        )
 
         try AuthenticatedRequest.validateHTTP(
             verifyResponse, data: verifyData,
@@ -215,7 +229,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/passkey/list-user-passkeys")
         let request = AuthenticatedRequest.withCookieOnly(url: url, signedToken: signedToken)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedRequest.data(
+            for: request,
+            context: "List passkeys", logger: log
+        )
 
         try AuthenticatedRequest.validateHTTP(
             response, data: data,
@@ -237,7 +254,10 @@ final class PasskeyService: NSObject, @unchecked Sendable {
             contentType: "application/json"
         )
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedRequest.data(
+            for: request,
+            context: "Delete passkey", logger: log
+        )
 
         try AuthenticatedRequest.validateHTTP(
             response, data: data,

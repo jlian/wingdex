@@ -8,6 +8,7 @@ final class ProfileEditor {
     var name: String
     var image: String
     private let auth: AuthService
+    private let userId: String?
     private var pendingTask: Task<Void, Never>?
 
     /// Original social provider avatar, captured once for restore-on-deselect.
@@ -15,6 +16,7 @@ final class ProfileEditor {
 
     init(auth: AuthService) {
         self.auth = auth
+        self.userId = auth.userId
         self.name = auth.userName ?? ""
         self.image = auth.userImage ?? ""
         self.originalSocialImage = {
@@ -23,7 +25,7 @@ final class ProfileEditor {
         }()
     }
 
-    var saveError: String?
+    var saveError: AppError?
 
     func save(name: String, image: String) {
         pendingTask?.cancel()
@@ -34,13 +36,14 @@ final class ProfileEditor {
             do {
                 try await auth.updateProfile(name: name, image: image)
             } catch {
-                saveError = error.localizedDescription
+                saveError = AppError.map(error, fallback: "Could not save your profile. Try again.")
             }
         }
     }
 
     /// Push final state back to auth so the rest of the app sees it.
     func syncToAuth() {
+        guard auth.userId == userId else { return }
         auth.userName = name
         auth.userImage = image
     }
@@ -60,11 +63,11 @@ struct SettingsView: View {
 
     // Other state
     @State private var isLoadingDemo = false
-    @State private var demoError: String?
+    @State private var demoError: AppError?
     @State private var showingDemoConfirmation = false
     @State private var showingEBirdImport = false
     @State private var isExporting = false
-    @State private var exportError: String?
+    @State private var exportError: AppError?
     @State private var exportItem: ExportFileItem?
     @State private var isEditingName = false
     @State private var editedName = ""
@@ -96,7 +99,7 @@ struct SettingsView: View {
 
             if let saveError = profile.saveError {
                 Section {
-                    Text(saveError)
+                    Text(saveError.message)
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
@@ -273,7 +276,7 @@ struct SettingsView: View {
             .disabled(store.dex.isEmpty || isExporting)
 
             if let exportError {
-                Text(exportError)
+                Text(exportError.message)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
@@ -355,7 +358,7 @@ struct SettingsView: View {
             .disabled(isLoadingDemo)
 
             if let demoError {
-                Text(demoError)
+                Text(demoError.message)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
@@ -372,7 +375,7 @@ struct SettingsView: View {
                     do {
                         try await store.loadDemoData()
                     } catch {
-                        demoError = error.localizedDescription
+                        demoError = AppError.map(error, fallback: "Could not load demo data. Try again.")
                     }
                     isLoadingDemo = false
                 }
@@ -408,7 +411,7 @@ struct SettingsView: View {
             try csvData.write(to: tempURL)
             exportItem = ExportFileItem(url: tempURL)
         } catch {
-            exportError = error.localizedDescription
+            exportError = AppError.map(error, fallback: "Could not export sightings. Try again.")
         }
         isExporting = false
     }

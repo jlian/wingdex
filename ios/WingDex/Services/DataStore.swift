@@ -30,11 +30,12 @@ final class DataStore {
     // MARK: - State
 
     var isLoading = false
-    var error: String?
+    var error: AppError?
 
     // MARK: - Dependencies
 
     private let service: DataService
+    private var generation = 0
 
     init(service: DataService) {
         self.service = service
@@ -44,21 +45,37 @@ final class DataStore {
 
     /// Load all user data from the API. Called on app launch and pull-to-refresh.
     func loadAll() async {
+        let loadGeneration = generation
         log.info("Loading all data...")
         isLoading = true
         error = nil
         do {
             let response = try await service.fetchAllData()
+            guard generation == loadGeneration else { return }
             outings = response.outings
             photos = response.photos
             observations = response.observations
             dex = response.dex
             log.info("Loaded \(self.outings.count) outings, \(self.observations.count) observations, \(self.dex.count) dex entries")
         } catch {
-            self.error = error.localizedDescription
-            log.error("Failed to load data: \(error.localizedDescription)")
+            guard generation == loadGeneration else { return }
+            self.error = AppError.map(error)
+            log.error("Failed to load account data")
         }
+        if generation == loadGeneration {
+            isLoading = false
+        }
+    }
+
+    /// Clear all account-owned state and invalidate in-flight bulk loads.
+    func reset() {
+        generation += 1
+        outings = []
+        photos = []
+        observations = []
+        dex = []
         isLoading = false
+        error = nil
     }
 
     // MARK: - Derived Data
@@ -134,25 +151,38 @@ final class DataStore {
     // MARK: - Mutations
 
     /// Delete an outing and remove its observations locally, then sync with server.
-    func deleteOuting(id: String) async {
+    func deleteOuting(id: String) async throws {
+        let mutationGeneration = generation
+        let previousOutings = outings
+        let previousObservations = observations
+        let previousPhotos = photos
         outings.removeAll { $0.id == id }
         observations.removeAll { $0.outingId == id }
         photos.removeAll { $0.outingId == id }
         do {
             try await service.deleteOuting(id: id)
         } catch {
-            log.warning("deleteOuting failed, reconciling: \(error.localizedDescription)")
+            guard generation == mutationGeneration else { return }
+            outings = previousOutings
+            observations = previousObservations
+            photos = previousPhotos
+            log.warning("Outing deletion failed; reconciling account data")
             await loadAll()
+            throw error
         }
     }
 
     /// Mark observations as rejected (soft delete).
     func rejectObservations(ids: [String]) async throws {
+        let mutationGeneration = generation
+        let previousObservations = observations
+        let previousDex = dex
         for i in observations.indices where ids.contains(observations[i].id) {
             observations[i].certainty = .rejected
         }
         do {
             let response = try await service.rejectObservations(ids: ids)
+            guard generation == mutationGeneration else { return }
             if let updated = response.observations {
                 let updatedById = Dictionary(uniqueKeysWithValues: updated.map { ($0.id, $0) })
                 observations = observations.map { updatedById[$0.id] ?? $0 }
@@ -161,7 +191,10 @@ final class DataStore {
                 dex = dexUpdates
             }
         } catch {
-            log.warning("rejectObservations failed, reconciling: \(error.localizedDescription)")
+            guard generation == mutationGeneration else { return }
+            observations = previousObservations
+            dex = previousDex
+            log.warning("Observation rejection failed; reconciling account data")
             await loadAll()
             throw error
         }
@@ -169,9 +202,13 @@ final class DataStore {
 
     /// Add one observation and install the server's recomputed dex.
     func addObservation(_ observation: BirdObservation) async throws {
+        let mutationGeneration = generation
+        let previousObservations = observations
+        let previousDex = dex
         observations.append(observation)
         do {
             let response = try await service.createObservations([observation])
+            guard generation == mutationGeneration else { return }
             if let created = response.observations {
                 let createdById = Dictionary(uniqueKeysWithValues: created.map { ($0.id, $0) })
                 observations = observations.map { createdById[$0.id] ?? $0 }
@@ -180,7 +217,10 @@ final class DataStore {
                 dex = dexUpdates
             }
         } catch {
-            log.warning("addObservation failed, reconciling: \(error.localizedDescription)")
+            guard generation == mutationGeneration else { return }
+            observations = previousObservations
+            dex = previousDex
+            log.warning("Observation creation failed; reconciling account data")
             await loadAll()
             throw error
         }
@@ -188,6 +228,8 @@ final class DataStore {
 
     /// Update outing fields locally and on the server.
     func updateOuting(id: String, fields: OutingUpdate) async throws {
+        let mutationGeneration = generation
+        let previousOutings = outings
         if let idx = outings.firstIndex(where: { $0.id == id }) {
             let old = outings[idx]
             outings[idx] = Outing(
@@ -212,11 +254,14 @@ final class DataStore {
         }
         do {
             let updated = try await service.updateOuting(id: id, fields: fields)
+            guard generation == mutationGeneration else { return }
             if let idx = outings.firstIndex(where: { $0.id == id }) {
                 outings[idx] = updated
             }
         } catch {
-            log.warning("updateOuting failed, reconciling: \(error.localizedDescription)")
+            guard generation == mutationGeneration else { return }
+            outings = previousOutings
+            log.warning("Outing update failed; reconciling account data")
             await loadAll()
             throw error
         }
@@ -224,7 +269,9 @@ final class DataStore {
 
     /// Clear all user data.
     func clearAll() async throws {
+        let mutationGeneration = generation
         try await service.clearAllData()
+        guard generation == mutationGeneration else { return }
         outings = []
         photos = []
         observations = []
@@ -233,20 +280,24 @@ final class DataStore {
 
     /// Load demo data by importing the bundled eBird CSV.
     func loadDemoData() async throws {
+        let mutationGeneration = generation
         guard let csvURL = Bundle.main.url(forResource: "demo-ebird-import", withExtension: "csv"),
               let csvData = try? Data(contentsOf: csvURL)
         else {
-            throw DataServiceError.networkError("Demo CSV not found in bundle")
+            throw AppError.message("Demo data isn't available in this build.")
         }
 
         // Clear existing data first
         try await clearAll()
+        guard generation == mutationGeneration else { return }
 
         // Upload CSV for preview
         let previewIds = try await service.importEBirdCSV(csvData)
+        guard generation == mutationGeneration else { return }
 
         // Confirm all previews
         _ = try await service.confirmImport(previewIds: previewIds)
+        guard generation == mutationGeneration else { return }
 
         // Reload all data
         await loadAll()

@@ -75,6 +75,12 @@ struct WingDexView: View {
                 .refreshable {
                     await store.loadAll()
                 }
+                .alert("Could Not Refresh", isPresented: cachedLoadErrorBinding) {
+                    Button("Retry") { Task { await store.loadAll() } }
+                    Button("OK", role: .cancel) { store.error = nil }
+                } message: {
+                    Text(store.error?.message ?? "Something went wrong. Try again.")
+                }
                 .searchable(
                     text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .automatic),
@@ -89,6 +95,13 @@ struct WingDexView: View {
                 .sensoryFeedback(.selection, trigger: sortField)
                 .sensoryFeedback(.selection, trigger: sortAscending)
         }
+    }
+
+    private var cachedLoadErrorBinding: Binding<Bool> {
+        Binding(
+            get: { store.error != nil && !store.dex.isEmpty },
+            set: { if !$0 { store.error = nil } }
+        )
     }
 
     @ToolbarContentBuilder
@@ -141,7 +154,16 @@ struct WingDexView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        if store.dex.isEmpty {
+        if let error = store.error, store.dex.isEmpty {
+            ContentUnavailableView {
+                Label("Could Not Load WingDex", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(error.message)
+            } actions: {
+                Button("Retry") { Task { await store.loadAll() } }
+                    .buttonStyle(.borderedProminent)
+            }
+        } else if store.dex.isEmpty {
             VStack(spacing: 24) {
                 Spacer()
                 ZStack {

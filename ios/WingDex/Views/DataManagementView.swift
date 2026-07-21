@@ -11,7 +11,7 @@ struct DataManagementView: View {
     @State private var showingDeleteAccountStep1 = false
     @State private var showingDeleteAccountStep2 = false
     @State private var isDeleting = false
-    @State private var deleteError: String?
+    @State private var deleteError: AppError?
 
     var body: some View {
         Form {
@@ -63,7 +63,7 @@ struct DataManagementView: View {
                     }
 
                     if let deleteError {
-                        Text(deleteError)
+                        Text(deleteError.message)
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
@@ -86,7 +86,7 @@ struct DataManagementView: View {
                     do {
                         try await store.clearAll()
                     } catch {
-                        deleteError = error.localizedDescription
+                        deleteError = AppError.map(error, fallback: "Could not delete your data. Try again.")
                     }
                 }
             }
@@ -102,7 +102,7 @@ struct DataManagementView: View {
             try await store.clearAll()
             try await auth.deleteAccount()
         } catch {
-            deleteError = "Failed to delete account: \(error.localizedDescription)"
+            deleteError = AppError.map(error, fallback: "Could not delete your account. Try again.")
             isDeleting = false
         }
     }

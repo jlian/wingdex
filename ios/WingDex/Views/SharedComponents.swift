@@ -416,6 +416,7 @@ private struct MiniMapSnapshot: View {
     let latitude: Double
     let longitude: Double
     let size: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
     @State private var image: UIImage?
 
     var body: some View {
@@ -430,7 +431,7 @@ private struct MiniMapSnapshot: View {
             }
         }
         .frame(width: size, height: size)
-        .task { await snapshot() }
+        .task(id: colorScheme) { await snapshot() }
     }
 
     private func snapshot() async {
@@ -442,6 +443,9 @@ private struct MiniMapSnapshot: View {
         )
         // Use 2x for snapshot; actual screen scale not needed for thumbnails
         options.size = CGSize(width: size * 2, height: size * 2)
+        options.traitCollection = UITraitCollection(
+            userInterfaceStyle: colorScheme == .dark ? .dark : .light
+        )
         options.pointOfInterestFilter = .excludingAll
         options.showsBuildings = false
 
@@ -495,7 +499,7 @@ private struct MiniMapSnapshot: View {
     .background(Color.pageBg)
 }
 
-#Preview("OutingRow") {
+#Preview("OutingRow - Light") {
     let store = previewStore()
     List(PreviewData.outings.prefix(5)) { outing in
         OutingRow(outing: outing, store: store)
@@ -503,5 +507,17 @@ private struct MiniMapSnapshot: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .background(Color.pageBg)
+    .preferredColorScheme(.light)
+}
+
+#Preview("OutingRow - Dark") {
+    let store = previewStore()
+    List(PreviewData.outings.prefix(5)) { outing in
+        OutingRow(outing: outing, store: store)
+    }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
+    .background(Color.pageBg)
+    .preferredColorScheme(.dark)
 }
 #endif

@@ -85,6 +85,16 @@ struct AddPhotosFlow: View {
             }
         }
         .celebration($celebration)
+        .alert("Could Not Continue", isPresented: addPhotosErrorBinding) {
+            if viewModel.canRetryError {
+                Button("Retry") { viewModel.retryCurrentError() }
+                Button("Close Upload", role: .destructive) { dismissWizard() }
+            } else {
+                Button("OK", role: .cancel) { viewModel.error = nil }
+            }
+        } message: {
+            Text(viewModel.error?.message ?? "Something went wrong. Try again.")
+        }
         .onChange(of: viewModel.currentStep) { _, step in
             if step == .done, !viewModel.newSpeciesNames.isEmpty {
                 celebration = LiferCelebration(
@@ -93,6 +103,13 @@ struct AddPhotosFlow: View {
                 )
             }
         }
+    }
+
+    private var addPhotosErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )
     }
 
     /// Dismiss the wizard full-screen cover. The onDismiss handler in
