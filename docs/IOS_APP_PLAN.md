@@ -735,8 +735,8 @@ Five gaps between the iOS and web species/WingDex views.
 
 iOS shows sightings without any certainty indicator. The web shows "confirmed" or "possible" badges.
 
-- [ ] **Badge**: Show a subtle text badge ("confirmed" or "possible") next to each sighting in the sightings list
-- [ ] **Styling**: "Possible" badge uses a muted/warning color to distinguish from confirmed sightings
+- [x] **Certainty metadata**: Show "Confirmed" or "Possible" in each sighting row
+- [x] **Styling**: "Possible" uses the system warning color; confirmed uses existing muted metadata styling
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -744,7 +744,7 @@ iOS shows sightings without any certainty indicator. The web shows "confirmed" o
 
 iOS doesn't show the count per sighting. The web shows `xN` when count > 1.
 
-- [x] **Count display**: Show `x{count}` next to the species name in each sighting row when the observation count is greater than 1
+- [x] **Count display**: Show `x{count}` in each sighting row when the observation count is greater than 1
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -752,8 +752,8 @@ iOS doesn't show the count per sighting. The web shows `xN` when count > 1.
 
 iOS doesn't display notes for species. The web shows a "Notes" section at the bottom of the species detail view.
 
-- [ ] **Notes section**: If `dexEntry.notes` is non-empty, show a "Notes" section heading with the notes text below in italic
-- [ ] **Read-only**: Notes are displayed but not editable from the species detail view (they can be edited on the web)
+- [x] **Notes section**: If `dexEntry.notes` is non-empty, show a "Notes" section heading with the notes text below in italic
+- [x] **Read-only**: Notes are displayed but not editable from the species detail view (they can be edited on the web)
 
 **Files**: `SpeciesDetailView.swift`
 
@@ -761,9 +761,9 @@ iOS doesn't display notes for species. The web shows a "Notes" section at the bo
 
 iOS has 3 sort options (date, count, name). The web has a 4th: Family (taxonomic).
 
-- [ ] **New sort option**: Add "Family" sort (leaf icon, SF Symbol `leaf`) to the sort menu in `WingDexView`
-- [ ] **Taxonomy order data**: Lazy-load taxonomy order data (taxonomic sort order from the bundled `taxonomy.json` or a derived lookup table). Port logic from `src/lib/taxonomy-order.ts`
-- [ ] **Sort behavior**: Group and sort species by their taxonomic family. Default direction: ascending (A-Z by family then by taxonomic order within family)
+- [x] **New sort option**: Add "Family" sort (leaf icon, SF Symbol `leaf`) to the sort menu in `WingDexView`
+- [x] **Taxonomy order data**: Reuse the bundled `taxonomy.json` array index as taxonomic sequence, matching `src/lib/taxonomy-order.ts`
+- [x] **Sort behavior**: Sort species by taxonomic sequence. Default direction: ascending; unknown species sort by name at the end
 
 **Files**: `WingDexView.swift`
 **Reference**: `WingDexPage.tsx` (family sort), `src/lib/taxonomy-order.ts`

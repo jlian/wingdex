@@ -12,12 +12,13 @@ struct WingDexView: View {
     // MARK: - Sort Options
 
     enum DexSortField: String, CaseIterable {
-        case date, count, name
+        case date, count, name, family
         var label: String {
             switch self {
             case .date: "Date"
             case .count: "Count"
             case .name: "Name"
+            case .family: "Family"
             }
         }
         var icon: String {
@@ -25,6 +26,7 @@ struct WingDexView: View {
             case .date: "calendar"
             case .count: "number"
             case .name: "textformat.abc"
+            case .family: "leaf"
             }
         }
     }
@@ -49,6 +51,10 @@ struct WingDexView: View {
                     .localizedCaseInsensitiveCompare(getDisplayName($1.speciesName))
                 return sortAscending ? cmp == .orderedAscending : cmp == .orderedDescending
             }
+        case .family:
+            sorted = store.dex.sorted {
+                taxonomicSpeciesPrecedes($0.speciesName, $1.speciesName, ascending: sortAscending)
+            }
         }
 
         if searchText.isEmpty { return sorted }
@@ -65,52 +71,7 @@ struct WingDexView: View {
                 .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("WingDex")
                 .toolbarTitleDisplayMode(.inlineLarge)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        // WHY HStack inside a single ToolbarItem instead of separate ToolbarItems:
-                        // Multiple .topBarTrailing ToolbarItems have excessive system spacing
-                        // between them (~16pt). An HStack lets us control the gap (5pt) to keep
-                        // the sort button and avatar visually grouped like Apple Music.
-                        HStack(spacing: 5) {
-                            Menu {
-                                Picker("Sort by", selection: $sortField) {
-                                    ForEach(DexSortField.allCases, id: \.self) { field in
-                                        Label(field.label, systemImage: field.icon)
-                                            .tag(field)
-                                    }
-                                }
-
-                                Divider()
-
-                                Button {
-                                    sortAscending.toggle()
-                                } label: {
-                                    Label(
-                                        sortAscending ? "Ascending" : "Descending",
-                                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                                    )
-                                }
-                            } label: {
-                                Label("Sort", systemImage: "arrow.up.arrow.down")
-                            }
-                            // WHY explicit .glassEffect on sort: .sharedBackgroundVisibility(.hidden)
-                            // below removes the default glass from ALL items in the ToolbarItem.
-                            // We add it back on the sort button only so it gets the liquid glass
-                            // pill while the avatar stays flat.
-                            .glassEffect(.regular.interactive())
-
-                            Button { showSettings() } label: {
-                                AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
-                            }
-                        }
-                        .padding(.trailing, -12)
-                    }
-                    // WHY .sharedBackgroundVisibility(.hidden): the default behavior gives both
-                    // the sort button and avatar a SHARED glass pill background. We want them
-                    // independent - sort gets its own pill, avatar is flat - so we disable the
-                    // shared background and add individual .glassEffect modifiers above.
-                    .sharedBackgroundVisibility(.hidden)
-                }
+                .toolbar { toolbarContent }
                 .refreshable {
                     await store.loadAll()
                 }
@@ -126,6 +87,52 @@ struct WingDexView: View {
                     SpeciesDetailView(speciesName: entry.speciesName)
                 }
         }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 5) {
+                Menu {
+                    ForEach(DexSortField.allCases, id: \.self) { field in
+                        Button {
+                            selectSortField(field)
+                        } label: {
+                            Label(field.label, systemImage: field.icon)
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        sortAscending.toggle()
+                    } label: {
+                        Label(
+                            sortAscending ? "Ascending" : "Descending",
+                            systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                        )
+                    }
+                } label: {
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                }
+                .glassEffect(.regular.interactive())
+
+                Button { showSettings() } label: {
+                    AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                }
+            }
+            .padding(.trailing, -12)
+        }
+        .sharedBackgroundVisibility(.hidden)
+    }
+
+    private func selectSortField(_ field: DexSortField) {
+        if sortField == field {
+            sortAscending.toggle()
+            return
+        }
+        sortField = field
+        sortAscending = field == .name || field == .family
     }
 
     // MARK: - Empty State

@@ -172,23 +172,26 @@ func getScientificName(_ speciesName: String) -> String? {
 }
 
 /// Lowercased common name lookups built from the bundled taxonomy.json in a single pass.
-/// Slot [2] -> eBird species code. Slot [5] -> BirdLife DataZone species ID.
-private let taxonomyLookups: (ebird: [String: String], birdlife: [String: String]) = {
+/// Array index -> taxonomic order. Slot [2] -> eBird code. Slot [5] -> BirdLife ID.
+private let taxonomyLookups: (ebird: [String: String], birdlife: [String: String], order: [String: Int]) = {
     guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
           let data = try? Data(contentsOf: url),
           let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
     else {
-        return ([:], [:])
+        return ([:], [:], [:])
     }
 
     var ebird: [String: String] = [:]
     var birdlife: [String: String] = [:]
+    var order: [String: Int] = [:]
     ebird.reserveCapacity(rawEntries.count)
     birdlife.reserveCapacity(rawEntries.count)
+    order.reserveCapacity(rawEntries.count)
 
-    for entry in rawEntries {
+    for (index, entry) in rawEntries.enumerated() {
         guard let commonName = entry.first as? String else { continue }
         let key = commonName.lowercased()
+        order[key] = index
 
         if entry.count > 2, let code = entry[2] as? String, !code.isEmpty {
             ebird[key] = code
@@ -198,11 +201,29 @@ private let taxonomyLookups: (ebird: [String: String], birdlife: [String: String
         }
     }
 
-    return (ebird, birdlife)
+    return (ebird, birdlife, order)
 }()
 
 private var ebirdCodeLookup: [String: String] { taxonomyLookups.ebird }
 private var birdlifeIdLookup: [String: String] { taxonomyLookups.birdlife }
+
+/// Return the bundled eBird taxonomy index for sorting, or Int.max when unknown.
+func getTaxonomicOrder(_ speciesName: String) -> Int {
+    let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
+    return taxonomyLookups.order[commonName.lowercased()] ?? Int.max
+}
+
+/// Compare stored species names by taxonomic sequence, keeping unknown species last.
+func taxonomicSpeciesPrecedes(_ lhs: String, _ rhs: String, ascending: Bool) -> Bool {
+    let lhsOrder = getTaxonomicOrder(lhs)
+    let rhsOrder = getTaxonomicOrder(rhs)
+    let lhsKnown = lhsOrder != Int.max
+    let rhsKnown = rhsOrder != Int.max
+
+    if lhsKnown != rhsKnown { return lhsKnown }
+    if lhsOrder != rhsOrder { return ascending ? lhsOrder < rhsOrder : lhsOrder > rhsOrder }
+    return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+}
 
 /// Build the eBird species URL for a stored species name.
 func getEbirdURL(for speciesName: String) -> URL? {

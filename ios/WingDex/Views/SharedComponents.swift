@@ -343,6 +343,7 @@ func openInMaps(outing: Outing, lat: Double, lon: Double) {
 struct OutingRow: View {
     let outing: Outing
     let store: DataStore
+    var observation: BirdObservation?
 
     var body: some View {
         let confirmed = store.confirmedObservations(outing.id)
@@ -357,11 +358,26 @@ struct OutingRow: View {
                     .foregroundStyle(Color.foregroundText)
                     .lineLimit(1)
 
-                Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
+                if let observation {
+                    HStack(spacing: 4) {
+                        Text(DateFormatting.formatDate(outing.startTime, style: .medium))
+                        if observation.count > 1 {
+                            Text("\u{00B7}")
+                            Text("x\(observation.count)")
+                        }
+                        Text("\u{00B7}")
+                        Text(observation.certainty.rawValue.capitalized)
+                            .foregroundStyle(observation.certainty == .possible ? .orange : Color.mutedText)
+                    }
                     .font(.system(size: 13))
                     .foregroundStyle(Color.mutedText)
+                } else {
+                    Text("\(DateFormatting.formatDate(outing.startTime, style: .medium)) \u{00B7} \(speciesNames.count) species")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.mutedText)
+                }
 
-                if !speciesNames.isEmpty {
+                if observation == nil, !speciesNames.isEmpty {
                     Text(
                         speciesNames.prefix(2).map { getDisplayName($0) }.joined(separator: ", ")
                         + (speciesNames.count > 2 ? " +\(speciesNames.count - 2) more" : "")
