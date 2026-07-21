@@ -121,6 +121,118 @@ final class AuthIntegrationTests: XCTestCase {
         XCTAssertEqual(deleteHttp.statusCode, 200, "Delete outing should succeed")
     }
 
+    func testOutingDetailEditingRoundtrip() async throws {
+        let token = try await signInAnonymously()
+        let suffix = UUID().uuidString
+        let outingId = "outing-phase5-\(suffix)"
+        let observationId = "obs-phase5-\(suffix)"
+
+        let createURL = baseURL.appendingPathComponent("api/data/outings")
+        var createRequest = URLRequest(url: createURL)
+        createRequest.httpMethod = "POST"
+        createRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        createRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        createRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+            "id": outingId,
+            "startTime": "2026-07-20T08:00:00.000Z",
+            "endTime": "2026-07-20T09:00:00.000Z",
+            "locationName": "Phase 5 Test Park",
+            "lat": 47.6205,
+            "lon": -122.3493,
+            "stateProvince": "US-WA",
+            "countryCode": "US",
+            "protocol": "Stationary",
+            "numberObservers": 1,
+            "allObsReported": true,
+            "createdAt": "2026-07-20T09:00:00.000Z",
+        ])
+
+        let (_, createResponse) = try await URLSession.shared.data(for: createRequest)
+        XCTAssertEqual(try XCTUnwrap(createResponse as? HTTPURLResponse).statusCode, 200)
+
+        let updateURL = baseURL.appendingPathComponent("api/data/outings/\(outingId)")
+        var updateRequest = URLRequest(url: updateURL)
+        updateRequest.httpMethod = "PATCH"
+        updateRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        updateRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        updateRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+            "locationName": "Renamed Phase 5 Park",
+            "defaultLocationName": "Phase 5 Test Park",
+        ])
+        let (updateData, updateResponse) = try await URLSession.shared.data(for: updateRequest)
+        XCTAssertEqual(try XCTUnwrap(updateResponse as? HTTPURLResponse).statusCode, 200)
+        let updatedOuting = try XCTUnwrap(try JSONSerialization.jsonObject(with: updateData) as? [String: Any])
+        XCTAssertEqual(updatedOuting["locationName"] as? String, "Renamed Phase 5 Park")
+        XCTAssertEqual(updatedOuting["defaultLocationName"] as? String, "Phase 5 Test Park")
+
+        var searchComponents = URLComponents(
+            url: baseURL.appendingPathComponent("api/species/search"),
+            resolvingAgainstBaseURL: false
+        )
+        searchComponents?.queryItems = [
+            URLQueryItem(name: "q", value: "American Robin"),
+            URLQueryItem(name: "limit", value: "8"),
+        ]
+        var searchRequest = URLRequest(url: try XCTUnwrap(searchComponents?.url))
+        searchRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (searchData, searchResponse) = try await URLSession.shared.data(for: searchRequest)
+        XCTAssertEqual(try XCTUnwrap(searchResponse as? HTTPURLResponse).statusCode, 200)
+        let searchJSON = try XCTUnwrap(try JSONSerialization.jsonObject(with: searchData) as? [String: Any])
+        let searchResults = try XCTUnwrap(searchJSON["results"] as? [[String: Any]])
+        let robin = try XCTUnwrap(searchResults.first)
+        let common = try XCTUnwrap(robin["common"] as? String)
+        let scientific = try XCTUnwrap(robin["scientific"] as? String)
+        let speciesName = "\(common) (\(scientific))"
+
+        let observationsURL = baseURL.appendingPathComponent("api/data/observations")
+        var addRequest = URLRequest(url: observationsURL)
+        addRequest.httpMethod = "POST"
+        addRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        addRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addRequest.httpBody = try JSONSerialization.data(withJSONObject: [[
+            "id": observationId,
+            "outingId": outingId,
+            "speciesName": speciesName,
+            "count": 1,
+            "certainty": "confirmed",
+            "notes": "Manually added",
+        ]])
+        let (addData, addResponse) = try await URLSession.shared.data(for: addRequest)
+        XCTAssertEqual(try XCTUnwrap(addResponse as? HTTPURLResponse).statusCode, 200)
+        let addJSON = try XCTUnwrap(try JSONSerialization.jsonObject(with: addData) as? [String: Any])
+        XCTAssertNotNil(addJSON["dexUpdates"] as? [[String: Any]])
+
+        let exportURL = baseURL.appendingPathComponent("api/export/outing/\(outingId)")
+        var exportRequest = URLRequest(url: exportURL)
+        exportRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (exportData, exportResponse) = try await URLSession.shared.data(for: exportRequest)
+        XCTAssertEqual(try XCTUnwrap(exportResponse as? HTTPURLResponse).statusCode, 200)
+        let csv = try XCTUnwrap(String(data: exportData, encoding: .utf8))
+        XCTAssertTrue(csv.contains(common), "CSV should contain the confirmed species")
+
+        var rejectRequest = URLRequest(url: observationsURL)
+        rejectRequest.httpMethod = "PATCH"
+        rejectRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        rejectRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        rejectRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+            "ids": [observationId],
+            "patch": ["certainty": "rejected"],
+        ])
+        let (rejectData, rejectResponse) = try await URLSession.shared.data(for: rejectRequest)
+        XCTAssertEqual(try XCTUnwrap(rejectResponse as? HTTPURLResponse).statusCode, 200)
+        let rejectJSON = try XCTUnwrap(try JSONSerialization.jsonObject(with: rejectData) as? [String: Any])
+        let rejected = try XCTUnwrap(rejectJSON["observations"] as? [[String: Any]])
+        XCTAssertEqual(rejected.first?["certainty"] as? String, "rejected")
+        XCTAssertNotNil(rejectJSON["dexUpdates"] as? [[String: Any]])
+
+        let deleteURL = baseURL.appendingPathComponent("api/data/outings/\(outingId)")
+        var deleteRequest = URLRequest(url: deleteURL)
+        deleteRequest.httpMethod = "DELETE"
+        deleteRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (_, deleteResponse) = try await URLSession.shared.data(for: deleteRequest)
+        XCTAssertEqual(try XCTUnwrap(deleteResponse as? HTTPURLResponse).statusCode, 200)
+    }
+
     // MARK: - Helpers
 
     /// Sign in anonymously and return the raw session token.

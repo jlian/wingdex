@@ -9,6 +9,19 @@ struct OutingDetailView: View {
     @State private var editingNotes = false
     @State private var notesText = ""
     @State private var contextMenuSpecies: String?
+    @State private var editingLocation = false
+    @State private var locationText = ""
+    @State private var showingAddSpecies = false
+    @State private var speciesQuery = ""
+    @State private var selectedSpecies: DataService.SpeciesSearchResult?
+    @State private var speciesResults: [DataService.SpeciesSearchResult] = []
+    @State private var speciesSearchTask: Task<Void, Never>?
+    @State private var isSearchingSpecies = false
+    @State private var isAddingSpecies = false
+    @State private var pendingRemoval: SpeciesRemoval?
+    @State private var exportItem: ExportFileItem?
+    @State private var isExporting = false
+    @State private var feedback: FeedbackMessage?
 
     private var outing: Outing? { store.outing(id: outingId) }
     private var confirmed: [BirdObservation] { store.confirmedObservations(outingId) }
@@ -38,6 +51,34 @@ struct OutingDetailView: View {
         } message: {
             Text("This will permanently delete this outing and all its observations.")
         }
+        .alert(item: $pendingRemoval) { removal in
+            Alert(
+                title: Text("Remove \(removal.displayName) from outing?"),
+                primaryButton: .destructive(Text("Remove")) {
+                    Task { await removeSpecies(removal) }
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        .sheet(item: $exportItem) { item in
+            ActivityView(activityItems: [item.url])
+        }
+        .overlay(alignment: .top) {
+            if let feedback {
+                Label(feedback.text, systemImage: feedback.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(feedback.isError ? Color.red : Color.foregroundText)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
+            }
+        }
+        .onDisappear {
+            speciesSearchTask?.cancel()
+        }
     }
 
     @ViewBuilder
@@ -65,11 +106,27 @@ struct OutingDetailView: View {
 
             // Actions
             Section {
+                Button {
+                    Task { await exportOuting(outing) }
+                } label: {
+                    if isExporting {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.mini)
+                            Text("Exporting...")
+                        }
+                    } else {
+                        Label("Export eBird CSV", systemImage: "square.and.arrow.up")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .disabled(confirmed.isEmpty || isExporting)
+
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
                     Label("Delete Outing", systemImage: "trash")
-                        .font(.system(size: 14))
+                        .foregroundStyle(.red)
                 }
             }
         }
@@ -87,9 +144,51 @@ struct OutingDetailView: View {
 
     private func headerSection(_ outing: Outing) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                .font(.system(.title2, design: .serif, weight: .bold))
-                .foregroundStyle(Color.foregroundText)
+            if editingLocation {
+                TextField("Location name", text: $locationText)
+                    .textFieldStyle(.roundedBorder)
+
+                if !locationSuggestions.isEmpty {
+                    ForEach(locationSuggestions, id: \.self) { suggestion in
+                        Button {
+                            locationText = suggestion
+                        } label: {
+                            Text(suggestion)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .tint(.primary)
+                    }
+                }
+
+                HStack {
+                    Button("Cancel") {
+                        editingLocation = false
+                        locationText = outing.locationName
+                    }
+                    Spacer()
+                    Button("Save") {
+                        Task { await saveLocation(outing) }
+                    }
+                    .fontWeight(.semibold)
+                }
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
+                        .font(.system(.title2, design: .serif, weight: .bold))
+                        .foregroundStyle(Color.foregroundText)
+
+                    Button {
+                        locationText = outing.locationName
+                        editingLocation = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .accessibilityLabel("Edit location name")
+                }
+            }
 
             HStack(spacing: 4) {
                 Image(systemName: "calendar")
@@ -197,6 +296,16 @@ struct OutingDetailView: View {
             .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
 
         Section {
+            speciesSectionTitle(
+                title: "Species (\(Set(confirmed.map(\.speciesName)).count))",
+                showsAddAction: true
+            )
+            .listRowSeparator(.hidden)
+
+            if showingAddSpecies {
+                addSpeciesForm
+            }
+
             if confirmed.isEmpty {
                 Text("No confirmed observations")
                     .font(.system(size: 14))
@@ -229,12 +338,18 @@ struct OutingDetailView: View {
                         }
                         .environment(store)
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingRemoval = SpeciesRemoval(
+                                displayName: getDisplayName(speciesName),
+                                observationIds: obs.map(\.id)
+                            )
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
                 }
             }
-        } header: {
-            Text("Species (\(Set(confirmed.map(\.speciesName)).count))")
-                .font(.system(size: 16, weight: .semibold, design: .serif))
-                .foregroundStyle(Color.foregroundText)
         }
     }
 
@@ -247,6 +362,9 @@ struct OutingDetailView: View {
                 .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
 
             Section {
+                speciesSectionTitle(title: "Possible (\(possible.count))")
+                    .listRowSeparator(.hidden)
+
                 ForEach(grouped, id: \.key) { speciesName, obs in
                     let totalCount = obs.reduce(0) { $0 + $1.count }
                     let entry = store.dexEntry(for: speciesName)
@@ -274,11 +392,41 @@ struct OutingDetailView: View {
                         }
                         .environment(store)
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingRemoval = SpeciesRemoval(
+                                displayName: getDisplayName(speciesName),
+                                observationIds: obs.map(\.id)
+                            )
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
                 }
-            } header: {
-                Text("Possible (\(possible.count))")
-                    .font(.system(size: 16, weight: .semibold, design: .serif))
-                    .foregroundStyle(Color.foregroundText)
+            }
+        }
+    }
+
+    private func speciesSectionTitle(title: String, showsAddAction: Bool = false) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .serif))
+                .foregroundStyle(Color.foregroundText)
+            Spacer()
+            if showsAddAction {
+                Button {
+                    showingAddSpecies.toggle()
+                    if !showingAddSpecies {
+                        resetSpeciesForm()
+                    }
+                } label: {
+                    Label(
+                        showingAddSpecies ? "Cancel" : "Add Species",
+                        systemImage: showingAddSpecies ? "xmark" : "plus"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(Color.accentColor)
+                }
             }
         }
     }
@@ -302,8 +450,13 @@ struct OutingDetailView: View {
                     Spacer()
                     Button("Save") {
                         Task {
-                            await store.updateOuting(id: outingId, fields: OutingUpdate(notes: notesText))
-                            editingNotes = false
+                            do {
+                                try await store.updateOuting(id: outingId, fields: OutingUpdate(notes: notesText))
+                                editingNotes = false
+                                showFeedback("Notes saved")
+                            } catch {
+                                showFeedback("Could not save notes", isError: true)
+                            }
                         }
                     }
                     .fontWeight(.semibold)
@@ -319,6 +472,214 @@ struct OutingDetailView: View {
             }
         }
     }
+
+    // MARK: - Add Species
+
+    private var addSpeciesForm: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("Search species or enter a name", text: $speciesQuery)
+                .textInputAutocapitalization(.words)
+                .onChange(of: speciesQuery) { _, query in
+                    if selectedSpecies?.common != query {
+                        selectedSpecies = nil
+                    }
+                    scheduleSpeciesSearch(query)
+                }
+
+            if isSearchingSpecies {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            ForEach(speciesResults) { result in
+                Button {
+                    speciesSearchTask?.cancel()
+                    selectedSpecies = result
+                    speciesQuery = result.common
+                    speciesResults = []
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(result.common)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Text(result.scientific)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .tint(.primary)
+            }
+
+            Button {
+                Task { await addSpecies() }
+            } label: {
+                if isAddingSpecies {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Text("Add Species")
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(speciesQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingSpecies)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var locationSuggestions: [String] {
+        let query = locationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        return store.outings
+            .map { $0.locationName.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+            .filter { $0.localizedCaseInsensitiveContains(query) && $0.caseInsensitiveCompare(locationText) != .orderedSame }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private func saveLocation(_ outing: Outing) async {
+        let trimmed = locationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let currentName = outing.locationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resetName = outing.defaultLocationName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let newName = trimmed.isEmpty
+            ? (resetName.isEmpty ? (currentName.isEmpty ? "Unknown Location" : currentName) : resetName)
+            : trimmed
+        let defaultName = outing.defaultLocationName ?? (currentName.isEmpty ? nil : currentName)
+
+        do {
+            try await store.updateOuting(
+                id: outingId,
+                fields: OutingUpdate(locationName: newName, defaultLocationName: defaultName)
+            )
+            editingLocation = false
+            showFeedback(trimmed.isEmpty ? "Outing name reset" : "Outing name saved")
+        } catch {
+            showFeedback("Could not save outing name", isError: true)
+        }
+    }
+
+    private func scheduleSpeciesSearch(_ query: String) {
+        speciesSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, selectedSpecies == nil else {
+            speciesResults = []
+            isSearchingSpecies = false
+            return
+        }
+
+        speciesSearchTask = Task {
+            do {
+                try await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                isSearchingSpecies = true
+                let results = try await store.searchSpecies(query: trimmed)
+                guard !Task.isCancelled,
+                      speciesQuery.trimmingCharacters(in: .whitespacesAndNewlines) == trimmed
+                else { return }
+                speciesResults = results
+            } catch is CancellationError {
+                return
+            } catch {
+                speciesResults = []
+            }
+            isSearchingSpecies = false
+        }
+    }
+
+    private func addSpecies() async {
+        let trimmed = speciesQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let storedName: String
+        let displayName: String
+        if let selectedSpecies {
+            storedName = "\(selectedSpecies.common) (\(selectedSpecies.scientific))"
+            displayName = selectedSpecies.common
+        } else {
+            storedName = trimmed
+            displayName = getDisplayName(trimmed)
+        }
+
+        isAddingSpecies = true
+        let observation = BirdObservation(
+            id: "obs_\(UUID().uuidString)",
+            outingId: outingId,
+            speciesName: storedName,
+            count: 1,
+            certainty: .confirmed,
+            notes: "Manually added"
+        )
+        do {
+            try await store.addObservation(observation)
+            resetSpeciesForm()
+            showingAddSpecies = false
+            showFeedback("\(displayName) added")
+        } catch {
+            showFeedback("Could not add \(displayName)", isError: true)
+        }
+        isAddingSpecies = false
+    }
+
+    private func resetSpeciesForm() {
+        speciesSearchTask?.cancel()
+        speciesQuery = ""
+        selectedSpecies = nil
+        speciesResults = []
+        isSearchingSpecies = false
+    }
+
+    private func removeSpecies(_ removal: SpeciesRemoval) async {
+        do {
+            try await store.rejectObservations(ids: removal.observationIds)
+            showFeedback("Observation removed")
+        } catch {
+            showFeedback("Could not remove \(removal.displayName)", isError: true)
+        }
+    }
+
+    private func exportOuting(_ outing: Outing) async {
+        isExporting = true
+        do {
+            let csvData = try await store.exportOutingCSV(outingId: outing.id)
+            let date = String(outing.startTime.prefix(10))
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("wingdex-outing-\(date).csv")
+            try csvData.write(to: url)
+            exportItem = ExportFileItem(url: url)
+            showFeedback("Outing exported in eBird Record CSV format")
+        } catch {
+            showFeedback("Could not export outing", isError: true)
+        }
+        isExporting = false
+    }
+
+    private func showFeedback(_ text: String, isError: Bool = false) {
+        let message = FeedbackMessage(text: text, isError: isError)
+        withAnimation { feedback = message }
+        Task {
+            try? await Task.sleep(for: .seconds(isError ? 5 : 3))
+            guard feedback?.id == message.id else { return }
+            withAnimation { feedback = nil }
+        }
+    }
+}
+
+private struct SpeciesRemoval: Identifiable {
+    let id = UUID()
+    let displayName: String
+    let observationIds: [String]
+}
+
+private struct FeedbackMessage: Identifiable {
+    let id = UUID()
+    let text: String
+    let isError: Bool
 }
 
 #if DEBUG

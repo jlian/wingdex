@@ -666,11 +666,11 @@ The iOS `OutingDetailView` is read-only except for notes editing and outing dele
 
 iOS shows the location name as a static title. The web has a pencil icon that opens an autocomplete input.
 
-- [ ] **Pencil icon**: SF Symbol `pencil` in the header area next to the location name
-- [ ] **Edit mode**: Tap pencil -> replace the title with a `TextField` pre-filled with the current name. Show Save and Cancel buttons
-- [ ] **Autocomplete**: As the user types, show suggestions filtered from all existing outing location names (client-side filter from `DataStore.outings`)
-- [ ] **Save**: Call `PATCH /api/data/outings/{id}` with the new `locationName`. Update local state immediately
-- [ ] **Empty name**: Resets to the default geocoded location name (or "Unknown Location")
+- [x] **Pencil icon**: SF Symbol `pencil` in the header area next to the location name
+- [x] **Edit mode**: Tap pencil -> replace the title with a `TextField` pre-filled with the current name. Show Save and Cancel buttons
+- [x] **Autocomplete**: As the user types, show suggestions filtered from all existing outing location names (client-side filter from `DataStore.outings`)
+- [x] **Save**: Call `PATCH /api/data/outings/{id}` with the new `locationName`. Update local state immediately
+- [x] **Empty name**: Resets to the default geocoded location name (or "Unknown Location")
 
 **Files**: `OutingDetailView.swift`
 **Reference**: `OutingsPage.tsx` (edit location name section)
@@ -679,10 +679,10 @@ iOS shows the location name as a static title. The web has a pencil icon that op
 
 iOS can only delete entire outings. The web has per-species delete with confirmation.
 
-- [ ] **Delete trigger**: Trailing swipe action on each species row (trash icon, destructive style), or a trash icon button visible on each row
-- [ ] **Confirmation dialog**: "Remove {species name} from outing?" with Cancel and Remove buttons
-- [ ] **Execution**: Call `PATCH /api/data/observations` to mark the observation as `certainty: "rejected"` (soft delete matching web behavior)
-- [ ] **UI update**: Remove the species from the visible list immediately
+- [x] **Delete trigger**: Trailing swipe action on each species row (trash icon, destructive style), or a trash icon button visible on each row
+- [x] **Confirmation dialog**: "Remove {species name} from outing?" with Cancel and Remove buttons
+- [x] **Execution**: Call `PATCH /api/data/observations` to mark the observation as `certainty: "rejected"` (soft delete matching web behavior)
+- [x] **UI update**: Remove the species from the visible list immediately
 
 **Files**: `OutingDetailView.swift`
 **Reference**: `OutingsPage.tsx` (delete observation section)
@@ -691,11 +691,11 @@ iOS can only delete entire outings. The web has per-species delete with confirma
 
 Does not exist on iOS. The web has an "+ Add Species" button with taxonomy autocomplete.
 
-- [ ] **"+ Add Species" button**: Toggle button in the species list section header. When active, shows an inline form; when inactive, shows the button label
-- [ ] **Species name input**: Text field with autocomplete dropdown powered by server-side taxonomy search (`GET /api/species/search?q=...&limit=8`). Debounce input by 150ms before sending search request
-- [ ] **Add action**: Tap "Add" creates a new observation with `count: 1`, `certainty: "confirmed"`, linked to this outing
-- [ ] **Feedback**: Toast "{species name} added". Clear input, close form
-- [ ] **Keyboard navigation**: Autocomplete results navigable with tap (no hardware keyboard expected on iOS, but support standard list selection)
+- [x] **"+ Add Species" button**: Toggle button in the species list section header. When active, shows an inline form; when inactive, shows the button label
+- [x] **Species name input**: Text field with autocomplete dropdown powered by server-side taxonomy search (`GET /api/species/search?q=...&limit=8`). Debounce input by 150ms before sending search request
+- [x] **Add action**: Tap "Add" creates a new observation with `count: 1`, `certainty: "confirmed"`, linked to this outing
+- [x] **Feedback**: Toast "{species name} added". Clear input, close form
+- [x] **Keyboard navigation**: Autocomplete results navigable with tap (no hardware keyboard expected on iOS, but support standard list selection)
 
 **Files**: `OutingDetailView.swift`, `DataService.swift` (species search API call)
 **Reference**: `OutingsPage.tsx` (add species section)
@@ -704,21 +704,20 @@ Does not exist on iOS. The web has an "+ Add Species" button with taxonomy autoc
 
 Does not exist on iOS. The web has an "Export eBird CSV" button per outing.
 
-- [ ] **Button**: "Export eBird CSV" with download icon, placed in the action buttons area at the bottom of the detail view
-- [ ] **Disabled state**: Greyed out if the outing has no confirmed observations
-- [ ] **Execution**: Fetch `GET /api/export/outing/{id}`, receive CSV data
-- [ ] **Save**: Present `UIActivityViewController` (share sheet) with the CSV file
-- [ ] **Feedback**: Toast "Outing exported in eBird Record CSV format"
+- [x] **Button**: "Export eBird CSV" with download icon, placed in the action buttons area at the bottom of the detail view
+- [x] **Disabled state**: Greyed out if the outing has no confirmed observations
+- [x] **Execution**: Fetch `GET /api/export/outing/{id}`, receive CSV data
+- [x] **Save**: Present `UIActivityViewController` (share sheet) with the CSV file
+- [x] **Feedback**: Toast "Outing exported in eBird Record CSV format"
 
 **Files**: `OutingDetailView.swift`, `DataService.swift`
 
-### 5.5: Tappable Coordinates / Map Link
+### 5.5: Tappable Map Link
 
-iOS shows an embedded MapKit view but has no external link. The web shows clickable coordinates that open Google Maps.
+iOS shows an embedded MapKit view that opens the outing location in Apple Maps.
 
-- [x] **Tappable coordinates**: Below or alongside the embedded map, show coordinates as tappable text: "(lat, lon)" formatted to 4 decimal places
-- [x] **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the coordinates, or offer a choice between Apple Maps and Google Maps
-- [x] **Apple Maps URL**: `maps://?q={lat},{lon}`
+- [x] **Tappable map**: Tap the embedded map to open the outing location externally
+- [x] **Tap action**: Open in Apple Maps via `MKMapItem.openMaps()` with the outing coordinates
 
 **Files**: `OutingDetailView.swift`
 
@@ -1239,7 +1238,7 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 3.5 | **Navigation & SignIn Rework** (3-tab + "+" layout, avatar settings sheet, SignInView matching web modal) | ✅ Done |
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | ⏳ In Progress |
 | 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | ✅ Done |
-| 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | Not started |
+| 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | ✅ Done |
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |
 | 8 | **Dark Mode, Auth Fixes & Error Handling** (palette, toggle, visual audit, 401 fix, error/logging overhaul) | Not started |

@@ -121,6 +121,16 @@ final class DataStore {
         dex.first { $0.speciesName == speciesName }
     }
 
+    /// Search the server taxonomy for manual observation entry.
+    func searchSpecies(query: String, limit: Int = 8) async throws -> [DataService.SpeciesSearchResult] {
+        try await service.searchSpecies(query: query, limit: limit)
+    }
+
+    /// Download one outing in eBird Record CSV format.
+    func exportOutingCSV(outingId: String) async throws -> Data {
+        try await service.exportOutingCSV(outingId: outingId)
+    }
+
     // MARK: - Mutations
 
     /// Delete an outing and remove its observations locally, then sync with server.
@@ -137,20 +147,47 @@ final class DataStore {
     }
 
     /// Mark observations as rejected (soft delete).
-    func rejectObservations(ids: [String]) async {
+    func rejectObservations(ids: [String]) async throws {
         for i in observations.indices where ids.contains(observations[i].id) {
             observations[i].certainty = .rejected
         }
         do {
-            try await service.rejectObservations(ids: ids)
+            let response = try await service.rejectObservations(ids: ids)
+            if let updated = response.observations {
+                let updatedById = Dictionary(uniqueKeysWithValues: updated.map { ($0.id, $0) })
+                observations = observations.map { updatedById[$0.id] ?? $0 }
+            }
+            if let dexUpdates = response.dexUpdates {
+                dex = dexUpdates
+            }
         } catch {
             log.warning("rejectObservations failed, reconciling: \(error.localizedDescription)")
             await loadAll()
+            throw error
+        }
+    }
+
+    /// Add one observation and install the server's recomputed dex.
+    func addObservation(_ observation: BirdObservation) async throws {
+        observations.append(observation)
+        do {
+            let response = try await service.createObservations([observation])
+            if let created = response.observations {
+                let createdById = Dictionary(uniqueKeysWithValues: created.map { ($0.id, $0) })
+                observations = observations.map { createdById[$0.id] ?? $0 }
+            }
+            if let dexUpdates = response.dexUpdates {
+                dex = dexUpdates
+            }
+        } catch {
+            log.warning("addObservation failed, reconciling: \(error.localizedDescription)")
+            await loadAll()
+            throw error
         }
     }
 
     /// Update outing fields locally and on the server.
-    func updateOuting(id: String, fields: OutingUpdate) async {
+    func updateOuting(id: String, fields: OutingUpdate) async throws {
         if let idx = outings.firstIndex(where: { $0.id == id }) {
             let old = outings[idx]
             outings[idx] = Outing(
@@ -174,10 +211,14 @@ final class DataStore {
             )
         }
         do {
-            try await service.updateOuting(id: id, fields: fields)
+            let updated = try await service.updateOuting(id: id, fields: fields)
+            if let idx = outings.firstIndex(where: { $0.id == id }) {
+                outings[idx] = updated
+            }
         } catch {
             log.warning("updateOuting failed, reconciling: \(error.localizedDescription)")
             await loadAll()
+            throw error
         }
     }
 
