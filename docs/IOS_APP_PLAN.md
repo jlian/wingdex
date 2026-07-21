@@ -679,8 +679,8 @@ iOS shows the location name as a static title. The web has a pencil icon that op
 
 iOS can only delete entire outings. The web has per-species delete with confirmation.
 
-- [x] **Delete trigger**: Trailing swipe action on each species row (trash icon, destructive style), or a trash icon button visible on each row
-- [x] **Confirmation dialog**: "Remove {species name} from outing?" with Cancel and Remove buttons
+- [x] **Delete trigger**: Trailing swipe action on each species row with a destructive trash action; removal happens immediately and rolls back if the request fails
+- [ ] **Undo (deferred)**: Evaluate native Shake to Undo as a separate change with serialized server mutations and account-safe retry handling
 - [x] **Execution**: Call `PATCH /api/data/observations` to mark the observation as `certainty: "rejected"` (soft delete matching web behavior)
 - [x] **UI update**: Remove the species from the visible list immediately
 
@@ -694,7 +694,7 @@ Does not exist on iOS. The web has an "+ Add Species" button with taxonomy autoc
 - [x] **"+ Add Species" button**: Toggle button in the species list section header. When active, shows an inline form; when inactive, shows the button label
 - [x] **Species name input**: Text field with autocomplete dropdown powered by server-side taxonomy search (`GET /api/species/search?q=...&limit=8`). Debounce input by 150ms before sending search request
 - [x] **Add action**: Tap "Add" creates a new observation with `count: 1`, `certainty: "confirmed"`, linked to this outing
-- [x] **Feedback**: Toast "{species name} added". Clear input, close form
+- [x] **Feedback**: Clear input and close the form after the species appears in the list; failures use a native alert
 - [x] **Keyboard navigation**: Autocomplete results navigable with tap (no hardware keyboard expected on iOS, but support standard list selection)
 
 **Files**: `OutingDetailView.swift`, `DataService.swift` (species search API call)
@@ -708,7 +708,7 @@ Does not exist on iOS. The web has an "Export eBird CSV" button per outing.
 - [x] **Disabled state**: Greyed out if the outing has no confirmed observations
 - [x] **Execution**: Fetch `GET /api/export/outing/{id}`, receive CSV data
 - [x] **Save**: Present `UIActivityViewController` (share sheet) with the CSV file
-- [x] **Feedback**: Toast "Outing exported in eBird Record CSV format"
+- [x] **Feedback**: Present the native share sheet after export; failures use a native alert
 
 **Files**: `OutingDetailView.swift`, `DataService.swift`
 
@@ -808,69 +808,69 @@ Add photos with a new species -> confetti animation fires + lifer toast with hap
 
 ---
 
-## Phase 8 - Dark Mode, Auth Fixes & Error Handling
+## Phase 8 - Appearance & Session Hardening
 
-### 8.1: Define Dark Color Palette
+### 8.1: System Appearance Foundations
 
-iOS has light mode colors only.
+WingDex follows the iOS system appearance. A separate appearance toggle is intentionally out of scope.
 
-- [ ] **Web dark colors**: Background `#262e29`, card darker variant, lighter text, adjusted borders
-- [ ] **Color assets**: Add dark mode variants to all custom `Color` extensions in `Theme.swift` and color sets in `Assets.xcassets`
-- [ ] **Verify semantic usage**: Ensure all views use `Color.pageBg`, `Color.cardBg`, etc. and never hardcoded color values
+- [x] **Adaptive palette**: All WingDex named color assets include light and dark variants
+- [x] **System mode**: No `preferredColorScheme`, `UIUserInterfaceStyle`, or window-scene override forces an appearance
+- [x] **Semantic color audit**: Custom UI uses adaptive/semantic colors; intentional black/white values are limited to controlled image overlays
 
-**Files**: `Theme.swift`, `Assets.xcassets` color sets
+**Files**: `Theme.swift`, `Assets.xcassets` color sets, representative views
 
-### 8.2: Appearance Toggle Wiring
+### 8.2: Light & Dark Visual Audit
 
-Depends on Phase 4.5 (appearance toggle UI).
+- [x] **Map thumbnails**: `MiniMapSnapshot` renders with the active appearance and refreshes when the system scheme changes
+- [x] **Attribution contrast**: Wikipedia attribution uses the readable adaptive muted color without compounded opacity
+- [x] **Representative flows**: Existing previews and simulator flows were audited in both appearances, including Sign In, Home, WingDex, Outings, Settings, detail views, Add Photos, and celebration
+- [x] **UIKit surfaces**: List cells, menus, alerts, pickers, sheets, and global tint adapt correctly
+- [x] **Image and card legibility**: Image overlays, Sign In foreground content, and Outing Detail card hierarchy remain legible
 
-- [ ] **UserDefaults**: Store preference as `"light"`, `"dark"`, or `"system"` in UserDefaults
-- [ ] **Apply**: On launch and on toggle change, set `overrideUserInterfaceStyle` on all connected window scenes
-- [ ] **System mode**: `overrideUserInterfaceStyle = .unspecified` follows iOS system setting
+**Files**: `SharedComponents.swift`, `SpeciesDetailView.swift`, representative view previews
 
-**Files**: `Theme.swift`, `WingDexApp.swift`
+### 8.3: Bearer Authentication Baseline
 
-### 8.3: Full Dark Mode Visual Audit
+The API now uses Better Auth's bearer plugin. The older middleware dual-cookie workaround is no longer the API authentication path; signed cookies remain only for passkey endpoints.
 
-- Every view, every shared component in both light and dark
-- Check contrast ratios and text legibility (especially text overlaid on images with gradient)
-- Verify `UITableViewCell.appearance().backgroundColor` and other UIAppearance overrides work correctly in dark mode
-- Verify map styling (`.standard` map with dark scheme)
+- [x] **Bearer API calls**: `DataService` attaches the raw session token via `Authorization: Bearer`
+- [x] **Passkey isolation**: Signed cookie handling remains separate and passkey-cookie failures do not blindly invalidate bearer auth
+- [x] **Mobile callback compatibility**: Callback extraction accepts secure and non-secure Better Auth cookie names
 
-### 8.4: Fix 401 on API Calls ✅
+### 8.4: Token-Aware 401 Handling
 
-Fixed. Root cause: middleware injected bearer token with wrong cookie name on HTTPS (`better-auth.session_token` vs `__Secure-better-auth.session_token`). Fix: inject both prefixed and non-prefixed cookie names so it works regardless of the `useSecureCookies` setting.
+- [x] **Intercept**: Protected API 401 responses invalidate the rejected bearer session
+- [x] **Race safety**: A delayed 401 from an old token cannot sign out a replacement session
+- [x] **Account isolation**: Clear account-owned in-memory data on logout/session rejection and ignore stale in-flight bulk loads
+- [x] **Stale mutation guard**: Delayed profile updates cannot mutate a replacement session
+- [x] **Re-authentication UX**: Return to Sign In with a one-time session-expired message; explicit logout stays silent
+- [x] **No automatic mutation replay**: Do not retry arbitrary requests after sign-in until idempotency and retry policy are designed
 
-- [x] **Dual cookie injection**: Middleware now injects both `better-auth.session_token` and `__Secure-better-auth.session_token`
-- [x] **Mobile callback cookie extraction**: Reads both prefixed and non-prefixed cookie names
+**Files**: `AuthService.swift`, `DataService.swift`, `DataStore.swift`, `WingDexApp.swift`, `SignInView.swift`, `SettingsView.swift`
 
-### 8.5: 401 Auto-Retry
+### 8.5: Session Expiry Handling
 
-- [ ] **Intercept**: When any API call returns HTTP 401, intercept the response in `DataService`
-- [ ] **Re-auth prompt**: Present the sign-in sheet (via a published property or notification)
-- [ ] **Retry**: After successful re-authentication, retry the original API request that triggered the 401
+- [x] **Startup validation**: Treat Better Auth `200 null`, HTTP 401, and malformed successful session payloads as rejected sessions
+- [x] **Outage tolerance**: Preserve cached auth on transport failures and server 5xx responses
+- [x] **Foreground validation**: Silently validate the active session when the app returns to the foreground
+- [x] **Local expiry**: Expired cached tokens use the same session-expired path
+- [ ] **End-to-end verification**: Exercise startup rejection, foreground rejection, explicit logout, and account-data clearing in the simulator
 
-**Files**: `DataService.swift` or a shared API middleware layer
-
-### 8.6: Session Expiry Handling
-
-- [ ] **Foreground check**: When the app returns to foreground (`scenePhase == .active`), check the stored token's age
-- [ ] **Near expiry**: If the token is close to expiring, make a silent validation request to the server (`GET /api/auth/get-session`)
-- [ ] **Expired**: If validation fails, prompt re-auth
-
-**Files**: `AuthService.swift`, `WingDexApp.swift`
+**Files**: `AuthService.swift`, `WingDexApp.swift`, session tests
 
 ### 8.7: Error Handling Overhaul (iOS)
 
-Currently errors are either silently ignored or show raw `localizedDescription` strings which are often unhelpful (e.g., "(null)" for ASAuthorization errors). Needs a systematic pass across the entire iOS app.
+Errors are mapped at presentation boundaries while transport/domain errors retain status, retry, and cancellation context. Persistent failures use native empty states, and action failures use native alerts or existing inline form feedback.
 
-- [ ] **Typed error mapping**: Create a central `AppError` enum that maps network errors, auth errors, passkey errors, and API errors to user-friendly messages. All `catch` blocks should map through this instead of using raw `localizedDescription`
-- [ ] **User-facing error alerts**: Show `.alert` or banner for errors that need user action (auth failure, network unreachable). Show inline error text for recoverable errors (form validation, import conflicts)
-- [ ] **Network error handling**: Detect no-connectivity (`URLError.notConnectedToInternet`) and show a clear offline banner. Detect timeouts and offer retry. Detect server errors (500) with generic "Something went wrong" message
-- [ ] **Rate limit feedback**: When `POST /api/identify-bird` returns 429, show "AI identification limit reached (150/day). Try again tomorrow." with the daily limit from `Config.aiDailyRateLimit`
-- [ ] **Passkey error messages**: Map all `ASAuthorizationError` codes to clear messages - `.canceled` (silent dismiss), `.notHandled` ("Passkey not available for this domain"), `.failed` ("Authentication failed")
-- [ ] **Pull-to-refresh retry**: On data load failure, show the error message and let pull-to-refresh retry the request
-- [ ] **Toast/banner system**: Create a reusable toast overlay (environment-based) for success and error messages. Auto-dismiss after 3-5 seconds. Used across settings saves, imports, exports, species additions
+- [x] **Typed error mapping**: `AppError` maps connectivity, timeout, auth, passkey, safe API status, decoding, and cancellation cases without flattening domain errors prematurely
+- [x] **Native user feedback**: Action failures use SwiftUI alerts; forms/import/passkeys retain inline feedback; failed initial loads use `ContentUnavailableView` with Retry
+- [x] **Network error handling**: Offline, timeout, server, invalid-response, and cancellation cases have safe distinct behavior; cached data remains visible on refresh failure
+- [x] **Rate limit feedback**: Bird identification 429 responses retain `Retry-After` and show the configured request limit from `Config.aiDailyRateLimit`; unrelated 429 responses use generic retry copy
+- [x] **Passkey error messages**: Cancellation is silent, unavailable/not-handled uses neutral production copy, and failed authorization is actionable
+- [x] **Pull-to-refresh retry**: Home, WingDex, and Outings preserve refresh gestures, show failure state, and expose explicit Retry when the initial load has no data
+- [x] **Workflow recovery**: Add Photos stops on metadata failure, preserves state across identify/save retries, distinguishes failures from no-candidate results, and uses stable idempotent photo/observation IDs
+- [x] **Native presentation decision**: Use system alerts and `ContentUnavailableView` rather than a global or hand-rolled toast/banner framework
 
 **Files**: New `AppError.swift`, update `SignInView.swift`, `DataStore.swift`, `SettingsView.swift`, all views with error states
 
@@ -878,18 +878,19 @@ Currently errors are either silently ignored or show raw `localizedDescription` 
 
 Part of [#222](https://github.com/jlian/wingdex/issues/222). Ensure consistent, structured logging across all layers.
 
-- [ ] **iOS Logger audit**: Verify all services use `Logger` with appropriate subsystem/category. Ensure `.debug` for routine operations (request/response), `.info` for state changes (sign-in, data load), `.error` for failures. Remove any credential values from log messages
-- [ ] **iOS request/response timing**: Add elapsed time logging to `DataService` API calls (time between request start and response) for performance monitoring
-- [ ] **Server DEBUG flag**: All API route handlers log request entry and error details when `env.DEBUG` is set. Already implemented in middleware; extend to all `functions/api/` route files
-- [ ] **Server structured format**: Use `JSON.stringify({ method, path, status, ... })` consistently for easy filtering in Wrangler terminal and Cloudflare log tailing
-- [ ] **Web client debug logger**: Add a `debugLog()` utility gated on `import.meta.env.DEV` using `console.debug()`. Cover auth state changes, API calls, data mutations, flow transitions
-- [ ] **No credentials in logs**: Audit all log statements across iOS, server, and web to ensure tokens, keys, and user data are never logged (log token length and presence, not values)
+- [x] **iOS Logger audit**: Services use categorized `Logger` calls; expected 4xx responses are warnings, 5xx/transport failures are errors, and routine request timing is debug-level
+- [x] **iOS request/response timing**: `DataService` logs elapsed time and response size for API calls
+- [x] **Server structured format**: Request-scoped structured logging and trace propagation are defined in `OBSERVABILITY.md` and implemented by the shared logger/responder
+- [x] **Web client debug logger**: `debugLog()` is gated on `import.meta.env.DEV`
+- [x] **No credentials or user content in logs**: OAuth callback URLs, tokens/cookies, response bodies, filenames, locations, species arrays, passkey IDs, provider/database exception text, and user-authored content are excluded; `OBSERVABILITY.md` defines the safe metadata allowlist
+- [x] **End-to-end trace propagation**: iOS data/auth/passkey requests and first-party web fetches emit W3C `traceparent`; iOS logs safe duration/status/byte metadata and middleware rejection/completion logs include duration
+- [x] **Route compliance**: Species lookup handlers use the shared route responder and no longer rely on observability-test exemptions
 
 **Files**: All service files (iOS), all `functions/api/*.ts` files (server), new web debug utility
 
 ### Phase 8 Verification
 
-Toggle appearance Light/Dark/System -> every screen renders correctly in dark mode -> sign in via GitHub -> all API calls succeed (no 401) -> background the app for 24+ hours -> return -> session still valid or re-auth prompted gracefully -> errors shown as user-friendly messages, not raw strings -> no credentials in any log output -> server logs structured JSON when DEBUG=1.
+Switch the iOS system between Light and Dark -> representative screens and native error UI render correctly -> valid bearer API calls succeed -> rejected startup/foreground sessions return to Sign In gracefully -> old-token 401 cannot clear a replacement session -> logout clears account data -> no prior account data appears during a later sign-in -> offline/timeout/500/429 failures show safe actionable feedback and preserve retry state -> structured logs contain trace/timing metadata without credentials or user content.
 
 ---
 
@@ -1123,10 +1124,7 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ### 10.1: Error Handling Audit
 
-- Network errors: show user-friendly alerts with "Retry" button, not raw error messages
-- Server errors (500): "Something went wrong. Please try again."
-- Rate limit (429): Show "AI identification limit reached (150/day). Try again tomorrow." with remaining count
-- Offline: Graceful degradation - show cached data (Phase 9 L1) or a clear "No connection" banner
+Completed in Phase 8.7. Phase 10 should perform only the final release-build and App Store submission audit for error copy and accessibility.
 
 ### 10.2: Accessibility Final Pass
 
@@ -1239,8 +1237,8 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 3-R | **Add Photos Flow Rework** (outing review, per-photo confirm, two-tier AI, crop retry, certainty) | ⏳ In Progress |
 | 4 | **Settings & Profile Parity** (name, avatar, appearance, import/export, delete account) | ✅ Done |
 | 5 | **Outing Detail Editing** (edit location, add/delete species, export, map link) | ✅ Done |
-| 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | Not started |
-| 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | Not started |
-| 8 | **Dark Mode, Auth Fixes & Error Handling** (palette, toggle, visual audit, 401 fix, error/logging overhaul) | Not started |
+| 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | ✅ Done |
+| 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | ✅ Done |
+| 8 | **Appearance & Session Hardening** (system appearance audit, 401/session handling, native errors, observability) | ✅ Done |
 | 9 | **iOS-Native Enhancements** (sharing, context menus, shortcuts, Spotlight, widgets, camera, tips, etc.) | Not started |
 | 10 | **Polish & App Store** (errors, accessibility, icon, TestFlight, listing, submission) | Not started |
