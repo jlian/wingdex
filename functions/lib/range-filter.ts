@@ -89,13 +89,18 @@ export async function getRangePriors(
     if (outOfRange.length > 0) {
       const neighbors = neighborCells(x, y, cell.row, cell.col)
       const remaining = new Set(outOfRange)
-      if (neighbors.length > 0) {
-        // Fetch all ring cells in parallel (network latency dominates), but
-        // defer decompression: decompress + parse sequentially closest-first
-        // and stop as soon as every species is resolved, so a hit in the
-        // nearest cell avoids decompressing the farther ones.
-        const neighborBlobs = await Promise.all(
-          neighbors.map(async n => {
+      // Progressive fan-out: process the ring in closest-first waves and only
+      // fetch farther cells if species are still unresolved. Coastal points
+      // are usually resolved by the 1-2 nearest cells, so this avoids issuing
+      // all 8 R2 GETs on the hot path while preserving closest-first winner
+      // semantics. Within a wave, cells are fetched in parallel (network
+      // latency dominates) and decompressed lazily closest-first with early
+      // exit. Worst case is a handful of small waves rather than 8 GETs.
+      const WAVE_SIZE = 2
+      for (let i = 0; i < neighbors.length && remaining.size > 0; i += WAVE_SIZE) {
+        const wave = neighbors.slice(i, i + WAVE_SIZE)
+        const waveBlobs = await Promise.all(
+          wave.map(async n => {
             try {
               const nObj = await bucket.get(`range-priors/${n.row}-${n.col}.bin.gz`)
               if (!nObj) return null
@@ -105,8 +110,8 @@ export async function getRangePriors(
             }
           }),
         )
-        // Scan closest-first so the nearest containing cell wins.
-        for (const blob of neighborBlobs) {
+        // Scan closest-first within the wave so the nearest containing cell wins.
+        for (const blob of waveBlobs) {
           if (remaining.size === 0) break
           if (!blob) continue
           let nData: Uint8Array
