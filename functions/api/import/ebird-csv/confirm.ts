@@ -206,8 +206,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     },
     dexUpdates: enrichDexEntries(dexUpdates),
   })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `eBird import confirm failed: ${message}`, { error: message, previewCount: body.previewIds.length })
+  } catch {
+    return route.fail(500, 'Internal server error', 'eBird import confirmation failed; inspect the trace and database batch', { previewCount: body.previewIds.length })
   }
  }

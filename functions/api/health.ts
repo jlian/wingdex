@@ -9,9 +9,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     route.fail(503, 'D1 health check returned unexpected result', 'D1 health check returned an unexpected result; the database may be in a degraded state')
     return Response.json({ status: 'degraded', db: 'unexpected' }, { status: 503 })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    route.fail(503, 'D1 health check failed', `D1 health check failed: ${message}`)
+  } catch {
+    route.fail(503, 'D1 health check failed', 'D1 health check failed; inspect the database binding and trace')
     return Response.json({ status: 'degraded', db: 'error' }, { status: 503 })
   }
 }

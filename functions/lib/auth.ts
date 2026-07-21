@@ -18,7 +18,6 @@ type SocialProviderConfig = {
   appBundleIdentifier?: string
 }
 
-const AUTH_DEBUG_LOGGED_KEY = '__wingdexAuthDebugLogged__'
 
 function isLoopbackOrigin(value: string | null): value is string {
   if (!value) return false
@@ -175,20 +174,6 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
     }
     return baseURL
   })()
-
-  if (isLoopbackOrigin(baseURL)) {
-    const globalRef = globalThis as typeof globalThis & Record<string, unknown>
-    if (globalRef[AUTH_DEBUG_LOGGED_KEY] !== true) {
-      globalRef[AUTH_DEBUG_LOGGED_KEY] = true
-      console.info('[auth:dev] resolved origins', {
-        baseURL,
-        requestOrigin,
-        headerOrigin,
-        passkeyOrigin,
-        trustedOrigins: Array.from(trustedOrigins),
-      })
-    }
-  }
 
   const socialProviders: Record<string, SocialProviderConfig> = {}
   if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {

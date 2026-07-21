@@ -1,3 +1,4 @@
+import { clientLog } from "./lib/client-log";
 import { Alert, AlertTitle, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import type { FallbackProps } from "react-error-boundary";
@@ -5,10 +6,13 @@ import type { FallbackProps } from "react-error-boundary";
 import { AlertTriangleIcon, RefreshCwIcon } from "lucide-react";
 
 export const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
-  // Log the error in dev mode but still show the boundary instead of rethrowing
-  // (rethrowing causes a cascade crash and blank screen)
+  // Record a safe dev-only boundary event without logging the error object.
+  // Rethrowing would cause a cascade crash and blank screen.
   if (import.meta.env.DEV) {
-    console.error('[ErrorFallback] Caught error:', error);
+    clientLog.error("web/errorBoundary/render", {
+      resultType: "Failed",
+      resultDescription: "The React error boundary caught an unhandled render error",
+    });
   }
 
   return (

@@ -3,6 +3,7 @@ import { Key, GithubLogo, AppleLogo, GoogleChromeLogo } from '@phosphor-icons/re
 import { toast } from 'sonner'
 
 import { authClient } from '@/lib/auth-client'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { generateBirdName } from '@/lib/fun-names'
 import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike } from '@/lib/passkey-label'
 import {
@@ -131,7 +132,7 @@ function AuthGateModal({
     )
 
     // Finalize -- flip anonymous -> real user
-    const finalizeRes = await fetch('/api/auth/finalize-passkey', {
+    const finalizeRes = await fetchWithLocalAuthRetry('/api/auth/finalize-passkey', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

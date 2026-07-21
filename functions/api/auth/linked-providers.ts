@@ -40,8 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   return Response.json({ providers }, {
     headers: { 'cache-control': 'no-store' },
   })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Linked providers fetch failed: ${message}`, { error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Linked provider lookup failed; inspect the trace and authentication database operation')
   }
 }

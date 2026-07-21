@@ -31,11 +31,8 @@ function listTsFiles(dir: string): string[] {
   return results
 }
 
-/** Handler files that are exempt from createRouteResponder (no DB calls, pure lookups). */
+/** Handler files that are exempt from createRouteResponder. */
 const EXEMPT_HANDLERS = new Set([
-  'species/search.ts',
-  'species/ebird-code.ts',
-  'species/wiki-title.ts',
   'auth/[[path]].ts',  // Better Auth catch-all, not a route handler we instrument
 ])
 

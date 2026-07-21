@@ -35,7 +35,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     passkeyId || undefined,
   )
   if (!ownsPasskey) {
-    return route.fail(403, 'Passkey required', `User does not own passkey ${passkeyId || '(none)'} or no passkey found for this user`, { passkeyId: passkeyId || undefined })
+    return route.fail(403, 'Passkey required', 'No owned passkey matched the finalization request', { passkeyIdSupplied: passkeyId.length > 0 })
   }
 
   try {
@@ -49,8 +49,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     route.info('User finalized passkey upgrade and is no longer anonymous')
 
     return Response.json({ success: true })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Passkey finalization failed: ${message}`, { error: message, userId: session.user.id })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Passkey finalization failed; inspect the trace and database operation', { userId: session.user.id })
   }
 }

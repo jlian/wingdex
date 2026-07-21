@@ -15,7 +15,7 @@ import { fetchWithLocalAuthRetry, isLocalRuntime } from '@/lib/local-auth-fetch'
 import { generateBirdName, emojiForBirdName, emojiAvatarDataUrl } from '@/lib/fun-names'
 import { buildPasskeyName, getDeviceLabelFromNavigator, isPasskeyCancellationLike, toStandardPasskeyLabel } from '@/lib/passkey-label'
 import { toast } from 'sonner'
-import { logClientFailure } from '@/lib/client-log'
+import { clientLog, logClientFailure } from '@/lib/client-log'
 import demoCsv from '@/assets/ebird-import.csv?raw'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
 
@@ -176,7 +176,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
         return formData
       }
 
-      const postPreview = () => fetch('/api/import/ebird-csv', {
+      const postPreview = () => fetchWithLocalAuthRetry('/api/import/ebird-csv', {
         method: 'POST',
         credentials: 'include',
         body: makePreviewFormData(),
@@ -238,7 +238,10 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to import eBird data: ${detail}`)
-      if (import.meta.env.DEV) console.error(error)
+      clientLog.error('import/ebirdCsv/import', {
+        resultType: 'Failed',
+        resultDescription: 'The eBird CSV import flow failed during preview, confirmation, or refresh',
+      })
     }
 
     if (importFileRef.current) {

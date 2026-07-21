@@ -110,8 +110,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     observations,
     dex: enrichDexEntries(dex),
   })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Data fetch failed: ${message}`, { error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Bulk data fetch failed; inspect the trace and database operations')
   }
 }
