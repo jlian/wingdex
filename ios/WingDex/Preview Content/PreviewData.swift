@@ -120,7 +120,7 @@ enum PreviewData {
         add("outing-001", "Song Sparrow (Melospiza melodia)")
         add("outing-001", "Black-capped Chickadee (Poecile atricapillus)")
         add("outing-001", "Blue Jay (Cyanocitta cristata)")
-        add("outing-001", "Northern Cardinal (Cardinalis cardinalis)")
+        add("outing-001", "Northern Cardinal (Cardinalis cardinalis)", count: 4)
         add("outing-001", "Steller's Jay (Cyanocitta stelleri)", count: 3)
         add("outing-001", "Dark-eyed Junco (Junco hyemalis)")
 
@@ -131,7 +131,7 @@ enum PreviewData {
         add("outing-002", "Apapane (Himatione sanguinea)")
         add("outing-002", "Pacific Golden-Plover (Pluvialis fulva)")
         add("outing-002", "Warbling White-eye (Zosterops japonicus)")
-        add("outing-002", "Northern Cardinal (Cardinalis cardinalis)")
+        add("outing-002", "Northern Cardinal (Cardinalis cardinalis)", certainty: .possible)
         add("outing-002", "Eurasian Skylark (Alauda arvensis)")
 
         // Outing 3 - Jamaica Bay, NYC
@@ -296,7 +296,7 @@ enum PreviewData {
                 lastSeenDate: stats.lastDate,
                 totalOutings: stats.outingIds.count,
                 totalCount: stats.totalCount,
-                notes: "",
+                notes: species == sampleSpecies ? "Often seen near dense shrubs and woodland edges." : "",
                 wikiTitle: wiki?.title,
                 thumbnailUrl: wiki?.thumb
             )

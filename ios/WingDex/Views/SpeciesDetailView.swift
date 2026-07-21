@@ -37,7 +37,7 @@ struct SpeciesDetailView: View {
             Section {
                 ForEach(sightings, id: \.observation.id) { item in
                     NavigationLink(value: item.outing) {
-                        OutingRow(outing: item.outing, store: store)
+                        OutingRow(outing: item.outing, store: store, observation: item.observation)
                     }
                     .contextMenu {
                         Button {
@@ -63,6 +63,19 @@ struct SpeciesDetailView: View {
                 Text("Sightings (\(sightings.count))")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.foregroundText)
+            }
+
+            if let notes = entry?.notes.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                Section {
+                    Text(notes)
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundStyle(Color.mutedText)
+                } header: {
+                    Text("Notes")
+                        .font(.system(size: 16, weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.foregroundText)
+                }
             }
         }
         .listStyle(.plain)

@@ -39,6 +39,7 @@
 		6541BF20FA6B0465C6AA8204 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584DE950D0BBC4D9543B7EB4 /* HomeView.swift */; };
 		6A3E3A8BE6F89235D4E0ED32 /* collage1.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BC6ADC80E561240BA8BF7D7E /* collage1.jpg */; };
 		71AE086D49EDD88D2294F2E1 /* demo-ebird-import.csv in Resources */ = {isa = PBXBuildFile; fileRef = 071E15B7BF7B6D9EA12130BA /* demo-ebird-import.csv */; };
+		735564E615ECED94D844C13B /* TaxonomyOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */; };
 		76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */ = {isa = PBXBuildFile; fileRef = B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */; };
 		78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */; };
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
@@ -117,6 +118,7 @@
 		452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunNamesTests.swift; sourceTree = "<group>"; };
 		487950E4852A38D4FFA3B405 /* collage24.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage24.jpg; sourceTree = "<group>"; };
 		494CD419AD323D541E04D2AB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaxonomyOrderTests.swift; sourceTree = "<group>"; };
 		557A070AA631D1A44FE4F407 /* GitInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitInfo.swift; sourceTree = "<group>"; };
 		584DE950D0BBC4D9543B7EB4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		5873328D24830AA514049E5C /* PhotoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoService.swift; sourceTree = "<group>"; };
@@ -327,6 +329,7 @@
 				40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */,
 				DE1613DCCF3480F9644D0D29 /* AuthServiceTests.swift */,
 				452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */,
+				4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */,
 			);
 			path = WingDexTests;
 			sourceTree = "<group>";
@@ -559,6 +562,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */,
 				8EE17A4E87495C877151768B /* AuthServiceTests.swift in Sources */,
 				E2DEFBDD3B36FEB4C7CFCC96 /* FunNamesTests.swift in Sources */,
+				735564E615ECED94D844C13B /* TaxonomyOrderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -658,7 +662,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.wingdex;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -780,7 +784,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.wingdex;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
