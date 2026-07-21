@@ -15,6 +15,21 @@ Prefer up-to-date sources over training data. Search for error messages, check o
 - **Dev server:** `npm run dev` (Vite on `:5000`, Wrangler on `:8787`)
 - **Stop:** `npm stop`
 
+## iOS UI Verification
+
+For changes under `ios/WingDex/Views/` or shared iOS UI code, inspect the corresponding web implementation under `src/components/`, `src/styles/`, and `src/index.css` before editing. Preserve feature, state, copy, content order, and palette parity with the web source of truth while using native SwiftUI and Apple HIG conventions rather than pixel-for-pixel cloning.
+
+Before styling a new iOS control, find an existing control with the same function and reuse its component, modifier, symbol, label structure, font, spacing, and interaction pattern. Prefer styling in this order:
+
+1. An existing WingDex component or established nearby pattern.
+2. Standard SwiftUI controls, styles, semantic fonts and colors, button roles, materials, and system spacing.
+3. New custom styling only when the product design requires behavior or appearance the first two options cannot provide.
+
+Do not hand-style native controls by default. Avoid fixed font sizes, explicit foreground colors, custom padding, custom shapes, or separate icon/text styling when a standard control, `Label`, semantic role, tint, or existing modifier already provides the intended result. When custom styling is necessary, keep it minimal, Dynamic Type-safe, and consistent across every control with the same function.
+
+Before finishing, build the active iOS scheme with Xcode MCP, render every affected `#Preview`, and validate the installed app with iOS Simulator MCP. Exercise the changed flow with `--auto-sign-in --auto-demo-data` when authenticated data is needed, and check light and dark appearance, navigation, scrolling, sheets, Dynamic Type, and visible overlap. Report any simulator or local-server validation that could not be performed.
+
+
 ## Observability (Structured Logging)
 
 Full schema and reference in **[docs/OBSERVABILITY.md](../docs/OBSERVABILITY.md)**.
