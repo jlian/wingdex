@@ -37,18 +37,56 @@ final class DataService: Sendable {
         try await delete("api/data/outings/\(id)")
     }
 
-    func updateOuting(id: String, fields: OutingUpdate) async throws {
+    func updateOuting(id: String, fields: OutingUpdate) async throws -> Outing {
         let data = try JSONEncoder().encode(fields)
-        try await patch("api/data/outings/\(id)", body: data)
+        let responseData = try await patch("api/data/outings/\(id)", body: data)
+        return try JSONDecoder().decode(Outing.self, from: responseData)
     }
 
     // MARK: - Observations
 
-    func rejectObservations(ids: [String]) async throws {
-        struct Update: Codable { let id: String; let certainty: String }
-        let updates = ids.map { Update(id: $0, certainty: "rejected") }
-        let data = try JSONEncoder().encode(updates)
-        try await patch("api/data/observations", body: data)
+    func rejectObservations(ids: [String]) async throws -> ObservationsResponse {
+        struct Patch: Codable { let certainty: String }
+        struct Update: Codable { let ids: [String]; let patch: Patch }
+        let data = try JSONEncoder().encode(Update(ids: ids, patch: Patch(certainty: "rejected")))
+        let responseData = try await patch("api/data/observations", body: data)
+        return try JSONDecoder().decode(ObservationsResponse.self, from: responseData)
+    }
+
+    // MARK: - Species
+
+    struct SpeciesSearchResult: Codable, Identifiable, Sendable {
+        var id: String { ebirdCode ?? "\(common)|\(scientific)" }
+        let common: String
+        let scientific: String
+        let ebirdCode: String?
+        let wikiTitle: String?
+    }
+
+    private struct SpeciesSearchResponse: Codable {
+        let results: [SpeciesSearchResult]
+    }
+
+    func searchSpecies(query: String, limit: Int = 8) async throws -> [SpeciesSearchResult] {
+        var components = URLComponents(
+            url: Config.apiBaseURL.appendingPathComponent("api/species/search"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ]
+        guard let url = components?.url else {
+            throw DataServiceError.networkError("Invalid species search URL")
+        }
+
+        var request = URLRequest(url: url)
+        try await attachAuth(&request)
+
+        let start = Date()
+        let (data, response) = try await Self.bearerSession.data(for: request)
+        try await validate(response, data: data, path: "api/species/search", method: "GET", start: start, byteCount: data.count)
+        return try JSONDecoder().decode(SpeciesSearchResponse.self, from: data).results
     }
 
     // MARK: - Create Operations
