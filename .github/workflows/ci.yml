@@ -81,7 +81,7 @@ jobs:
       # version with a stable alias URL of the form
       #   pr-<N>-wingdex-app-preview.<subdomain>.workers.dev
       # (requires preview_urls = true in wrangler.toml). Unlike `deploy`, this
-      # does NOT change the live deployed version — each PR only gets its own
+      # does NOT change the live deployed version; each PR only gets its own
       # isolated preview URL.
       - name: Deploy preview to Cloudflare Workers
         if: github.head_ref != 'dev' && github.head_ref != 'main'
@@ -135,8 +135,9 @@ jobs:
             const m = out.match(/https:\/\/pr-[a-z0-9-]+-wingdex-app-preview\.[a-z0-9-]+\.workers\.dev/i);
             const url = (m && m[0]) || process.env.FALLBACK_ALIAS_URL;
             const marker = '<!-- preview-url -->';
-            const body = `${marker}\n🔎 **Preview for this PR:** ${url}\n\n_Isolated per-PR alias — no longer shared/overwritten across PRs. Updates on every push._`;
-            const { data: comments } = await github.rest.issues.listComments({
+            const body = `${marker}\n🔎 **Preview for this PR:** ${url}\n\n_Isolated per-PR alias, no longer shared/overwritten across PRs. Updates on every push._`;
+            // Paginate: the sticky marker may be beyond the first page on busy PRs.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               ...context.repo,
               issue_number: context.issue.number,
               per_page: 100,
