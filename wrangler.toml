@@ -32,6 +32,14 @@ bucket_name = "wingdex-range-priors"
 # used in functions/lib/range-filter.ts).
 remote = true
 
+# On-device model assets (BioCLIP int8 encoder + text-embedding matrix), served
+# through functions/models/[[path]].ts since files exceed the 25 MiB static
+# asset limit. Uploaded via scripts/upload-model.mjs. Read-only in code.
+[[r2_buckets]]
+binding = "MODELS"
+bucket_name = "wingdex-models"
+remote = true
+
 [vars]
 
 [observability]
@@ -67,4 +75,9 @@ remote = true
 [[env.preview.r2_buckets]]
 binding = "RANGE_PRIORS"
 bucket_name = "wingdex-range-priors"
+remote = true
+
+[[env.preview.r2_buckets]]
+binding = "MODELS"
+bucket_name = "wingdex-models"
 remote = true

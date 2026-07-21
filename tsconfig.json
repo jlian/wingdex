@@ -33,6 +33,7 @@
   ],
   "exclude": [
     "src/__tests__/auth-config.test.ts",
-    "src/__tests__/range-filter.test.ts"
+    "src/__tests__/range-filter.test.ts",
+    "src/__tests__/range-adjust.test.ts"
   ]
 }
