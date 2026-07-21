@@ -57,7 +57,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
   const headers = new Headers()
   headers.set('Content-Type', contentType)
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  // Cache aggressively but revalidate: the filenames are stable/non-versioned,
+  // so `immutable` would pin a stale model forever if an asset is ever replaced
+  // in R2. A long max-age keeps it fast, while ETag + must-revalidate lets
+  // clients pick up a new upload via a cheap 304 once the cached copy is stale.
+  headers.set('Cache-Control', 'public, max-age=86400, must-revalidate')
   headers.set('ETag', object.httpEtag)
   headers.set('Accept-Ranges', 'bytes')
   const range = (object as R2ObjectBody & { range?: { offset: number; length: number } }).range

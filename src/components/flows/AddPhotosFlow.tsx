@@ -121,8 +121,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const fullCurrentPhoto = getFullPhoto(currentPhotoIndex)
 
   useEffect(() => {
-    // Warm the on-device model in the background (no-op unless the feature
-    // flag is on and it isn't cached yet), so it's ready by first identify.
+    // Warm the on-device model in the background so it's ready by first
+    // identify. Network-gated and no-op if already downloading/cached; safe to
+    // call unconditionally (see maybePrefetchModel).
     void maybePrefetchModel()
   }, [])
 

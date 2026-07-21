@@ -50,14 +50,16 @@ function getConnection(): NetworkInformation | undefined {
  * Whether it's safe to auto-download ~300 MB right now.
  *
  * `navigator.connection` is only available on Chromium (Android/desktop). When
- * it's absent (Safari/Firefox) we conservatively allow prefetch only if the
- * model is already partially cached-friendly; here we default to allowing it,
- * since the alternative (never prefetching on Safari) would mean on-device
- * never warms there. Callers can still gate on isModelCached() for identify.
+ * it's absent (notably iOS Safari and Firefox) we CANNOT tell whether the user
+ * is on Wi-Fi or metered cellular, so we conservatively do NOT auto-prefetch:
+ * silently pulling ~300 MB on an iPhone over LTE would be user-hostile. On-
+ * device still warms on Chromium/Wi-Fi, and identify always works via GPT until
+ * the model is cached, so the only cost of this caution is that Safari/FF users
+ * stay on the server path unless the model gets cached some other way.
  */
 export function isNetworkSuitableForPrefetch(): boolean {
   const c = getConnection()
-  if (!c) return true // unknown (Safari/FF): allow; download is cached + one-time
+  if (!c) return false // unknown (Safari/FF): can't rule out metered cellular
   if (c.saveData) return false // user asked to save data
   if (c.type === 'cellular') return false
   // effectiveType: 'slow-2g' | '2g' | '3g' | '4g'
