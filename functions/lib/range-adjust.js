@@ -66,6 +66,38 @@ export function nearestNeighborCell(x, y, row, col) {
   return { row: nr, col: nc }
 }
 
+/**
+ * All in-bounds neighbor cells in the 3x3 ring around (row, col), ordered by
+ * proximity to the point's position within its cell (closest edge/corner
+ * first). Used to blend range data across cell boundaries: coastal and
+ * range-edge points frequently fall in a cell that lacks a species whose
+ * range polygon covers an adjacent (often diagonal) cell.
+ *
+ * `nearestNeighborCell` only returns the single closest edge cell, which
+ * misses diagonals and the other three edges; a point right on a coastline
+ * can read out-of-range for a species that is plainly present one cell over.
+ * This returns up to 8 cells so callers can scan the full ring.
+ */
+export function neighborCells(x, y, row, col) {
+  const fx = (x - (GRID_ORIGIN_X + col * GRID_CELL_SIZE)) / GRID_CELL_SIZE
+  const fy = ((GRID_ORIGIN_Y - row * GRID_CELL_SIZE) - y) / GRID_CELL_SIZE
+  const out = []
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue
+      const nr = row + dr, nc = col + dc
+      if (nr < 0 || nr >= GRID_ROWS || nc < 0 || nc >= GRID_COLS) continue
+      // squared distance from the point to the target cell (0 if inside the
+      // shared edge/corner direction); used only for ordering.
+      const ddx = dc === -1 ? fx : dc === 1 ? 1 - fx : 0
+      const ddy = dr === -1 ? fy : dr === 1 ? 1 - fy : 0
+      out.push({ row: nr, col: nc, dist: ddx * ddx + ddy * ddy })
+    }
+  }
+  out.sort((a, b) => a.dist - b.dist)
+  return out.map(({ row, col }) => ({ row, col }))
+}
+
 // ── Blob parsing ────────────────────────────────────────────
 
 /**

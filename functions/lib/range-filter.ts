@@ -10,7 +10,7 @@
 import {
   lonLatToEqualEarth,
   xyToCell,
-  nearestNeighborCell,
+  neighborCells,
   parseCellBlob,
   adjustConfidence as _adjustConfidence,
 } from './range-adjust.js'
@@ -35,8 +35,12 @@ async function decompressBlob(compressed: ArrayBuffer): Promise<ArrayBuffer> {
 /**
  * Look up range status for multiple species at a single location.
  *
- * For species not found in the primary cell, checks the nearest neighbor
- * cell (based on point position) and upgrades those to 'near-range'.
+ * For species not found in the primary cell, scans the 3x3 ring of neighbor
+ * cells (up to 8) closest-first using progressive fan-out (small parallel
+ * waves), and upgrades a species to 'near-range' on the first neighbor cell
+ * that contains it. Farther cells are only fetched if species remain
+ * unresolved, so the common case touches just the 1-2 nearest cells. Species
+ * absent from the primary cell and every neighbor are marked 'out-of-range'.
  */
 export async function getRangePriors(
   bucket: R2Bucket,
@@ -77,28 +81,59 @@ export async function getRangePriors(
       }
     }
 
-    // Neighbor blending for out-of-range species
+    // Neighbor blending for out-of-range species. Scan the full 3x3 ring
+    // (up to 8 cells) rather than only the single closest edge cell: coastal
+    // and range-edge points often fall in a cell that lacks a species whose
+    // BirdLife polygon covers an adjacent (frequently diagonal) cell, which
+    // the old single-neighbor lookup reported as out-of-range. Cells are
+    // fetched in parallel and scanned closest-first; a species is marked
+    // near-range on the first ring cell that contains it.
     if (outOfRange.length > 0) {
-      const neighbor = nearestNeighborCell(x, y, cell.row, cell.col)
-      if (neighbor) {
-        try {
-          const nObj = await bucket.get(`range-priors/${neighbor.row}-${neighbor.col}.bin.gz`)
-          if (nObj) {
-            const nData = await decompressBlob(await nObj.arrayBuffer())
-            const nMap = parseCellBlob(new Uint8Array(nData), new Set(outOfRange))
-            for (const code of outOfRange) {
-              const attrs = nMap.get(code)
-              results.set(code, attrs ? { status: 'near-range', ...attrs } : OUT_OF_RANGE)
+      const neighbors = neighborCells(x, y, cell.row, cell.col)
+      const remaining = new Set(outOfRange)
+      // Progressive fan-out: process the ring in closest-first waves and only
+      // fetch farther cells if species are still unresolved. Coastal points
+      // are usually resolved by the 1-2 nearest cells, so this avoids issuing
+      // all 8 R2 GETs on the hot path while preserving closest-first winner
+      // semantics. Within a wave, cells are fetched in parallel (network
+      // latency dominates) and decompressed lazily closest-first with early
+      // exit. Worst case (nothing resolves early) still issues up to 8 GETs,
+      // but spread across several small sequential waves rather than all at once.
+      const WAVE_SIZE = 2
+      for (let i = 0; i < neighbors.length && remaining.size > 0; i += WAVE_SIZE) {
+        const wave = neighbors.slice(i, i + WAVE_SIZE)
+        const waveBlobs = await Promise.all(
+          wave.map(async n => {
+            try {
+              const nObj = await bucket.get(`range-priors/${n.row}-${n.col}.bin.gz`)
+              if (!nObj) return null
+              return await nObj.arrayBuffer()
+            } catch {
+              return null
             }
-          } else {
-            for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
+          }),
+        )
+        // Scan closest-first within the wave so the nearest containing cell wins.
+        for (const blob of waveBlobs) {
+          if (remaining.size === 0) break
+          if (!blob) continue
+          let nData: Uint8Array
+          try {
+            nData = new Uint8Array(await decompressBlob(blob))
+          } catch {
+            continue
           }
-        } catch {
-          for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
+          const nMap = parseCellBlob(nData, remaining)
+          for (const code of [...remaining]) {
+            const attrs = nMap.get(code)
+            if (attrs) {
+              results.set(code, { status: 'near-range', ...attrs })
+              remaining.delete(code)
+            }
+          }
         }
-      } else {
-        for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
       }
+      for (const code of remaining) results.set(code, OUT_OF_RANGE)
     }
   } catch {
     for (const code of ebirdCodes) results.set(code, NO_DATA)
