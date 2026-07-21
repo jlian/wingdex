@@ -240,7 +240,7 @@ final class AddPhotosViewModel {
         }
 
         // Process camera-captured photos (no EXIF GPS; use the device location
-        // captured at shot time, and capture time as now).
+        // captured at shot time, and the processing time as the timestamp).
         for camera in cameraPhotos {
             let uiImage = camera.image
             let id = UUID().uuidString

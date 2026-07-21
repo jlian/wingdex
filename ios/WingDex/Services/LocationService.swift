@@ -50,6 +50,12 @@ final class LocationService: ObservableObject {
             } catch {
                 // Non-fatal: capture still works, photo just won't be geotagged.
             }
+            // Clear our own handle when the stream ends/throws, but only if a
+            // newer start() hasn't already replaced it (avoids clobbering a
+            // restart). Cancellation is handled by stop().
+            if let self, !Task.isCancelled {
+                self.updatesTask = nil
+            }
         }
     }
 
