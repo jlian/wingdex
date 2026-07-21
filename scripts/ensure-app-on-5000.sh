@@ -47,7 +47,8 @@ release_lock() {
 }
 
 is_healthy() {
-  curl -fsS "${BASE_URL}" >/dev/null 2>&1 && curl -fsS "${BASE_URL}/api/health" >/dev/null 2>&1
+  curl -fsS --connect-timeout 2 --max-time 5 "${BASE_URL}" >/dev/null 2>&1 \
+    && curl -fsS --connect-timeout 2 --max-time 5 "${BASE_URL}/api/health" >/dev/null 2>&1
 }
 
 start_dev() {
