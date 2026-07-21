@@ -45,9 +45,10 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   const ext = key.slice(key.lastIndexOf('.'))
   const contentType = CONTENT_TYPES[ext] || 'application/octet-stream'
   const rangeHeader = context.request.headers.get('range')
+  const parsedRange = rangeHeader ? parseRange(rangeHeader) : undefined
 
-  const object = rangeHeader
-    ? await context.env.MODELS.get(key, { range: parseRange(rangeHeader) })
+  const object = parsedRange
+    ? await context.env.MODELS.get(key, { range: parsedRange })
     : await context.env.MODELS.get(key)
 
   if (!object) {
@@ -60,7 +61,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   headers.set('ETag', object.httpEtag)
   headers.set('Accept-Ranges', 'bytes')
   const range = (object as R2ObjectBody & { range?: { offset: number; length: number } }).range
-  if (rangeHeader && object.size != null && range) {
+  if (parsedRange && object.size != null && range) {
     const start = range.offset ?? 0
     const end = Math.min(start + (range.length ?? object.size) - 1, object.size - 1)
     headers.set('Content-Range', `bytes ${start}-${end}/${object.size}`)
@@ -72,10 +73,18 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   return new Response(object.body, { status: 200, headers })
 }
 
-function parseRange(header: string): { offset: number; length: number } | undefined {
-  const m = /bytes=(\d+)-(\d*)/.exec(header)
+/**
+ * Parse a single-range `bytes=start-[end]` header into an R2 range option.
+ * Returns undefined for absent, malformed, or invalid (end < start) ranges so
+ * callers omit the range option entirely and serve the full object.
+ */
+function parseRange(header: string): { offset: number; length: number } | { offset: number } | undefined {
+  const m = /^bytes=(\d+)-(\d*)$/.exec(header.trim())
   if (!m) return undefined
   const start = Number(m[1])
-  const end = m[2] ? Number(m[2]) : undefined
-  return { offset: start, length: end !== undefined ? end - start + 1 : undefined as unknown as number }
+  if (!Number.isFinite(start) || start < 0) return undefined
+  if (m[2] === '') return { offset: start } // open-ended: start to EOF
+  const end = Number(m[2])
+  if (!Number.isFinite(end) || end < start) return undefined
+  return { offset: start, length: end - start + 1 }
 }

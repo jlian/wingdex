@@ -20,14 +20,19 @@ function cellBlob(records: Uint8Array[]): Buffer {
   return gzipSync(Buffer.from(raw))
 }
 
-/** R2 bucket that returns the same records for the self cell, empty for neighbors. */
+/**
+ * R2 bucket that returns the given records for the FIRST cell key requested
+ * (the self cell) and null for every subsequent distinct key (neighbors =
+ * ocean/empty). This lets tests exercise self-cell vs neighbor behavior
+ * instead of returning the same blob for every key.
+ */
 function bucketWith(records: Uint8Array[]): any {
   const compressed = cellBlob(records)
+  let selfKey: string | null = null
   return {
     get: vi.fn(async (key: string) => {
-      // Only the self cell has data; neighbor cells are "ocean" (null).
-      if (!key.includes('-')) return null
-      // Heuristic: give data to the first requested cell only.
+      if (selfKey === null) selfKey = key // first requested cell = self
+      if (key !== selfKey) return null // neighbor cells are empty
       return {
         arrayBuffer: async () => compressed.buffer.slice(compressed.byteOffset, compressed.byteOffset + compressed.byteLength),
       }

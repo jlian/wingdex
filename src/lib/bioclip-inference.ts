@@ -19,7 +19,7 @@
 import type { BirdIdResult } from './ai-inference'
 import { fetchWithLocalAuthRetry } from './local-auth-fetch'
 
-// Asset URLs (served from R2 via the Worker; see functions/api/model/[[path]].ts).
+// Asset URLs (served from R2 via the Worker; see functions/models/[[path]].ts).
 const MODEL_URL = '/models/bioclip2_visual_int8.onnx'
 const TEXT_EMBEDS_URL = '/models/text_embeds_int8.bin'
 const TEXT_SCALE_URL = '/models/text_embeds_scale.bin'
@@ -54,7 +54,7 @@ let species: SpeciesEntry[] | null = null
 let loadPromise: Promise<void> | null = null
 
 export function isModelReady(): boolean {
-  return session !== null && textInt8 !== null && species !== null
+  return session !== null && textInt8 !== null && textScale !== null && species !== null
 }
 
 /** Whether the model is already cached (=> load will be fast, no big download). */
@@ -134,13 +134,26 @@ async function streamModel(cache: Cache | null, report: (p: ModelLoadProgress) =
   if (!resp.ok || !resp.body) throw new Error(`model fetch failed: ${resp.status}`)
   const total = Number(resp.headers.get('content-length')) || 0
   const reader = resp.body.getReader()
+
+  // When the size is known, write directly into one preallocated buffer to
+  // avoid holding chunks + a Blob + a final ArrayBuffer all at once (a ~3x
+  // transient memory spike that risks OOM on mobile). Fall back to chunk
+  // collection only when content-length is missing.
+  const preallocated = total > 0 ? new Uint8Array(total) : null
   const chunks: Uint8Array[] = []
   let received = 0
   let lastReport = t0
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
-    chunks.push(value)
+    if (preallocated && received + value.length <= preallocated.length) {
+      preallocated.set(value, received)
+    } else if (preallocated) {
+      // Server sent more than content-length claimed; spill the remainder.
+      chunks.push(value)
+    } else {
+      chunks.push(value)
+    }
     received += value.length
     const now = performance.now()
     if (now - lastReport > 300) {
@@ -150,8 +163,20 @@ async function streamModel(cache: Cache | null, report: (p: ModelLoadProgress) =
       lastReport = now
     }
   }
-  const blob = new Blob(chunks as BlobPart[])
-  const buf = await blob.arrayBuffer()
+
+  let buf: ArrayBuffer
+  if (preallocated && chunks.length === 0 && received === preallocated.length) {
+    buf = preallocated.buffer
+  } else {
+    // Content-length was absent or inaccurate: assemble from whatever we have.
+    const head = preallocated ? preallocated.subarray(0, Math.min(received, preallocated.length)) : null
+    const parts = head ? [head, ...chunks] : chunks
+    const size = parts.reduce((n, p) => n + p.length, 0)
+    const out = new Uint8Array(size)
+    let offset = 0
+    for (const p of parts) { out.set(p, offset); offset += p.length }
+    buf = out.buffer
+  }
   if (cache) await cache.put(MODEL_URL, new Response(buf))
   return buf
 }
