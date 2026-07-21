@@ -35,10 +35,12 @@ async function decompressBlob(compressed: ArrayBuffer): Promise<ArrayBuffer> {
 /**
  * Look up range status for multiple species at a single location.
  *
- * For species not found in the primary cell, scans the full 3x3 ring of
- * neighbor cells (up to 8) in parallel, closest-first, and upgrades a species
- * to 'near-range' on the first neighbor cell that contains it. Species absent
- * from the primary cell and every neighbor are marked 'out-of-range'.
+ * For species not found in the primary cell, scans the 3x3 ring of neighbor
+ * cells (up to 8) closest-first using progressive fan-out (small parallel
+ * waves), and upgrades a species to 'near-range' on the first neighbor cell
+ * that contains it. Farther cells are only fetched if species remain
+ * unresolved, so the common case touches just the 1-2 nearest cells. Species
+ * absent from the primary cell and every neighbor are marked 'out-of-range'.
  */
 export async function getRangePriors(
   bucket: R2Bucket,
@@ -95,7 +97,8 @@ export async function getRangePriors(
       // all 8 R2 GETs on the hot path while preserving closest-first winner
       // semantics. Within a wave, cells are fetched in parallel (network
       // latency dominates) and decompressed lazily closest-first with early
-      // exit. Worst case is a handful of small waves rather than 8 GETs.
+      // exit. Worst case (nothing resolves early) still issues up to 8 GETs,
+      // but spread across several small sequential waves rather than all at once.
       const WAVE_SIZE = 2
       for (let i = 0; i < neighbors.length && remaining.size > 0; i += WAVE_SIZE) {
         const wave = neighbors.slice(i, i + WAVE_SIZE)
