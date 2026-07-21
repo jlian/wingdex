@@ -1,3 +1,10 @@
+## [1.21.2](https://github.com/jlian/wingdex/compare/v1.21.1...v1.21.2) (2026-07-21)
+
+
+### Bug Fixes
+
+* **range:** scan full 3x3 neighbor ring for range priors ([#258](https://github.com/jlian/wingdex/issues/258)) ([c26f19a](https://github.com/jlian/wingdex/commit/c26f19a097f02bec058b29bf7991de781e3989f4))
+
 ## [1.21.1](https://github.com/jlian/wingdex/compare/v1.21.0...v1.21.1) (2026-04-20)
 
 
