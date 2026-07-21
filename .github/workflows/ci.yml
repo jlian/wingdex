@@ -120,7 +120,6 @@ jobs:
               state: 'success',
               environment_url: previewUrl || undefined,
             });
-            core.setOutput('preview_url', previewUrl);
 
       # Sticky comment so reviewers always have the per-PR preview URL.
       - name: Comment preview URL on PR
