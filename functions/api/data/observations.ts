@@ -1,6 +1,7 @@
-import { computeDex } from '../../lib/dex-query'
+import { computeDex, enrichDexEntries } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
 import { createRouteResponder } from '../../lib/log'
+import { queryInChunks } from '../../lib/d1-chunk'
 
 type ObservationCertainty = 'confirmed' | 'possible' | 'pending' | 'rejected'
 
@@ -97,27 +98,29 @@ async function listObservationsByIds(db: D1Database, userId: string, ids: string
   const supportsSpeciesComments = await hasObservationColumn(db, 'speciesComments')
   const speciesCommentsSelect = supportsSpeciesComments ? 'speciesComments' : 'NULL as speciesComments'
 
-  const placeholders = ids.map(() => '?').join(', ')
-  const result = await db
-    .prepare(
-      `SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, ${speciesCommentsSelect}, notes
+  const rows = await queryInChunks(ids, (chunk, placeholders) =>
+    db
+      .prepare(
+        `SELECT id, outingId, speciesName, count, certainty, representativePhotoId, aiConfidence, ${speciesCommentsSelect}, notes
        FROM observation
        WHERE userId = ? AND id IN (${placeholders})`
-    )
-    .bind(userId, ...ids)
-    .all<{
-      id: string
-      outingId: string
-      speciesName: string
-      count: number
-      certainty: ObservationCertainty
-      representativePhotoId?: string | null
-      aiConfidence?: number | null
-      speciesComments?: string | null
-      notes: string
-    }>()
+      )
+      .bind(userId, ...chunk)
+      .all<{
+        id: string
+        outingId: string
+        speciesName: string
+        count: number
+        certainty: ObservationCertainty
+        representativePhotoId?: string | null
+        aiConfidence?: number | null
+        speciesComments?: string | null
+        notes: string
+      }>()
+      .then(result => result.results)
+  )
 
-  return result.results.map(observation => ({
+  return rows.map(observation => ({
     ...observation,
     representativePhotoId: observation.representativePhotoId || undefined,
     aiConfidence: observation.aiConfidence ?? undefined,
@@ -129,13 +132,68 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
   const uniqueOutingIds = Array.from(new Set(outingIds))
   if (uniqueOutingIds.length === 0) return true
 
-  const placeholders = uniqueOutingIds.map(() => '?').join(', ')
-  const result = await db
-    .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
-    .bind(userId, ...uniqueOutingIds)
-    .all<{ id: string }>()
+  const rows = await queryInChunks(uniqueOutingIds, async (chunk, placeholders) => {
+    const result = await db
+      .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
+      .bind(userId, ...chunk)
+      .all<{ id: string }>()
+    return result.results
+  })
 
-  return result.results.length === uniqueOutingIds.length
+  return rows.length === uniqueOutingIds.length
+}
+
+async function hasCompatibleObservationIds(
+  db: D1Database,
+  userId: string,
+  observations: CreateObservationInput[],
+  requireAll = false,
+): Promise<boolean> {
+  const ids = [...new Set(observations.map(observation => observation.id))]
+  if (ids.length === 0) return true
+  const expectedOutings = new Map(observations.map(observation => [observation.id, observation.outingId]))
+  const existing = await queryInChunks(ids, async (chunk, placeholders) => {
+    const result = await db
+      .prepare(`SELECT id, userId, outingId FROM observation WHERE id IN (${placeholders})`)
+      .bind(...chunk)
+      .all<{ id: string; userId: string; outingId: string }>()
+    return result.results
+  })
+  return (!requireAll || existing.length === ids.length) &&
+    existing.every(observation => observation.userId === userId && observation.outingId === expectedOutings.get(observation.id))
+}
+
+async function hasOwnedPhotos(db: D1Database, userId: string, photoRefs: Array<{ photoId: string; outingId?: string }>): Promise<boolean> {
+  if (photoRefs.length === 0) return true
+  const ids = [...new Set(photoRefs.map(ref => ref.photoId))]
+  const rows = await queryInChunks(ids, async (chunk, placeholders) => {
+    const result = await db
+      .prepare(`SELECT id, outingId FROM photo WHERE userId = ? AND id IN (${placeholders})`)
+      .bind(userId, ...chunk)
+      .all<{ id: string; outingId: string }>()
+    return result.results
+  })
+  if (rows.length !== ids.length) return false
+  const photosById = new Map(rows.map(photo => [photo.id, photo]))
+  return photoRefs.every(ref => {
+    const photo = photosById.get(ref.photoId)
+    return !!photo && (!ref.outingId || photo.outingId === ref.outingId)
+  })
+}
+
+function hasConflictingObservationIds(observations: CreateObservationInput[]): boolean {
+  return new Set(observations.map(observation => observation.id)).size !== observations.length
+}
+
+function hasConflictingPhotoRefs(observations: CreateObservationInput[]): boolean {
+  const outingsByPhoto = new Map<string, string>()
+  for (const observation of observations) {
+    if (!observation.representativePhotoId) continue
+    const existing = outingsByPhoto.get(observation.representativePhotoId)
+    if (existing && existing !== observation.outingId) return true
+    outingsByPhoto.set(observation.representativePhotoId, observation.outingId)
+  }
+  return false
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -158,7 +216,13 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   if (body.length === 0) {
     const dexUpdates = await computeDex(context.env.DB, userId)
-    return Response.json({ observations: [], dexUpdates })
+    return Response.json({ observations: [], dexUpdates: enrichDexEntries(dexUpdates) })
+  }
+  if (hasConflictingObservationIds(body)) {
+    return route.fail(400, 'Duplicate observation IDs', 'Observation payload must contain unique IDs', { count: body.length })
+  }
+  if (hasConflictingPhotoRefs(body)) {
+    return route.fail(400, 'Invalid photo references', 'A representative photo cannot reference multiple outings in one request')
   }
 
   try {
@@ -171,6 +235,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     if (!allOwned) {
       return route.fail(400, 'Invalid outing reference', `One or more outing IDs do not belong to the requesting user`, { outingIds })
     }
+    if (!await hasCompatibleObservationIds(context.env.DB, userId, body)) {
+      return route.fail(409, 'Observation ID conflict', 'One or more observation IDs already belong to another account or outing', { count: body.length })
+    }
+    const photoRefs = body
+      .filter(observation => observation.representativePhotoId)
+      .map(observation => ({ photoId: observation.representativePhotoId!, outingId: observation.outingId }))
+    if (!await hasOwnedPhotos(context.env.DB, userId, photoRefs)) {
+      return route.fail(400, 'Invalid photo reference', 'Representative photos must belong to the requesting account and outing', { count: photoRefs.length })
+    }
 
     const supportsSpeciesComments = await hasObservationColumn(context.env.DB, 'speciesComments')
 
@@ -178,7 +251,16 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       if (supportsSpeciesComments) {
         return context.env.DB.prepare(
           `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, speciesComments, notes)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+           ON CONFLICT(id) DO UPDATE SET
+             speciesName = excluded.speciesName,
+             count = excluded.count,
+             certainty = excluded.certainty,
+             representativePhotoId = excluded.representativePhotoId,
+             aiConfidence = excluded.aiConfidence,
+             speciesComments = excluded.speciesComments,
+             notes = excluded.notes
+           WHERE observation.userId = excluded.userId AND observation.outingId = excluded.outingId`
         ).bind(
           observation.id,
           observation.outingId,
@@ -195,7 +277,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
       return context.env.DB.prepare(
         `INSERT INTO observation (id, outingId, userId, speciesName, count, certainty, representativePhotoId, aiConfidence, notes)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(id) DO UPDATE SET
+           speciesName = excluded.speciesName,
+           count = excluded.count,
+           certainty = excluded.certainty,
+           representativePhotoId = excluded.representativePhotoId,
+           aiConfidence = excluded.aiConfidence,
+           notes = excluded.notes
+         WHERE observation.userId = excluded.userId AND observation.outingId = excluded.outingId`
       ).bind(
         observation.id,
         observation.outingId,
@@ -210,12 +300,15 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     })
 
     await context.env.DB.batch(statements)
+    if (!await hasCompatibleObservationIds(context.env.DB, userId, body, true)) {
+      return route.fail(409, 'Observation ID conflict', 'One or more observation IDs were concurrently claimed by another account or outing', { count: body.length })
+    }
     const speciesNames = [...new Set(body.map(o => o.speciesName))]
     const scopedRoute = outingIds.length === 1
       ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/observations`), 'data/observations/write', 'Application')
       : route
-    scopedRoute.info(`Inserted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
-    scopedRoute.debug('Observation insert details', { outingIds, speciesNames })
+    scopedRoute.info(`Persisted ${body.length} observations for ${speciesNames.length} species in ${outingIds.length} outings`, { observationCount: body.length, speciesCount: speciesNames.length, outingCount: outingIds.length })
+    scopedRoute.debug('Observation insert details', { outingCount: outingIds.length, speciesCount: speciesNames.length })
 
     const observations = body.map(observation => ({
       ...observation,
@@ -226,10 +319,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     }))
 
     const dexUpdates = await computeDex(context.env.DB, userId)
-    return Response.json({ observations, dexUpdates })
-    } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Observation insert failed: ${message}`, { error: message, count: body.length })
+    return Response.json({ observations, dexUpdates: enrichDexEntries(dexUpdates) })
+    } catch {
+    return route.fail(500, 'Internal server error', 'Observation persistence failed; inspect the trace and database operation', { count: body.length })
   }
 }
 
@@ -278,6 +370,20 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
         return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
+    if (typeof patch.outingId === 'string' || 'representativePhotoId' in patch) {
+      const current = await listObservationsByIds(db, userId, [id])
+      const currentObservation = current[0]
+      if (!currentObservation) {
+        return route.fail(404, 'Not found', `Observation ${id} not found or not owned by user`, { observationId: id })
+      }
+      const photoId = 'representativePhotoId' in patch
+        ? patch.representativePhotoId
+        : currentObservation.representativePhotoId
+      const outingId = patch.outingId ?? currentObservation.outingId
+      if (typeof photoId === 'string' && !await hasOwnedPhotos(db, userId, [{ photoId, outingId }])) {
+        return route.fail(400, 'Invalid photo reference', 'Representative photo must belong to the requesting account and outing', { observationId: id })
+      }
+    }
 
     const updateResult = await db
       .prepare(`UPDATE observation SET ${updateFields.join(', ')} WHERE id = ? AND userId = ?`)
@@ -291,7 +397,7 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const updated = await listObservationsByIds(db, userId, [id])
     const dexUpdates = await computeDex(db, userId)
 
-    return Response.json({ observation: updated[0], dexUpdates })
+    return Response.json({ observation: updated[0], dexUpdates: enrichDexEntries(dexUpdates) })
     }
 
     if (Array.isArray(body.ids) && body.ids.every(id => typeof id === 'string') && isObject(body.patch)) {
@@ -320,6 +426,20 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
         return route.fail(400, 'Invalid outing reference', `Outing ${patch.outingId} is not owned by user or does not exist`, { outingId: patch.outingId })
       }
     }
+    if (typeof patch.outingId === 'string' || 'representativePhotoId' in patch) {
+      const current = await listObservationsByIds(db, userId, ids)
+      const photoRefs = current.flatMap(observation => {
+        const photoId = 'representativePhotoId' in patch
+          ? patch.representativePhotoId
+          : observation.representativePhotoId
+        return typeof photoId === 'string'
+          ? [{ photoId, outingId: patch.outingId ?? observation.outingId }]
+          : []
+      })
+      if (current.length !== ids.length || !await hasOwnedPhotos(db, userId, photoRefs)) {
+        return route.fail(400, 'Invalid photo reference', 'Representative photo must belong to the requesting account and every target outing', { count: ids.length })
+      }
+    }
 
     const statements = ids.map(id =>
       db
@@ -337,12 +457,11 @@ export const onRequestPatch: PagesFunction<Env> = async context => {
     const observations = await listObservationsByIds(db, userId, ids)
     const dexUpdates = await computeDex(db, userId)
 
-    return Response.json({ observations, dexUpdates })
+    return Response.json({ observations, dexUpdates: enrichDexEntries(dexUpdates) })
     }
 
     return route.fail(400, 'Invalid patch payload', 'PATCH payload does not match single-id or bulk-ids shape')
-    } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Observation patch failed: ${message}`, { error: message })
+    } catch {
+      return route.fail(500, 'Internal server error', 'Observation patch failed; inspect the trace and database operation')
   }
 }

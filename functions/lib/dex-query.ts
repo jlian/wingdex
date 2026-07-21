@@ -1,4 +1,6 @@
-type DexRow = {
+import { getWikiMetadata } from './taxonomy'
+
+export type DexRow = {
   speciesName: string
   firstSeenDate: string
   lastSeenDate: string
@@ -39,4 +41,17 @@ export interface DexQueryDB {
 export async function computeDex(db: DexQueryDB, userId: string): Promise<DexRow[]> {
   const result = await db.prepare(DEX_QUERY).bind(userId).all<DexRow>()
   return result.results
+}
+
+export function enrichDexEntries(rows: DexRow[]) {
+  return rows.map(row => {
+    const { wikiTitle, thumbnailUrl } = getWikiMetadata(row.speciesName)
+    return {
+      ...row,
+      addedDate: row.addedDate || undefined,
+      bestPhotoId: row.bestPhotoId || undefined,
+      wikiTitle,
+      thumbnailUrl,
+    }
+  })
 }

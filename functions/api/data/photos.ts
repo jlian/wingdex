@@ -1,4 +1,5 @@
 import { createRouteResponder } from '../../lib/log'
+import { queryInChunks } from '../../lib/d1-chunk'
 
 type CreatePhotoInput = {
   id: string
@@ -29,13 +30,45 @@ async function hasOwnedOutings(db: D1Database, userId: string, outingIds: string
   const uniqueOutingIds = Array.from(new Set(outingIds))
   if (uniqueOutingIds.length === 0) return true
 
-  const placeholders = uniqueOutingIds.map(() => '?').join(', ')
-  const result = await db
-    .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
-    .bind(userId, ...uniqueOutingIds)
-    .all<{ id: string }>()
+  const rows = await queryInChunks(uniqueOutingIds, async (chunk, placeholders) => {
+    const result = await db
+      .prepare(`SELECT id FROM outing WHERE userId = ? AND id IN (${placeholders})`)
+      .bind(userId, ...chunk)
+      .all<{ id: string }>()
+    return result.results
+  })
 
-  return result.results.length === uniqueOutingIds.length
+  return rows.length === uniqueOutingIds.length
+}
+
+async function hasCompatiblePhotoIds(
+  db: D1Database,
+  userId: string,
+  photos: CreatePhotoInput[],
+  requireAll = false,
+): Promise<boolean> {
+  const ids = [...new Set(photos.map(photo => photo.id))]
+  if (ids.length === 0) return true
+  const expectedOutings = new Map(photos.map(photo => [photo.id, photo.outingId]))
+  const existing = await queryInChunks(ids, async (chunk, placeholders) => {
+    const result = await db
+      .prepare(`SELECT id, userId, outingId FROM photo WHERE id IN (${placeholders})`)
+      .bind(...chunk)
+      .all<{ id: string; userId: string; outingId: string }>()
+    return result.results
+  })
+  return (!requireAll || existing.length === ids.length) &&
+    existing.every(photo => photo.userId === userId && photo.outingId === expectedOutings.get(photo.id))
+}
+
+function hasConflictingPhotoIds(photos: CreatePhotoInput[]): boolean {
+  const outingsById = new Map<string, string>()
+  for (const photo of photos) {
+    const existing = outingsById.get(photo.id)
+    if (existing && existing !== photo.outingId) return true
+    outingsById.set(photo.id, photo.outingId)
+  }
+  return outingsById.size !== photos.length
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -59,6 +92,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   if (body.length === 0) {
     return Response.json([])
   }
+  if (hasConflictingPhotoIds(body)) {
+    return route.fail(400, 'Duplicate photo IDs', 'Photo payload must contain unique IDs', { count: body.length })
+  }
 
   try {
     const allOwned = await hasOwnedOutings(
@@ -70,11 +106,21 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     const failOutingIds = [...new Set(body.map(p => p.outingId))]
     return route.fail(400, 'Invalid outing reference', `One or more outing IDs are not owned by user or do not exist`, { outingIds: failOutingIds })
     }
+    if (!await hasCompatiblePhotoIds(context.env.DB, userId, body)) {
+      return route.fail(409, 'Photo ID conflict', 'One or more photo IDs already belong to another account or outing', { count: body.length })
+    }
 
     const statements = body.map(photo =>
     context.env.DB.prepare(
       `INSERT INTO photo (id, outingId, userId, dataUrl, thumbnail, exifTime, gpsLat, gpsLon, fileHash, fileName)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+       ON CONFLICT(id) DO UPDATE SET
+         exifTime = excluded.exifTime,
+         gpsLat = excluded.gpsLat,
+         gpsLon = excluded.gpsLon,
+         fileHash = excluded.fileHash,
+         fileName = excluded.fileName
+       WHERE photo.userId = excluded.userId AND photo.outingId = excluded.outingId`
     ).bind(
       photo.id,
       photo.outingId,
@@ -90,21 +136,25 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     )
 
     await context.env.DB.batch(statements)
+    if (!await hasCompatiblePhotoIds(context.env.DB, userId, body, true)) {
+      return route.fail(409, 'Photo ID conflict', 'One or more photo IDs were concurrently claimed by another account or outing', { count: body.length })
+    }
     const outingIds = [...new Set(body.map(p => p.outingId))]
     const scopedRoute = outingIds.length === 1
     ? createRouteResponder(route.log?.withResourceId(`outings/${outingIds[0]}/photos`), 'data/photos/write', 'Application')
     : route
-    scopedRoute.debug(`Inserted ${body.length} photos into ${outingIds.length} outings`, { photoCount: body.length, outingCount: outingIds.length })
+    scopedRoute.debug(`Persisted ${body.length} photos into ${outingIds.length} outings`, { photoCount: body.length, outingCount: outingIds.length })
 
     return Response.json(
     body.map(photo => ({
       ...photo,
+      dataUrl: '',
+      thumbnail: '',
       exifTime: photo.exifTime || undefined,
       gps: photo.gps ? { lat: photo.gps.lat, lon: photo.gps.lon } : undefined,
     }))
     )
-    } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Photo insert failed: ${message}`, { error: message, count: body.length })
+    } catch {
+    return route.fail(500, 'Internal server error', 'Photo persistence failed; inspect the trace and database operation', { count: body.length })
   }
 }

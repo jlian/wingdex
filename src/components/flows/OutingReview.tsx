@@ -1,3 +1,4 @@
+import { debug } from '@/lib/debug'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { findMatchingOuting } from '@/lib/clustering'
 import { dateToLocalISOWithOffset, toLocalISOWithOffset, formatStoredDate, formatStoredTimeWithTZ } from '@/lib/timezone'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
+import type { Outing } from '@/lib/types'
 import { toast } from 'sonner'
 
 interface PhotoCluster {
@@ -31,7 +33,7 @@ interface OutingReviewProps {
     locationName: string,
     lat?: number,
     lon?: number
-  ) => void
+  ) => Promise<void>
 }
 
 function normalizeStateProvinceCode(raw?: string): string | undefined {
@@ -81,6 +83,8 @@ export default function OutingReview({
   const roundedLon = hasGps ? Number(cluster.centerLon!.toFixed(3)) : undefined
   const [locationName, setLocationName] = useState(defaultLocationName)
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+  const preparedOutingRef = useRef<Outing | null>(null)
   const [suggestedLocation, setSuggestedLocation] = useState(defaultLocationName)
   const [inferredStateProvince, setInferredStateProvince] = useState<string | undefined>(undefined)
   const [inferredCountryCode, setInferredCountryCode] = useState<string | undefined>(undefined)
@@ -128,7 +132,7 @@ export default function OutingReview({
       // 2) natural feature at point (strait/bay/lake/cliff/etc.)
       // 3) neighborhood-level reverse geocode
       // 4) city-level reverse geocode
-      if (import.meta.env.DEV) console.log('Reverse geocoding via Nominatim...')
+      debug('geocoding', 'Starting reverse geocoding')
 
       const scoreResult = (result: any): number => {
         if (!result) return 0
@@ -275,18 +279,18 @@ export default function OutingReview({
 
       if (!name) throw new Error('No location name returned')
       
-      if (import.meta.env.DEV) console.log('Location identified:', name)
+      debug('geocoding', 'Location identified')
       setSuggestedLocation(name)
       setLocationName(name)
       const region = extractRegionCodes(sourceResult)
       setInferredStateProvince(region.stateProvince)
       setInferredCountryCode(region.countryCode)
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Reverse geocoding failed:', error)
+      debug('geocoding', 'Reverse geocoding failed')
       toast.warning('Could not look up location name, using coordinates instead')
       // Fall back to default location or coordinate string
       const fallback = defaultLocationName || `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
-      if (import.meta.env.DEV) console.log('Using fallback:', fallback)
+      debug('geocoding', 'Using location fallback')
       setSuggestedLocation(fallback)
       setLocationName(fallback)
       setInferredStateProvince(undefined)
@@ -309,61 +313,72 @@ export default function OutingReview({
     }
   }, [autoLookupGps, hasGps, matchingOuting, useExistingOuting, roundedLat, roundedLon, fetchLocationName])
 
-  const doConfirm = (name: string) => {
-    if (useExistingOuting && matchingOuting) {
-      // Merge into existing outing, expand its time window if needed.
-      // cluster.startTime is a proper UTC instant (exifTime is offset-aware),
-      // so dateToLocalISOWithOffset correctly formats it in the outing's TZ.
-      const clusterStartISO = dateToLocalISOWithOffset(
-        cluster.startTime, matchingOuting.lat, matchingOuting.lon
-      )
-      const clusterEndISO = dateToLocalISOWithOffset(
-        cluster.endTime, matchingOuting.lat, matchingOuting.lon
-      )
-      const existingStartMs = new Date(matchingOuting.startTime).getTime()
-      const existingEndMs = new Date(matchingOuting.endTime).getTime()
-      const clusterStartMs = cluster.startTime.getTime()
-      const clusterEndMs = cluster.endTime.getTime()
+  const doConfirm = async (name: string) => {
+    if (isConfirming) return
+    setIsConfirming(true)
+    try {
+      if (useExistingOuting && matchingOuting) {
+        // Merge into existing outing, expand its time window if needed.
+        // cluster.startTime is a proper UTC instant (exifTime is offset-aware),
+        // so dateToLocalISOWithOffset correctly formats it in the outing's TZ.
+        const clusterStartISO = dateToLocalISOWithOffset(
+          cluster.startTime, matchingOuting.lat, matchingOuting.lon
+        )
+        const clusterEndISO = dateToLocalISOWithOffset(
+          cluster.endTime, matchingOuting.lat, matchingOuting.lon
+        )
+        const existingStartMs = new Date(matchingOuting.startTime).getTime()
+        const existingEndMs = new Date(matchingOuting.endTime).getTime()
+        const clusterStartMs = cluster.startTime.getTime()
+        const clusterEndMs = cluster.endTime.getTime()
 
-      const needsTimeExpansion = clusterStartMs < existingStartMs || clusterEndMs > existingEndMs
-      const needsRegionFill =
-        (!matchingOuting.stateProvince && !!inferredStateProvince) ||
-        (!matchingOuting.countryCode && !!inferredCountryCode)
+        const needsTimeExpansion = clusterStartMs < existingStartMs || clusterEndMs > existingEndMs
+        const needsRegionFill =
+          (!matchingOuting.stateProvince && !!inferredStateProvince) ||
+          (!matchingOuting.countryCode && !!inferredCountryCode)
 
-      if (needsTimeExpansion || needsRegionFill) {
-        data.updateOuting(matchingOuting.id, {
-          startTime: needsTimeExpansion && clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
-          endTime: needsTimeExpansion && clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
-          stateProvince: matchingOuting.stateProvince || inferredStateProvince,
-          countryCode: matchingOuting.countryCode || inferredCountryCode,
-        })
+        if (needsTimeExpansion || needsRegionFill) {
+          data.updateOuting(matchingOuting.id, {
+            startTime: needsTimeExpansion && clusterStartMs < existingStartMs ? clusterStartISO : matchingOuting.startTime,
+            endTime: needsTimeExpansion && clusterEndMs > existingEndMs ? clusterEndISO : matchingOuting.endTime,
+            stateProvince: matchingOuting.stateProvince || inferredStateProvince,
+            countryCode: matchingOuting.countryCode || inferredCountryCode,
+          })
+        }
+
+        await onConfirm(matchingOuting.id, matchingOuting.locationName, matchingOuting.lat, matchingOuting.lon)
+        return
       }
 
-      onConfirm(matchingOuting.id, matchingOuting.locationName, matchingOuting.lat, matchingOuting.lon)
-      return
-    }
+      const outing = preparedOutingRef.current ?? {
+        id: `outing_${crypto.randomUUID()}`,
+        userId: userId.toString(),
+        startTime: dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon),
+        endTime: dateToLocalISOWithOffset(effectiveEndTime, effectiveLat, effectiveLon),
+        locationName: name || 'Unknown Location',
+        defaultLocationName: name || 'Unknown Location',
+        lat: effectiveLat,
+        lon: effectiveLon,
+        stateProvince: inferredStateProvince,
+        countryCode: inferredCountryCode,
+        notes: '',
+        createdAt: new Date().toISOString()
+      }
+      preparedOutingRef.current = outing
 
-    const outingId = `outing_${Date.now()}`
-    const outing = {
-      id: outingId,
-      userId: userId.toString(),
-      startTime: dateToLocalISOWithOffset(effectiveStartTime, effectiveLat, effectiveLon),
-      endTime: dateToLocalISOWithOffset(effectiveEndTime, effectiveLat, effectiveLon),
-      locationName: name || 'Unknown Location',
-      defaultLocationName: name || 'Unknown Location',
-      lat: effectiveLat,
-      lon: effectiveLon,
-      stateProvince: inferredStateProvince,
-      countryCode: inferredCountryCode,
-      notes: '',
-      createdAt: new Date().toISOString()
+      await data.addOuting(outing)
+      await onConfirm(outing.id, name || 'Unknown Location', effectiveLat, effectiveLon)
+      preparedOutingRef.current = null
+    } finally {
+      setIsConfirming(false)
     }
-
-    data.addOuting(outing)
-    onConfirm(outingId, name || 'Unknown Location', effectiveLat, effectiveLon)
   }
 
-  const handleConfirm = () => doConfirm(locationName)
+  const handleConfirm = () => {
+    void doConfirm(locationName).catch(() => {
+      toast.error('Could not continue saving this outing. Try again.')
+    })
+  }
 
   const handleApplyDateTime = () => {
     const [year, month, day] = manualDate.split('-').map(Number)
@@ -400,7 +415,7 @@ export default function OutingReview({
       if (!controller.signal.aborted) setPlaceResults(results)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
-      if (import.meta.env.DEV) console.error('Place search failed:', error)
+      debug('geocoding', 'Place search failed')
       toast.error('Place search failed')
     } finally {
       if (!controller.signal.aborted) setIsSearchingPlace(false)
@@ -644,10 +659,10 @@ export default function OutingReview({
 
           <Button
             onClick={handleConfirm}
-            disabled={isLoadingLocation}
+            disabled={isLoadingLocation || isConfirming}
             className="w-full bg-primary text-primary-foreground"
           >
-            {isLoadingLocation ? 'Loading...' : 'Continue to Species Identification'}
+            {isLoadingLocation || isConfirming ? 'Loading...' : 'Continue to Species Identification'}
           </Button>
         </>
     </div>

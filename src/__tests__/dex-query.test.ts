@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeDex, type DexQueryDB } from '../../functions/lib/dex-query'
+import { computeDex, enrichDexEntries, type DexQueryDB } from '../../functions/lib/dex-query'
 
 type DexRow = {
   speciesName: string
@@ -108,5 +108,32 @@ describe('computeDex', () => {
     void computeDex(db, 'user-1')
     expect(capturedSql).toContain("IN ('confirmed', 'possible')")
     expect(capturedSql).not.toContain("certainty = 'confirmed'")
+  })
+})
+
+describe('enrichDexEntries', () => {
+  it('adds wiki metadata while preserving dex statistics and notes', () => {
+    const row: DexRow = {
+      speciesName: 'Northern Cardinal',
+      firstSeenDate: '2026-01-01T12:00:00Z',
+      lastSeenDate: '2026-01-02T12:00:00Z',
+      addedDate: null,
+      totalOutings: 2,
+      totalCount: 3,
+      bestPhotoId: null,
+      notes: 'Backyard visitor',
+    }
+
+    const [entry] = enrichDexEntries([row])
+    expect(entry).toMatchObject({
+      speciesName: 'Northern Cardinal',
+      totalOutings: 2,
+      totalCount: 3,
+      notes: 'Backyard visitor',
+    })
+    expect(entry.wikiTitle).toBeTruthy()
+    expect(entry.thumbnailUrl).toMatch(/^https:\/\//)
+    expect(entry.addedDate).toBeUndefined()
+    expect(entry.bestPhotoId).toBeUndefined()
   })
 })

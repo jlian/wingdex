@@ -81,12 +81,72 @@ test.describe('API smoke (request context)', () => {
     })
     expect(createOuting.status()).toBe(200)
 
+    const replayOuting = await api.post('/api/data/outings', {
+      headers: { cookie: authCookie },
+      data: {
+        id: outingId,
+        startTime: '2026-02-20T08:00:00.000Z',
+        endTime: '2026-02-20T09:30:00.000Z',
+        locationName: 'Renamed API Smoke Park',
+        createdAt: '2099-01-01T00:00:00.000Z',
+      },
+    })
+    expect(replayOuting.status()).toBe(200)
+    await expect(replayOuting.json()).resolves.toMatchObject({
+      id: outingId,
+      locationName: 'Renamed API Smoke Park',
+      createdAt: '2026-02-20T09:00:00.000Z',
+    })
+
     const postCreateData = await api.get('/api/data/all', {
       headers: { cookie: authCookie },
     })
     expect(postCreateData.status()).toBe(200)
     const postCreateJson = await postCreateData.json()
-    expect(postCreateJson.outings.some((outing: { id: string }) => outing.id === outingId)).toBe(true)
+    const savedOuting = postCreateJson.outings.find((outing: { id: string }) => outing.id === outingId)
+    expect(savedOuting).toMatchObject({
+      id: outingId,
+      locationName: 'Renamed API Smoke Park',
+      endTime: '2026-02-20T09:30:00.000Z',
+      createdAt: '2026-02-20T09:00:00.000Z',
+    })
+
+    const cardinalId = `${outingId}-cardinal`
+    const blueJayId = `${outingId}-blue-jay`
+    const createObservations = await api.post('/api/data/observations', {
+      headers: { cookie: authCookie },
+      data: [
+        {
+          id: cardinalId,
+          outingId,
+          speciesName: 'Northern Cardinal (Cardinalis cardinalis)',
+          count: 1,
+          certainty: 'confirmed',
+          notes: '',
+        },
+        {
+          id: blueJayId,
+          outingId,
+          speciesName: 'Blue Jay (Cyanocitta cristata)',
+          count: 1,
+          certainty: 'confirmed',
+          notes: '',
+        },
+      ],
+    })
+    expect(createObservations.status()).toBe(200)
+
+    const rejectObservation = await api.patch('/api/data/observations', {
+      headers: { cookie: authCookie },
+      data: { ids: [cardinalId], patch: { certainty: 'rejected' } },
+    })
+    expect(rejectObservation.status()).toBe(200)
+    const rejectPayload = await rejectObservation.json()
+    const remainingBlueJay = rejectPayload.dexUpdates.find(
+      (entry: { speciesName: string }) => entry.speciesName.startsWith('Blue Jay'),
+    )
+    expect(remainingBlueJay?.wikiTitle).toBeTruthy()
+    expect(remainingBlueJay?.thumbnailUrl).toMatch(/^https:\/\//)
 
     await api.dispose()
   })

@@ -1,3 +1,4 @@
+import { debug } from '@/lib/debug'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -174,11 +175,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setPhotoProgress(100)
         await wait(240)
         if (fastResult.multipleBirds) {
-          if (import.meta.env.DEV) console.log('Multiple birds detected by fast model, asking user to crop before escalation')
+          debug('bird-id', 'Multiple birds detected by fast model; requesting crop')
           toast.info('Multiple birds detected, crop to one')
           setCurrentCandidates(fastResult.candidates)
         } else {
-          if (import.meta.env.DEV) console.log('No species identified by fast model, asking user to crop before escalation')
+          debug('bird-id', 'No species identified by fast model; requesting crop')
           setCurrentCandidates([])
         }
         setRangeAdjusted(false)
@@ -213,7 +214,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         })()
         : fastResult
 
-      if (import.meta.env.DEV) console.log(`Found ${result.candidates.length} candidates`)
+      debug('bird-id', `Found ${result.candidates.length} candidates`)
       setPhotoProgress(100)
       await wait(240)
 
@@ -228,11 +229,11 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
 
       if (result.candidates.length === 0 && !imageUrl) {
         // No species found on full image, ask user to crop and retry
-        if (import.meta.env.DEV) console.log('No species identified, asking user to crop or skip')
+        debug('bird-id', 'No species identified; requesting crop or skip')
         setStep('photo-manual-crop')
       } else if (result.multipleBirds && !imageUrl) {
         // Multiple birds detected, let user crop to the one they want
-        if (import.meta.env.DEV) console.log('Multiple birds detected, asking user to crop')
+        debug('bird-id', 'Multiple birds detected; requesting crop')
         toast.info('Multiple birds detected, crop to one')
         setCurrentCandidates(result.candidates)
         setRangeAdjusted(result.rangeAdjusted === true)
@@ -243,7 +244,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
         setStep('photo-confirm')
       }
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Species ID failed:', error)
+      debug('bird-id', 'Species identification failed')
       const msg = error instanceof Error ? error.message : 'Species identification failed'
       toast.error(msg)
       setCurrentCandidates([])
@@ -261,7 +262,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       setRangeAdjusted(false)
       void runSpeciesId(nextIdx)
     } else {
-      saveOuting(finalResults)
+      void saveOuting(finalResults).catch(() => {
+        toast.error('Could not save this outing. Try again.')
+      })
     }
   }
 
@@ -283,7 +286,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const uploadStatsRef = useRef({ newSpecies: 0, outings: 0, totalSpecies: 0, totalCount: 0, locationNames: [] as string[] })
 
   // ─── Save all observations and finish ────────────────────
-  const saveOuting = (allResults: PhotoResult[]) => {
+  const saveOuting = async (allResults: PhotoResult[]) => {
     const confirmed = filterConfirmedResults(allResults)
     const existingSpecies = new Set(data.dex.map(entry => entry.speciesName))
 
@@ -321,8 +324,9 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     let liferMessage = ''
 
     if (observations.length > 0) {
-      data.addObservations(observations)
+      const persistObservations = data.addObservations(observations)
       const result = data.updateDex(currentOutingId, observations)
+      await persistObservations
       newSpeciesCount = result.newSpeciesCount
       const newSpeciesNames = observations
         .map(obs => obs.speciesName)
@@ -416,13 +420,10 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       const file = files[i]
       try {
         const exif = await extractEXIF(file)
-        if (import.meta.env.DEV) console.log(
-          `${file.name}: EXIF = time:${exif.timestamp || 'none'}, GPS:${
-            exif.gps
-              ? `${exif.gps.lat.toFixed(4)},${exif.gps.lon.toFixed(4)}`
-              : 'none'
-          }`
-        )
+        debug('photo-import', 'Extracted photo metadata', {
+          hasTimestamp: !!exif.timestamp,
+          hasGps: !!exif.gps,
+        })
         const thumbnail = await generateThumbnail(file)
         const hash = await computeFileHash(file)
 
@@ -459,7 +460,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
           newPhotos.push(photo)
         }
       } catch (error) {
-        if (import.meta.env.DEV) console.error(`Failed to process ${file.name}:`, error)
+        debug('photo-import', 'Failed to process a selected file')
         toast.error(`Failed to process ${file.name}`)
       }
       setProgress(((i + 1) / files.length) * 100)
@@ -559,7 +560,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
       fileHash: p.fileHash,
       fileName: p.fileName,
     }))
-    data.addPhotos(photosForStorage as Photo[])
+    await data.addPhotos(photosForStorage as Photo[])
     setPhotos(prev =>
       prev.map(p => {
         const updated = updatedPhotos.find((up: any) => up.id === p.id)

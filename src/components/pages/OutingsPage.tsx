@@ -380,6 +380,7 @@ function OutingDetail({
   const [editingLocationName, setEditingLocationName] = useState(false)
   const [locationName, setLocationName] = useState(outing.locationName || '')
   const [addingSpecies, setAddingSpecies] = useState(false)
+  const [isAddingSpecies, setIsAddingSpecies] = useState(false)
   const [newSpeciesName, setNewSpeciesName] = useState('')
   const [selectedSpeciesEntry, setSelectedSpeciesEntry] = useState<TaxonEntry | null>(null)
   const [deleteOutingOpen, setDeleteOutingOpen] = useState(false)
@@ -443,8 +444,8 @@ function OutingDetail({
     setPendingDeleteObservation({ ids: obsIds, speciesName })
   }
 
-  const handleAddSpecies = () => {
-    if (!newSpeciesName.trim()) return
+  const handleAddSpecies = async () => {
+    if (!newSpeciesName.trim() || isAddingSpecies) return
 
     const normalizedName = selectedSpeciesEntry
       ? `${selectedSpeciesEntry.common} (${selectedSpeciesEntry.scientific})`
@@ -458,12 +459,19 @@ function OutingDetail({
       certainty: 'confirmed',
       notes: 'Manually added',
     }
-    data.addObservations([obs])
-    data.updateDex(outing.id, [obs])
-    setNewSpeciesName('')
-    setSelectedSpeciesEntry(null)
-    setAddingSpecies(false)
-    toast.success(`${getDisplayName(normalizedName)} added`)
+    setIsAddingSpecies(true)
+    try {
+      await data.addObservations([obs])
+      data.updateDex(outing.id, [obs])
+      setNewSpeciesName('')
+      setSelectedSpeciesEntry(null)
+      setAddingSpecies(false)
+      toast.success(`${getDisplayName(normalizedName)} added`)
+    } catch {
+      toast.error(`Could not add ${getDisplayName(normalizedName)}. Try again.`)
+    } finally {
+      setIsAddingSpecies(false)
+    }
   }
 
   const outingDate = new Date(outing.startTime)
@@ -609,7 +617,7 @@ function OutingDetail({
               />
             </div>
             <div className="flex items-center gap-3">
-              <Button size="sm" onClick={handleAddSpecies} disabled={!newSpeciesName.trim()}>
+              <Button size="sm" onClick={handleAddSpecies} disabled={!newSpeciesName.trim() || isAddingSpecies}>
                 <Check size={14} className="mr-1" />
                 Add
               </Button>

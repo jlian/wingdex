@@ -15,6 +15,26 @@ type WingDexPayload = {
 
 type StorageMode = 'api' | 'local'
 
+export function rollbackItemsById<T extends { id: string }>(
+  current: T[],
+  previous: T[],
+  touchedIds: Set<string>,
+): T[] {
+  const previousById = new Map(previous.map(item => [item.id, item]))
+  const result = current.flatMap(item => {
+    if (!touchedIds.has(item.id)) return [item]
+    const prior = previousById.get(item.id)
+    return prior ? [prior] : []
+  })
+  const resultIds = new Set(result.map(item => item.id))
+  for (const item of previous) {
+    if (touchedIds.has(item.id) && !resultIds.has(item.id)) {
+      result.push(item)
+    }
+  }
+  return result
+}
+
 function rebuildDexFromState(
   allOutings: Outing[],
   allObservations: Observation[],
@@ -211,12 +231,14 @@ export function useWingDexData(userId: string) {
     })
   }
 
-  const addPhotos = (newPhotos: Photo[]) => {
+  const addPhotos = async (newPhotos: Photo[]): Promise<void> => {
     if (newPhotos.length === 0) return
 
+    const previousPhotos = payloadRef.current.photos
+    const newIds = new Set(newPhotos.map(photo => photo.id))
     const optimistic: WingDexPayload = {
       ...payloadRef.current,
-      photos: [...payloadRef.current.photos, ...newPhotos],
+      photos: [...payloadRef.current.photos.filter(photo => !newIds.has(photo.id)), ...newPhotos],
     }
     applyPayload(optimistic)
 
@@ -236,40 +258,56 @@ export function useWingDexData(userId: string) {
           body: JSON.stringify(requestBody),
         })
 
-      void postPhotos().catch(err => {
-        window.setTimeout(() => {
-          void postPhotos().catch(retryErr => logClientFailure('data/photos/write', retryErr, { count: requestBody.length, retried: true }))
-        }, 600)
+      try {
+        await postPhotos()
+      } catch (err) {
         logClientFailure('data/photos/write', err, { count: requestBody.length, willRetry: true })
-      })
+        await new Promise(resolve => window.setTimeout(resolve, 600))
+        try {
+          await postPhotos()
+        } catch (retryErr) {
+          logClientFailure('data/photos/write', retryErr, { count: requestBody.length, retried: true })
+          setPayload(current => ({
+            ...current,
+            photos: rollbackItemsById(current.photos, previousPhotos, newIds),
+          }))
+          throw retryErr
+        }
+      }
     }
   }
 
-  const addOuting = (outing: Outing) => {
+  const addOuting = async (outing: Outing): Promise<void> => {
+    const previousOutings = payloadRef.current.outings
     const optimistic: WingDexPayload = {
       ...payloadRef.current,
-      outings: [outing, ...payloadRef.current.outings],
+      outings: [outing, ...payloadRef.current.outings.filter(item => item.id !== outing.id)],
     }
     applyPayload(optimistic)
 
     if (storageMode === 'api') {
-      void apiJson<Outing>('/api/data/outings', {
-        method: 'POST',
-        body: JSON.stringify(outing),
-      })
-        .then(savedOuting => {
-          setPayload(current => {
-            const alreadyPresent = current.outings.some(item => item.id === savedOuting.id)
-            const next = {
-              ...current,
-              outings: alreadyPresent
-                ? current.outings.map(item => (item.id === savedOuting.id ? savedOuting : item))
-                : [savedOuting, ...current.outings],
-            }
-            return next
-          })
+      try {
+        const savedOuting = await apiJson<Outing>('/api/data/outings', {
+          method: 'POST',
+          body: JSON.stringify(outing),
         })
-        .catch(err => logClientFailure('data/outings/write', err, { outingId: outing.id }))
+        setPayload(current => {
+          const alreadyPresent = current.outings.some(item => item.id === savedOuting.id)
+          return {
+            ...current,
+            outings: alreadyPresent
+              ? current.outings.map(item => (item.id === savedOuting.id ? savedOuting : item))
+              : [savedOuting, ...current.outings],
+          }
+        })
+      } catch (err) {
+        logClientFailure('data/outings/write', err, { outingId: outing.id })
+        setPayload(current => ({
+          ...current,
+          outings: rollbackItemsById(current.outings, previousOutings, new Set([outing.id])),
+        }))
+        throw err
+      }
     }
   }
 
@@ -324,36 +362,45 @@ export function useWingDexData(userId: string) {
     }
   }
 
-  const addObservations = (newObservations: Observation[]) => {
+  const addObservations = async (newObservations: Observation[]): Promise<void> => {
     if (newObservations.length === 0) return
 
+    const previousObservations = payloadRef.current.observations
+    const newIds = new Set(newObservations.map(observation => observation.id))
     const optimistic: WingDexPayload = {
       ...payloadRef.current,
-      observations: [...payloadRef.current.observations, ...newObservations],
+      observations: [
+        ...payloadRef.current.observations.filter(observation => !newIds.has(observation.id)),
+        ...newObservations,
+      ],
     }
     applyPayload(optimistic)
 
     if (storageMode === 'api') {
-      void apiJson<{ observations: Observation[]; dexUpdates: DexEntry[] }>('/api/data/observations', {
-        method: 'POST',
-        body: JSON.stringify(newObservations),
-      })
-        .then(response => {
-          setPayload(current => {
-            const byId = new Map(current.observations.map(observation => [observation.id, observation]))
-            for (const observation of response.observations || []) {
-              byId.set(observation.id, observation)
-            }
-
-            const next = {
-              ...current,
-              observations: Array.from(byId.values()),
-              dex: response.dexUpdates || current.dex,
-            }
-            return next
-          })
+      try {
+        const response = await apiJson<{ observations: Observation[]; dexUpdates: DexEntry[] }>('/api/data/observations', {
+          method: 'POST',
+          body: JSON.stringify(newObservations),
         })
-        .catch(err => logClientFailure('data/observations/write', err, { count: newObservations.length }))
+        setPayload(current => {
+          const byId = new Map(current.observations.map(observation => [observation.id, observation]))
+          for (const observation of response.observations || []) {
+            byId.set(observation.id, observation)
+          }
+          return {
+            ...current,
+            observations: Array.from(byId.values()),
+            dex: response.dexUpdates || current.dex,
+          }
+        })
+      } catch (err) {
+        logClientFailure('data/observations/write', err, { count: newObservations.length })
+        setPayload(current => ({
+          ...current,
+          observations: rollbackItemsById(current.observations, previousObservations, newIds),
+        }))
+        throw err
+      }
     }
   }
 
