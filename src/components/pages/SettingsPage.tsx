@@ -3,6 +3,8 @@ import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { isOnDeviceEnabled, setOnDeviceEnabled } from '@/lib/storage-keys'
+import { maybePrefetchModel } from '@/lib/model-router'
 import { Confetti } from '@/components/ui/confetti'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -61,6 +63,7 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
     const stored = localStorage.getItem('wingdex_useGeoContext')
     return stored === null ? true : stored === 'true'
   })
+  const [onDeviceId, setOnDeviceId] = useState(() => isOnDeviceEnabled())
   const [mounted, setMounted] = useState(false)
   const [profileTimezone, setProfileTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'
@@ -662,6 +665,27 @@ export default function SettingsPage({ data, user, onSignIn, onSignedOut, onProf
             onCheckedChange={(checked) => {
               setUseGeoContext(checked)
               localStorage.setItem('wingdex_useGeoContext', String(checked))
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5 flex-1">
+            <label htmlFor="on-device-setting" className="text-sm font-medium text-foreground cursor-pointer">
+              On-device identification (beta)
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Runs a bird-ID model (~307&nbsp;MB, one-time download) directly on this
+              device: private, works offline, no server round-trip. Falls back to the
+              cloud model until the download finishes.
+            </p>
+          </div>
+          <Switch
+            id="on-device-setting"
+            checked={onDeviceId}
+            onCheckedChange={(checked) => {
+              setOnDeviceId(checked)
+              setOnDeviceEnabled(checked)
+              if (checked) void maybePrefetchModel()
             }}
           />
         </div>

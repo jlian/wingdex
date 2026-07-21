@@ -18,6 +18,7 @@ import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-uti
 import { clusterPhotosIntoOutings } from '@/lib/clustering'
 import { identifyBirdInPhoto } from '@/lib/ai-inference'
 import type { BirdIdResult } from '@/lib/ai-inference'
+import { identifyBirdAdaptive, maybePrefetchModel } from '@/lib/model-router'
 import OutingReview from '@/components/flows/OutingReview'
 import { getDisplayName, getScientificName, cn } from '@/lib/utils'
 import { toLocalISOWithOffset } from '@/lib/timezone'
@@ -120,6 +121,12 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
   const fullCurrentPhoto = getFullPhoto(currentPhotoIndex)
 
   useEffect(() => {
+    // Warm the on-device model in the background (no-op unless the feature
+    // flag is on and it isn't cached yet), so it's ready by first identify.
+    void maybePrefetchModel()
+  }, [])
+
+  useEffect(() => {
     if (step !== 'photo-processing') {
       setPhotoProgress(0)
       return
@@ -156,7 +163,7 @@ export default function AddPhotosFlow({ data, onClose, userId }: AddPhotosFlowPr
     )
 
     try {
-      const fastResult: BirdIdResult = await identifyBirdInPhoto(
+      const fastResult: BirdIdResult = await identifyBirdAdaptive(
         analyzeUrl,
         useGeoContext ? photo.gps : undefined,
         useGeoContext && photo.exifTime
