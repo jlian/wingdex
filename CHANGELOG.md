@@ -1,3 +1,19 @@
+# [1.22.0](https://github.com/jlian/wingdex/compare/v1.21.2...v1.22.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **Data:** make persistence retries safe ([6528f94](https://github.com/jlian/wingdex/commit/6528f94dd5e5164be87101813a0edf47870b7594))
+* **dev:** harden workspace app monitor ([f5f079f](https://github.com/jlian/wingdex/commit/f5f079fa3ebf295bd6f52688a36b53d4cb92737e))
+* **Observability:** sanitize logs and propagate traces ([49e0c35](https://github.com/jlian/wingdex/commit/49e0c359279f0086417596086faae54156ba71da))
+
+
+### Features
+
+* **Outings:** complete iOS detail editing parity ([40ebaf8](https://github.com/jlian/wingdex/commit/40ebaf8b953f0630df43464bf39d668c74e9225e))
+* **WingDex:** add lifer celebrations and haptics ([ab7f7e9](https://github.com/jlian/wingdex/commit/ab7f7e9840ae16580532b6a1b9f0a97f02b18e0c))
+* **WingDex:** enrich species detail and add family sort ([b5eb777](https://github.com/jlian/wingdex/commit/b5eb777419672a94828e93be59167069350c3b0f))
+
 ## [1.21.2](https://github.com/jlian/wingdex/compare/v1.21.1...v1.21.2) (2026-07-21)
 
 
