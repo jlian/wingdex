@@ -10,7 +10,7 @@
 import {
   lonLatToEqualEarth,
   xyToCell,
-  nearestNeighborCell,
+  neighborCells,
   parseCellBlob,
   adjustConfidence as _adjustConfidence,
 } from './range-adjust.js'
@@ -77,28 +77,43 @@ export async function getRangePriors(
       }
     }
 
-    // Neighbor blending for out-of-range species
+    // Neighbor blending for out-of-range species. Scan the full 3x3 ring
+    // (up to 8 cells) rather than only the single closest edge cell: coastal
+    // and range-edge points often fall in a cell that lacks a species whose
+    // BirdLife polygon covers an adjacent (frequently diagonal) cell, which
+    // the old single-neighbor lookup reported as out-of-range. Cells are
+    // fetched in parallel and scanned closest-first; a species is marked
+    // near-range on the first ring cell that contains it.
     if (outOfRange.length > 0) {
-      const neighbor = nearestNeighborCell(x, y, cell.row, cell.col)
-      if (neighbor) {
-        try {
-          const nObj = await bucket.get(`range-priors/${neighbor.row}-${neighbor.col}.bin.gz`)
-          if (nObj) {
-            const nData = await decompressBlob(await nObj.arrayBuffer())
-            const nMap = parseCellBlob(new Uint8Array(nData), new Set(outOfRange))
-            for (const code of outOfRange) {
-              const attrs = nMap.get(code)
-              results.set(code, attrs ? { status: 'near-range', ...attrs } : OUT_OF_RANGE)
+      const neighbors = neighborCells(x, y, cell.row, cell.col)
+      const remaining = new Set(outOfRange)
+      if (neighbors.length > 0) {
+        const neighborData = await Promise.all(
+          neighbors.map(async n => {
+            try {
+              const nObj = await bucket.get(`range-priors/${n.row}-${n.col}.bin.gz`)
+              if (!nObj) return null
+              return new Uint8Array(await decompressBlob(await nObj.arrayBuffer()))
+            } catch {
+              return null
             }
-          } else {
-            for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
+          }),
+        )
+        // Scan closest-first so the nearest containing cell wins.
+        for (const nData of neighborData) {
+          if (remaining.size === 0) break
+          if (!nData) continue
+          const nMap = parseCellBlob(nData, remaining)
+          for (const code of [...remaining]) {
+            const attrs = nMap.get(code)
+            if (attrs) {
+              results.set(code, { status: 'near-range', ...attrs })
+              remaining.delete(code)
+            }
           }
-        } catch {
-          for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
         }
-      } else {
-        for (const code of outOfRange) results.set(code, OUT_OF_RANGE)
       }
+      for (const code of remaining) results.set(code, OUT_OF_RANGE)
     }
   } catch {
     for (const code of ebirdCodes) results.set(code, NO_DATA)
