@@ -9,25 +9,20 @@ import Foundation
 /// current coordinate at capture time so camera photos get the same GPS signal
 /// the range-prior pipeline (and future on-device model) relies on.
 ///
-/// Usage: hold a single instance for the capture flow, call `requestAuthorization()`
-/// when the camera opens, and read `currentLocation` (or `latestCoordinate`) when
-/// a photo is taken. When-in-use authorization only; no background tracking.
+/// Uses the modern `CLLocationUpdate.liveUpdates()` async sequence (iOS 17+)
+/// rather than the delegate pattern, which keeps it clean under Swift 6 strict
+/// concurrency. When-in-use authorization only; no background tracking.
+///
+/// Usage: call `start()` when the camera opens, read `latestCoordinate` when a
+/// photo is taken, and `stop()` when the capture flow closes.
 @MainActor
-final class LocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
-    private let manager = CLLocationManager()
-
+final class LocationService: ObservableObject {
     /// Most recent location fix, if any.
     @Published private(set) var currentLocation: CLLocation?
 
-    /// Current authorization status.
-    @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
-
-    override init() {
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-        authorizationStatus = manager.authorizationStatus
-    }
+    /// Manager retained only to request authorization (no delegate is used).
+    private let manager = CLLocationManager()
+    private var updatesTask: Task<Void, Never>?
 
     /// Convenience: the latest coordinate as (lat, lon), or nil if unavailable.
     var latestCoordinate: (lat: Double, lon: Double)? {
@@ -37,49 +32,30 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
         return (coord.latitude, coord.longitude)
     }
 
-    /// Whether we currently have permission to read location.
-    var isAuthorized: Bool {
-        authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
-    }
-
-    /// Request when-in-use permission and begin updating if granted. Safe to call
-    /// repeatedly (e.g. each time the camera opens).
-    func requestAuthorization() {
-        switch manager.authorizationStatus {
-        case .notDetermined:
+    /// Request when-in-use permission (if needed) and begin streaming location.
+    /// Safe to call repeatedly; a second call is a no-op while already running.
+    func start() {
+        if manager.authorizationStatus == .notDetermined {
             manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            manager.startUpdatingLocation()
-        default:
-            break // denied/restricted: photos simply won't be geotagged
+        }
+        guard updatesTask == nil else { return }
+        updatesTask = Task { [weak self] in
+            do {
+                for try await update in CLLocationUpdate.liveUpdates() {
+                    guard let self else { return }
+                    if let location = update.location {
+                        self.currentLocation = location
+                    }
+                }
+            } catch {
+                // Non-fatal: capture still works, photo just won't be geotagged.
+            }
         }
     }
 
     /// Stop location updates (call when the capture flow closes to save battery).
     func stop() {
-        manager.stopUpdatingLocation()
-    }
-
-    // MARK: - CLLocationManagerDelegate
-
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        let status = manager.authorizationStatus
-        Task { @MainActor in
-            self.authorizationStatus = status
-            if status == .authorizedWhenInUse || status == .authorizedAlways {
-                manager.startUpdatingLocation()
-            }
-        }
-    }
-
-    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let loc = locations.last else { return }
-        Task { @MainActor in
-            self.currentLocation = loc
-        }
-    }
-
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // Non-fatal: capture still works, photo just won't be geotagged.
+        updatesTask?.cancel()
+        updatesTask = nil
     }
 }

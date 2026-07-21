@@ -120,7 +120,7 @@ struct PhotoSelectionView: View {
                     .buttonSizing(.flexible)
 
                     Button {
-                        locationService.requestAuthorization()
+                        locationService.start()
                         showCamera = true
                     } label: {
                         Label("Take Photo", systemImage: "camera")
