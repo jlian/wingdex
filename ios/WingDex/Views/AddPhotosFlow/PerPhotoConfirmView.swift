@@ -616,7 +616,7 @@ struct PerPhotoConfirmView: View {
             }
         } catch is CancellationError { /* expected */ }
         catch {
-            log.debug("Commons gallery fetch failed: \(error.localizedDescription)")
+            log.debug("Commons gallery fetch failed")
             await MainActor.run { isLoadingWikiImage = false }
         }
     }

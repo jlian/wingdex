@@ -107,6 +107,12 @@ struct OutingsView: View {
                 .refreshable {
                     await store.loadAll()
                 }
+                .alert("Could Not Refresh", isPresented: cachedLoadErrorBinding) {
+                    Button("Retry") { Task { await store.loadAll() } }
+                    Button("OK", role: .cancel) { store.error = nil }
+                } message: {
+                    Text(store.error?.message ?? "Something went wrong. Try again.")
+                }
                 .searchable(
                     text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .automatic),
@@ -121,11 +127,27 @@ struct OutingsView: View {
         }
     }
 
+    private var cachedLoadErrorBinding: Binding<Bool> {
+        Binding(
+            get: { store.error != nil && !store.outings.isEmpty },
+            set: { if !$0 { store.error = nil } }
+        )
+    }
+
     // MARK: - Empty State
 
     @ViewBuilder
     private var rootContent: some View {
-        if store.outings.isEmpty {
+        if let error = store.error, store.outings.isEmpty {
+            ContentUnavailableView {
+                Label("Could Not Load Outings", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(error.message)
+            } actions: {
+                Button("Retry") { Task { await store.loadAll() } }
+                    .buttonStyle(.borderedProminent)
+            }
+        } else if store.outings.isEmpty {
             VStack(spacing: 24) {
                 Spacer()
                 ZStack {

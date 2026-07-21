@@ -18,10 +18,9 @@ struct OutingDetailView: View {
     @State private var speciesSearchTask: Task<Void, Never>?
     @State private var isSearchingSpecies = false
     @State private var isAddingSpecies = false
-    @State private var pendingRemoval: SpeciesRemoval?
     @State private var exportItem: ExportFileItem?
     @State private var isExporting = false
-    @State private var feedback: FeedbackMessage?
+    @State private var operationError: String?
 
     private var outing: Outing? { store.outing(id: outingId) }
     private var confirmed: [BirdObservation] { store.confirmedObservations(outingId) }
@@ -44,37 +43,24 @@ struct OutingDetailView: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete Outing", role: .destructive) {
                 Task {
-                    await store.deleteOuting(id: outingId)
-                    dismiss()
+                    do {
+                        try await store.deleteOuting(id: outingId)
+                        dismiss()
+                    } catch {
+                        showError(error, fallback: "Could not delete outing. Try again.")
+                    }
                 }
             }
         } message: {
             Text("This will permanently delete this outing and all its observations.")
         }
-        .alert(item: $pendingRemoval) { removal in
-            Alert(
-                title: Text("Remove \(removal.displayName) from outing?"),
-                primaryButton: .destructive(Text("Remove")) {
-                    Task { await removeSpecies(removal) }
-                },
-                secondaryButton: .cancel()
-            )
-        }
         .sheet(item: $exportItem) { item in
             ActivityView(activityItems: [item.url])
         }
-        .overlay(alignment: .top) {
-            if let feedback {
-                Label(feedback.text, systemImage: feedback.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(feedback.isError ? Color.red : Color.foregroundText)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .accessibilityAddTraits(.isStaticText)
-            }
+        .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
+            Button("OK", role: .cancel) { operationError = nil }
+        } message: {
+            Text(operationError ?? "Something went wrong. Try again.")
         }
         .onDisappear {
             speciesSearchTask?.cancel()
@@ -340,10 +326,12 @@ struct OutingDetailView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            pendingRemoval = SpeciesRemoval(
-                                displayName: getDisplayName(speciesName),
-                                observationIds: obs.map(\.id)
-                            )
+                            Task {
+                                await removeSpecies(
+                                    displayName: getDisplayName(speciesName),
+                                    observationIds: obs.map(\.id)
+                                )
+                            }
                         } label: {
                             Label("Remove", systemImage: "trash")
                         }
@@ -394,10 +382,12 @@ struct OutingDetailView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            pendingRemoval = SpeciesRemoval(
-                                displayName: getDisplayName(speciesName),
-                                observationIds: obs.map(\.id)
-                            )
+                            Task {
+                                await removeSpecies(
+                                    displayName: getDisplayName(speciesName),
+                                    observationIds: obs.map(\.id)
+                                )
+                            }
                         } label: {
                             Label("Remove", systemImage: "trash")
                         }
@@ -453,9 +443,8 @@ struct OutingDetailView: View {
                             do {
                                 try await store.updateOuting(id: outingId, fields: OutingUpdate(notes: notesText))
                                 editingNotes = false
-                                showFeedback("Notes saved")
                             } catch {
-                                showFeedback("Could not save notes", isError: true)
+                                showError(error, fallback: "Could not save notes. Try again.")
                             }
                         }
                     }
@@ -559,9 +548,8 @@ struct OutingDetailView: View {
                 fields: OutingUpdate(locationName: newName, defaultLocationName: defaultName)
             )
             editingLocation = false
-            showFeedback(trimmed.isEmpty ? "Outing name reset" : "Outing name saved")
         } catch {
-            showFeedback("Could not save outing name", isError: true)
+            showError(error, fallback: "Could not save outing name. Try again.")
         }
     }
 
@@ -585,6 +573,7 @@ struct OutingDetailView: View {
                 else { return }
                 speciesResults = results
             } catch is CancellationError {
+                isSearchingSpecies = false
                 return
             } catch {
                 speciesResults = []
@@ -619,9 +608,8 @@ struct OutingDetailView: View {
             try await store.addObservation(observation)
             resetSpeciesForm()
             showingAddSpecies = false
-            showFeedback("\(displayName) added")
         } catch {
-            showFeedback("Could not add \(displayName)", isError: true)
+            showError(error, fallback: "Could not add \(displayName). Try again.")
         }
         isAddingSpecies = false
     }
@@ -634,12 +622,11 @@ struct OutingDetailView: View {
         isSearchingSpecies = false
     }
 
-    private func removeSpecies(_ removal: SpeciesRemoval) async {
+    private func removeSpecies(displayName: String, observationIds: [String]) async {
         do {
-            try await store.rejectObservations(ids: removal.observationIds)
-            showFeedback("Observation removed")
+            try await store.rejectObservations(ids: observationIds)
         } catch {
-            showFeedback("Could not remove \(removal.displayName)", isError: true)
+            showError(error, fallback: "Could not remove \(displayName). Try again.")
         }
     }
 
@@ -652,34 +639,23 @@ struct OutingDetailView: View {
                 .appendingPathComponent("wingdex-outing-\(date).csv")
             try csvData.write(to: url)
             exportItem = ExportFileItem(url: url)
-            showFeedback("Outing exported in eBird Record CSV format")
         } catch {
-            showFeedback("Could not export outing", isError: true)
+            showError(error, fallback: "Could not export outing. Try again.")
         }
         isExporting = false
     }
 
-    private func showFeedback(_ text: String, isError: Bool = false) {
-        let message = FeedbackMessage(text: text, isError: isError)
-        withAnimation { feedback = message }
-        Task {
-            try? await Task.sleep(for: .seconds(isError ? 5 : 3))
-            guard feedback?.id == message.id else { return }
-            withAnimation { feedback = nil }
-        }
+    private var operationErrorBinding: Binding<Bool> {
+        Binding(
+            get: { operationError != nil },
+            set: { if !$0 { operationError = nil } }
+        )
     }
-}
 
-private struct SpeciesRemoval: Identifiable {
-    let id = UUID()
-    let displayName: String
-    let observationIds: [String]
-}
-
-private struct FeedbackMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isError: Bool
+    private func showError(_ error: Error, fallback: String) {
+        guard let appError = AppError.map(error, fallback: fallback) else { return }
+        operationError = appError.message
+    }
 }
 
 #if DEBUG

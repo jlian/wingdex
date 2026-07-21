@@ -32,6 +32,7 @@ struct WingDexApp: App {
 struct ContentView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var isValidating = true
 
@@ -67,6 +68,15 @@ struct ContentView: View {
         }
         .background(Color.pageBg.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
+        .onChange(of: auth.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                store.reset()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, auth.isAuthenticated, !isValidating else { return }
+            Task { await auth.validateSession() }
+        }
         .task {
             if auth.isAuthenticated {
                 await auth.validateSession()

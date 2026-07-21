@@ -6,7 +6,7 @@ struct PasskeyManagementView: View {
     @Environment(AuthService.self) private var auth
     @State private var passkeys: [PasskeyService.PasskeyInfo] = []
     @State private var isLoading = true
-    @State private var errorMessage: String?
+    @State private var errorMessage: AppError?
     @State private var showAddSheet = false
     @State private var newPasskeyName = ""
     @State private var isAdding = false
@@ -54,7 +54,7 @@ struct PasskeyManagementView: View {
 
             if let errorMessage {
                 Section {
-                    Text(errorMessage)
+                    Text(errorMessage.message)
                         .foregroundStyle(.red)
                         .font(.caption)
                 }
@@ -105,7 +105,7 @@ struct PasskeyManagementView: View {
         do {
             passkeys = try await auth.listPasskeys()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppError.map(error, fallback: "Could not load passkeys. Try again.")
         }
         isLoading = false
     }
@@ -119,10 +119,7 @@ struct PasskeyManagementView: View {
             try await auth.registerPasskey(name: finalName)
             await loadPasskeys()
         } catch {
-            // Don't show error for user cancellation
-            if (error as? ASAuthorizationError)?.code != .canceled {
-                errorMessage = error.localizedDescription
-            }
+            errorMessage = AppError.map(error, fallback: "Could not add this passkey. Try again.")
         }
         isAdding = false
     }
@@ -152,7 +149,7 @@ struct PasskeyManagementView: View {
             try await auth.deletePasskey(id: id)
             passkeys.removeAll { $0.id == id }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppError.map(error, fallback: "Could not delete this passkey. Try again.")
         }
     }
 

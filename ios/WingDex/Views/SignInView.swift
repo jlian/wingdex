@@ -286,7 +286,10 @@ struct SignInView: View {
             }
         }
         .animation(.default, value: errorMessage)
-        .onAppear { startParallax() }
+        .onAppear {
+            errorMessage = auth.consumeSignInMessage()
+            startParallax()
+        }
         .onDisappear { stopParallax() }
         }
     }
@@ -336,13 +339,9 @@ struct SignInView: View {
         Task {
             do {
                 try await action()
-            } catch let error as ASAuthorizationError where error.code == .notHandled {
-                errorMessage = "Passkey not available for this domain. Check Associated Domains entitlement."
-            } catch let error as ASAuthorizationError where error.code == .canceled {
-                errorMessage = nil
             } catch {
-                errorMessage = error.localizedDescription
-                log.debug("Sign-in error: \(error.localizedDescription)")
+                errorMessage = AppError.map(error, fallback: "Authentication failed. Try again.")?.message
+                log.debug("Sign-in attempt failed")
             }
             isSigningIn = false
         }
@@ -399,9 +398,17 @@ private struct SignInCollage: View {
 }
 
 #if DEBUG
-#Preview {
+#Preview("Sign In - Light") {
     SignInView()
         .environment(AuthService())
         .environment(previewStore(empty: true))
+        .preferredColorScheme(.light)
+}
+
+#Preview("Sign In - Dark") {
+    SignInView()
+        .environment(AuthService())
+        .environment(previewStore(empty: true))
+        .preferredColorScheme(.dark)
 }
 #endif

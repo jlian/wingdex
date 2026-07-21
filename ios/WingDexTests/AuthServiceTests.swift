@@ -127,6 +127,132 @@ final class AuthCallbackParsingTests: XCTestCase {
     }
 }
 
+// MARK: - Session Validation Tests
+
+final class SessionValidationTests: XCTestCase {
+    func testNullSuccessfulSessionIsRejected() {
+        XCTAssertTrue(AuthService.sessionValidationRejects(statusCode: 200, data: Data("null".utf8)))
+    }
+
+    func testMalformedSuccessfulSessionIsRejected() {
+        XCTAssertTrue(AuthService.sessionValidationRejects(statusCode: 200, data: Data("{}".utf8)))
+    }
+
+    func testSuccessfulSessionWithoutIdsIsRejected() {
+        let data = Data(#"{"session":{},"user":{}}"#.utf8)
+        XCTAssertTrue(AuthService.sessionValidationRejects(statusCode: 200, data: data))
+    }
+
+    func testValidSuccessfulSessionIsAccepted() {
+        let data = Data(#"{"session":{"id":"session-1"},"user":{"id":"user-1"}}"#.utf8)
+        XCTAssertFalse(AuthService.sessionValidationRejects(statusCode: 200, data: data))
+    }
+
+    func testUnauthorizedSessionIsRejected() {
+        XCTAssertTrue(AuthService.sessionValidationRejects(statusCode: 401, data: Data()))
+    }
+
+    func testServerFailureDoesNotRejectCachedSession() {
+        XCTAssertFalse(AuthService.sessionValidationRejects(statusCode: 500, data: Data()))
+    }
+
+    func testRejectedCurrentTokenInvalidatesSession() {
+        XCTAssertTrue(AuthService.isSameSession(currentToken: "token-a", initiatingToken: "token-a"))
+    }
+
+    func testRejectedOldTokenDoesNotInvalidateReplacementSession() {
+        XCTAssertFalse(AuthService.isSameSession(currentToken: "token-b", initiatingToken: "token-a"))
+    }
+
+    @MainActor
+    func testSignInMessageIsConsumedOnce() {
+        let auth = AuthService()
+        auth.signInMessage = "Your session expired. Please sign in again."
+
+        XCTAssertEqual(auth.consumeSignInMessage(), "Your session expired. Please sign in again.")
+        XCTAssertNil(auth.consumeSignInMessage())
+    }
+}
+
+@MainActor
+final class DataStoreSessionTests: XCTestCase {
+    func testResetClearsAccountOwnedState() {
+        let auth = AuthService()
+        let store = DataStore(service: DataService(auth: auth))
+        store.outings = [Outing(
+            id: "outing-1",
+            userId: "user-1",
+            startTime: "2026-07-20T12:00:00Z",
+            endTime: "2026-07-20T13:00:00Z",
+            locationName: "Test Marsh",
+            notes: "",
+            createdAt: "2026-07-20T12:00:00Z"
+        )]
+        store.isLoading = true
+        store.error = .message("Previous account error")
+
+        store.reset()
+
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertTrue(store.photos.isEmpty)
+        XCTAssertTrue(store.observations.isEmpty)
+        XCTAssertTrue(store.dex.isEmpty)
+        XCTAssertFalse(store.isLoading)
+        XCTAssertNil(store.error)
+    }
+}
+
+final class AppErrorTests: XCTestCase {
+    func testExistingAppErrorIsPreserved() {
+        let error = AppError.message("Specific recovery guidance")
+        XCTAssertEqual(AppError.map(error), error)
+    }
+
+    func testOfflineMapping() {
+        XCTAssertEqual(AppError.map(URLError(.notConnectedToInternet)), .offline)
+        XCTAssertEqual(AppError.map(URLError(.networkConnectionLost)), .offline)
+    }
+
+    func testTimeoutMapping() {
+        XCTAssertEqual(AppError.map(URLError(.timedOut)), .timedOut)
+    }
+
+    func testCancellationIsSilent() {
+        XCTAssertNil(AppError.map(URLError(.cancelled)))
+    }
+
+    func testRateLimitIncludesConfiguredLimitAndRetryAfter() {
+        let error = DataServiceError.http(status: 429, message: nil, retryAfter: 120)
+        let mapped = AppError.map(error, rateLimit: Config.aiDailyRateLimit)
+        XCTAssertEqual(mapped, .rateLimited(limit: Config.aiDailyRateLimit, retryAfter: 120))
+        XCTAssertTrue(mapped?.message.contains("150 requests/day") == true)
+        XCTAssertTrue(mapped?.message.contains("2 minutes") == true)
+    }
+
+    func testUnrelatedRateLimitUsesGenericCopy() {
+        let error = DataServiceError.http(status: 429, message: nil, retryAfter: 120)
+        XCTAssertEqual(AppError.map(error), .message("Too many requests. Try again later."))
+    }
+
+    func testAuthErrorsRespectPresentationContext() {
+        XCTAssertEqual(AppError.map(AuthError.notAuthenticated), .sessionExpired)
+        XCTAssertEqual(
+            AppError.map(AuthError.oauthFailed("unsafe detail"), fallback: "Could not save your profile. Try again."),
+            .message("Could not save your profile. Try again.")
+        )
+    }
+
+    func testSafeClientMessageIsPreserved() {
+        let error = DataServiceError.http(status: 409, message: "This import was already confirmed.", retryAfter: nil)
+        XCTAssertEqual(AppError.map(error), .message("This import was already confirmed."))
+    }
+
+    func testServerAndDecodingFailuresUseSafeCopy() {
+        XCTAssertEqual(AppError.map(DataServiceError.http(status: 500, message: nil, retryAfter: nil)), .server)
+        XCTAssertEqual(AppError.map(DataServiceError.invalidResponse), .invalidResponse)
+    }
+}
+
 // MARK: - Config Tests
 
 final class ConfigURLTests: XCTestCase {

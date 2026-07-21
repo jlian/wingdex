@@ -20,6 +20,7 @@ final class AuthService: @unchecked Sendable {
     var userName: String?
     var userEmail: String?
     var userImage: String?
+    var signInMessage: String?
 
     private var sessionToken: String?
     /// Signed session token (includes HMAC suffix) for cookie-based auth.
@@ -52,7 +53,7 @@ final class AuthService: @unchecked Sendable {
     }
 
     /// Validate the locally-cached session with the server.
-    /// Signs out on 401 (expired/revoked session) so the UI goes straight to
+    /// Signs out when Better Auth rejects the session so the UI goes straight to
     /// sign-in instead of flashing authenticated content. Network errors are
     /// ignored - the user may be offline with a valid cached session.
     func validateSession() async {
@@ -61,16 +62,35 @@ final class AuthService: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 5
+        AuthenticatedRequest.instrument(&request)
         do {
-            let (_, response) = try await Self.bearerSession.data(for: request)
-            if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            let (data, response) = try await AuthenticatedRequest.data(
+                for: request, session: Self.bearerSession,
+                context: "Validate session", logger: log
+            )
+            if let http = response as? HTTPURLResponse,
+               Self.sessionValidationRejects(statusCode: http.statusCode, data: data) {
                 log.warning("Session rejected by server, signing out")
-                signOut()
+                invalidateSession(rejectedToken: token)
             }
         } catch {
             // Network error - don't sign out, user may be offline
-            log.info("Session validation skipped: \(error.localizedDescription)")
+            log.info("Session validation skipped because the request failed")
         }
+    }
+
+    nonisolated static func sessionValidationRejects(statusCode: Int, data: Data) -> Bool {
+        if statusCode == 401 { return true }
+        guard (200...299).contains(statusCode),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let session = json["session"] as? [String: Any],
+              session["id"] is String,
+              let user = json["user"] as? [String: Any],
+              user["id"] is String
+        else {
+            return (200...299).contains(statusCode)
+        }
+        return false
     }
 
     // MARK: - OAuth Flows
@@ -128,15 +148,18 @@ final class AuthService: @unchecked Sendable {
             "idToken": ["token": identityToken],
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        AuthenticatedRequest.instrument(&request)
 
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await AuthenticatedRequest.data(
+            for: request, session: Self.bearerSession,
+            context: "Apple sign-in", logger: log
+        )
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode)
         else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw AuthError.oauthFailed("Apple sign-in failed (\(statusCode)): \(body)")
+            throw AuthError.oauthFailed("Apple sign-in failed (HTTP \(statusCode))")
         }
 
         try processTokenResponse(data: data, response: response)
@@ -155,8 +178,12 @@ final class AuthService: @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         request.httpBody = Data("{}".utf8)
+        AuthenticatedRequest.instrument(&request)
 
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await AuthenticatedRequest.data(
+            for: request, session: Self.bearerSession,
+            context: "Anonymous sign-in", logger: log
+        )
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AuthError.oauthFailed("Invalid response")
@@ -165,8 +192,7 @@ final class AuthService: @unchecked Sendable {
         log.info("Anonymous sign-in response: \(httpResponse.statusCode)")
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            log.error("Anonymous sign-in failed: \(httpResponse.statusCode) \(body)")
+            log.error("Anonymous sign-in failed: HTTP \(httpResponse.statusCode)")
             throw AuthError.oauthFailed("Anonymous sign-in failed (\(httpResponse.statusCode))")
         }
 
@@ -188,7 +214,7 @@ final class AuthService: @unchecked Sendable {
 
         log.debug("OAuth URL: \(signInURL)")
         let callbackURL = try await performWebAuth(url: signInURL)
-        log.debug("OAuth callback received: \(callbackURL)")
+        log.debug("OAuth callback received for provider: \(provider)")
         try processAuthCallback(url: callbackURL)
         log.info("OAuth sign-in succeeded for \(provider)")
     }
@@ -196,6 +222,29 @@ final class AuthService: @unchecked Sendable {
     /// Sign out - clear all state. Session invalidation happens server-side via expiry.
     func signOut() {
         log.info("Signing out")
+        signInMessage = nil
+        clearSession()
+    }
+
+    /// Clear a rejected session only if it is still the active session.
+    @discardableResult
+    func invalidateSession(rejectedToken: String) -> Bool {
+        guard sessionToken == rejectedToken else { return false }
+        signInMessage = "Your session expired. Please sign in again."
+        clearSession()
+        return true
+    }
+
+    nonisolated static func isSameSession(currentToken: String?, initiatingToken: String) -> Bool {
+        currentToken == initiatingToken
+    }
+
+    func consumeSignInMessage() -> String? {
+        defer { signInMessage = nil }
+        return signInMessage
+    }
+
+    private func clearSession() {
         sessionToken = nil
         signedSessionToken = nil
         sessionExpiry = nil
@@ -213,6 +262,13 @@ final class AuthService: @unchecked Sendable {
     /// Send name and image to Better Auth's update-user endpoint and persist on success.
     func updateProfile(name: String, image: String) async throws {
         let token = try validToken()
+        try await updateProfile(name: name, image: image, token: token)
+    }
+
+    private func updateProfile(name: String, image: String, token: String) async throws {
+        guard Self.isSameSession(currentToken: sessionToken, initiatingToken: token) else {
+            throw AuthError.notAuthenticated
+        }
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/update-user")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -222,17 +278,21 @@ final class AuthService: @unchecked Sendable {
 
         let body: [String: String] = ["name": name.trimmingCharacters(in: .whitespacesAndNewlines), "image": image]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        AuthenticatedRequest.instrument(&request)
 
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (_, response) = try await AuthenticatedRequest.data(
+            for: request, session: Self.bearerSession,
+            context: "Update profile", logger: log
+        )
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let detail = String(data: data, encoding: .utf8) ?? ""
-            throw AuthError.oauthFailed("Profile update failed (\(statusCode)): \(detail)")
+            if statusCode == 401 {
+                invalidateSession(rejectedToken: token)
+            }
+            throw AuthError.oauthFailed("Profile update failed (HTTP \(statusCode))")
         }
 
-        // Update in-memory state and persist to Keychain.
-        // The caller (ProfileEditor) also sets these optimistically
-        // before the network call, so this ensures they stay in sync.
+        guard Self.isSameSession(currentToken: sessionToken, initiatingToken: token) else { return }
         userName = name
         userImage = image
         persistSession()
@@ -248,12 +308,18 @@ final class AuthService: @unchecked Sendable {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         request.httpBody = Data("{}".utf8)
+        AuthenticatedRequest.instrument(&request)
 
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (_, response) = try await AuthenticatedRequest.data(
+            for: request, session: Self.bearerSession,
+            context: "Delete account", logger: log
+        )
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let detail = String(data: data, encoding: .utf8) ?? ""
-            throw AuthError.oauthFailed("Account deletion failed (\(statusCode)): \(detail)")
+            if statusCode == 401 {
+                invalidateSession(rejectedToken: token)
+            }
+            throw AuthError.oauthFailed("Account deletion failed (HTTP \(statusCode))")
         }
 
         signOut()
@@ -300,8 +366,12 @@ final class AuthService: @unchecked Sendable {
         anonRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         anonRequest.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         anonRequest.httpBody = Data("{}".utf8)
+        AuthenticatedRequest.instrument(&anonRequest)
 
-        let (anonData, anonResponse) = try await Self.bearerSession.data(for: anonRequest)
+        let (anonData, anonResponse) = try await AuthenticatedRequest.data(
+            for: anonRequest, session: Self.bearerSession,
+            context: "Create passkey account", logger: log
+        )
         guard let anonHttp = anonResponse as? HTTPURLResponse,
               (200...299).contains(anonHttp.statusCode),
               let anonJson = try JSONSerialization.jsonObject(with: anonData) as? [String: Any],
@@ -346,7 +416,10 @@ final class AuthService: @unchecked Sendable {
             contentType: "application/json"
         )
 
-        let (_, finalizeResponse) = try await URLSession.shared.data(for: finalizeRequest)
+        let (_, finalizeResponse) = try await AuthenticatedRequest.data(
+            for: finalizeRequest,
+            context: "Finalize passkey account", logger: log
+        )
         guard let finalizeHttp = finalizeResponse as? HTTPURLResponse,
               (200...299).contains(finalizeHttp.statusCode)
         else {
@@ -376,11 +449,12 @@ final class AuthService: @unchecked Sendable {
         Task.detached { [weak self] in
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
+            guard await self.isCurrentSession(token: rawToken) else { return }
             await MainActor.run { self.clearAPICookies() }
             do {
-                try await self.updateProfile(name: birdName, image: avatarDataUrl)
+                try await self.updateProfile(name: birdName, image: avatarDataUrl, token: rawToken)
             } catch {
-                log.warning("Post-signup profile update failed: \(error.localizedDescription)")
+                log.warning("Post-signup profile update failed")
             }
             await MainActor.run { self.clearAPICookies() }
         }
@@ -430,16 +504,19 @@ final class AuthService: @unchecked Sendable {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        AuthenticatedRequest.instrument(&request)
 
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await AuthenticatedRequest.data(
+            for: request, session: Self.bearerSession,
+            context: "Fetch user info", logger: log
+        )
 
         guard let httpResponse = response as? HTTPURLResponse else {
             log.warning("fetchUserInfo: non-HTTP response, skipping user-info enrichment")
             return
         }
         guard httpResponse.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            log.warning("fetchUserInfo: HTTP \(httpResponse.statusCode), body: \(body, privacy: .private)")
+            log.warning("fetchUserInfo: HTTP \(httpResponse.statusCode)")
             return
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -464,14 +541,19 @@ final class AuthService: @unchecked Sendable {
     /// Get a valid session token for API requests.
     /// Attach as `Authorization: Bearer <token>`.
     func validToken() throws -> String {
-        guard let token = sessionToken,
-              let expiry = sessionExpiry,
-              expiry > Date.now
-        else {
-            signOut()
+        guard let token = sessionToken else {
+            clearSession()
+            throw AuthError.notAuthenticated
+        }
+        guard let expiry = sessionExpiry, expiry > Date.now else {
+            invalidateSession(rejectedToken: token)
             throw AuthError.notAuthenticated
         }
         return token
+    }
+
+    private func isCurrentSession(token: String) -> Bool {
+        Self.isSameSession(currentToken: sessionToken, initiatingToken: token)
     }
 
     // MARK: - ASWebAuthenticationSession
@@ -640,7 +722,8 @@ final class AuthService: @unchecked Sendable {
         guard let expiry = formatter.date(from: expiryString),
               expiry > Date.now
         else {
-            clearKeychain()
+            signInMessage = "Your session expired. Please sign in again."
+            clearSession()
             return
         }
 
