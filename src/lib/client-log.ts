@@ -22,6 +22,7 @@ export interface ClientLogFields {
 }
 
 function emit(level: ClientLogLevel, operationName: string, fields?: ClientLogFields): void {
+  if (level === 'Debug' && !import.meta.env.DEV) return
   const entry: Record<string, unknown> = {
     time: new Date().toISOString(),
     level,
@@ -49,20 +50,23 @@ export const clientLog = {
 }
 
 /**
- * Convenience: log a fetch/mutation failure with the error message and
- * (when available) the parsed status code from the thrown Error.
- *
- * Server `apiJson()` throws Error(body || `${status} ${statusText}`). The body
- * is the server-emitted resultDescription, so we surface it directly.
+ * Log a fetch/mutation failure using only safe operational metadata.
+ * The status prefix selects the severity, while thrown messages and response
+ * bodies are intentionally excluded from structured logs.
  */
 export function logClientFailure(operationName: string, err: unknown, properties?: Record<string, unknown>): void {
   const message = err instanceof Error ? err.message : String(err)
   const statusMatch = /^(\d{3})\s/.exec(message)
   const resultSignature = statusMatch ? Number(statusMatch[1]) : undefined
-  clientLog.error(operationName, {
+  const logger = resultSignature !== undefined && resultSignature >= 400 && resultSignature < 500
+    ? clientLog.warn
+    : clientLog.error
+  logger(operationName, {
     resultType: 'Failed',
     resultSignature,
-    resultDescription: message,
+    resultDescription: resultSignature !== undefined
+      ? `Client request failed with HTTP ${resultSignature}`
+      : 'Client request failed; inspect the operation and browser network trace',
     properties,
   })
 }

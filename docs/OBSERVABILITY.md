@@ -33,7 +33,7 @@ Standard 6-level hierarchy, controlled by `LOG_LEVEL` env var:
 
 | Level | Purpose | When to use |
 |---|---|---|
-| `Trace` | Ultra-verbose data dumps | Full candidate arrays, range prior maps. Deep debugging only. |
+| `Trace` | Ultra-verbose operational diagnostics | Safe pipeline state and aggregate maps. Never credentials or user content. |
 | `Debug` | Sub-step diagnostic detail | Bird-id pipeline stages, batch counts, import parsing. Local dev. |
 | `Info` | Significant business events | Request completion (1 per request), audit events. **Production baseline.** |
 | `Warning` | Client errors, degraded paths | 4xx responses, validation failures. Emitted at `warn` level and above. |
@@ -84,7 +84,24 @@ LOG_FORMAT=pretty
 You see sub-step detail (bird-id pipeline, import parsing, batch counts) in a compact terminal-friendly format.
 
 ### Deep debugging
-Temporarily set `LOG_LEVEL=trace` to see full data dumps (candidate arrays, range prior maps). Revert when done.
+Temporarily set `LOG_LEVEL=trace` to see additional safe pipeline diagnostics. Trace level does not permit credentials, response bodies, user-authored content, or provider/database exception text. Revert when done.
+
+## Safe metadata policy
+
+Logs may include stable operational metadata needed to correlate and diagnose requests:
+
+- top-level `userId`, internal `resourceId`, trace/span IDs
+- internal outing, observation, or photo IDs when they identify the affected resource
+- HTTP status, method, route, duration, response byte count
+- aggregate counts, booleans, enums, configured limits, and retry durations
+
+Logs must never include:
+
+- raw or signed session tokens, cookies, authorization headers, OAuth callback URLs, passkey credential IDs, or challenge payloads
+- email addresses, profile image URLs/data, filenames, notes, outing/location names, species-name arrays, CSV contents, or image data
+- request/response bodies, provider payloads, database/provider exception messages, or stack traces
+
+Use a stable operation summary plus safe metadata in catch blocks, for example: `Outing deletion failed; inspect the trace and database operation` with `{ outingId }`. The trace ID is the correlation handle; raw exception text is not a logging shortcut.
 
 ### Tracing a specific user in production
 Query CF Workers Logs (or log analytics) by `userId` at Info level - it's a top-level field on every log line. If you need sub-step detail for a production issue, temporarily set `LOG_LEVEL=debug` in Cloudflare Workers env vars and redeploy. Revert after investigation.
@@ -192,7 +209,7 @@ Middleware resolves the session (and therefore `userId`) for non-`/api/auth/*` r
 5. **Include entity context** in error messages: outing IDs, observation IDs, counts. Use the `detail` parameter for rich descriptions and `properties` for machine-queryable data.
 6. **Scope resourceId** when operating on a specific entity: `createRouteResponder(log?.withResourceId('outings/' + outingId), ...)`
 7. **Propagate `traceparent`** on outbound calls (web -> API, iOS -> API).
-8. **Read `response.text()`** on client-side errors to surface server error details to the user.
+8. **Expose only safe expected 4xx details** to clients. Never surface or log raw 5xx bodies, HTML, exception text, or provider/database payloads.
 
 ### Route handler template
 
@@ -212,13 +229,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     // ... DB operations ...
     route.debug('Created outing', { outingId: body.id })
     return Response.json(result)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Operation failed: ${message}`, { error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Outing creation failed; inspect the trace and database operation', { outingId: body.id })
   }
 }
 ```
 
 ### Choosing info vs debug
 
-Ask: "Would an ops engineer need to see this for every request in production?" If yes -> `route.info()`. If only useful when debugging -> `route.debug()`. If it's a giant data dump -> `route.trace()`.
+Ask: "Would an ops engineer need to see this for every request in production?" If yes -> `route.info()`. If only useful when debugging -> `route.debug()`. Use `route.trace()` only for additional safe operational metadata, never for raw payloads or user content.

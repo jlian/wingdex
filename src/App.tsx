@@ -9,6 +9,7 @@ import { BirdLogo } from '@/components/ui/bird-logo'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import { getStableDevUserId } from '@/lib/dev-user'
 import { authClient } from '@/lib/auth-client'
+import { fetchWithLocalAuthRetry } from '@/lib/local-auth-fetch'
 import { getEmojiAvatarColor } from '@/lib/fun-names'
 import { useAuthGate } from '@/hooks/use-auth-gate'
 import { loadDemoData } from '@/lib/demo-data'
@@ -125,7 +126,7 @@ function App() {
 
   const fetchLinkedProviders = useCallback(async (): Promise<string[]> => {
     try {
-      const response = await fetch('/api/auth/linked-providers', {
+      const response = await fetchWithLocalAuthRetry('/api/auth/linked-providers', {
         credentials: 'include',
       })
       if (!response.ok) return []

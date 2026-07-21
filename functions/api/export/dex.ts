@@ -21,8 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       'cache-control': 'no-store',
     },
   })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Dex export failed: ${message}`, { error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Dex export failed; inspect the trace and database query')
   }
 }

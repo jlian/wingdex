@@ -80,11 +80,11 @@ describe('logClientFailure', () => {
   it('extracts status code from error message prefix', () => {
     const [entry] = captureLogs(() => logClientFailure('data/outings/write', new Error('400 Invalid JSON body')))
     expect(entry).toMatchObject({
-      level: 'Error',
+      level: 'Warning',
       operationName: 'data/outings/write',
       resultType: 'Failed',
       resultSignature: 400,
-      resultDescription: '400 Invalid JSON body',
+      resultDescription: 'Client request failed with HTTP 400',
     })
   })
 
@@ -92,7 +92,7 @@ describe('logClientFailure', () => {
     const [entry] = captureLogs(() => logClientFailure('test/op', 'string error'))
     expect(entry).toMatchObject({
       resultType: 'Failed',
-      resultDescription: 'string error',
+      resultDescription: 'Client request failed; inspect the operation and browser network trace',
     })
     expect((entry as { resultSignature?: number }).resultSignature).toBeUndefined()
   })
@@ -100,7 +100,7 @@ describe('logClientFailure', () => {
   it('handles error without status prefix', () => {
     const [entry] = captureLogs(() => logClientFailure('test/op', new Error('Network error')))
     expect(entry).toMatchObject({
-      resultDescription: 'Network error',
+      resultDescription: 'Client request failed; inspect the operation and browser network trace',
     })
     expect((entry as { resultSignature?: number }).resultSignature).toBeUndefined()
   })

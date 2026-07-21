@@ -126,7 +126,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // --- HTTP method validation ---
   if (!ALLOWED_METHODS.has(method)) {
-    log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS` })
+    log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 405, resultDescription: `Method ${method} is not allowed; supported methods are GET, POST, PATCH, DELETE, OPTIONS`, durationMs: Date.now() - start })
     const methodResponse = errorResponse('Method Not Allowed', 405, {
       Allow: Array.from(ALLOWED_METHODS).join(', '),
     })
@@ -141,7 +141,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (hasBodyMethod && rawContentLength !== null) {
     const parsedLength = Number(rawContentLength)
     if (!Number.isFinite(parsedLength) || parsedLength < 0) {
-      log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number' })
+      log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 400, resultDescription: 'Content-Length header is not a valid non-negative number', durationMs: Date.now() - start })
       const clResponse = errorResponse('Invalid Content-Length', 400)
       addTraceHeaders(clResponse, traceCtx)
       return clResponse
@@ -150,7 +150,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const limit =
         BODY_LIMITS.find((b) => pathname.startsWith(b.prefix))?.maxBytes ?? DEFAULT_BODY_LIMIT
       if (parsedLength > limit) {
-        log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body of ${parsedLength} bytes exceeds the ${limit}-byte limit`, properties: { contentLength: parsedLength, limit } })
+        log.warn('requests/validation/validate', { category: 'Request', resultType: 'Failed', resultSignature: 413, resultDescription: `Request body exceeded the configured route limit`, durationMs: Date.now() - start, properties: { contentLength: parsedLength, limit } })
         const sizeResponse = errorResponse('Payload Too Large', 413)
         addTraceHeaders(sizeResponse, traceCtx)
         return sizeResponse
@@ -225,32 +225,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 /** Emit the single request-lifecycle completion log with dynamic level. */
 async function emitCompletionLog(log: ReturnType<typeof createLogger>, op: string, response: Response, durationMs: number, method: string, pathname: string): Promise<void> {
   const status = response.status
-  // For error responses, try to extract a meaningful description from the body
-  let description = `HTTP ${status}`
-  if (status >= 400) {
-    try {
-      const contentType = response.headers.get('content-type') || ''
-      const contentLength = parseInt(response.headers.get('content-length') || '', 10)
-      // Only read small text/json bodies with a known size to avoid logging large or binary payloads
-      if ((contentType.includes('json') || contentType.includes('text')) && !isNaN(contentLength) && contentLength <= 4096) {
-        const cloned = response.clone()
-        const body = await cloned.text()
-        if (body) {
-          try {
-            const json = JSON.parse(body) as Record<string, unknown>
-            const msg = json.message || json.error || json.detail
-            if (typeof msg === 'string') description = msg.slice(0, 200)
-          } catch {
-            if (body.length <= 200) description = body
-          }
-        }
-      }
-    } catch {
-      // Ignore read failures; keep default description
-    }
-  }
   const resultType = status < 400 ? 'Succeeded' : 'Failed'
-  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: description, durationMs, properties: { 'http.method': method, 'http.route': pathname } }
+  const fields = { category: 'Request' as const, resultType: resultType as 'Succeeded' | 'Failed', resultSignature: status, resultDescription: `HTTP ${status}`, durationMs, properties: { 'http.method': method, 'http.route': pathname } }
   if (status >= 500) {
     log.error(op, fields)
   } else if (status >= 400) {
@@ -274,14 +250,13 @@ function handleUnexpectedError(
   operationName: string,
   start: number,
 ): Response {
-  const message = err instanceof Error ? err.message : String(err)
+  void err
   log.error(operationName, {
     category: 'Request',
     resultType: 'Failed',
     resultSignature: 500,
-    resultDescription: `Unhandled error: ${message}`,
+    resultDescription: 'Unhandled route error; inspect the result signature and trace ID, then retry or investigate the route implementation',
     durationMs: Date.now() - start,
-    properties: { error: message },
   })
   const response = errorResponse('Internal Server Error', 500)
   addTraceHeaders(response, traceCtx)

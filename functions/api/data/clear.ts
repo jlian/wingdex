@@ -15,8 +15,7 @@ export const onRequestDelete: PagesFunction<Env> = async context => {
     route.info('Deleted all outings and dex metadata for user')
 
     return Response.json({ cleared: true })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'Internal server error', `Data clear failed: ${message}`, { error: message })
+  } catch {
+    return route.fail(500, 'Internal server error', 'Data clear failed; inspect the trace and database batch')
   }
 }

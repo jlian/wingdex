@@ -144,14 +144,13 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     return Response.json(result)
   } catch (error) {
     if (error instanceof RateLimitError) {
-      return route.failWithHeaders(error.status, error.message, { 'Retry-After': String(error.retryAfterSeconds) }, `Bird identification rate-limited: ${error.message}; retry after ${error.retryAfterSeconds}s`, { retryAfterSeconds: error.retryAfterSeconds })
+      return route.failWithHeaders(error.status, error.message, { 'Retry-After': String(error.retryAfterSeconds) }, 'Bird identification request was rate-limited', { retryAfterSeconds: error.retryAfterSeconds })
     }
 
     if (error instanceof HttpError) {
-      return route.fail(error.status, error.message, `Bird identification failed: ${error.message}`)
+      return route.fail(error.status, error.message, `Bird identification failed with HTTP ${error.status}`)
     }
 
-    const message = error instanceof Error ? error.message : String(error)
-    return route.fail(500, 'An unexpected error occurred during bird identification', `Bird identification failed unexpectedly: ${message}`, { error: message })
+    return route.fail(500, 'An unexpected error occurred during bird identification', 'Bird identification failed unexpectedly; inspect the trace and upstream model request')
   }
 }

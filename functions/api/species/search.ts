@@ -1,4 +1,5 @@
 import { searchSpecies } from '../../lib/taxonomy'
+import { createRouteResponder } from '../../lib/log'
 
 function parseLimit(value: string | null): number {
   if (!value) return 8
@@ -8,9 +9,10 @@ function parseLimit(value: string | null): number {
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
+  const route = createRouteResponder(context.data.log, 'species/search/read', 'Application')
   const userId = (context.data as { user?: { id?: string } }).user?.id
   if (!userId) {
-    return new Response('Unauthorized', { status: 401 })
+    return route.fail(401, 'Unauthorized', 'Species search requires an authenticated session')
   }
 
   const query = new URL(context.request.url).searchParams.get('q') ?? ''
