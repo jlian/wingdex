@@ -56,8 +56,10 @@ final class AddPhotosViewModel {
     var selectedItems: [PhotosPickerItem] = []
     var processedPhotos: [ProcessedPhoto] = []
 
-    /// Photos captured via the camera (UIImage, not from PhotosPicker).
-    var cameraPhotos: [UIImage] = []
+    /// Photos captured via the camera (UIImage + capture-time location, not from
+    /// PhotosPicker). The in-app camera returns bare pixels with no EXIF GPS, so
+    /// we carry the device location captured alongside each shot.
+    var cameraPhotos: [(image: UIImage, lat: Double?, lon: Double?)] = []
 
     // MARK: - Clustering
 
@@ -172,9 +174,10 @@ final class AddPhotosViewModel {
 
     // MARK: - Camera Support
 
-    /// Add a photo captured from the camera.
-    func addCameraPhoto(_ image: UIImage) {
-        cameraPhotos.append(image)
+    /// Add a photo captured from the camera, with the device location at capture
+    /// time (nil if location was unavailable or permission was denied).
+    func addCameraPhoto(_ image: UIImage, lat: Double?, lon: Double?) {
+        cameraPhotos.append((image: image, lat: lat, lon: lon))
     }
 
     // MARK: - Step 1: Process Selected Photos
@@ -236,8 +239,10 @@ final class AddPhotosViewModel {
             extractionProgress = Double(processedCount) / Double(totalCount) * 100
         }
 
-        // Process camera-captured photos (no EXIF GPS, use capture time as now)
-        for uiImage in cameraPhotos {
+        // Process camera-captured photos (no EXIF GPS; use the device location
+        // captured at shot time, and capture time as now).
+        for camera in cameraPhotos {
+            let uiImage = camera.image
             let id = UUID().uuidString
             let compressed = PhotoService.compressImage(uiImage, quality: 0.7) ?? Data()
             let thumbnail = PhotoService.generateThumbnail(from: compressed, maxDimension: 200) ?? compressed
@@ -248,8 +253,8 @@ final class AddPhotosViewModel {
                 image: compressed,
                 thumbnail: thumbnail,
                 exifTime: Date(),
-                gpsLat: nil,
-                gpsLon: nil,
+                gpsLat: camera.lat,
+                gpsLon: camera.lon,
                 fileHash: fileHash,
                 fileName: "camera_\(id).jpg"
             )

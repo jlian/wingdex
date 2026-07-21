@@ -33,6 +33,7 @@
 		43921D83ECB05301E343D2ED /* collage11.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 99DD81C22AA9F61ABDD60B50 /* collage11.jpg */; };
 		48572F12742996B68226EECF /* FunNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D47136847CF32C6251A4BD /* FunNames.swift */; };
 		4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494CD419AD323D541E04D2AB /* AuthService.swift */; };
+		DCEF48F0819EB6083C514EA5 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C391CE53E6D744A318E8B40 /* LocationService.swift */; };
 		4D2754D2E24874B1AB391719 /* collage19.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 1758F97178B6D85D64F1363D /* collage19.jpg */; };
 		4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F34071627BDA774005F033 /* SettingsView.swift */; };
 		58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */; };
@@ -123,6 +124,7 @@
 		452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunNamesTests.swift; sourceTree = "<group>"; };
 		487950E4852A38D4FFA3B405 /* collage24.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage24.jpg; sourceTree = "<group>"; };
 		494CD419AD323D541E04D2AB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		3C391CE53E6D744A318E8B40 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		4BDBF72550893F931771EA36 /* CelebrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationTests.swift; sourceTree = "<group>"; };
 		4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaxonomyOrderTests.swift; sourceTree = "<group>"; };
 		557A070AA631D1A44FE4F407 /* GitInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitInfo.swift; sourceTree = "<group>"; };
@@ -213,6 +215,7 @@
 				5CACACCB759F9881B6989222 /* CropService.swift */,
 				CFBE1598DFE8F27ED8313060 /* DataService.swift */,
 				8DF3BE4EAF4D781A2029593E /* DataStore.swift */,
+				3C391CE53E6D744A318E8B40 /* LocationService.swift */,
 				19D47136847CF32C6251A4BD /* FunNames.swift */,
 				C55734005BE9F01B6719A826 /* PasskeyService.swift */,
 				5873328D24830AA514049E5C /* PhotoService.swift */,
@@ -535,6 +538,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				CCB60C37FEB5B3C7781CF308 /* AppIconView.swift in Sources */,
 				0C26BD71C3D1128D41123339 /* AppModels.swift in Sources */,
 				4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */,
+				DCEF48F0819EB6083C514EA5 /* LocationService.swift in Sources */,
 				78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */,
 				701F62DDB95D5BDF65E3E23D /* CelebrationOverlay.swift in Sources */,
 				28C700594AF36399A460FAAB /* CollageImageCache.swift in Sources */,
