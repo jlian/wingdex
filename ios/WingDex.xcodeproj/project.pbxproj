@@ -497,6 +497,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9F120F44C1BCF4A0D747BC74 /* Build configuration list for PBXNativeTarget "WingDex" */;
 			buildPhases = (
+				2D4DEE284FBD9A47E1083370 /* Generate Git Info */,
 				4EAE3C60C44E2B3ED8423CFF /* Sources */,
 				8A0F8F3B8571B020C1668150 /* Resources */,
 				E5E0CF21C98E3D40ECF2BFD6 /* Frameworks */,
@@ -644,6 +645,31 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2D4DEE284FBD9A47E1083370 /* Generate Git Info */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/gen-git-info.sh",
+				"$(SRCROOT)/../.git",
+			);
+			name = "Generate Git Info";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/WingDex/App/GitInfo.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "$SRCROOT/scripts/gen-git-info.sh";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4EAE3C60C44E2B3ED8423CFF /* Sources */ = {

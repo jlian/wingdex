@@ -20,6 +20,15 @@ targets:
   WingDex:
     type: application
     platform: iOS
+    preBuildScripts:
+      - name: Generate Git Info
+        script: "$SRCROOT/scripts/gen-git-info.sh"
+        inputFiles:
+          - "$(SRCROOT)/scripts/gen-git-info.sh"
+          - "$(SRCROOT)/../.git"
+        outputFiles:
+          - "$(SRCROOT)/WingDex/App/GitInfo.swift"
+        basedOnDependencyAnalysis: false
     sources:
       - path: WingDex
         excludes:
