@@ -83,7 +83,9 @@ enum IncomingShareStore {
                     at: sourceURL,
                     to: destination
                 )
-                let fileBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                guard let fileBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                      fileBytes >= 0
+                else { throw IncomingShareError.stagingFailed }
                 guard fileBytes <= maximumPhotoBytes else { throw IncomingShareError.photoTooLarge }
                 totalBytes += fileBytes
                 guard totalBytes <= maximumTotalBytes else { throw IncomingShareError.shareTooLarge }
@@ -150,7 +152,15 @@ enum IncomingShareStore {
         )
         .filter { $0.pathExtension == "json" }
         .compactMap { url in
-            try? JSONDecoder().decode(Manifest.self, from: Data(contentsOf: url))
+            if let manifest = try? JSONDecoder().decode(Manifest.self, from: Data(contentsOf: url)) {
+                return manifest
+            }
+            // A manifest that can't be decoded (corrupt/truncated) would otherwise
+            // keep `hasPendingShare` true forever while `pendingShare` returns nil,
+            // wedging the app into a "share pending but unimportable" state. Drop the
+            // dead manifest so the cheap presence check and the decode path converge.
+            try? FileManager.default.removeItem(at: url)
+            return nil
         }
     }
 
@@ -167,6 +177,7 @@ enum IncomingShareError: LocalizedError {
     case tooManyPhotos
     case photoTooLarge
     case shareTooLarge
+    case stagingFailed
 
     var errorDescription: String? {
         switch self {
@@ -180,6 +191,8 @@ enum IncomingShareError: LocalizedError {
             "Each shared photo must be smaller than 50 MB."
         case .shareTooLarge:
             "These photos are too large to share to WingDex at once."
+        case .stagingFailed:
+            "WingDex could not prepare the shared photos. Please try again."
         }
     }
 }
