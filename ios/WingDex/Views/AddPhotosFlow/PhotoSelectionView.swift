@@ -36,6 +36,7 @@ struct PhotoSelectionView: View {
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showCamera = false
     @State private var collageDrag: CGSize = .zero
+    @StateObject private var locationService = LocationService()
 
     private static let collageImages = CollageImageCache.names
 
@@ -119,6 +120,7 @@ struct PhotoSelectionView: View {
                     .buttonSizing(.flexible)
 
                     Button {
+                        locationService.start()
                         showCamera = true
                     } label: {
                         Label("Take Photo", systemImage: "camera")
@@ -167,12 +169,14 @@ struct PhotoSelectionView: View {
             }
         }
         .fullScreenCover(isPresented: $showCamera, onDismiss: {
+            locationService.stop()
             if !viewModel.cameraPhotos.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }
             }
         }) {
             CameraCaptureView { image in
-                viewModel.addCameraPhoto(image)
+                let coord = locationService.latestCoordinate
+                viewModel.addCameraPhoto(image, lat: coord?.lat, lon: coord?.lon)
             }
             .ignoresSafeArea()
         }
