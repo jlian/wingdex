@@ -232,6 +232,13 @@ func getEbirdURL(for speciesName: String) -> URL? {
     return URL(string: "https://ebird.org/species/\(ebirdCode)")
 }
 
+/// Build a Wikipedia URL from the taxonomy-provided article title.
+func getWikipediaURL(for wikiTitle: String?) -> URL? {
+    guard let wikiTitle, !wikiTitle.isEmpty else { return nil }
+    let encoded = wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle
+    return URL(string: "https://en.wikipedia.org/wiki/\(encoded)")
+}
+
 /// Build the BirdLife DataZone factsheet URL for a stored species name.
 func getBirdlifeFactsheetURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)

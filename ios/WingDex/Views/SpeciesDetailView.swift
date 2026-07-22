@@ -6,6 +6,9 @@ struct SpeciesDetailView: View {
     @State private var wikiExtract: String?
     @State private var fullImageUrl: String?
     @State private var contextMenuOuting: Outing?
+    @State private var imageShareItem: ExportFileItem?
+    @State private var imageOperationError: String?
+    @State private var savedImageToPhotos = false
 
     private var entry: DexEntry? { store.dexEntry(for: speciesName) }
     private var sightings: [(observation: BirdObservation, outing: Outing)] {
@@ -13,7 +16,9 @@ struct SpeciesDetailView: View {
     }
 
     var body: some View {
-        List {
+        VStack(spacing: 0) {
+            CachedDataNotice()
+            List {
             // Hero image section - no separators, full bleed
             Section {
                 heroSection
@@ -77,6 +82,7 @@ struct SpeciesDetailView: View {
                         .foregroundStyle(Color.foregroundText)
                 }
             }
+            }
         }
         .listStyle(.plain)
         // WHY .scrollContentBackground(.hidden) + .background(): SwiftUI List has an
@@ -86,12 +92,34 @@ struct SpeciesDetailView: View {
         .scrollContentBackground(.hidden)
         .navigationTitle(getDisplayName(speciesName))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let entry {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: SharePayload.species(entry)) {
+                        Label("Share Species", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
         .background(Color.pageBg.ignoresSafeArea())
         .navigationDestination(for: Outing.self) { outing in
             OutingDetailView(outingId: outing.id)
         }
         .navigationDestination(item: $contextMenuOuting) { outing in
             OutingDetailView(outingId: outing.id)
+        }
+        .sheet(item: $imageShareItem) { item in
+            ActivityView(item: item)
+        }
+        .alert("Could Not Complete Action", isPresented: imageOperationErrorBinding) {
+            Button("OK", role: .cancel) { imageOperationError = nil }
+        } message: {
+            Text(imageOperationError ?? "Something went wrong. Try again.")
+        }
+        .alert("Saved to Photos", isPresented: $savedImageToPhotos) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The bird image was added to your photo library.")
         }
         .task { await fetchWikipediaData() }
     }
@@ -168,6 +196,18 @@ struct SpeciesDetailView: View {
         }
         .frame(height: 280)
         .padding(.horizontal)
+        .contextMenu {
+            Button {
+                Task { await shareHeroImage() }
+            } label: {
+                Label("Share Image", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                Task { await saveHeroImage() }
+            } label: {
+                Label("Save to Photos", systemImage: "square.and.arrow.down")
+            }
+        }
     }
 
     private var heroPlaceholder: some View {
@@ -204,12 +244,10 @@ struct SpeciesDetailView: View {
 
     @ViewBuilder
     private var linksSection: some View {
-        if let entry, let wikiTitle = entry.wikiTitle {
-            if let url = URL(string: "https://en.wikipedia.org/wiki/\(wikiTitle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? wikiTitle)") {
+        if let url = getWikipediaURL(for: entry?.wikiTitle) {
                 Link(destination: url) {
                     Label("Wikipedia", systemImage: "book")
                 }
-            }
         }
 
         if let url = getEbirdURL(for: speciesName) {
@@ -246,6 +284,39 @@ struct SpeciesDetailView: View {
         } catch {
             // Silently fail - the thumbnail from dex is still shown
         }
+    }
+
+    private var heroImageURL: URL? {
+        guard let value = fullImageUrl ?? entry?.thumbnailUrl else { return nil }
+        return URL(string: value)
+    }
+
+    private func shareHeroImage() async {
+        guard let heroImageURL else { return }
+        do {
+            let data = try await ImageSharingService.downloadImage(from: heroImageURL)
+            imageShareItem = try ImageSharingService.shareFile(data: data, sourceURL: heroImageURL)
+        } catch {
+            imageOperationError = AppError.map(error, fallback: "Could not share this image. Try again.")?.message
+        }
+    }
+
+    private func saveHeroImage() async {
+        guard let heroImageURL else { return }
+        do {
+            let data = try await ImageSharingService.downloadImage(from: heroImageURL)
+            try await ImageSharingService.saveToPhotos(data: data)
+            savedImageToPhotos = true
+        } catch {
+            imageOperationError = AppError.map(error, fallback: "Could not save this image. Try again.")?.message
+        }
+    }
+
+    private var imageOperationErrorBinding: Binding<Bool> {
+        Binding(
+            get: { imageOperationError != nil },
+            set: { if !$0 { imageOperationError = nil } }
+        )
     }
 }
 

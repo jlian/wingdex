@@ -311,6 +311,10 @@ struct OutingReviewView: View {
         return PeekPopContextMenu(
             menu: removeMenu,
             previewSize: previewSize,
+            accessibilityLabel: "Bird photo",
+            accessibilityActions: [
+                .init(name: "Remove Photo") { removePhoto(photo) },
+            ],
             onTap: { /* no-op, photos aren't navigable */ }
         ) {
             Group {
@@ -360,10 +364,9 @@ struct OutingReviewView: View {
 
     /// Remove a photo from the current cluster.
     private func removePhoto(_ photo: ProcessedPhoto) {
-        guard var cluster = cluster else { return }
-        cluster.photos.removeAll { $0.id == photo.id }
-        if viewModel.currentClusterIndex < viewModel.clusters.count {
-            viewModel.clusters[viewModel.currentClusterIndex] = cluster
+        viewModel.removePhotoFromCurrentCluster(id: photo.id)
+        if viewModel.currentStep == .outingReview {
+            resetClusterState()
         }
     }
 
@@ -688,10 +691,11 @@ struct OutingReviewView: View {
         Task {
             defer { isCreatingOuting = false }
             do {
-                let service = DataService(auth: auth)
-                let saved = try await service.createOuting(outing)
+                let saved = try await viewModel.createOuting(outing)
                 preparedOuting = nil
                 viewModel.outingConfirmed(outingId: saved.id, locationName: finalLocationName)
+            } catch is CancellationError {
+                return
             } catch {
                 log.error("Failed to create outing")
                 viewModel.error = AppError.map(error, fallback: "Could not create this outing. Try again.")

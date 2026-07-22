@@ -61,6 +61,7 @@ struct EBirdImportView: View {
     @State private var previews: [DataService.ImportPreview] = []
     @State private var showPreview = false
     @State private var selectedPreviewIds: Set<String> = []
+    @State private var previewAccountID: String?
 
     private var timezoneOptions: [(value: String, label: String)] {
         let now = Date()
@@ -181,6 +182,11 @@ struct EBirdImportView: View {
             ) { result in
                 Task { await handleFileSelection(result) }
             }
+            .onChange(of: store.activeAccountID) { _, accountID in
+                guard accountID != previewAccountID else { return }
+                discardPreview()
+            }
+            .onDisappear { discardPreview() }
         }
     }
 
@@ -218,13 +224,20 @@ struct EBirdImportView: View {
             defer { fileURL.stopAccessingSecurityScopedResource() }
 
             do {
+                guard let accountID = store.activeAccountID, store.hasLoadedAll else {
+                    throw AuthError.notAuthenticated
+                }
                 let csvData = try Data(contentsOf: fileURL)
                 isImporting = true
 
-                let service = DataService(auth: auth)
+                let service = DataService(auth: auth, expectedAccountID: accountID)
                 let timezone = selectedTimezone == "observation-local" ? nil : selectedTimezone
                 let results = try await service.importEBirdCSVPreview(csvData, profileTimezone: timezone)
+                guard store.activeAccountID == accountID, store.hasLoadedAll else {
+                    throw CancellationError()
+                }
 
+                previewAccountID = accountID
                 previews = results
                 selectedPreviewIds = Set(
                     results
@@ -233,6 +246,8 @@ struct EBirdImportView: View {
                 )
                 showPreview = true
                 isImporting = false
+            } catch is CancellationError {
+                discardPreview()
             } catch {
                 importError = AppError.map(error, fallback: "Could not preview this CSV. Check the file and try again.")
                 isImporting = false
@@ -241,16 +256,25 @@ struct EBirdImportView: View {
     }
 
     private func confirmImport() async {
-        guard !selectedPreviewIds.isEmpty else { return }
+        guard !selectedPreviewIds.isEmpty,
+              let accountID = previewAccountID,
+              store.activeAccountID == accountID,
+              store.hasLoadedAll
+        else {
+            discardPreview()
+            return
+        }
         isImporting = true
         importError = nil
 
         do {
-            let service = DataService(auth: auth)
+            let service = DataService(auth: auth, expectedAccountID: accountID)
             let priorSpecies = Set(store.dex.map(\.speciesName))
             let result = try await service.confirmImport(previewIds: Array(selectedPreviewIds))
+            guard store.activeAccountID == accountID else { throw CancellationError() }
 
             await store.loadAll()
+            guard store.activeAccountID == accountID else { throw CancellationError() }
 
             let newSpeciesNames = store.dex
                 .map(\.speciesName)
@@ -263,10 +287,20 @@ struct EBirdImportView: View {
 
             onImported?(result.imported.newSpecies, newSpeciesNames)
             dismiss()
+        } catch is CancellationError {
+            discardPreview()
         } catch {
             importError = AppError.map(error, fallback: "Could not import this CSV. Try again.")
             isImporting = false
         }
+    }
+
+    private func discardPreview() {
+        previewAccountID = nil
+        previews = []
+        selectedPreviewIds = []
+        showPreview = false
+        isImporting = false
     }
 }
 

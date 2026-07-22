@@ -50,6 +50,7 @@ final class AddPhotosViewModel {
     }
 
     var currentStep: Step = .selectPhotos
+    private(set) var flowDismissalRequestID = UUID()
 
     // MARK: - Photo Selection
 
@@ -60,6 +61,8 @@ final class AddPhotosViewModel {
     /// PhotosPicker). The in-app camera returns bare pixels with no EXIF GPS, so
     /// we carry the device location captured alongside each shot.
     var cameraPhotos: [(image: UIImage, lat: Double?, lon: Double?)] = []
+    private var incomingSharedPhotos: [IncomingSharedPhoto] = []
+    private var incomingShareID: String?
 
     // MARK: - Clustering
 
@@ -144,9 +147,16 @@ final class AddPhotosViewModel {
 
     private var dataService: DataService?
     private var dataStore: DataStore?
+    private var accountID: String?
+    private var sessionGeneration = UUID()
 
-    func configure(dataService: DataService, dataStore: DataStore) {
-        self.dataService = dataService
+    func configure(auth: AuthService, dataStore: DataStore) {
+        let accountID = dataStore.activeAccountID
+        if self.accountID != accountID {
+            sessionGeneration = UUID()
+        }
+        self.accountID = accountID
+        dataService = DataService(auth: auth, expectedAccountID: accountID)
         self.dataStore = dataStore
         // Initialize lastLocationName from the most recent outing
         if let mostRecent = dataStore.outings
@@ -155,6 +165,21 @@ final class AddPhotosViewModel {
         {
             lastLocationName = mostRecent.locationName
         }
+    }
+
+    func cancelSession() {
+        sessionGeneration = UUID()
+        accountID = nil
+        dataService = nil
+        dataStore = nil
+    }
+
+    func createOuting(_ outing: Outing) async throws -> Outing {
+        let sessionID = try requireCurrentSession()
+        guard let service = dataService else { throw AuthError.notAuthenticated }
+        let saved = try await service.createOuting(outing)
+        guard isCurrentSession(sessionID) else { throw CancellationError() }
+        return saved
     }
 
     // MARK: - Convenience
@@ -180,15 +205,28 @@ final class AddPhotosViewModel {
         cameraPhotos.append((image: image, lat: lat, lon: lon))
     }
 
+    func importIncomingShareIfAvailable() async {
+        guard currentStep == .selectPhotos else { return }
+        do {
+            guard let snapshot = try IncomingShareStore.pendingShare() else { return }
+            incomingShareID = snapshot.id
+            incomingSharedPhotos = snapshot.photos
+            await processSelectedPhotos()
+        } catch {
+            self.error = AppError.map(error, fallback: "Could not import the shared photos. Try again.")
+        }
+    }
+
     // MARK: - Step 1: Process Selected Photos
 
     /// Load photos from the picker and camera, extract EXIF, generate thumbnails, cluster.
     func processSelectedPhotos() async {
-        guard !selectedItems.isEmpty || !cameraPhotos.isEmpty else { return }
+        guard !selectedItems.isEmpty || !cameraPhotos.isEmpty || !incomingSharedPhotos.isEmpty else { return }
+        guard let sessionID = try? requireCurrentSession() else { return }
         isProcessing = true
         error = nil
         currentStep = .extracting
-        totalCount = selectedItems.count + cameraPhotos.count
+        totalCount = selectedItems.count + cameraPhotos.count + incomingSharedPhotos.count
         processedCount = 0
         extractionProgress = 0
         processingMessage = "Reading photo data..."
@@ -199,38 +237,17 @@ final class AddPhotosViewModel {
 
         var newPhotos: [ProcessedPhoto] = []
         var duplicatePhotos: [ProcessedPhoto] = []
+        var rejectedSharedFileNames: [String] = []
 
         for item in selectedItems {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { continue }
-                let id = UUID().uuidString
-                let (exifDate, lat, lon) = PhotoService.extractEXIF(from: data)
-
-                guard let image = UIImage(data: data) else { continue }
-                let compressed = PhotoService.compressImage(image, quality: 0.7) ?? data
-                let thumbnail = PhotoService.generateThumbnail(from: data, maxDimension: 200) ?? data
-                let fileHash = computeFileHash(data)
-
-                let photo = ProcessedPhoto(
-                    id: id,
-                    image: compressed,
-                    thumbnail: thumbnail,
-                    exifTime: exifDate,
-                    gpsLat: lat,
-                    gpsLon: lon,
-                    fileHash: fileHash,
-                    fileName: "photo_\(id).jpg"
-                )
-
-                // Check for duplicate against existing data
-                let isDup = dataStore?.photos.contains { existing in
-                    existing.fileHash == fileHash
-                } ?? false
-
-                if isDup {
-                    duplicatePhotos.append(photo)
-                } else {
-                    newPhotos.append(photo)
+                guard isCurrentSession(sessionID) else {
+                    cancelExtractionForSessionChange()
+                    return
+                }
+                if let photo = makeProcessedPhoto(data: data, fileName: nil) {
+                    appendByDuplicateStatus(photo, newPhotos: &newPhotos, duplicatePhotos: &duplicatePhotos)
                 }
             } catch {
                 log.error("Failed to load a selected photo")
@@ -238,6 +255,34 @@ final class AddPhotosViewModel {
             processedCount += 1
             extractionProgress = Double(processedCount) / Double(totalCount) * 100
         }
+
+        for sharedPhoto in incomingSharedPhotos {
+            guard isCurrentSession(sessionID) else {
+                cancelExtractionForSessionChange()
+                return
+            }
+            do {
+                let data = try Data(contentsOf: sharedPhoto.fileURL, options: .mappedIfSafe)
+                if let photo = makeProcessedPhoto(data: data, fileName: sharedPhoto.fileName) {
+                    appendByDuplicateStatus(photo, newPhotos: &newPhotos, duplicatePhotos: &duplicatePhotos)
+                } else {
+                    rejectedSharedFileNames.append(sharedPhoto.fileName)
+                }
+            } catch {
+                rejectedSharedFileNames.append(sharedPhoto.fileName)
+            }
+            processedCount += 1
+            extractionProgress = Double(processedCount) / Double(totalCount) * 100
+        }
+        guard isCurrentSession(sessionID) else {
+            cancelExtractionForSessionChange()
+            return
+        }
+        if let incomingShareID {
+            try? IncomingShareStore.completePendingShare(id: incomingShareID)
+        }
+        incomingShareID = nil
+        incomingSharedPhotos = []
 
         // Process camera-captured photos (no EXIF GPS; use the device location
         // captured at shot time, and the processing time as the timestamp).
@@ -282,6 +327,54 @@ final class AddPhotosViewModel {
         }
 
         finishExtraction(photos: newPhotos)
+        if !rejectedSharedFileNames.isEmpty {
+            let count = rejectedSharedFileNames.count
+            error = .message(
+                count == 1
+                    ? "One shared photo could not be read. Share it again in a supported image format."
+                    : "\(count) shared photos could not be read. Share them again in a supported image format."
+            )
+        }
+    }
+
+    private func cancelExtractionForSessionChange() {
+        isProcessing = false
+        currentStep = .selectPhotos
+        processingMessage = ""
+        processedCount = 0
+        totalCount = 0
+        extractionProgress = 0
+    }
+
+    private func makeProcessedPhoto(data: Data, fileName: String?) -> ProcessedPhoto? {
+        guard let image = UIImage(data: data) else { return nil }
+        let id = UUID().uuidString
+        let (exifDate, lat, lon) = PhotoService.extractEXIF(from: data)
+        let compressed = PhotoService.compressImage(image, quality: 0.7) ?? data
+        let thumbnail = PhotoService.generateThumbnail(from: data, maxDimension: 200) ?? data
+        return ProcessedPhoto(
+            id: id,
+            image: compressed,
+            thumbnail: thumbnail,
+            exifTime: exifDate,
+            gpsLat: lat,
+            gpsLon: lon,
+            fileHash: computeFileHash(data),
+            fileName: fileName ?? "photo_\(id).jpg"
+        )
+    }
+
+    private func appendByDuplicateStatus(
+        _ photo: ProcessedPhoto,
+        newPhotos: inout [ProcessedPhoto],
+        duplicatePhotos: inout [ProcessedPhoto]
+    ) {
+        let isDuplicate = dataStore?.photos.contains { $0.fileHash == photo.fileHash } ?? false
+        if isDuplicate {
+            duplicatePhotos.append(photo)
+        } else {
+            newPhotos.append(photo)
+        }
     }
 
     /// Called after duplicate resolution - finalize extraction with the chosen photos.
@@ -296,6 +389,7 @@ final class AddPhotosViewModel {
         if finalPhotos.isEmpty {
             selectedItems = []
             currentStep = .selectPhotos
+            flowDismissalRequestID = UUID()
             return
         }
 
@@ -332,6 +426,7 @@ final class AddPhotosViewModel {
     /// Creates photo metadata on the server immediately (matching web flow),
     /// then starts the per-photo AI identification loop.
     func outingConfirmed(outingId: String, locationName: String) {
+        guard let sessionID = try? requireCurrentSession() else { return }
         let normalizedName = locationName.trimmingCharacters(in: .whitespacesAndNewlines)
         lastLocationName = normalizedName
         currentOutingId = outingId
@@ -345,8 +440,10 @@ final class AddPhotosViewModel {
         // The observation table has a FK to photo(id), so photos must exist first.
         Task {
             do {
-                try await createPhotoMetadata(outingId: outingId)
+                try await createPhotoMetadata(outingId: outingId, sessionID: sessionID)
                 await runSpeciesId(photoIndex: 0)
+            } catch is CancellationError {
+                return
             } catch {
                 log.error("Failed to save photo metadata")
                 self.error = AppError.map(error, fallback: "Could not save photo details. Try again.")
@@ -359,7 +456,7 @@ final class AddPhotosViewModel {
 
     /// Persist photo metadata for the current cluster to the server.
     /// Must be called before creating observations (FK constraint on representativePhotoId).
-    private func createPhotoMetadata(outingId: String) async throws {
+    private func createPhotoMetadata(outingId: String, sessionID: UUID) async throws {
         guard let service = dataService else {
             throw AppError.message("Photo service isn't available.")
         }
@@ -378,6 +475,7 @@ final class AddPhotosViewModel {
             )
         }
         try await service.createPhotos(payloads)
+        guard isCurrentSession(sessionID) else { throw CancellationError() }
         log.info("Saved \(payloads.count) photo metadata records for outing \(outingId)")
     }
 
@@ -389,6 +487,7 @@ final class AddPhotosViewModel {
     /// 1. Send with `model: "fast"` (~1.2s)
     /// 2. If confidence < 0.75 OR gap between top-2 < 0.15, re-send with `model: "strong"` (~4.4s)
     func runSpeciesId(photoIndex: Int, croppedImageData: Data? = nil) async {
+        guard let sessionID = try? requireCurrentSession() else { return }
         guard let service = dataService else { return }
         let photos = clusterPhotos
         guard photoIndex < photos.count else { return }
@@ -441,6 +540,7 @@ final class AddPhotosViewModel {
 
             // Fast model first
             let fastResult = try await service.identifyBird(request)
+            guard isCurrentSession(sessionID) else { return }
             let fastCandidates = (fastResult.candidates ?? []).map {
                 IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage, rangeStatus: $0.rangeStatus)
             }
@@ -506,6 +606,7 @@ final class AddPhotosViewModel {
                 }
 
                 let strongResult = try await service.identifyBird(request)
+                guard isCurrentSession(sessionID) else { return }
                 finalCandidates = (strongResult.candidates ?? []).map {
                     IdentifiedCandidate(species: $0.species, confidence: $0.confidence, wikiTitle: $0.wikiTitle, plumage: $0.plumage, rangeStatus: $0.rangeStatus)
                 }
@@ -535,6 +636,8 @@ final class AddPhotosViewModel {
                 cropPromptContext = .manualRecrop
                 currentStep = .perPhotoConfirm
             }
+        } catch is CancellationError {
+            return
         } catch {
             log.error("Species identification failed for photo index \(photoIndex + 1)")
             self.error = AppError.map(
@@ -586,6 +689,30 @@ final class AddPhotosViewModel {
         currentStep = .manualCrop
     }
 
+    /// Run identification again for the current photo using its latest crop, if any.
+    func reidentifyCurrentPhoto() {
+        Task { await runSpeciesId(photoIndex: currentPhotoIndex) }
+    }
+
+    /// Remove a photo before identification and keep the cluster state valid.
+    func removePhotoFromCurrentCluster(id: String) {
+        guard currentClusterIndex < clusters.count else { return }
+        clusters[currentClusterIndex].photos.removeAll { $0.id == id }
+        processedPhotos.removeAll { $0.id == id }
+
+        if clusters[currentClusterIndex].photos.isEmpty {
+            clusters.remove(at: currentClusterIndex)
+            if clusters.isEmpty {
+                currentClusterIndex = 0
+                selectedItems = []
+                currentStep = .selectPhotos
+                flowDismissalRequestID = UUID()
+            } else if currentClusterIndex >= clusters.count {
+                currentClusterIndex = clusters.count - 1
+            }
+        }
+    }
+
     /// After user crops, re-identify the cropped image.
     func handleCropComplete(croppedImageData: Data) {
         storeCroppedImage(photoId: currentPhoto?.id, imageData: croppedImageData)
@@ -616,6 +743,7 @@ final class AddPhotosViewModel {
     /// Save all confirmed observations for the current cluster,
     /// then advance to the next cluster or finish.
     private func saveCurrentCluster() async {
+        guard let sessionID = try? requireCurrentSession() else { return }
         guard let service = dataService, let store = dataStore else { return }
         currentStep = .saving
         isProcessing = true
@@ -652,6 +780,7 @@ final class AddPhotosViewModel {
         do {
             if !observations.isEmpty {
                 let response = try await service.createObservations(observations)
+                guard isCurrentSession(sessionID) else { return }
                 if let dexUpdates = response.dexUpdates {
                     store.dex = dexUpdates
                 }
@@ -695,6 +824,7 @@ final class AddPhotosViewModel {
             // Brief "saved" notice before advancing
             processingMessage = "Outing saved!"
             try? await Task.sleep(for: .milliseconds(1200))
+            guard isCurrentSession(sessionID) else { return }
 
             // Move to next cluster or finish
             if currentClusterIndex < clusters.count - 1 {
@@ -711,6 +841,8 @@ final class AddPhotosViewModel {
                 preparedObservations = nil
                 currentStep = .done
             }
+        } catch is CancellationError {
+            return
         } catch {
             self.error = AppError.map(error, fallback: "Could not save this outing. Try again.")
             errorRecovery = .saveCluster
@@ -727,8 +859,11 @@ final class AddPhotosViewModel {
         case .photoMetadata:
             Task {
                 do {
-                    try await createPhotoMetadata(outingId: currentOutingId)
+                    let sessionID = try requireCurrentSession()
+                    try await createPhotoMetadata(outingId: currentOutingId, sessionID: sessionID)
                     await runSpeciesId(photoIndex: currentPhotoIndex)
+                } catch is CancellationError {
+                    return
                 } catch {
                     self.error = AppError.map(error, fallback: "Could not save photo details. Try again.")
                     errorRecovery = .photoMetadata
@@ -741,6 +876,21 @@ final class AddPhotosViewModel {
         case nil:
             break
         }
+    }
+
+    private func requireCurrentSession() throws -> UUID {
+        guard let accountID,
+              dataStore?.activeAccountID == accountID,
+              dataStore?.hasLoadedAll == true
+        else {
+            throw AuthError.notAuthenticated
+        }
+        return sessionGeneration
+    }
+
+    private func isCurrentSession(_ sessionID: UUID) -> Bool {
+        guard sessionGeneration == sessionID, let accountID else { return false }
+        return dataStore?.activeAccountID == accountID && dataStore?.hasLoadedAll == true
     }
 
     // MARK: - Helpers

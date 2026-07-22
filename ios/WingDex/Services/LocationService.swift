@@ -26,15 +26,20 @@ final class LocationService: ObservableObject {
 
     /// Convenience: the latest coordinate as (lat, lon), or nil if unavailable.
     var latestCoordinate: (lat: Double, lon: Double)? {
-        guard let coord = currentLocation?.coordinate,
-              CLLocationCoordinate2DIsValid(coord)
+          guard let currentLocation,
+              currentLocation.horizontalAccuracy >= 0,
+              currentLocation.horizontalAccuracy <= 1_000,
+              currentLocation.timestamp.timeIntervalSinceNow > -60
         else { return nil }
-        return (coord.latitude, coord.longitude)
+          let coordinate = currentLocation.coordinate
+          guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+          return (coordinate.latitude, coordinate.longitude)
     }
 
     /// Request when-in-use permission (if needed) and begin streaming location.
     /// Safe to call repeatedly; a second call is a no-op while already running.
     func start() {
+        currentLocation = nil
         if manager.authorizationStatus == .notDetermined {
             manager.requestWhenInUseAuthorization()
         }
@@ -63,5 +68,6 @@ final class LocationService: ObservableObject {
     func stop() {
         updatesTask?.cancel()
         updatesTask = nil
+        currentLocation = nil
     }
 }

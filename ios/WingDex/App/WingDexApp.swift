@@ -4,13 +4,21 @@ import SwiftUI
 
 @main
 struct WingDexApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var authService: AuthService
     @State private var dataStore: DataStore
+    @State private var navigation = AppNavigationModel.shared
 
     init() {
         let auth = AuthService()
+        let cache = try? AccountDataCache()
         _authService = State(initialValue: auth)
-        _dataStore = State(initialValue: DataStore(service: DataService(auth: auth)))
+        _dataStore = State(initialValue: DataStore(
+            serviceFactory: { accountID in
+                DataService(auth: auth, expectedAccountID: accountID)
+            },
+            cache: cache
+        ))
 
         // UIKit-rendered controls (menu popovers, pickers, alerts) don't inherit
         // the SwiftUI AccentColor asset. Set UIKit's global tint to match.
@@ -22,6 +30,13 @@ struct WingDexApp: App {
             ContentView()
                 .environment(authService)
                 .environment(dataStore)
+                .environment(navigation)
+                .onOpenURL { url in
+                    guard url.scheme == Config.oauthCallbackScheme,
+                          url.host == "share-import"
+                    else { return }
+                    navigation.handleIncomingShare()
+                }
         }
     }
 }
@@ -32,6 +47,7 @@ struct WingDexApp: App {
 struct ContentView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(AppNavigationModel.self) private var navigation
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var isValidating = true
@@ -44,15 +60,6 @@ struct ContentView: View {
             } else if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
-                    .task {
-                        await store.loadAll()
-                        #if DEBUG
-                        if ProcessInfo.processInfo.arguments.contains("--auto-demo-data"),
-                           store.dex.isEmpty {
-                            try? await store.loadDemoData()
-                        }
-                        #endif
-                    }
             } else {
                 SignInView()
                     .transition(.opacity)
@@ -69,19 +76,35 @@ struct ContentView: View {
         .background(Color.pageBg.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
         .onChange(of: auth.isAuthenticated) { _, isAuthenticated in
-            if !isAuthenticated {
-                store.reset()
+            if isAuthenticated, let accountID = auth.userId {
+                store.activate(accountID: accountID)
+            } else if !isAuthenticated {
+                navigation.setMainInterfaceReady(false)
+                store.clearActiveAccount()
+                if let accountID = auth.consumeDiscardedAccountID() {
+                    store.clearCachedAccount(accountID: accountID)
+                }
             }
+        }
+        .onChange(of: auth.userId) { _, accountID in
+            guard auth.isAuthenticated, let accountID else { return }
+            store.activate(accountID: accountID)
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, auth.isAuthenticated, !isValidating else { return }
             Task { await auth.validateSession() }
         }
         .task {
-            if auth.isAuthenticated {
-                await auth.validateSession()
+            if let discardedAccountID = auth.consumeDiscardedAccountID() {
+                store.clearCachedAccount(accountID: discardedAccountID)
             }
-            isValidating = false
+            if auth.isAuthenticated, let accountID = auth.userId {
+                store.activate(accountID: accountID)
+                isValidating = false
+                await auth.validateSession()
+            } else {
+                isValidating = false
+            }
         }
     }
 }
@@ -92,17 +115,17 @@ struct ContentView: View {
 struct MainTabView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
-    @State private var selectedTab = AppTab.home
+    @Environment(AppNavigationModel.self) private var navigation
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingSettings = false
     @State private var addPhotosVM = AddPhotosViewModel()
     @State private var showingWizard = false
-
-    enum AppTab: Hashable {
-        case home, outings, wingdex, add
-    }
+    @State private var initialDataLoaded = false
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        @Bindable var navigation = navigation
+
+        TabView(selection: $navigation.selectedTab) {
             TabSection {
                 Tab("Home", systemImage: "house", value: AppTab.home) {
                     HomeView()
@@ -122,7 +145,7 @@ struct MainTabView: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .onAppear {
                             addPhotosVM.configure(
-                                dataService: DataService(auth: auth),
+                                auth: auth,
                                 dataStore: store
                             )
                         }
@@ -137,11 +160,15 @@ struct MainTabView: View {
             }
         }
         .fullScreenCover(isPresented: $showingWizard, onDismiss: {
+            addPhotosVM.cancelSession()
             addPhotosVM = AddPhotosViewModel()
             addPhotosVM.configure(
-                dataService: DataService(auth: auth),
+                auth: auth,
                 dataStore: store
             )
+            if IncomingShareStore.hasPendingShare {
+                Task { await importIncomingShareIfAvailable() }
+            }
         }) {
             NavigationStack {
                 AddPhotosFlow(viewModel: addPhotosVM)
@@ -150,11 +177,60 @@ struct MainTabView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .environment(\.showAddPhotos) { selectedTab = .add }
+        .task {
+            navigation.setMainInterfaceReady(true)
+            await store.loadAll()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--auto-demo-data"),
+               store.dex.isEmpty {
+                try? await store.loadDemoData()
+            }
+            #endif
+            await completeInitialLoadIfReady()
+        }
+        .onChange(of: store.hasLoadedAll) { _, hasLoadedAll in
+            guard hasLoadedAll else { return }
+            Task {
+                await completeInitialLoadIfReady()
+                await addPhotosVM.processSelectedPhotos()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, initialDataLoaded, IncomingShareStore.hasPendingShare else { return }
+            navigation.route(to: .addPhotos())
+            Task { await importIncomingShareIfAvailable() }
+        }
+        .onDisappear {
+            navigation.setMainInterfaceReady(false)
+            addPhotosVM.cancelSession()
+        }
+        .task(id: navigation.incomingShareRequestID) {
+            guard initialDataLoaded else { return }
+            await importIncomingShareIfAvailable()
+        }
+        .environment(\.showAddPhotos) { navigation.route(to: .addPhotos()) }
         .environment(\.showSettings) { showingSettings = true }
-        .environment(\.showWingDex) { selectedTab = .wingdex }
-        .environment(\.showHome) { selectedTab = .home }
-        .environment(\.showOutings) { selectedTab = .outings }
+        .environment(\.showWingDex) { navigation.route(to: .wingdex()) }
+        .environment(\.showHome) { navigation.route(to: .home) }
+        .environment(\.showOutings) { navigation.route(to: .outings) }
+    }
+
+    private func importIncomingShareIfAvailable() async {
+        guard initialDataLoaded, IncomingShareStore.hasPendingShare else { return }
+        addPhotosVM.configure(
+            auth: auth,
+            dataStore: store
+        )
+        await addPhotosVM.importIncomingShareIfAvailable()
+    }
+
+    private func completeInitialLoadIfReady() async {
+        guard !initialDataLoaded, auth.isAuthenticated, store.hasLoadedAll else { return }
+        initialDataLoaded = true
+        if IncomingShareStore.hasPendingShare {
+            navigation.route(to: .addPhotos())
+            await importIncomingShareIfAvailable()
+        }
     }
 }
 
@@ -235,11 +311,13 @@ struct AvatarView: View {
     ContentView()
         .environment(AuthService())
         .environment(previewStore())
+    .environment(AppNavigationModel())
 }
 
 #Preview("App - Signed Out") {
     ContentView()
         .environment(AuthService())
         .environment(previewStore(empty: true))
+        .environment(AppNavigationModel())
 }
 #endif

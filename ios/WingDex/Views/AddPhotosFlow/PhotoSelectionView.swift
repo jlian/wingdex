@@ -33,8 +33,11 @@ private let collageBlurFadeLength: Double = 0.25
 /// pattern for image input. Camera-captured photos feed into the same
 /// extraction -> clustering -> identification pipeline as library photos.
 struct PhotoSelectionView: View {
+    @Environment(AppNavigationModel.self) private var navigation
     @Bindable var viewModel: AddPhotosViewModel
+    @State private var showLibrary = false
     @State private var showCamera = false
+    @State private var showCameraUnavailable = false
     @State private var collageDrag: CGSize = .zero
     @StateObject private var locationService = LocationService()
 
@@ -107,11 +110,9 @@ struct PhotoSelectionView: View {
                 Spacer().frame(height: 28)
 
                 VStack(spacing: 12) {
-                    PhotosPicker(
-                        selection: $viewModel.selectedItems,
-                        maxSelectionCount: 50,
-                        matching: .images
-                    ) {
+                    Button {
+                        showLibrary = true
+                    } label: {
                         Label("Choose from Library", systemImage: "photo.on.rectangle")
                             .font(.body.weight(.medium))
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -120,8 +121,7 @@ struct PhotoSelectionView: View {
                     .buttonSizing(.flexible)
 
                     Button {
-                        locationService.start()
-                        showCamera = true
+                        openCamera()
                     } label: {
                         Label("Take Photo", systemImage: "camera")
                             .font(.body.weight(.medium))
@@ -168,6 +168,31 @@ struct PhotoSelectionView: View {
                 Task { await viewModel.processSelectedPhotos() }
             }
         }
+        .photosPicker(
+            isPresented: $showLibrary,
+            selection: $viewModel.selectedItems,
+            maxSelectionCount: 50,
+            matching: .images
+        )
+        .task(id: navigation.addPhotosLaunchRequest?.id) {
+            guard let request = navigation.addPhotosLaunchRequest else { return }
+            navigation.consumeAddPhotosLaunchRequest(id: request.id)
+            switch request.action {
+            case .library:
+                showLibrary = true
+            case .camera:
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    openCamera()
+                } else {
+                    showCameraUnavailable = true
+                }
+            }
+        }
+        .alert("Camera Unavailable", isPresented: $showCameraUnavailable) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("This device does not have an available camera.")
+        }
         .fullScreenCover(isPresented: $showCamera, onDismiss: {
             locationService.stop()
             if !viewModel.cameraPhotos.isEmpty {
@@ -182,6 +207,14 @@ struct PhotoSelectionView: View {
         }
     }
 
+    private func openCamera() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            showCameraUnavailable = true
+            return
+        }
+        locationService.start()
+        showCamera = true
+    }
 
 }
 

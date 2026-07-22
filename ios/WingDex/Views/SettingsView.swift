@@ -158,7 +158,7 @@ struct SettingsView: View {
             }
         }
         .sheet(item: $exportItem) { item in
-            ActivityView(activityItems: [item.url])
+            ActivityView(item: item)
         }
     }
 
@@ -405,36 +405,12 @@ struct SettingsView: View {
         do {
             let service = DataService(auth: auth)
             let csvData = try await service.exportSightingsCSV()
-            let dateStr = ISO8601DateFormatter().string(from: Date()).prefix(10)
-            let fileName = "wingdex-sightings-\(dateStr).csv"
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-            try csvData.write(to: tempURL)
-            exportItem = ExportFileItem(url: tempURL)
+            exportItem = try ExportFileFactory.sightings(data: csvData)
         } catch {
             exportError = AppError.map(error, fallback: "Could not export sightings. Try again.")
         }
         isExporting = false
     }
-}
-
-// MARK: - Export File Wrapper
-
-/// Identifiable wrapper for the share sheet file URL.
-struct ExportFileItem: Identifiable {
-    let id = UUID()
-    let url: URL
-}
-
-// MARK: - UIActivityViewController wrapper for share sheet
-
-struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #if DEBUG

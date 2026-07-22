@@ -87,6 +87,11 @@ struct PerPhotoConfirmView: View {
                 if hasCandidates {
                     Menu {
                         Button {
+                            viewModel.reidentifyCurrentPhoto()
+                        } label: {
+                            Label("Re-identify", systemImage: "sparkles")
+                        }
+                        Button {
                             confirmWith(status: .possible)
                         } label: {
                             Label("Mark as Possible", systemImage: "questionmark")
@@ -210,6 +215,13 @@ struct PerPhotoConfirmView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 fallbackPhoto(size: size)
+            }
+        }
+        .contextMenu {
+            Button {
+                viewModel.reidentifyCurrentPhoto()
+            } label: {
+                Label("Re-identify", systemImage: "sparkles")
             }
         }
     }

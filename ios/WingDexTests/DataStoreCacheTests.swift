@@ -1,0 +1,602 @@
+@testable import WingDex
+import XCTest
+
+@MainActor
+final class DataStoreCacheTests: XCTestCase {
+    func testActivateHydratesCacheWithoutEnablingMutations() throws {
+        let cache = CacheStub(snapshot: AccountDataSnapshot(
+            response: fixtureResponse(locationName: "Cached Marsh"),
+            refreshedAt: Date(timeIntervalSince1970: 100)
+        ))
+        let store = DataStore(service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))), cache: cache)
+
+        store.activate(accountID: "account-a")
+
+        XCTAssertEqual(store.outings.first?.locationName, "Cached Marsh")
+        XCTAssertTrue(store.hasReadableData)
+        XCTAssertFalse(store.hasLoadedAll)
+        XCTAssertNotNil(store.cachedAt)
+        XCTAssertThrowsError(try storeMutationReadiness(store))
+    }
+
+    func testOfflineRefreshKeepsCachedDataVisible() async {
+        let cache = CacheStub(snapshot: AccountDataSnapshot(
+            response: fixtureResponse(locationName: "Cached Marsh"),
+            refreshedAt: .now
+        ))
+        let store = DataStore(service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))), cache: cache)
+        store.activate(accountID: "account-a")
+
+        await store.loadAll()
+
+        XCTAssertEqual(store.outings.first?.locationName, "Cached Marsh")
+        XCTAssertEqual(store.error, .offline)
+        XCTAssertFalse(store.hasLoadedAll)
+    }
+
+    func testFirstLaunchOfflineHasNoReadableSnapshot() async {
+        let cache = CacheStub(snapshot: nil)
+        let store = DataStore(
+            service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))),
+            cache: cache
+        )
+        store.activate(accountID: "account-a")
+
+        await store.loadAll()
+
+        XCTAssertFalse(store.hasReadableData)
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertEqual(store.error, .offline)
+    }
+
+    func testSuccessfulRefreshReconcilesAndPersists() async {
+        let cache = CacheStub(snapshot: AccountDataSnapshot(
+            response: fixtureResponse(locationName: "Cached Marsh"),
+            refreshedAt: .now
+        ))
+        let store = DataStore(
+            service: ServiceStub(result: .success(fixtureResponse(locationName: "Fresh Marsh"))),
+            cache: cache
+        )
+        store.activate(accountID: "account-a")
+
+        await store.loadAll()
+
+        XCTAssertEqual(store.outings.first?.locationName, "Fresh Marsh")
+        XCTAssertTrue(store.hasLoadedAll)
+        XCTAssertNil(store.cachedAt)
+        XCTAssertEqual(cache.replacements.last?.accountID, "account-a")
+        XCTAssertEqual(cache.replacements.last?.response.outings.first?.locationName, "Fresh Marsh")
+    }
+
+    func testCacheWriteFailureDoesNotTurnServerSuccessIntoRefreshFailure() async {
+        let cache = CacheStub(snapshot: nil)
+        cache.replaceError = CocoaError(.fileWriteUnknown)
+        let store = DataStore(
+            service: ServiceStub(result: .success(fixtureResponse(locationName: "Fresh Marsh"))),
+            cache: cache
+        )
+        store.activate(accountID: "account-a")
+
+        await store.loadAll()
+
+        XCTAssertTrue(store.hasLoadedAll)
+        XCTAssertEqual(store.outings.first?.locationName, "Fresh Marsh")
+        XCTAssertNil(store.error)
+    }
+
+    func testCorruptPayloadIsPurgedWithoutBecomingReadable() {
+        let cache = CacheStub(snapshot: nil)
+        cache.loadError = DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "corrupt"))
+        let store = DataStore(
+            service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))),
+            cache: cache
+        )
+
+        store.activate(accountID: "account-a")
+
+        XCTAssertFalse(store.hasReadableData)
+        XCTAssertEqual(cache.clearedAccountIDs, ["account-a"])
+    }
+
+    func testClearActiveAccountPurgesMemoryAndPersistedSnapshot() {
+        let cache = CacheStub(snapshot: AccountDataSnapshot(
+            response: fixtureResponse(locationName: "Cached Marsh"),
+            refreshedAt: .now
+        ))
+        let store = DataStore(service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))), cache: cache)
+        store.activate(accountID: "account-a")
+
+        store.clearActiveAccount()
+
+        XCTAssertNil(store.activeAccountID)
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertEqual(cache.clearedAccountIDs, ["account-a"])
+    }
+
+    func testCachedSnapshotRejectsMutationsUntilServerRefreshSucceeds() async {
+        let cache = CacheStub(snapshot: AccountDataSnapshot(
+            response: fixtureResponse(locationName: "Cached Marsh"),
+            refreshedAt: .now
+        ))
+        let service = ServiceStub(result: .failure(URLError(.notConnectedToInternet)))
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+
+        do {
+            try await store.deleteOuting(id: "outing-1")
+            XCTFail("Expected cached data to remain read-only")
+        } catch let error as AppError {
+            XCTAssertEqual(error, .message("Reconnect and refresh WingDex before making changes."))
+            XCTAssertEqual(store.outings.first?.locationName, "Cached Marsh")
+            XCTAssertEqual(service.deleteOutingCalls, 0)
+        } catch {
+            XCTFail("Expected explicit cached-read-only error, got \(error)")
+        }
+    }
+
+    func testSuccessfulMutationPersistsServerConfirmedSnapshot() async throws {
+        let cache = CacheStub(snapshot: nil)
+        let service = ServiceStub(result: .success(fixtureResponse(locationName: "Fresh Marsh")))
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+        cache.replacements.removeAll()
+
+        try await store.deleteOuting(id: "outing-1")
+
+        XCTAssertEqual(service.deleteOutingCalls, 1)
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertTrue(cache.replacements.last?.response.outings.isEmpty == true)
+    }
+
+    func testDeleteOutingInstallsAuthoritativeDexResponse() async throws {
+        let authoritativeDex = [fixtureDex(speciesName: "American Robin", totalCount: 2)]
+        let service = ServiceStub(result: .success(fixtureResponse(locationName: "Fresh Marsh")))
+        service.deleteDexUpdates = authoritativeDex
+        let cache = CacheStub(snapshot: nil)
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+
+        try await store.deleteOuting(id: "outing-1")
+
+        XCTAssertEqual(store.dex, authoritativeDex)
+        XCTAssertEqual(cache.replacements.last?.response.dex, authoritativeDex)
+    }
+
+    func testAmbiguousMutationFailureReconcilesServerAuthoritativeState() async {
+        let authoritativeEmpty = AllDataResponse(outings: [], photos: [], observations: [], dex: [])
+        let service = AmbiguousDeleteService(
+            initial: fixtureResponse(locationName: "Fresh Marsh"),
+            reconciled: authoritativeEmpty
+        )
+        let cache = CacheStub(snapshot: nil)
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+
+        do {
+            try await store.deleteOuting(id: "outing-1")
+            XCTFail("Expected the simulated post-commit timeout")
+        } catch {
+            XCTAssertTrue(error is URLError)
+        }
+        await service.waitForReconciliationFetch()
+        await Task.yield()
+
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertTrue(cache.replacements.last?.response.outings.isEmpty == true)
+    }
+
+    func testDeleteAllClearsAccountCacheAfterServerSuccess() async throws {
+        let cache = CacheStub(snapshot: nil)
+        let service = ServiceStub(result: .success(fixtureResponse(locationName: "Fresh Marsh")))
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+
+        try await store.clearAll()
+
+        XCTAssertEqual(service.clearAllCalls, 1)
+        XCTAssertEqual(cache.clearedAccountIDs, ["account-a"])
+        XCTAssertTrue(store.outings.isEmpty)
+    }
+
+    func testRefreshForDepartedAccountCannotOverwriteReplacementAccount() async {
+        let cache = CacheStub(snapshot: nil)
+        let service = SuspendedFetchService()
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+
+        let load = Task { await store.loadAll() }
+        await service.waitUntilFetchStarts()
+        store.activate(accountID: "account-b")
+        await service.complete(with: fixtureResponse(locationName: "Account A Marsh"))
+        await load.value
+
+        XCTAssertEqual(store.activeAccountID, "account-b")
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertTrue(cache.replacements.isEmpty)
+    }
+
+    func testSameAccountRefreshesAreSerialized() async {
+        let cache = CacheStub(snapshot: nil)
+        let service = MultiFetchService()
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+
+        let firstLoad = Task { await store.loadAll() }
+        await service.waitForFetchCount(1)
+        let secondLoad = Task { await store.loadAll() }
+        await Task.yield()
+        let fetchCountBeforeRelease = await service.fetchCount()
+        XCTAssertEqual(fetchCountBeforeRelease, 1)
+        await service.complete(index: 0, with: fixtureResponse(locationName: "First Marsh"))
+        await firstLoad.value
+        await service.waitForFetchCount(2)
+        await service.complete(index: 1, with: fixtureResponse(locationName: "Second Marsh"))
+        await secondLoad.value
+
+        XCTAssertEqual(store.outings.first?.locationName, "Second Marsh")
+        XCTAssertEqual(cache.replacements.last?.response.outings.first?.locationName, "Second Marsh")
+    }
+
+    func testCancelledQueuedRefreshReleasesOperationSlot() async {
+        let service = MultiFetchService()
+        let store = DataStore(service: service)
+        store.activate(accountID: "account-a")
+
+        let firstLoad = Task { await store.loadAll() }
+        await service.waitForFetchCount(1)
+        let cancelledLoad = Task { await store.loadAll() }
+        cancelledLoad.cancel()
+        await service.complete(index: 0, with: fixtureResponse(locationName: "First Marsh"))
+        await firstLoad.value
+        await cancelledLoad.value
+
+        let finalLoad = Task { await store.loadAll() }
+        await service.waitForFetchCount(2)
+        await service.complete(index: 1, with: fixtureResponse(locationName: "Final Marsh"))
+        await finalLoad.value
+
+        XCTAssertEqual(store.outings.first?.locationName, "Final Marsh")
+    }
+
+    func testOverlappingRefreshCannotRestoreSuccessfullyDeletedData() async throws {
+        let service = RefreshDeleteRaceService(response: fixtureResponse(locationName: "Fresh Marsh"))
+        let cache = CacheStub(snapshot: nil)
+        let store = DataStore(service: service, cache: cache)
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+
+        let staleRefresh = Task { await store.loadAll() }
+        await service.waitForSuspendedRefresh()
+        let delete = Task { try await store.deleteOuting(id: "outing-1") }
+        await service.completeSuspendedRefresh()
+        await staleRefresh.value
+        try await delete.value
+
+        XCTAssertTrue(store.outings.isEmpty)
+        XCTAssertTrue(cache.replacements.last?.response.outings.isEmpty == true)
+    }
+
+    func testQueuedMutationFromDepartedAccountNeverDispatchesForReplacementAccount() async throws {
+        let accountAService = SuspendedDeleteService(response: fixtureResponse(locationName: "Account A Marsh"))
+        let accountBService = ServiceStub(result: .success(fixtureResponse(locationName: "Account B Marsh")))
+        let store = DataStore(serviceFactory: { accountID -> any DataStoreService in
+            if accountID == "account-a" { return accountAService }
+            return accountBService
+        })
+        store.activate(accountID: "account-a")
+        await store.loadAll()
+
+        let firstDelete = Task { try await store.deleteOuting(id: "outing-1") }
+        await accountAService.waitUntilDeleteStarts()
+        let queuedDelete = Task { try await store.deleteOuting(id: "outing-2") }
+        await Task.yield()
+        store.activate(accountID: "account-b")
+        await accountAService.completeDelete()
+        _ = try await firstDelete.value
+        do {
+            try await queuedDelete.value
+            XCTFail("Expected queued departed-account mutation to be cancelled")
+        } catch is CancellationError {
+        } catch {
+            XCTFail("Expected cancellation, got \(error)")
+        }
+        await store.loadAll()
+
+        let accountADeleteCount = await accountAService.deleteCallCount()
+        XCTAssertEqual(accountADeleteCount, 1)
+        XCTAssertEqual(accountBService.deleteOutingCalls, 0)
+        XCTAssertEqual(store.activeAccountID, "account-b")
+    }
+
+    private func storeMutationReadiness(_ store: DataStore) throws {
+        guard store.hasLoadedAll else {
+            throw AppError.message("not ready")
+        }
+    }
+
+    private func fixtureResponse(locationName: String) -> AllDataResponse {
+        AllDataResponse(
+            outings: [Outing(
+                id: "outing-1",
+                userId: "account-a",
+                startTime: "2026-07-20T12:00:00Z",
+                endTime: "2026-07-20T13:00:00Z",
+                locationName: locationName,
+                notes: "",
+                createdAt: "2026-07-20T12:00:00Z"
+            )],
+            photos: [],
+            observations: [],
+            dex: []
+        )
+    }
+
+    private func fixtureDex(speciesName: String, totalCount: Int) -> DexEntry {
+        DexEntry(
+            speciesName: speciesName,
+            firstSeenDate: "2026-07-20",
+            lastSeenDate: "2026-07-20",
+            totalOutings: 1,
+            totalCount: totalCount,
+            notes: ""
+        )
+    }
+}
+
+@MainActor
+private final class CacheStub: AccountDataCaching {
+    struct Replacement {
+        let accountID: String
+        let response: AllDataResponse
+    }
+
+    var snapshot: AccountDataSnapshot?
+    var replacements: [Replacement] = []
+    var clearedAccountIDs: [String] = []
+    var loadError: Error?
+    var replaceError: Error?
+
+    init(snapshot: AccountDataSnapshot?) {
+        self.snapshot = snapshot
+    }
+
+    func load(accountID _: String) throws -> AccountDataSnapshot? {
+        if let loadError { throw loadError }
+        return snapshot
+    }
+
+    func replace(accountID: String, response: AllDataResponse, refreshedAt _: Date) throws {
+        if let replaceError { throw replaceError }
+        replacements.append(Replacement(accountID: accountID, response: response))
+    }
+
+    func clear(accountID: String) throws {
+        clearedAccountIDs.append(accountID)
+        snapshot = nil
+    }
+}
+
+private final class ServiceStub: DataStoreService, @unchecked Sendable {
+    let result: Result<AllDataResponse, Error>
+    var deleteOutingCalls = 0
+    var clearAllCalls = 0
+    var deleteDexUpdates: [DexEntry] = []
+
+    init(result: Result<AllDataResponse, Error>) {
+        self.result = result
+    }
+
+    func fetchAllData() async throws -> AllDataResponse { try result.get() }
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse {
+        deleteOutingCalls += 1
+        return DexUpdateResponse(dexUpdates: deleteDexUpdates)
+    }
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws { clearAllCalls += 1 }
+}
+
+private actor MultiFetchService: DataStoreService {
+    private var continuations: [CheckedContinuation<AllDataResponse, Error>?] = []
+    private var countWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+
+    func fetchAllData() async throws -> AllDataResponse {
+        let index = continuations.count
+        continuations.append(nil)
+        resumeCountWaiters()
+        return try await withCheckedThrowingContinuation { continuations[index] = $0 }
+    }
+
+    func waitForFetchCount(_ count: Int) async {
+        guard continuations.count < count else { return }
+        await withCheckedContinuation { countWaiters.append((count, $0)) }
+    }
+
+    func fetchCount() -> Int { continuations.count }
+
+    func complete(index: Int, with response: AllDataResponse) {
+        continuations[index]?.resume(returning: response)
+        continuations[index] = nil
+    }
+
+    private func resumeCountWaiters() {
+        let ready = countWaiters.filter { continuations.count >= $0.count }
+        countWaiters.removeAll { continuations.count >= $0.count }
+        ready.forEach { $0.continuation.resume() }
+    }
+
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse { DexUpdateResponse(dexUpdates: []) }
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws {}
+}
+
+private actor SuspendedFetchService: DataStoreService {
+    private var fetchStarted = false
+    private var fetchWaiters: [CheckedContinuation<Void, Never>] = []
+    private var responseContinuation: CheckedContinuation<AllDataResponse, Error>?
+
+    func fetchAllData() async throws -> AllDataResponse {
+        fetchStarted = true
+        fetchWaiters.forEach { $0.resume() }
+        fetchWaiters.removeAll()
+        return try await withCheckedThrowingContinuation { responseContinuation = $0 }
+    }
+
+    func waitUntilFetchStarts() async {
+        guard !fetchStarted else { return }
+        await withCheckedContinuation { fetchWaiters.append($0) }
+    }
+
+    func complete(with response: AllDataResponse) {
+        responseContinuation?.resume(returning: response)
+        responseContinuation = nil
+    }
+
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse {
+        DexUpdateResponse(dexUpdates: [])
+    }
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws {}
+}
+
+private actor RefreshDeleteRaceService: DataStoreService {
+    private let response: AllDataResponse
+    private var fetchCount = 0
+    private var suspendedRefresh: CheckedContinuation<AllDataResponse, Error>?
+    private var refreshWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(response: AllDataResponse) {
+        self.response = response
+    }
+
+    func fetchAllData() async throws -> AllDataResponse {
+        fetchCount += 1
+        if fetchCount == 1 { return response }
+        refreshWaiters.forEach { $0.resume() }
+        refreshWaiters.removeAll()
+        return try await withCheckedThrowingContinuation { suspendedRefresh = $0 }
+    }
+
+    func waitForSuspendedRefresh() async {
+        guard fetchCount < 2 else { return }
+        await withCheckedContinuation { refreshWaiters.append($0) }
+    }
+
+    func completeSuspendedRefresh() {
+        suspendedRefresh?.resume(returning: response)
+        suspendedRefresh = nil
+    }
+
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse { DexUpdateResponse(dexUpdates: []) }
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws {}
+}
+
+private actor SuspendedDeleteService: DataStoreService {
+    private let response: AllDataResponse
+    private var deleteCalls = 0
+    private var deleteContinuation: CheckedContinuation<Void, Never>?
+    private var deleteWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(response: AllDataResponse) {
+        self.response = response
+    }
+
+    func fetchAllData() async throws -> AllDataResponse { response }
+
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse {
+        deleteCalls += 1
+        deleteWaiters.forEach { $0.resume() }
+        deleteWaiters.removeAll()
+        await withCheckedContinuation { deleteContinuation = $0 }
+        return DexUpdateResponse(dexUpdates: [])
+    }
+
+    func waitUntilDeleteStarts() async {
+        guard deleteCalls == 0 else { return }
+        await withCheckedContinuation { deleteWaiters.append($0) }
+    }
+
+    func completeDelete() {
+        deleteContinuation?.resume()
+        deleteContinuation = nil
+    }
+
+    func deleteCallCount() -> Int { deleteCalls }
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws {}
+}
+
+private actor AmbiguousDeleteService: DataStoreService {
+    private let initial: AllDataResponse
+    private let reconciled: AllDataResponse
+    private var fetchCount = 0
+    private var reconciliationWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(initial: AllDataResponse, reconciled: AllDataResponse) {
+        self.initial = initial
+        self.reconciled = reconciled
+    }
+
+    func fetchAllData() async throws -> AllDataResponse {
+        fetchCount += 1
+        if fetchCount > 1 {
+            reconciliationWaiters.forEach { $0.resume() }
+            reconciliationWaiters.removeAll()
+            return reconciled
+        }
+        return initial
+    }
+
+    func waitForReconciliationFetch() async {
+        guard fetchCount < 2 else { return }
+        await withCheckedContinuation { reconciliationWaiters.append($0) }
+    }
+
+    func deleteOuting(id _: String) async throws -> DexUpdateResponse {
+        throw URLError(.timedOut)
+    }
+
+    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing { fatalError() }
+    func rejectObservations(ids _: [String]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func searchSpecies(query _: String, limit _: Int) async throws -> [DataService.SpeciesSearchResult] { [] }
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse { fatalError() }
+    func exportOutingCSV(outingId _: String) async throws -> Data { Data() }
+    func importEBirdCSV(_ csvData: Data) async throws -> [String] { [] }
+    func confirmImport(previewIds _: [String]) async throws -> DataService.ImportConfirmResponse { fatalError() }
+    func clearAllData() async throws {}
+}

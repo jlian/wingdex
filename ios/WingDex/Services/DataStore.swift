@@ -31,38 +31,98 @@ final class DataStore {
 
     var isLoading = false
     var error: AppError?
+    private(set) var hasLoadedAll = false
+    private(set) var cachedAt: Date?
+    private(set) var activeAccountID: String?
+    var hasReadableData: Bool { cachedAt != nil || hasLoadedAll }
+    var isShowingCachedData: Bool { cachedAt != nil && !hasLoadedAll }
 
     // MARK: - Dependencies
 
-    private let service: DataService
+    private var service: (any DataStoreService)?
+    private let serviceFactory: ((String) -> any DataStoreService)?
+    private let cache: (any AccountDataCaching)?
     private var generation = 0
+    private var loadRequestID = UUID()
+    private var confirmedSnapshot: AllDataResponse?
+    private var operationInProgress = false
+    private var operationWaiters: [CheckedContinuation<Void, Never>] = []
 
-    init(service: DataService) {
+    init(service: any DataStoreService, cache: (any AccountDataCaching)? = nil) {
         self.service = service
+        serviceFactory = nil
+        self.cache = cache
+    }
+
+    init(
+        serviceFactory: @escaping (String) -> any DataStoreService,
+        cache: (any AccountDataCaching)? = nil
+    ) {
+        service = nil
+        self.serviceFactory = serviceFactory
+        self.cache = cache
     }
 
     // MARK: - Fetch
 
+    /// Activate one account and hydrate its read-only cache synchronously.
+    func activate(accountID: String) {
+        guard activeAccountID != accountID else { return }
+        reset()
+        activeAccountID = accountID
+        if let serviceFactory {
+            service = serviceFactory(accountID)
+        }
+        do {
+            guard let snapshot = try cache?.load(accountID: accountID) else { return }
+            install(snapshot.response)
+            confirmedSnapshot = snapshot.response
+            cachedAt = snapshot.refreshedAt
+            log.info("Loaded cached account data")
+        } catch {
+            log.error("Failed to load cached account data; clearing the disposable cache")
+            try? cache?.clear(accountID: accountID)
+        }
+    }
+
     /// Load all user data from the API. Called on app launch and pull-to-refresh.
     func loadAll() async {
+        guard let operationContext = try? await acquireOperationContext(requireLoadedSnapshot: false) else { return }
+        defer { releaseOperation(operationContext) }
+        guard let accountID = activeAccountID, let service else { return }
         let loadGeneration = generation
+        let requestID = UUID()
+        loadRequestID = requestID
         log.info("Loading all data...")
         isLoading = true
         error = nil
         do {
             let response = try await service.fetchAllData()
-            guard generation == loadGeneration else { return }
-            outings = response.outings
-            photos = response.photos
-            observations = response.observations
-            dex = response.dex
+            guard generation == loadGeneration,
+                activeAccountID == accountID,
+                loadRequestID == requestID
+            else { return }
+            install(response)
+            confirmedSnapshot = response
+            hasLoadedAll = true
+            cachedAt = nil
+            do {
+                try cache?.replace(accountID: accountID, response: response, refreshedAt: .now)
+            } catch {
+                log.error("Failed to persist refreshed account cache")
+            }
             log.info("Loaded \(self.outings.count) outings, \(self.observations.count) observations, \(self.dex.count) dex entries")
         } catch {
-            guard generation == loadGeneration else { return }
+            guard generation == loadGeneration,
+                  activeAccountID == accountID,
+                  loadRequestID == requestID
+            else { return }
             self.error = AppError.map(error)
             log.error("Failed to load account data")
         }
-        if generation == loadGeneration {
+        if generation == loadGeneration,
+           activeAccountID == accountID,
+           loadRequestID == requestID {
             isLoading = false
         }
     }
@@ -70,12 +130,40 @@ final class DataStore {
     /// Clear all account-owned state and invalidate in-flight bulk loads.
     func reset() {
         generation += 1
+        operationInProgress = false
+        operationWaiters.forEach { $0.resume() }
+        operationWaiters.removeAll()
         outings = []
         photos = []
         observations = []
         dex = []
         isLoading = false
         error = nil
+        hasLoadedAll = false
+        cachedAt = nil
+        activeAccountID = nil
+        confirmedSnapshot = nil
+        loadRequestID = UUID()
+        if serviceFactory != nil {
+            service = nil
+        }
+    }
+
+    /// Clear the departing account from memory and persistent cache.
+    func clearActiveAccount() {
+        let accountID = activeAccountID
+        reset()
+        if let accountID {
+            clearCachedAccount(accountID: accountID)
+        }
+    }
+
+    func clearCachedAccount(accountID: String) {
+        do {
+            try cache?.clear(accountID: accountID)
+        } catch {
+            log.error("Failed to clear cached account data")
+        }
     }
 
     // MARK: - Derived Data
@@ -140,49 +228,51 @@ final class DataStore {
 
     /// Search the server taxonomy for manual observation entry.
     func searchSpecies(query: String, limit: Int = 8) async throws -> [DataService.SpeciesSearchResult] {
-        try await service.searchSpecies(query: query, limit: limit)
+        guard let service else { throw AuthError.notAuthenticated }
+        return try await service.searchSpecies(query: query, limit: limit)
     }
 
     /// Download one outing in eBird Record CSV format.
     func exportOutingCSV(outingId: String) async throws -> Data {
-        try await service.exportOutingCSV(outingId: outingId)
+        guard let service else { throw AuthError.notAuthenticated }
+        return try await service.exportOutingCSV(outingId: outingId)
     }
 
     // MARK: - Mutations
 
     /// Delete an outing and remove its observations locally, then sync with server.
     func deleteOuting(id: String) async throws {
-        let mutationGeneration = generation
-        let previousOutings = outings
-        let previousObservations = observations
-        let previousPhotos = photos
+        let mutationContext = try await acquireOperationContext(requireLoadedSnapshot: true)
+        defer { releaseOperation(mutationContext) }
+        guard let service else { throw AuthError.notAuthenticated }
         outings.removeAll { $0.id == id }
         observations.removeAll { $0.outingId == id }
         photos.removeAll { $0.outingId == id }
         do {
-            try await service.deleteOuting(id: id)
+            let response = try await service.deleteOuting(id: id)
+            guard isCurrentMutation(mutationContext) else { return }
+            dex = response.dexUpdates
+            confirmAndPersistCurrentSnapshot()
         } catch {
-            guard generation == mutationGeneration else { return }
-            outings = previousOutings
-            observations = previousObservations
-            photos = previousPhotos
+            guard isCurrentMutation(mutationContext) else { return }
+            restoreConfirmedSnapshot()
             log.warning("Outing deletion failed; reconciling account data")
-            await loadAll()
+            reconcileAfterMutationFailure(mutationContext)
             throw error
         }
     }
 
     /// Mark observations as rejected (soft delete).
     func rejectObservations(ids: [String]) async throws {
-        let mutationGeneration = generation
-        let previousObservations = observations
-        let previousDex = dex
+        let mutationContext = try await acquireOperationContext(requireLoadedSnapshot: true)
+        defer { releaseOperation(mutationContext) }
+        guard let service else { throw AuthError.notAuthenticated }
         for i in observations.indices where ids.contains(observations[i].id) {
             observations[i].certainty = .rejected
         }
         do {
             let response = try await service.rejectObservations(ids: ids)
-            guard generation == mutationGeneration else { return }
+            guard isCurrentMutation(mutationContext) else { return }
             if let updated = response.observations {
                 let updatedById = Dictionary(uniqueKeysWithValues: updated.map { ($0.id, $0) })
                 observations = observations.map { updatedById[$0.id] ?? $0 }
@@ -190,25 +280,25 @@ final class DataStore {
             if let dexUpdates = response.dexUpdates {
                 dex = dexUpdates
             }
+            confirmAndPersistCurrentSnapshot()
         } catch {
-            guard generation == mutationGeneration else { return }
-            observations = previousObservations
-            dex = previousDex
+            guard isCurrentMutation(mutationContext) else { return }
+            restoreConfirmedSnapshot()
             log.warning("Observation rejection failed; reconciling account data")
-            await loadAll()
+            reconcileAfterMutationFailure(mutationContext)
             throw error
         }
     }
 
     /// Add one observation and install the server's recomputed dex.
     func addObservation(_ observation: BirdObservation) async throws {
-        let mutationGeneration = generation
-        let previousObservations = observations
-        let previousDex = dex
+        let mutationContext = try await acquireOperationContext(requireLoadedSnapshot: true)
+        defer { releaseOperation(mutationContext) }
+        guard let service else { throw AuthError.notAuthenticated }
         observations.append(observation)
         do {
             let response = try await service.createObservations([observation])
-            guard generation == mutationGeneration else { return }
+            guard isCurrentMutation(mutationContext) else { return }
             if let created = response.observations {
                 let createdById = Dictionary(uniqueKeysWithValues: created.map { ($0.id, $0) })
                 observations = observations.map { createdById[$0.id] ?? $0 }
@@ -216,20 +306,21 @@ final class DataStore {
             if let dexUpdates = response.dexUpdates {
                 dex = dexUpdates
             }
+            confirmAndPersistCurrentSnapshot()
         } catch {
-            guard generation == mutationGeneration else { return }
-            observations = previousObservations
-            dex = previousDex
+            guard isCurrentMutation(mutationContext) else { return }
+            restoreConfirmedSnapshot()
             log.warning("Observation creation failed; reconciling account data")
-            await loadAll()
+            reconcileAfterMutationFailure(mutationContext)
             throw error
         }
     }
 
     /// Update outing fields locally and on the server.
     func updateOuting(id: String, fields: OutingUpdate) async throws {
-        let mutationGeneration = generation
-        let previousOutings = outings
+        let mutationContext = try await acquireOperationContext(requireLoadedSnapshot: true)
+        defer { releaseOperation(mutationContext) }
+        guard let service else { throw AuthError.notAuthenticated }
         if let idx = outings.firstIndex(where: { $0.id == id }) {
             let old = outings[idx]
             outings[idx] = Outing(
@@ -254,33 +345,42 @@ final class DataStore {
         }
         do {
             let updated = try await service.updateOuting(id: id, fields: fields)
-            guard generation == mutationGeneration else { return }
+            guard isCurrentMutation(mutationContext) else { return }
             if let idx = outings.firstIndex(where: { $0.id == id }) {
                 outings[idx] = updated
             }
+            confirmAndPersistCurrentSnapshot()
         } catch {
-            guard generation == mutationGeneration else { return }
-            outings = previousOutings
+            guard isCurrentMutation(mutationContext) else { return }
+            restoreConfirmedSnapshot()
             log.warning("Outing update failed; reconciling account data")
-            await loadAll()
+            reconcileAfterMutationFailure(mutationContext)
             throw error
         }
     }
 
     /// Clear all user data.
     func clearAll() async throws {
-        let mutationGeneration = generation
+        let mutationContext = try await acquireOperationContext(requireLoadedSnapshot: true)
+        defer { releaseOperation(mutationContext) }
+        guard let service else { throw AuthError.notAuthenticated }
+        let accountID = activeAccountID
         try await service.clearAllData()
-        guard generation == mutationGeneration else { return }
+        guard isCurrentMutation(mutationContext) else { return }
         outings = []
         photos = []
         observations = []
         dex = []
+        confirmedSnapshot = AllDataResponse(outings: [], photos: [], observations: [], dex: [])
+        if let accountID {
+            try? cache?.clear(accountID: accountID)
+        }
     }
 
     /// Load demo data by importing the bundled eBird CSV.
     func loadDemoData() async throws {
         let mutationGeneration = generation
+        guard let service else { throw AuthError.notAuthenticated }
         guard let csvURL = Bundle.main.url(forResource: "demo-ebird-import", withExtension: "csv"),
               let csvData = try? Data(contentsOf: csvURL)
         else {
@@ -301,5 +401,99 @@ final class DataStore {
 
         // Reload all data
         await loadAll()
+    }
+
+    private func install(_ response: AllDataResponse) {
+        outings = response.outings
+        photos = response.photos
+        observations = response.observations
+        dex = response.dex
+    }
+
+    private func confirmAndPersistCurrentSnapshot() {
+        guard let accountID = activeAccountID else { return }
+        let snapshot = AllDataResponse(
+            outings: outings,
+            photos: photos,
+            observations: observations,
+            dex: dex
+        )
+        confirmedSnapshot = snapshot
+        do {
+            try cache?.replace(
+                accountID: accountID,
+                response: snapshot,
+                refreshedAt: .now
+            )
+        } catch {
+            log.error("Failed to persist server-confirmed account cache")
+        }
+    }
+
+    private func restoreConfirmedSnapshot() {
+        if let confirmedSnapshot {
+            install(confirmedSnapshot)
+        }
+    }
+
+    private func acquireOperationContext(
+        requireLoadedSnapshot: Bool
+    ) async throws -> (accountID: String, generation: Int) {
+        guard let accountID = activeAccountID else { throw AuthError.notAuthenticated }
+        let operationGeneration = generation
+        if !operationInProgress {
+            operationInProgress = true
+        } else {
+            await withCheckedContinuation { operationWaiters.append($0) }
+        }
+        do {
+            try Task.checkCancellation()
+        } catch {
+            releaseOperation((accountID, operationGeneration))
+            throw error
+        }
+        guard activeAccountID == accountID,
+              generation == operationGeneration
+        else {
+            releaseOperation((accountID, operationGeneration))
+            throw CancellationError()
+        }
+        if requireLoadedSnapshot {
+            do {
+                try requireServerSnapshot()
+            } catch {
+                releaseOperation((accountID, operationGeneration))
+                throw error
+            }
+            loadRequestID = UUID()
+            isLoading = false
+        }
+        return (accountID, operationGeneration)
+    }
+
+    private func releaseOperation(_ context: (accountID: String, generation: Int)) {
+        guard generation == context.generation, activeAccountID == context.accountID else { return }
+        if operationWaiters.isEmpty {
+            operationInProgress = false
+        } else {
+            operationWaiters.removeFirst().resume()
+        }
+    }
+
+    private func isCurrentMutation(_ context: (accountID: String, generation: Int)) -> Bool {
+        activeAccountID == context.accountID && generation == context.generation
+    }
+
+    private func reconcileAfterMutationFailure(_ context: (accountID: String, generation: Int)) {
+        Task { [weak self] in
+            guard let self, self.isCurrentMutation(context) else { return }
+            await self.loadAll()
+        }
+    }
+
+    private func requireServerSnapshot() throws {
+        guard hasLoadedAll else {
+            throw AppError.message("Reconnect and refresh WingDex before making changes.")
+        }
     }
 }

@@ -3,6 +3,7 @@ import MapKit
 
 struct OutingDetailView: View {
     let outingId: String
+    var beginsLocationEditing = false
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm = false
@@ -27,15 +28,27 @@ struct OutingDetailView: View {
     private var possible: [BirdObservation] { store.possibleObservations(outingId) }
 
     var body: some View {
-        Group {
-            if let outing {
-                outingContent(outing)
-            } else {
-                ContentUnavailableView("Outing not found", systemImage: "exclamationmark.triangle")
+        VStack(spacing: 0) {
+            CachedDataNotice()
+            Group {
+                if let outing {
+                    outingContent(outing)
+                } else {
+                    ContentUnavailableView("Outing not found", systemImage: "exclamationmark.triangle")
+                }
             }
         }
         .navigationTitle(outing?.locationName ?? "Outing")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let outing {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: SharePayload.outing(outing, observations: confirmed)) {
+                        Label("Share Outing", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
         // WHY: see SpeciesDetailView - hide system list background, apply our own.
         .scrollContentBackground(.hidden)
         .background(Color.pageBg.ignoresSafeArea())
@@ -55,7 +68,7 @@ struct OutingDetailView: View {
             Text("This will permanently delete this outing and all its observations.")
         }
         .sheet(item: $exportItem) { item in
-            ActivityView(activityItems: [item.url])
+            ActivityView(item: item)
         }
         .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
             Button("OK", role: .cancel) { operationError = nil }
@@ -64,6 +77,11 @@ struct OutingDetailView: View {
         }
         .onDisappear {
             speciesSearchTask?.cancel()
+        }
+        .onChange(of: outing?.id, initial: true) {
+            guard beginsLocationEditing, let outing, !editingLocation else { return }
+            locationText = outing.locationName
+            editingLocation = true
         }
     }
 
@@ -311,12 +329,22 @@ struct OutingDetailView: View {
                         Button {
                             contextMenuSpecies = speciesName
                         } label: {
-                            Label("View Species", systemImage: "bird")
+                            Label("View Details", systemImage: "bird")
                         }
-                        Button {
-                            UIPasteboard.general.string = speciesName
-                        } label: {
-                            Label("Copy Name", systemImage: "doc.on.doc")
+                        if let entry {
+                            ShareLink(item: SharePayload.species(entry)) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                        if let url = getEbirdURL(for: speciesName) {
+                            Link(destination: url) {
+                                Label("Open in eBird", systemImage: "globe")
+                            }
+                        }
+                        if let url = getWikipediaURL(for: entry?.wikiTitle) {
+                            Link(destination: url) {
+                                Label("Open in Wikipedia", systemImage: "book")
+                            }
                         }
                     } preview: {
                         NavigationStack {
@@ -367,12 +395,22 @@ struct OutingDetailView: View {
                         Button {
                             contextMenuSpecies = speciesName
                         } label: {
-                            Label("View Species", systemImage: "bird")
+                            Label("View Details", systemImage: "bird")
                         }
-                        Button {
-                            UIPasteboard.general.string = speciesName
-                        } label: {
-                            Label("Copy Name", systemImage: "doc.on.doc")
+                        if let entry {
+                            ShareLink(item: SharePayload.species(entry)) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                        if let url = getEbirdURL(for: speciesName) {
+                            Link(destination: url) {
+                                Label("Open in eBird", systemImage: "globe")
+                            }
+                        }
+                        if let url = getWikipediaURL(for: entry?.wikiTitle) {
+                            Link(destination: url) {
+                                Label("Open in Wikipedia", systemImage: "book")
+                            }
                         }
                     } preview: {
                         NavigationStack {
@@ -634,11 +672,7 @@ struct OutingDetailView: View {
         isExporting = true
         do {
             let csvData = try await store.exportOutingCSV(outingId: outing.id)
-            let date = String(outing.startTime.prefix(10))
-            let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("wingdex-outing-\(date).csv")
-            try csvData.write(to: url)
-            exportItem = ExportFileItem(url: url)
+            exportItem = try ExportFileFactory.outing(data: csvData, outing: outing)
         } catch {
             showError(error, fallback: "Could not export outing. Try again.")
         }

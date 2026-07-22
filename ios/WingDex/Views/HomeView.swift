@@ -9,11 +9,14 @@ struct HomeView: View {
     @Environment(\.showOutings) private var showOutings
     @Environment(\.showSettings) private var showSettings
     @State private var committedSpeciesEntry: DexEntry?
-    @State private var contextMenuOuting: Outing?
+    @State private var actionDestination: OutingActionDestination?
 
     var body: some View {
         NavigationStack {
-            rootContent
+            VStack(spacing: 0) {
+                CachedDataNotice()
+                rootContent
+            }
                 // WHY .frame + .background instead of ZStack: wrapping content in a ZStack
                 // with Color.pageBg causes a white flash during push/pop transitions when
                 // the nav bar collapses. Using .background() on the content directly avoids this.
@@ -52,8 +55,11 @@ struct HomeView: View {
                 .navigationDestination(for: Outing.self) { outing in
                     OutingDetailView(outingId: outing.id)
                 }
-                .navigationDestination(item: $contextMenuOuting) { outing in
-                    OutingDetailView(outingId: outing.id)
+                .navigationDestination(item: $actionDestination) { destination in
+                    OutingDetailView(
+                        outingId: destination.outing.id,
+                        beginsLocationEditing: destination.beginsLocationEditing
+                    )
                 }
                 .navigationDestination(item: $committedSpeciesEntry) { entry in
                     SpeciesDetailView(speciesName: entry.speciesName)
@@ -194,6 +200,8 @@ struct HomeView: View {
                                 ForEach(recentSpecies) { entry in
                                     PeekPopContextMenu(
                                         menu: speciesContextMenu(for: entry),
+                                        accessibilityLabel: getDisplayName(entry.speciesName),
+                                        accessibilityActions: speciesAccessibilityActions(for: entry),
                                         onTap: {
                                             committedSpeciesEntry = entry
                                         }
@@ -242,25 +250,21 @@ struct HomeView: View {
                         NavigationLink(value: outing) {
                             OutingRow(outing: outing, store: store)
                         }
-                        .contextMenu {
-                            Button {
-                                contextMenuOuting = outing
-                            } label: {
-                                Label("View Outing", systemImage: "binoculars")
+                        .outingRowActions(
+                            outing: outing,
+                            onView: {
+                                actionDestination = OutingActionDestination(
+                                    outing: outing,
+                                    beginsLocationEditing: false
+                                )
+                            },
+                            onEditLocation: {
+                                actionDestination = OutingActionDestination(
+                                    outing: outing,
+                                    beginsLocationEditing: true
+                                )
                             }
-                            if let lat = outing.lat, let lon = outing.lon {
-                                Button {
-                                    openInMaps(outing: outing, lat: lat, lon: lon)
-                                } label: {
-                                    Label("View in Maps", systemImage: "map")
-                                }
-                            }
-                        } preview: {
-                            NavigationStack {
-                                OutingDetailView(outingId: outing.id)
-                            }
-                            .environment(store)
-                        }
+                        )
                     }
                 }
             }
@@ -273,15 +277,47 @@ struct HomeView: View {
     private func speciesContextMenu(for entry: DexEntry) -> UIMenu {
         var actions: [UIMenuElement] = []
 
-        actions.append(UIAction(title: "View Species", image: UIImage(systemName: "bird")) { _ in
+        actions.append(UIAction(title: "View Details", image: UIImage(systemName: "bird")) { _ in
             committedSpeciesEntry = entry
         })
 
-        actions.append(UIAction(title: "Copy Name", image: UIImage(systemName: "doc.on.doc")) { _ in
-            UIPasteboard.general.string = entry.speciesName
+        actions.append(UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+            presentActivitySheet(items: [SharePayload.species(entry)])
         })
 
+        if let url = getEbirdURL(for: entry.speciesName) {
+            actions.append(UIAction(title: "Open in eBird", image: UIImage(systemName: "globe")) { _ in
+                UIApplication.shared.open(url)
+            })
+        }
+
+        if let url = getWikipediaURL(for: entry.wikiTitle) {
+            actions.append(UIAction(title: "Open in Wikipedia", image: UIImage(systemName: "book")) { _ in
+                UIApplication.shared.open(url)
+            })
+        }
+
         return UIMenu(children: actions)
+    }
+
+    private func speciesAccessibilityActions(
+        for entry: DexEntry
+    ) -> [ContextMenuAccessibilityAction] {
+        var actions = [
+            ContextMenuAccessibilityAction(name: "View Details") {
+                committedSpeciesEntry = entry
+            },
+            ContextMenuAccessibilityAction(name: "Share") {
+                presentActivitySheet(items: [SharePayload.species(entry)])
+            },
+        ]
+        if let url = getEbirdURL(for: entry.speciesName) {
+            actions.append(.init(name: "Open in eBird") { UIApplication.shared.open(url) })
+        }
+        if let url = getWikipediaURL(for: entry.wikiTitle) {
+            actions.append(.init(name: "Open in Wikipedia") { UIApplication.shared.open(url) })
+        }
+        return actions
     }
 }
 
