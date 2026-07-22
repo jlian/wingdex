@@ -8,7 +8,6 @@ final class ShareViewController: UIViewController {
     private let openButton = UIButton(type: .system)
     private let cancelButton = UIButton(type: .system)
     private var stagingTask: Task<Void, Never>?
-    private var providerProgresses: [Progress] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -18,8 +17,6 @@ final class ShareViewController: UIViewController {
 
     deinit {
         stagingTask?.cancel()
-        providerProgresses.forEach { $0.cancel() }
-        providerProgresses = []
     }
 
     private func configureUI() {
@@ -99,7 +96,6 @@ final class ShareViewController: UIViewController {
 
             try Task.checkCancellation()
             try await stageInBackground(fileURLs: temporaryFiles)
-            providerProgresses = []
             statusLabel.text = providers.count == 1
                 ? "Your photo is ready. Open WingDex to identify it."
                 : "Your \(providers.count) photos are ready. Open WingDex to identify them."
@@ -136,46 +132,54 @@ final class ShareViewController: UIViewController {
         from provider: NSItemProvider,
         remainingBytes: Int
     ) async throws -> (url: URL, size: Int) {
-        try await withCheckedThrowingContinuation { continuation in
-            let progress = provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, error in
-                do {
-                    if let error { throw error }
-                    guard let url else { throw IncomingShareError.noPhotos }
-                    guard let sourceBytes = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-                          sourceBytes >= 0
-                    else { throw IncomingShareError.stagingFailed }
-                    guard sourceBytes <= IncomingShareStore.maximumPhotoBytes else {
-                        throw IncomingShareError.photoTooLarge
-                    }
-                    guard sourceBytes <= remainingBytes else {
-                        throw IncomingShareError.shareTooLarge
-                    }
-                    let fileExtension = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
-                    let destination = FileManager.default.temporaryDirectory
-                        .appendingPathComponent("wingdex-share-\(UUID().uuidString).\(fileExtension)")
-                    try FileManager.default.copyItem(at: url, to: destination)
+        let loadState = FileRepresentationLoadState()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                loadState.install(continuation)
+                guard loadState.isActive else { return }
+                let progress = provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, error in
+                    guard loadState.isActive else { return }
                     do {
-                        guard let copiedBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-                              copiedBytes >= 0
+                        if let error { throw error }
+                        guard let url else { throw IncomingShareError.noPhotos }
+                        guard let sourceBytes = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                              sourceBytes >= 0
                         else { throw IncomingShareError.stagingFailed }
-                        guard copiedBytes <= IncomingShareStore.maximumPhotoBytes else {
+                        guard sourceBytes <= IncomingShareStore.maximumPhotoBytes else {
                             throw IncomingShareError.photoTooLarge
                         }
-                        guard copiedBytes <= remainingBytes else {
+                        guard sourceBytes <= remainingBytes else {
                             throw IncomingShareError.shareTooLarge
                         }
-                        continuation.resume(returning: (destination, copiedBytes))
+                        let fileExtension = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+                        let destination = FileManager.default.temporaryDirectory
+                            .appendingPathComponent("wingdex-share-\(UUID().uuidString).\(fileExtension)")
+                        try FileManager.default.copyItem(at: url, to: destination)
+                        do {
+                            guard let copiedBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                                  copiedBytes >= 0
+                            else { throw IncomingShareError.stagingFailed }
+                            guard copiedBytes <= IncomingShareStore.maximumPhotoBytes else {
+                                throw IncomingShareError.photoTooLarge
+                            }
+                            guard copiedBytes <= remainingBytes else {
+                                throw IncomingShareError.shareTooLarge
+                            }
+                            if !loadState.complete(.success((destination, copiedBytes))) {
+                                try? FileManager.default.removeItem(at: destination)
+                            }
+                        } catch {
+                            try? FileManager.default.removeItem(at: destination)
+                            throw error
+                        }
                     } catch {
-                        try? FileManager.default.removeItem(at: destination)
-                        throw error
+                        loadState.complete(.failure(error))
                     }
-                } catch {
-                    continuation.resume(throwing: error)
                 }
+                loadState.setProgress(progress as Progress?)
             }
-            if let progress = progress as Progress? {
-                providerProgresses.append(progress)
-            }
+        } onCancel: {
+            loadState.cancel()
         }
     }
 
@@ -191,7 +195,65 @@ final class ShareViewController: UIViewController {
     private func cancelInFlightWork() {
         stagingTask?.cancel()
         stagingTask = nil
-        providerProgresses.forEach { $0.cancel() }
-        providerProgresses = []
+    }
+}
+
+private final class FileRepresentationLoadState: @unchecked Sendable {
+    typealias Output = (url: URL, size: Int)
+
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Output, Error>?
+    private var pendingResult: Result<Output, Error>?
+    private var progress: Progress?
+    private var isCompleted = false
+
+    var isActive: Bool {
+        lock.withLock { !isCompleted }
+    }
+
+    func install(_ continuation: CheckedContinuation<Output, Error>) {
+        let pendingResult = lock.withLock { () -> Result<Output, Error>? in
+            if let pendingResult = self.pendingResult {
+                self.pendingResult = nil
+                return pendingResult
+            }
+            self.continuation = continuation
+            return nil
+        }
+        if let pendingResult {
+            continuation.resume(with: pendingResult)
+        }
+    }
+
+    func setProgress(_ progress: Progress?) {
+        guard let progress else { return }
+        let shouldCancel = lock.withLock {
+            if isCompleted { return true }
+            self.progress = progress
+            return false
+        }
+        if shouldCancel { progress.cancel() }
+    }
+
+    @discardableResult
+    func complete(_ result: Result<Output, Error>) -> Bool {
+        let completion = lock.withLock { () -> (won: Bool, continuation: CheckedContinuation<Output, Error>?) in
+            guard !isCompleted else { return (false, nil) }
+            isCompleted = true
+            let continuation = self.continuation
+            self.continuation = nil
+            if continuation == nil {
+                pendingResult = result
+            }
+            return (true, continuation)
+        }
+        completion.continuation?.resume(with: result)
+        return completion.won
+    }
+
+    func cancel() {
+        let progress = lock.withLock { self.progress }
+        progress?.cancel()
+        complete(.failure(CancellationError()))
     }
 }

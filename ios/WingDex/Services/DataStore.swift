@@ -492,7 +492,7 @@ final class DataStore {
     }
 
     private func reconcileAfterMutationFailure(_ context: (accountID: String, generation: Int)) {
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self, self.isCurrentMutation(context) else { return }
             await self.loadAll()
         }
