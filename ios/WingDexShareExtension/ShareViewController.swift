@@ -141,9 +141,9 @@ final class ShareViewController: UIViewController {
                 do {
                     if let error { throw error }
                     guard let url else { throw IncomingShareError.noPhotos }
-                      guard let sourceBytes = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                    guard let sourceBytes = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
                           sourceBytes >= 0
-                      else { throw IncomingShareError.noPhotos }
+                    else { throw IncomingShareError.stagingFailed }
                     guard sourceBytes <= IncomingShareStore.maximumPhotoBytes else {
                         throw IncomingShareError.photoTooLarge
                     }
@@ -157,7 +157,7 @@ final class ShareViewController: UIViewController {
                     do {
                         guard let copiedBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
                               copiedBytes >= 0
-                        else { throw IncomingShareError.noPhotos }
+                        else { throw IncomingShareError.stagingFailed }
                         guard copiedBytes <= IncomingShareStore.maximumPhotoBytes else {
                             throw IncomingShareError.photoTooLarge
                         }
