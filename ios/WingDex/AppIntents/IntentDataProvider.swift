@@ -76,7 +76,9 @@ enum IntentDataError: LocalizedError, Equatable {
 
     static func map(_ error: Error) -> IntentDataError {
         if let intentError = error as? IntentDataError { return intentError }
-        if case .http(let status, _, _) = error as? DataServiceError, status == 429 {
+        if let serviceError = error as? DataServiceError,
+           case .http(let status, _, _) = serviceError,
+           status == 429 {
             return .rateLimited
         }
         switch AppError.map(error) {
