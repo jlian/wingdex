@@ -269,6 +269,7 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
     private var authContinuation: CheckedContinuation<ASAuthorization, Error>?
     private var activeController: ASAuthorizationController?
+    private var presentationContext: AuthenticationPresentationContextProvider?
     // Prevent premature deallocation while the authorization sheet is shown.
     // ASAuthorizationController holds its delegate weakly.
     private var selfRetain: PasskeyService?
@@ -321,13 +322,18 @@ final class PasskeyService: NSObject, @unchecked Sendable {
 
     @MainActor
     private func requestAuthorization(requests: [ASAuthorizationRequest]) async throws -> ASAuthorization {
-        try await withCheckedThrowingContinuation { continuation in
+        guard let presentationContext = AuthenticationPresentationContextProvider.active() else {
+            throw PasskeyError.presentationUnavailable
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
             self.selfRetain = self
             self.authContinuation = continuation
+            self.presentationContext = presentationContext
             let controller = ASAuthorizationController(authorizationRequests: requests)
             self.activeController = controller
             controller.delegate = self
-            controller.presentationContextProvider = self
+            controller.presentationContextProvider = presentationContext
             controller.performRequests()
         }
     }
@@ -373,6 +379,7 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
         authContinuation?.resume(returning: authorization)
         authContinuation = nil
         activeController = nil
+        presentationContext = nil
         selfRetain = nil
     }
 
@@ -383,19 +390,8 @@ extension PasskeyService: ASAuthorizationControllerDelegate {
         authContinuation?.resume(throwing: error)
         authContinuation = nil
         activeController = nil
+        presentationContext = nil
         selfRetain = nil
-    }
-}
-
-// MARK: - ASAuthorizationControllerPresentationContextProviding
-
-extension PasskeyService: ASAuthorizationControllerPresentationContextProviding {
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene }).first else {
-            return UIWindow()
-        }
-        return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
 
@@ -407,6 +403,7 @@ enum PasskeyError: LocalizedError {
     case invalidResponse
     case authenticationFailed
     case registrationFailed
+    case presentationUnavailable
     case unexpectedCredentialType
 
     var errorDescription: String? {
@@ -416,6 +413,7 @@ enum PasskeyError: LocalizedError {
         case .invalidResponse: "Invalid response from server"
         case .authenticationFailed: "Passkey authentication failed"
         case .registrationFailed: "Passkey registration failed"
+        case .presentationUnavailable: "No active window is available for passkey authentication"
         case .unexpectedCredentialType: "Unexpected credential type"
         }
     }

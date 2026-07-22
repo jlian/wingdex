@@ -579,8 +579,15 @@ final class AuthService: @unchecked Sendable {
 
     // MARK: - ASWebAuthenticationSession
 
+    @MainActor
     private func performWebAuth(url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        guard let contextProvider = AuthenticationPresentationContextProvider.active() else {
+            throw AuthError.oauthFailed("No active window is available for sign-in")
+        }
+        webAuthContext = contextProvider
+        defer { webAuthContext = nil }
+
+        return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
                 url: url,
                 callback: .customScheme(Config.oauthCallbackScheme)
@@ -595,15 +602,12 @@ final class AuthService: @unchecked Sendable {
             }
             // Use non-ephemeral so OAuth cookies persist across the redirect chain
             session.prefersEphemeralWebBrowserSession = false
-            // Presentation context: use the first window scene's key window
-            let contextProvider = WebAuthContextProvider()
             session.presentationContextProvider = contextProvider
-            self.webAuthContext = contextProvider
             session.start()
         }
     }
 
-    private var webAuthContext: WebAuthContextProvider?
+    private var webAuthContext: AuthenticationPresentationContextProvider?
 
     // MARK: - Callback Processing
 
@@ -783,14 +787,41 @@ final class AuthService: @unchecked Sendable {
     }
 }
 
-/// Provides the presentation anchor for ASWebAuthenticationSession.
-private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-                guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene }).first else {
-            return UIWindow()
+@MainActor
+final class AuthenticationPresentationContextProvider: NSObject,
+    ASWebAuthenticationPresentationContextProviding,
+    ASAuthorizationControllerPresentationContextProviding
+{
+    private let anchor: ASPresentationAnchor
+
+    static func active() -> AuthenticationPresentationContextProvider? {
+        let activeScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive }
+
+        guard let anchor = activeScenes.lazy.compactMap({ scene in
+            scene.windows.first(where: { $0.isKeyWindow })
+                ?? scene.windows.first(where: {
+                    !$0.isHidden && $0.alpha > 0 && $0.windowLevel == .normal
+                })
+        }).first else {
+            return nil
         }
-        return scene.keyWindow ?? UIWindow(windowScene: scene)
+
+        return AuthenticationPresentationContextProvider(anchor: anchor)
+    }
+
+    private init(anchor: ASPresentationAnchor) {
+        self.anchor = anchor
+        super.init()
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        anchor
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        anchor
     }
 }
 
