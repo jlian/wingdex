@@ -262,7 +262,7 @@ final class AddPhotosViewModel {
                 return
             }
             do {
-                let data = try Data(contentsOf: sharedPhoto.fileURL, options: .mappedIfSafe)
+                let data = try await readSharedPhotoData(from: sharedPhoto.fileURL)
                 if let photo = makeProcessedPhoto(data: data, fileName: sharedPhoto.fileName) {
                     appendByDuplicateStatus(photo, newPhotos: &newPhotos, duplicatePhotos: &duplicatePhotos)
                 } else {
@@ -334,6 +334,17 @@ final class AddPhotosViewModel {
                     ? "One shared photo could not be read. Share it again in a supported image format."
                     : "\(count) shared photos could not be read. Share them again in a supported image format."
             )
+        }
+    }
+
+    private func readSharedPhotoData(from fileURL: URL) async throws -> Data {
+        let readTask = Task.detached(priority: .userInitiated) {
+            try Data(contentsOf: fileURL, options: .mappedIfSafe)
+        }
+        return try await withTaskCancellationHandler {
+            try await readTask.value
+        } onCancel: {
+            readTask.cancel()
         }
     }
 
