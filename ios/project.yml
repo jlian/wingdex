@@ -5,11 +5,15 @@ options:
     iOS: "26.0"
   xcodeVersion: "26.3"
   createIntermediateGroups: true
-  postGenCommand: scripts/fix-icon-ref.sh && scripts/gen-git-info.sh
+  preGenCommand: scripts/gen-git-info.sh
+  postGenCommand: scripts/fix-icon-ref.sh
 
 configs:
   Localhost Debug: debug
+  Localhost Release: release
   Dev Debug: debug
+  Dev Release: release
+  Production Debug: debug
   Release: release
 
 settings:
@@ -54,7 +58,6 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: WingDex/WingDex.entitlements
-        CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: "YES"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: "YES"
@@ -64,8 +67,16 @@ targets:
       configs:
         Localhost Debug:
           API_BASE_URL: https://localhost.wingdex.app
+          CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: "YES"
+        Localhost Release:
+          API_BASE_URL: https://localhost.wingdex.app
         Dev Debug:
           API_BASE_URL: https://dev.wingdex.app
+          CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: "YES"
+        Dev Release:
+          API_BASE_URL: https://dev.wingdex.app
+        Production Debug:
+          API_BASE_URL: https://wingdex.app
         Release:
           API_BASE_URL: https://wingdex.app
     info:
@@ -123,6 +134,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: WingDexShareExtension/WingDexShareExtension.entitlements
         SKIP_INSTALL: "YES"
         SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1"
     info:
       path: WingDexShareExtension/Info.plist
       properties:
@@ -156,18 +168,16 @@ schemes:
         WingDex: all
     run:
       config: Localhost Debug
-      environmentVariables:
-        - variable: API_BASE_URL
-          value: https://localhost.wingdex.app
-          isEnabled: true
     test:
       config: Localhost Debug
       targets:
         - WingDexTests
     profile:
-      config: Release
+      config: Localhost Release
     analyze:
       config: Localhost Debug
+    archive:
+      config: Localhost Release
 
   Dev:
     build:
@@ -175,18 +185,16 @@ schemes:
         WingDex: all
     run:
       config: Dev Debug
-      environmentVariables:
-        - variable: API_BASE_URL
-          value: https://dev.wingdex.app
-          isEnabled: true
     test:
       config: Dev Debug
       targets:
         - WingDexTests
     profile:
-      config: Release
+      config: Dev Release
     analyze:
       config: Dev Debug
+    archive:
+      config: Dev Release
 
   Production:
     build:
@@ -194,9 +202,15 @@ schemes:
         WingDex: all
     run:
       config: Release
+    test:
+      config: Production Debug
+      targets:
+        - WingDexTests
     profile:
       config: Release
     analyze:
+      config: Release
+    archive:
       config: Release
 
 packages:
