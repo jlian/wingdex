@@ -545,8 +545,6 @@ SHA-256 file hash computation exists in `PhotoService`, but there is no UI to ha
 - [x] Brief "Outing saved!" notice with checkmark shown for ~1.2s between clusters before advancing
 - [ ] After doing real tab, can we have a cool tab expansion animation like Apple Music's search tab where the icon expands to fill the screen as the new view appears? And instead of the search it would morph into two liquid glass big buttons (take photo and library) at the bottom where in apple music the search bar appears
 
-- [ ] (not related to photo upload) for the species/outing detail view can we also have liquid glass controls instead of the tab bar at the bottom? so like for speciies the liquid glass controls could show ebird/wikipedia/copy name, and for outings the liquid glass controls could show edit outing, view on map, delete outing, etc. It would be a nice way to unify the UI and be more ios native instead of embedding those controls in the scroll view (list?) content
-
 ### 3-R Verification
 
 Select 5+ photos from library -> see outing review with reverse-geocoded location and date -> AI identifies one-at-a-time with fast model, escalates to strong when uncertain -> per-photo confirm shows user photo alongside Wikipedia reference image with confidence bar -> can tap Back to revisit previous photo -> crop & retry auto-prompts on multi-bird and works manually -> certainty selection (Confirm/Possible/Skip) -> GPS toggle works -> duplicates detected -> save creates correct outings with state/country codes and proper certainty values.
@@ -896,227 +894,104 @@ Switch the iOS system between Light and Dark -> representative screens and nativ
 
 ## Phase 9 - iOS-Native Enhancements
 
-Features leveraging iOS platform APIs that the web cannot access. These go beyond parity - they make the iOS app feel like a first-class citizen on the platform.
+Phase 9 contains the native platform work required for the iPhone 1.0 launch. Sharing, shortcuts, context actions, camera capture, and the server-authoritative SwiftData read cache are implemented.
 
-- [ ] for the species/outing detail view can we also have liquid glass controls instead of the tab bar at the bottom? so like for speciies the liquid glass controls could show ebird/wikipedia/copy name, and for outings the liquid glass controls could show edit outing, view on map, delete outing, etc. It would be a nice way to unify the UI and be more ios native instead of embedding those controls in the scroll view (list?) content
+### 9.1 Sharing and Export
 
-### Category A: Sharing & Export
+#### 9.1.1 Share Extension
 
-#### A1. Share Extension
+- [x] Accept single or multiple images from other apps
+- [x] Stage image bytes in the App Group for import on the main app's next activation
+- [x] Preserve ordering, EXIF, and GPS while keeping authentication and identification in the main app
+- [x] Complete the extension normally and ask the user to open WingDex; do not depend on a Share Extension launching its containing app
 
-- Share photos directly to the WingDex AddPhotos flow via a Share Extension (ShareLink API), support single or multiple photos
-- Share species or outing details via the system share sheet with deep links to the app
-- Implement via `ShareLink` for in-app sharing and a custom Share Extension target for receiving shared content from other apps
-- For incoming shares, parse the shared content (images, text) and pre-fill the AddPhotos flow or create a new outing/species entry as appropriate
-- Example: user shares a bird photo from the Photos app -> "Share to WingDex" -> opens AddPhotos with that photo pre-loaded for identification
+#### 9.1.2 System Sharing and Export
 
-#### A2. Home Screen Quick Actions (3D Touch / Long Press on App Icon)
+- [x] Share species and outing summaries through the system share sheet
+- [x] Export sightings and outings as CSV files
+- [x] Share or save species images with original image bytes preserved through PhotoKit
+- [x] Clean temporary share/export files after the activity completes
 
-- "Upload Photos" quick action -> launches straight into AddPhotos flow sheet
-- "View WingDex" quick action -> opens the WingDex tab
-- Implement via `UIApplicationShortcutItem` entries in Info.plist or programmatic dynamic shortcuts
+### 9.2 Home Screen Actions
 
-### Category B: Context Menus & Swipe Actions
+- [x] "Take Photo" opens the camera directly
+- [x] "Upload Photos" opens the system photo library directly
+- [x] "View WingDex" opens the WingDex tab
+- [x] Register all three as static `UIApplicationShortcutItem` entries
 
-#### B1. Context Menus (Long-Press)
+### 9.3 Context Menus and Swipe Actions
 
-- Species row (WingDex, Home, Outing Detail): "View Details", "Share", "Open in eBird", "Open in Wikipedia"
-- Outing row (Outings, Home): "Edit Location", "Export eBird CSV", "Delete Outing", "Share Summary"
-- Species detail hero image: "Share Image", "Save to Photos" (via `UIImageWriteToSavedPhotosAlbum`)
-- Photo in AddPhotos flow: "Remove Photo", "Re-identify"
-- Implemented via SwiftUI `.contextMenu { }` modifier
+#### 9.3.1 Context Menus
 
-#### B2. Swipe Actions on List Rows
+- [x] Species: view details, share, open in eBird, open in Wikipedia
+- [x] Outing: edit location, export eBird CSV, delete, share summary
+- [x] Species hero image: share image, save to Photos
+- [x] AddPhotos photo: remove photo
+- [x] Mirror custom UIKit context-menu commands with accessibility actions
 
-- Outing row: leading swipe "Export" (eBird CSV), trailing swipe "Delete" (with confirmation)
-- Species in outing detail: trailing swipe "Remove" (marks as rejected)
-- Passkey row in passkey management: trailing swipe "Delete"
-- Implemented via `.swipeActions(edge:)` modifier
+#### 9.3.2 Swipe Actions
 
-### Category C: App Intents, Shortcuts & Siri
+- [x] Outing: leading export and trailing delete with confirmation
+- [x] Outing species: trailing remove
+- [x] Passkey: trailing delete
 
-#### C1. App Intents (Shortcuts App Integration)
+### 9.4 App Intents, Shortcuts, and Siri
 
-- `UploadPhotosIntent` - open the AddPhotos flow
-- `ViewWingDexIntent` - open WingDex tab, optionally with a species name filter parameter
-- `ViewOutingsIntent` - open Outings tab
-- `GetSpeciesCountIntent` - return the user's total species count as an integer (useful for Shortcuts automations)
-- `GetRecentSpeciesIntent` - return a list of recent species names
-- `ExportSightingsIntent` - trigger CSV export and return the file
-- All implemented via the AppIntents framework with `AppShortcutsProvider`
+#### 9.4.1 App Intents
 
-#### C2. Siri Phrases (App Shortcuts)
+- [x] `UploadPhotosIntent`
+- [x] `TakePhotoIntent`
+- [x] `ViewWingDexIntent`
+- [x] `ViewOutingsIntent`
+- [x] `GetSpeciesCountIntent`
+- [x] `GetRecentSpeciesIntent`
+- [x] `GetLastSpeciesIntent`
+- [x] `ExportSightingsIntent`
+- [x] Use `AppShortcutsProvider` and iOS 26 foreground intent modes
 
-- "Show my WingDex" -> opens WingDex tab
-- "How many birds have I seen?" -> returns species count via `GetSpeciesCountIntent`
-- "Upload bird photos" -> opens AddPhotos flow
-- "What was my last bird?" -> returns the most recently observed species name
-- Registered via `AppShortcutsProvider.appShortcuts` with natural language phrases
+#### 9.4.2 Siri and Action Button
 
-#### C3. Action Button Support
+- [x] Register natural-language App Shortcut phrases for navigation, photo entry, counts, recent species, and export
+- [x] Expose Upload Photos and Take Photo for assignment through the system Shortcut Action button option
 
-- Register `UploadPhotosIntent` as an Action button action so users can assign "Upload Photos" to the hardware Action button on iPhone 15 Pro+
+### 9.5 Camera Capture
 
-### Category D: Spotlight & Search
+- [x] Offer Take Photo beside Choose from Library
+- [x] Use `UIImagePickerController` with `.camera` only when the source is available
+- [x] Request current when-in-use location while camera capture is active
+- [x] Attach best-effort capture location and timestamp to the processed photo
+- [x] Feed captures into the existing extraction, duplicate detection, clustering, and identification pipeline
 
-#### D1. Spotlight Indexing
+### 9.6 Local Data Cache
 
-- Index all species in the user's WingDex as `CSSearchableItem` entries:
-  - Title: common name, description: scientific name + stats ("X seen, Y outings, first seen {date}")
-  - Thumbnail: Wikimedia bird image (cached locally)
-  - Content type: species/birding
-- Index all outings: title = location name, description = date + species list preview
-- Update index incrementally on data changes (add/delete outing, new species)
-- Deep link from Spotlight search result directly to species detail or outing detail view
+Spotlight is not a dependency. This is a server-authoritative read cache for launch speed and offline browsing, not an offline mutation system.
 
-#### D2. NSUserActivity Donations
+- [x] Cache outings, observations, dex entries, and the photo metadata/thumbnails needed for offline browsing with SwiftData; do not persist every full-resolution image by default
+- [x] Partition cached data by account ID and never display one account's cache for another account
+- [x] Render the current account's cache immediately, then reconcile it with a successful server response
+- [x] Replace the cache atomically after successful full refreshes and relevant mutations
+- [x] Clear in-memory and persisted account data on sign-out, account deletion, delete-all-data, and rejected-session transitions
+- [x] Define the initial schema and migration strategy before shipping the first persistent store
+- [x] Treat stale cached data as read-only and visibly report refresh failures without presenting the cache as current
+- [x] Test cold launch, offline launch, first launch without cache, corrupt-store recovery, schema migration, logout cleanup, and cross-account isolation
 
-- When user views a species detail, donate an `NSUserActivity` for "viewed species"
-- When user views an outing detail, donate an `NSUserActivity` for "viewed outing"
-- Powers "Siri Suggestions" on the Lock Screen and in system Search (frequently viewed species surface automatically)
+### 9.7 Verification
 
-#### D3. Handoff
+- [x] Phase 9 foundation tests cover App Intents metadata, routing, exports, and incoming-share queue behavior
+- [x] Home Screen quick actions register and route to their expected destinations
+- [x] Upload Photos presents the system photo library directly in Simulator
+- [x] Share Extension import preserves shared image bytes and metadata
+- [x] Context menus, system sharing, destructive confirmations, and swipe actions render in Simulator
+- [x] Shortcuts discovers all eight WingDex actions
+- [x] Raw View Outings shortcut opens the Outings tab
+- [x] Simulator reports camera unavailability without constructing a camera picker
+- [x] SwiftData cache unit/integration tests pass
+- [x] Simulator: cached launch and offline browsing
+- [ ] Physical iPhone: camera and location allow/deny paths, capture metadata, and identification
+- [ ] Physical iPhone: Siri phrases, Action button assignment, Photos save permission, and Share Extension handoff
+- [ ] Complete the Phase 10 accessibility final pass
 
-- Set `NSUserActivity` with `isEligibleForHandoff = true` for the current view
-- Enables continuing the current view on another Apple device (future-proofs for iPad/Mac Catalyst)
-
-### Category E: Widgets (WidgetKit)
-
-#### E1. Species Count Widget (Small)
-
-- Large species count number displayed in the warm palette color scheme
-- Tap opens the WingDex tab
-- Timeline provider: update every 4 hours or on app data change via `WidgetCenter.shared.reloadTimelines`
-
-#### E2. Recent Species Widget (Medium)
-
-- Grid of 2-4 recently observed species with Wikimedia thumbnails and common names
-- Tap on an individual species opens the species detail view
-- Timeline: updates on new species observation or every 4 hours
-
-#### E3. Recent Outing Widget (Medium)
-
-- Displays the most recent outing: location name, date, species count, and a mini species name list
-- Tap opens the outing detail view
-
-#### E4. Lock Screen Widgets (Accessory)
-
-- Accessory Circular: species count as a large number
-- Accessory Rectangular: "X species - Last: {species name}"
-- Accessory Inline: "WingDex: X species"
-
-#### E5. Control Center Control
-
-- "Upload Photos" button in Control Center (WidgetKit Controls API, iOS 18+)
-- Opens the app directly to the AddPhotos flow
-
-### Category F: Camera Integration
-
-#### F1. Direct Camera Capture
-
-- Add a "Take Photo" option alongside "Choose from Library" in the photo selection step of AddPhotos
-- Implement via `UIImagePickerController` with `.camera` source type, or the modern Camera framework
-- GPS: Request location permission and use `CLLocationManager` for the capture location (since camera photos don't have EXIF GPS by default in the picker)
-- Timestamp: Use the capture time as the EXIF time
-- The captured photo feeds into the same extraction -> clustering -> identification pipeline as library photos
-
-### Category G: Notifications & Background
-
-#### G1. Local Notifications
-
-- Weekly summary push: "You saw X new species this week!" (only if `newSpeciesCount > 0`)
-- Milestone notifications: "Congratulations! You reached 50/100/200/500 species!"
-- User-configurable: on/off toggle in Settings
-- Scheduled via `UNUserNotificationCenter` with appropriate triggers
-
-#### G2. Background App Refresh
-
-- Register a `BGAppRefreshTask` to periodically sync data from the server
-- On sync completion: update widget timelines (`WidgetCenter.shared.reloadAllTimelines`), update Spotlight index
-- Keeps widgets and Spotlight results current even when the app hasn't been opened recently
-
-### Category H: Map Enhancements
-
-#### H1. Full Map View (All Outings)
-
-- Dedicated full-screen map showing ALL outings as annotation pins
-- Cluster annotations when zoomed out (`MKClusterAnnotation`)
-- Tap a pin or cluster -> show outing info callout -> tap callout to navigate to outing detail
-- Filter controls: by date range, by species (show only outings containing a specific species)
-- Accessible from the Outings tab via a "Map" toggle or button
-
-#### H2. Species Range Map
-
-- On the species detail view, show a map of all sighting locations for that species
-- Display sighting count per location cluster
-- Gives the user a visual sense of where they've seen this species
-
-### Category I: TipKit Onboarding
-
-#### I1. Contextual Tips
-
-- First launch / empty state: "Upload your bird photos to get started" (points to the + button)
-- First species viewed: "Tap a species to see details and sighting history"
-- WingDex sort: "Use sort options to organize your species list by date, count, name, or family"
-- AddPhotos crop: "The AI works best with clear, centered bird photos"
-- Settings passkey: "Add a passkey for secure, passwordless sign-in on all your devices"
-- Implemented via TipKit framework. Tips auto-dismiss after the user performs the hinted action
-
-### Category J: Visual Intelligence (iOS 26)
-
-#### J1. Visual Intelligence Integration
-
-- Register species from the user's WingDex as searchable entities for Visual Intelligence
-- When the user points the camera at a bird (via Camera Control or Visual Intelligence), show "Search in WingDex" as a result option if a matching species is found in their data
-- Implemented via `IntentValueQuery` protocol conformance on the species entity type
-- Returns matching species with name, thumbnail, and sighting stats for the search results
-
-### Category K: Accessibility
-
-#### K1. VoiceOver
-
-- Descriptive labels on all interactive elements: species images ("Photo of American Robin"), stats ("Species count: 42"), buttons ("Upload and Identify photos")
-- Custom accessibility actions on complex rows (e.g., species row: "View details", "Share", "Open in eBird")
-- Group related elements with appropriate traits
-
-#### K2. Dynamic Type
-
-- Verify all text scales correctly at every Dynamic Type size (from xSmall to AX5)
-- Test layout at the largest accessibility sizes - ensure nothing overflows, truncates badly, or overlaps
-- Use `.dynamicTypeSize(...)` range if specific views break at extreme sizes
-
-#### K3. Reduce Motion
-
-- Respect `UIAccessibility.isReduceMotionEnabled` throughout the app
-- When enabled: skip confetti animation (use a simple fade-in banner instead), reduce map animations, minimize spring animations
-- When enabled: tab transitions and sheet presentations should not use custom animations
-
-### Category L: Data & Sync
-
-#### L1. Local Cache (SwiftData)
-
-- Cache all user data (outings, observations, dex entries) locally using SwiftData for instant launch and offline browsing
-- On app launch: display cached data immediately, then fetch fresh data from the API in the background
-- Conflict resolution: server wins (server is the authoritative data source)
-- Cache invalidation: refresh after mutations (add/delete/edit) and on pull-to-refresh
-
-#### L2. Offline Mutation Queue
-
-- When the device is offline, queue mutations (create outing, delete observation, etc.) locally
-- When connectivity returns, replay the queue against the server in order
-- Show a "pending" indicator on queued items (e.g., a small clock icon or subtle banner)
-- Handle conflicts if server state diverged while offline
-
-### Category M: iPad & Multi-Window (future)
-
-#### M1. iPad Adaptive Layout
-
-- Use `NavigationSplitView` for two-column layout on iPad: list in the sidebar, detail in the main content area
-- Full-width content takes advantage of the larger screen
-
-#### M2. Multi-Window Support
-
-- `UIScene`-based multi-window support so users can compare species or outings in side-by-side windows on iPad
+> On the iOS 26.5 Simulator, a preconfigured App Shortcut tile can fail with `Couldn't find AppShortcutsProvider` even when the provider, metadata, and raw intent are valid. Test the raw custom-shortcut action in Simulator and complete the preconfigured-tile/Siri smoke tests on a physical device.
 
 ---
 
@@ -1124,14 +999,18 @@ Features leveraging iOS platform APIs that the web cannot access. These go beyon
 
 ### 10.1: Error Handling Audit
 
-Completed in Phase 8.7. Phase 10 should perform only the final release-build and App Store submission audit for error copy and accessibility.
+- [x] Complete the implementation audit in Phase 8.7
+- [ ] Perform the final release-build and App Store submission audit for error copy and accessibility
 
 ### 10.2: Accessibility Final Pass
 
-- VoiceOver audit on every screen
-- Dynamic Type verification at largest sizes
-- Large Content Viewer support for key metrics (species count, outing stats)
-- Color contrast check (WCAG AA minimum)
+- [ ] Accessibility Inspector audit has no actionable errors on representative screens
+- [ ] VoiceOver completes authentication, AddPhotos, navigation, menus, sheets, errors, and destructive confirmations on a physical iPhone
+- [ ] Custom context-menu accessibility actions match their visible commands
+- [ ] Dynamic Type works from xSmall through AX5 without overlap, blocked actions, or harmful truncation
+- [ ] Large Content Viewer supports key metrics such as species count and outing stats
+- [ ] Reduce Motion removes or simplifies all custom motion, including celebrations and parallax/spring effects
+- [ ] Color contrast meets WCAG AA and status never relies on color alone
 
 ### 10.3: App Icon & Launch Screen
 
@@ -1140,9 +1019,9 @@ Completed in Phase 8.7. Phase 10 should perform only the final release-build and
 
 ### 10.4: TestFlight
 
-- Internal testing build
-- Fix any remaining signing/provisioning issues (register physical test devices or use App Store Connect automatic distribution)
-- First round of real-device testing on various iPhone sizes
+- [ ] Internal testing build
+- [ ] Fix any remaining signing/provisioning issues (register physical test devices or use App Store Connect automatic distribution)
+- [ ] First round of real-device testing on various iPhone sizes
 
 ### 10.5: App Store Listing
 
@@ -1154,9 +1033,79 @@ Completed in Phase 8.7. Phase 10 should perform only the final release-build and
 
 ### 10.6: App Store Submission
 
-- Review Apple's App Store Review Guidelines for compliance
-- Ensure demo account or demo data available for reviewer
-- Submit for review
+- [ ] Review Apple's App Store Review Guidelines for compliance
+- [ ] Ensure demo account or demo data available for reviewer
+- [ ] Submit for review
+
+---
+
+## Phase 11 - Post-1.0 Native Enhancements
+
+Phase 11 begins after the iPhone 1.0 App Store launch. Each numbered area should move to a focused repository issue before implementation. Recheck current Apple documentation and installed SDK interfaces when work starts.
+
+### 11.1 Offline Mutation Queue
+
+- [ ] Define idempotency keys, ordering, retries, conflict policy, and account-switch behavior before implementation
+- [ ] Persist queued mutations and replay them when connectivity returns
+- [ ] Show visible pending and failed states without presenting queued changes as server-confirmed
+- [ ] Add server versioning or precondition support where last-write-wins would lose user data
+
+### 11.2 Widgets and Control Center
+
+- [ ] Species count widget
+- [ ] Recent species widget with individual species routing
+- [ ] Recent outing widget
+- [ ] Lock Screen accessory widgets
+- [ ] Upload Photos Control Center control
+- [ ] Design App Group data sharing and timeline reloads together with the Phase 9 SwiftData read cache
+
+### 11.3 Spotlight, Suggestions, and Handoff
+
+- [ ] Index species and outings with `CSSearchableItem`
+- [ ] Route Spotlight results to species or outing detail
+- [ ] Donate viewed-species and viewed-outing `NSUserActivity` instances for system suggestions
+- [ ] Add Handoff only when WingDex ships another compatible Apple-platform app
+
+### 11.4 Notifications and Background Refresh
+
+#### 11.4.1 Local Notifications
+
+Spotlight and Background App Refresh are not dependencies. Notifications are derived from the latest successful foreground sync/import and must not imply that WingDex fetched newer data while suspended.
+
+- [ ] Add a Settings toggle, default off, and request notification authorization only after an explicit user action
+- [ ] Define weekly summary eligibility from the latest known data and schedule or replace at most one pending summary
+- [ ] Define meaningful species milestones and persist per-account delivery state to prevent duplicate notifications
+- [ ] Recompute notification state after successful refreshes, imports, and AddPhotos saves
+- [ ] Remove pending WingDex notifications when disabled, signed out, switched accounts, or account data is deleted
+- [ ] Handle denied/provisional authorization without blocking app workflows or repeatedly prompting
+- [ ] Test eligibility, deduplication, account isolation, scheduling replacement, disable/sign-out cleanup, and denied authorization
+
+#### 11.4.2 Background App Refresh
+
+- [ ] Add only when widgets or Spotlight provide a concrete need for opportunistic refresh beyond the Phase 9 cache
+- [ ] Treat `BGAppRefreshTask` as opportunistic, never periodic or correctness-critical
+- [ ] Register during launch, resubmit after each run, handle expiration, and persist useful results before completion
+- [ ] Keep foreground refresh authoritative and never promise background freshness
+
+### 11.5 Map Enhancements
+
+- [ ] Full outings map with annotation clustering and date/species filters
+- [ ] Species sighting map with location clusters and counts
+
+### 11.6 Contextual Onboarding
+
+- [ ] Use TipKit only after launch analytics identify concrete discovery problems
+- [ ] Candidate tips: first upload, species details, WingDex sorting, crop guidance, and passkey setup
+
+### 11.7 Visual Intelligence
+
+- [ ] Reassess the current Visual Intelligence integration API and product fit after 1.0
+- [ ] If supported, expose searchable WingDex species entities with image and sighting context
+
+### 11.8 iPad and Multi-Window
+
+- [ ] Adopt `NavigationSplitView` for an iPad two-column layout
+- [ ] Add scene-based multi-window support for comparing species or outings
 
 ---
 
@@ -1167,11 +1116,12 @@ Completed in Phase 8.7. Phase 10 should perform only the final release-build and
 | `swift-openapi-runtime` | Type-safe API response handling |
 | `swift-openapi-urlsession` | URLSession transport for API client |
 | `KeychainAccess` | Secure token storage |
-| SwiftData (built-in) | Local cache for offline browsing |
-| WidgetKit (built-in) | Home screen and Lock Screen widgets |
+| SwiftData (built-in) | Server-authoritative local read cache for launch speed and offline browsing |
+| UserNotifications (built-in, Phase 11) | Opt-in local summaries and milestones |
+| WidgetKit (built-in, Phase 11) | Home screen, Lock Screen, and Control Center widgets |
 | AppIntents (built-in) | Siri, Shortcuts, Spotlight integration |
-| TipKit (built-in) | Contextual onboarding tips |
-| ActivityKit (built-in) | Live Activities (future, if needed) |
+| TipKit (built-in, Phase 11) | Contextual onboarding tips |
+| ActivityKit (built-in, future) | Live Activities if a concrete post-launch use case emerges |
 
 No third-party UI libraries - pure SwiftUI + system frameworks.
 
@@ -1218,8 +1168,8 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | `FunNames.swift` | ✅ Done | Bird nickname generator ported from web |
 | `EBirdImportView.swift` | ✅ Done | eBird import sheet with timezone picker |
 | `ConfettiModifier.swift` | New | Confetti animation modifier |
-| Widget extension | New | WidgetKit extension with species count, recent species, outing widgets |
-| App Intents | New | AppShortcutsProvider, intent definitions |
+| Widget extension | Phase 11 | WidgetKit extension with species count, recent species, and outing widgets |
+| App Intents | ✅ Done | `AppShortcutsProvider` and intent definitions |
 
 ---
 
@@ -1240,5 +1190,6 @@ No third-party UI libraries - pure SwiftUI + system frameworks.
 | 6 | **Species Detail & WingDex Parity** (eBird lookup, badges, count, notes, family sort) | ✅ Done |
 | 7 | **Celebrations & Feedback** (confetti, lifer toast, haptics) | ✅ Done |
 | 8 | **Appearance & Session Hardening** (system appearance audit, 401/session handling, native errors, observability) | ✅ Done |
-| 9 | **iOS-Native Enhancements** (sharing, context menus, shortcuts, Spotlight, widgets, camera, tips, etc.) | Not started |
+| 9 | **iOS-Native Enhancements** (sharing, context menus, shortcuts, camera, local cache) | ⏳ In Progress - cache remains |
 | 10 | **Polish & App Store** (errors, accessibility, icon, TestFlight, listing, submission) | Not started |
+| 11 | **Post-1.0 Native Enhancements** (offline mutations, widgets, Spotlight, background refresh, maps, onboarding, Visual Intelligence, iPad) | Deferred until after 1.0 |

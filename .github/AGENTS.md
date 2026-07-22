@@ -17,6 +17,8 @@ Prefer up-to-date sources over training data. Search for error messages, check o
 
 ## iOS UI Verification
 
+For any iOS implementation, review, or validation task, check the latest official Apple documentation and the interfaces in the installed Xcode SDK before deciding on APIs, availability, lifecycle behavior, entitlements, privacy keys, background execution, or App Store requirements. Treat repository patterns and model knowledge as secondary when they conflict with current Apple guidance. Record any simulator or device limitation that prevents verification.
+
 For changes under `ios/WingDex/Views/` or shared iOS UI code, inspect the corresponding web implementation under `src/components/`, `src/styles/`, and `src/index.css` before editing. Preserve feature, state, copy, content order, and palette parity with the web source of truth while using native SwiftUI and Apple HIG conventions rather than pixel-for-pixel cloning.
 
 Before styling a new iOS control, find an existing control with the same function and reuse its component, modifier, symbol, label structure, font, spacing, and interaction pattern. Prefer styling in this order:
