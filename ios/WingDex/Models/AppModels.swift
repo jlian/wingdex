@@ -6,7 +6,7 @@ import Foundation
 // and manual API calls. When the generated OpenAPI client is wired up,
 // these may be replaced by or mapped from the generated types.
 
-struct Outing: Codable, Identifiable, Hashable {
+struct Outing: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let userId: String
     let startTime: String
@@ -26,7 +26,7 @@ struct Outing: Codable, Identifiable, Hashable {
     let createdAt: String
 }
 
-struct Photo: Codable, Identifiable, Hashable {
+struct Photo: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let outingId: String
     let dataUrl: String
@@ -36,20 +36,20 @@ struct Photo: Codable, Identifiable, Hashable {
     let fileHash: String
     let fileName: String
 
-    struct GPS: Codable, Hashable {
+    struct GPS: Codable, Hashable, Sendable {
         let lat: Double
         let lon: Double
     }
 }
 
-enum ObservationStatus: String, Codable, CaseIterable {
+enum ObservationStatus: String, Codable, CaseIterable, Sendable {
     case confirmed
     case possible
     case pending
     case rejected
 }
 
-struct BirdObservation: Codable, Identifiable, Hashable {
+struct BirdObservation: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let outingId: String
     let speciesName: String
@@ -61,7 +61,7 @@ struct BirdObservation: Codable, Identifiable, Hashable {
     var notes: String
 }
 
-struct DexEntry: Codable, Identifiable, Hashable {
+struct DexEntry: Codable, Identifiable, Hashable, Sendable {
     let speciesName: String
     let firstSeenDate: String
     let lastSeenDate: String
@@ -79,14 +79,14 @@ struct DexEntry: Codable, Identifiable, Hashable {
 
 // MARK: - API Response Types
 
-struct AllDataResponse: Codable {
+struct AllDataResponse: Codable, Sendable {
     let outings: [Outing]
     let photos: [Photo]
     let observations: [BirdObservation]
     let dex: [DexEntry]
 }
 
-struct DexUpdateResponse: Codable {
+struct DexUpdateResponse: Codable, Sendable {
     let dexUpdates: [DexEntry]
 }
 

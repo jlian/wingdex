@@ -21,6 +21,7 @@ final class AuthService: @unchecked Sendable {
     var userEmail: String?
     var userImage: String?
     var signInMessage: String?
+    private(set) var discardedAccountID: String?
 
     private var sessionToken: String?
     /// Signed session token (includes HMAC suffix) for cookie-based auth.
@@ -244,7 +245,15 @@ final class AuthService: @unchecked Sendable {
         return signInMessage
     }
 
+    func consumeDiscardedAccountID() -> String? {
+        defer { discardedAccountID = nil }
+        return discardedAccountID
+    }
+
     private func clearSession() {
+        if let userId {
+            discardedAccountID = userId
+        }
         sessionToken = nil
         signedSessionToken = nil
         sessionExpiry = nil
@@ -552,6 +561,18 @@ final class AuthService: @unchecked Sendable {
         return token
     }
 
+    func validToken(forAccountID expectedAccountID: String?) throws -> String {
+        if let expectedAccountID,
+           !Self.isSameAccount(currentAccountID: userId, expectedAccountID: expectedAccountID) {
+            throw AuthError.notAuthenticated
+        }
+        return try validToken()
+    }
+
+    nonisolated static func isSameAccount(currentAccountID: String?, expectedAccountID: String) -> Bool {
+        currentAccountID == expectedAccountID
+    }
+
     private func isCurrentSession(token: String) -> Bool {
         Self.isSameSession(currentToken: sessionToken, initiatingToken: token)
     }
@@ -722,6 +743,7 @@ final class AuthService: @unchecked Sendable {
         guard let expiry = formatter.date(from: expiryString),
               expiry > Date.now
         else {
+            discardedAccountID = keychain[Self.userIdKey]
             signInMessage = "Your session expired. Please sign in again."
             clearSession()
             return

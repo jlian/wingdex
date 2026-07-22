@@ -39,6 +39,33 @@
 	<string>WingDex may save captured bird photos to your library when you choose to keep them.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>WingDex uses your photo library so you can choose bird photos to identify.</string>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>camera.fill</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Take Photo</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>app.wingdex.quick-action.take-photo</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>photo.on.rectangle</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Upload Photos</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>app.wingdex.quick-action.upload-photos</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>bird</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>View WingDex</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>app.wingdex.quick-action.view-wingdex</string>
+		</dict>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

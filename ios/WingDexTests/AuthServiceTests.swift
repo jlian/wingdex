@@ -130,6 +130,11 @@ final class AuthCallbackParsingTests: XCTestCase {
 // MARK: - Session Validation Tests
 
 final class SessionValidationTests: XCTestCase {
+    func testExpectedAccountMustMatchCurrentAccount() {
+        XCTAssertTrue(AuthService.isSameAccount(currentAccountID: "account-a", expectedAccountID: "account-a"))
+        XCTAssertFalse(AuthService.isSameAccount(currentAccountID: "account-b", expectedAccountID: "account-a"))
+    }
+
     func testNullSuccessfulSessionIsRejected() {
         XCTAssertTrue(AuthService.sessionValidationRejects(statusCode: 200, data: Data("null".utf8)))
     }
@@ -171,6 +176,16 @@ final class SessionValidationTests: XCTestCase {
 
         XCTAssertEqual(auth.consumeSignInMessage(), "Your session expired. Please sign in again.")
         XCTAssertNil(auth.consumeSignInMessage())
+    }
+
+    @MainActor
+    func testDiscardedAccountIDIsConsumedOnce() {
+        let auth = AuthService()
+        auth.userId = "account-a"
+        auth.signOut()
+
+        XCTAssertEqual(auth.consumeDiscardedAccountID(), "account-a")
+        XCTAssertNil(auth.consumeDiscardedAccountID())
     }
 }
 

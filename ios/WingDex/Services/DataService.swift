@@ -3,12 +3,26 @@ import os
 
 private let log = Logger(subsystem: Config.bundleID, category: "DataService")
 
+protocol DataStoreService: Sendable {
+    func fetchAllData() async throws -> AllDataResponse
+    func deleteOuting(id: String) async throws -> DexUpdateResponse
+    func updateOuting(id: String, fields: OutingUpdate) async throws -> Outing
+    func rejectObservations(ids: [String]) async throws -> DataService.ObservationsResponse
+    func searchSpecies(query: String, limit: Int) async throws -> [DataService.SpeciesSearchResult]
+    func createObservations(_ observations: [BirdObservation]) async throws -> DataService.ObservationsResponse
+    func exportOutingCSV(outingId: String) async throws -> Data
+    func importEBirdCSV(_ csvData: Data) async throws -> [String]
+    func confirmImport(previewIds: [String]) async throws -> DataService.ImportConfirmResponse
+    func clearAllData() async throws
+}
+
 /// Handles all REST API communication with the WingDex backend.
 ///
 /// Every endpoint attaches the session token via `Authorization: Bearer` header.
 /// The server middleware translates this to a session cookie for Better Auth.
-final class DataService: Sendable {
+final class DataService: DataStoreService, Sendable {
     private let auth: AuthService
+    private let expectedAccountID: String?
 
     /// Ephemeral session that never sends or stores cookies.
     /// Prevents stale cookies from conflicting with Bearer token auth.
@@ -19,8 +33,9 @@ final class DataService: Sendable {
         return URLSession(configuration: config)
     }()
 
-    init(auth: AuthService) {
+    init(auth: AuthService, expectedAccountID: String? = nil) {
         self.auth = auth
+        self.expectedAccountID = expectedAccountID
     }
 
     // MARK: - Bulk Fetch
@@ -32,8 +47,9 @@ final class DataService: Sendable {
 
     // MARK: - Outings
 
-    func deleteOuting(id: String) async throws {
-        try await delete("api/data/outings/\(id)")
+    func deleteOuting(id: String) async throws -> DexUpdateResponse {
+        let data = try await delete("api/data/outings/\(id)")
+        return try JSONDecoder().decode(DexUpdateResponse.self, from: data)
     }
 
     func updateOuting(id: String, fields: OutingUpdate) async throws -> Outing {
@@ -125,7 +141,7 @@ final class DataService: Sendable {
         try await post("api/data/photos", body: data)
     }
 
-    struct ObservationsResponse: Codable {
+    struct ObservationsResponse: Codable, Sendable {
         let observations: [BirdObservation]?
         let dexUpdates: [DexEntry]?
     }
@@ -203,9 +219,9 @@ final class DataService: Sendable {
         let previews: [ImportPreview]
     }
 
-    struct ImportConfirmResponse: Codable {
+    struct ImportConfirmResponse: Codable, Sendable {
         let imported: ImportedCounts
-        struct ImportedCounts: Codable {
+        struct ImportedCounts: Codable, Sendable {
             let outings: Int
             let newSpecies: Int
         }
@@ -325,7 +341,7 @@ final class DataService: Sendable {
     }
 
     private func attachAuth(_ request: inout URLRequest) async throws -> String {
-        let token = try await auth.validToken()
+        let token = try await auth.validToken(forAccountID: expectedAccountID)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
         AuthenticatedRequest.instrument(&request)

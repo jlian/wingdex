@@ -7,7 +7,7 @@ struct OutingsView: View {
     @State private var searchText = ""
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
-    @State private var contextMenuOuting: Outing?
+    @State private var actionDestination: OutingActionDestination?
 
     // MARK: - Sort Options
 
@@ -62,7 +62,10 @@ struct OutingsView: View {
 
     var body: some View {
         NavigationStack {
-            rootContent
+            VStack(spacing: 0) {
+                CachedDataNotice()
+                rootContent
+            }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("Outings")
@@ -121,8 +124,11 @@ struct OutingsView: View {
                 .navigationDestination(for: Outing.self) { outing in
                     OutingDetailView(outingId: outing.id)
                 }
-                .navigationDestination(item: $contextMenuOuting) { outing in
-                    OutingDetailView(outingId: outing.id)
+                .navigationDestination(item: $actionDestination) { destination in
+                    OutingDetailView(
+                        outingId: destination.outing.id,
+                        beginsLocationEditing: destination.beginsLocationEditing
+                    )
                 }
         }
     }
@@ -184,25 +190,21 @@ struct OutingsView: View {
             NavigationLink(value: outing) {
                 OutingRow(outing: outing, store: store)
             }
-            .contextMenu {
-                Button {
-                    contextMenuOuting = outing
-                } label: {
-                    Label("View Outing", systemImage: "binoculars")
+            .outingRowActions(
+                outing: outing,
+                onView: {
+                    actionDestination = OutingActionDestination(
+                        outing: outing,
+                        beginsLocationEditing: false
+                    )
+                },
+                onEditLocation: {
+                    actionDestination = OutingActionDestination(
+                        outing: outing,
+                        beginsLocationEditing: true
+                    )
                 }
-                if let lat = outing.lat, let lon = outing.lon {
-                    Button {
-                        openInMaps(outing: outing, lat: lat, lon: lon)
-                    } label: {
-                        Label("View in Maps", systemImage: "map")
-                    }
-                }
-            } preview: {
-                NavigationStack {
-                    OutingDetailView(outingId: outing.id)
-                }
-                .environment(store)
-            }
+            )
         }
         .listStyle(.plain)
         .listSectionSeparator(.hidden, edges: .top)

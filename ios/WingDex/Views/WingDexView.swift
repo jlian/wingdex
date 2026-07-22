@@ -3,8 +3,8 @@ import SwiftUI
 struct WingDexView: View {
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
+    @Environment(AppNavigationModel.self) private var navigation
     @Environment(\.showSettings) private var showSettings
-    @State private var searchText = ""
     @State private var sortField: DexSortField = .date
     @State private var sortAscending = false
     @State private var contextMenuSpecies: DexEntry?
@@ -57,16 +57,21 @@ struct WingDexView: View {
             }
         }
 
-        if searchText.isEmpty { return sorted }
-        let query = searchText.lowercased()
+        if navigation.wingDexFilter.isEmpty { return sorted }
+        let query = navigation.wingDexFilter.lowercased()
         return sorted.filter { $0.speciesName.lowercased().contains(query) }
     }
 
     // MARK: - Body
 
     var body: some View {
+        @Bindable var navigation = navigation
+
         NavigationStack {
-            rootContent
+            VStack(spacing: 0) {
+                CachedDataNotice()
+                rootContent
+            }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .background(Color.pageBg.ignoresSafeArea())
                 .navigationTitle("WingDex")
@@ -82,7 +87,7 @@ struct WingDexView: View {
                     Text(store.error?.message ?? "Something went wrong. Try again.")
                 }
                 .searchable(
-                    text: $searchText,
+                    text: $navigation.wingDexFilter,
                     placement: .navigationBarDrawer(displayMode: .automatic),
                     prompt: "Search species"
                 )
@@ -213,12 +218,20 @@ struct WingDexView: View {
                 Button {
                     contextMenuSpecies = entry
                 } label: {
-                    Label("View Species", systemImage: "bird")
+                    Label("View Details", systemImage: "bird")
                 }
-                Button {
-                    UIPasteboard.general.string = entry.speciesName
-                } label: {
-                    Label("Copy Name", systemImage: "doc.on.doc")
+                ShareLink(item: SharePayload.species(entry)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                if let url = getEbirdURL(for: entry.speciesName) {
+                    Link(destination: url) {
+                        Label("Open in eBird", systemImage: "globe")
+                    }
+                }
+                if let url = getWikipediaURL(for: entry.wikiTitle) {
+                    Link(destination: url) {
+                        Label("Open in Wikipedia", systemImage: "book")
+                    }
                 }
             } preview: {
                 // WHY NavigationStack + .environment(store): context menu previews render
@@ -243,11 +256,13 @@ struct WingDexView: View {
     PreviewTabs(.wingdex) { WingDexView() }
         .environment(AuthService())
         .environment(previewStore())
+        .environment(AppNavigationModel())
 }
 
 #Preview("WingDex - Empty") {
     PreviewTabs(.wingdex) { WingDexView() }
         .environment(AuthService())
         .environment(previewStore(empty: true))
+        .environment(AppNavigationModel())
 }
 #endif

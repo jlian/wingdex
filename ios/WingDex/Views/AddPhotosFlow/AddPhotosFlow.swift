@@ -101,7 +101,14 @@ struct AddPhotosFlow: View {
                     newSpeciesCount: viewModel.newSpeciesNames.count,
                     speciesNames: viewModel.newSpeciesNames
                 )
+            } else if step == .selectPhotos,
+                      viewModel.clusters.isEmpty,
+                      !viewModel.showDuplicateConfirm {
+                dismiss()
             }
+        }
+        .onChange(of: viewModel.flowDismissalRequestID) { _, _ in
+            dismiss()
         }
     }
 

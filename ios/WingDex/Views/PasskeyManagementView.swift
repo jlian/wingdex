@@ -46,6 +46,13 @@ struct PasskeyManagementView: View {
                             }
                             .buttonStyle(.borderless)
                         }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                deleteTarget = passkey
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 } header: {
                     Text("Registered Passkeys")

@@ -2,6 +2,189 @@ import SwiftUI
 import MapKit
 import UIKit
 
+// MARK: - System Share Sheet
+
+struct ExportFileItem: Identifiable {
+    let id = UUID()
+    let url: URL
+    let cleanupDirectory: URL?
+
+    init(url: URL, cleanupDirectory: URL? = nil) {
+        self.url = url
+        self.cleanupDirectory = cleanupDirectory
+    }
+
+    func cleanup() {
+        guard let cleanupDirectory else { return }
+        try? FileManager.default.removeItem(at: cleanupDirectory)
+    }
+}
+
+struct ActivityView: UIViewControllerRepresentable {
+    let item: ExportFileItem
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [item.url], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, _ in item.cleanup() }
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+struct OutingActionDestination: Identifiable, Hashable {
+    let outing: Outing
+    let beginsLocationEditing: Bool
+
+    var id: String { "\(outing.id):\(beginsLocationEditing)" }
+}
+
+private struct OutingRowActionsModifier: ViewModifier {
+    let outing: Outing
+    let onView: () -> Void
+    let onEditLocation: () -> Void
+
+    @Environment(DataStore.self) private var store
+    @State private var exportItem: ExportFileItem?
+    @State private var isExporting = false
+    @State private var confirmsDeletion = false
+    @State private var operationError: String?
+
+    private var observations: [BirdObservation] {
+        store.confirmedObservations(outing.id)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .contextMenu {
+                Button(action: onEditLocation) {
+                    Label("Edit Location", systemImage: "pencil")
+                }
+                .disabled(!store.hasLoadedAll)
+                Button {
+                    Task { await exportOuting() }
+                } label: {
+                    Label("Export eBird CSV", systemImage: "square.and.arrow.up")
+                }
+                .disabled(observations.isEmpty || isExporting)
+                ShareLink(item: SharePayload.outing(outing, observations: observations)) {
+                    Label("Share Summary", systemImage: "text.bubble")
+                }
+                Button(role: .destructive) {
+                    confirmsDeletion = true
+                } label: {
+                    Label("Delete Outing", systemImage: "trash")
+                }
+                .disabled(!store.hasLoadedAll)
+            } preview: {
+                NavigationStack {
+                    OutingDetailView(outingId: outing.id)
+                }
+                .environment(store)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                Button {
+                    Task { await exportOuting() }
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .tint(.accentColor)
+                .disabled(observations.isEmpty || isExporting)
+            }
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    confirmsDeletion = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(!store.hasLoadedAll)
+            }
+            .sheet(item: $exportItem) { item in
+                ActivityView(item: item)
+            }
+            .alert("Delete this outing?", isPresented: $confirmsDeletion) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete Outing", role: .destructive) {
+                    Task { await deleteOuting() }
+                }
+            } message: {
+                Text("This will permanently delete this outing and all its observations.")
+            }
+            .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
+                Button("OK", role: .cancel) { operationError = nil }
+            } message: {
+                Text(operationError ?? "Something went wrong. Try again.")
+            }
+            .accessibilityAction(named: "View Outing", onView)
+    }
+
+    private func exportOuting() async {
+        guard !observations.isEmpty else { return }
+        isExporting = true
+        defer { isExporting = false }
+        do {
+            let data = try await store.exportOutingCSV(outingId: outing.id)
+            exportItem = try ExportFileFactory.outing(data: data, outing: outing)
+        } catch {
+            operationError = AppError.map(error, fallback: "Could not export outing. Try again.")?.message
+        }
+    }
+
+    private func deleteOuting() async {
+        do {
+            try await store.deleteOuting(id: outing.id)
+        } catch {
+            operationError = AppError.map(error, fallback: "Could not delete outing. Try again.")?.message
+        }
+    }
+
+    private var operationErrorBinding: Binding<Bool> {
+        Binding(
+            get: { operationError != nil },
+            set: { if !$0 { operationError = nil } }
+        )
+    }
+}
+
+extension View {
+    func outingRowActions(
+        outing: Outing,
+        onView: @escaping () -> Void,
+        onEditLocation: @escaping () -> Void
+    ) -> some View {
+        modifier(OutingRowActionsModifier(
+            outing: outing,
+            onView: onView,
+            onEditLocation: onEditLocation
+        ))
+    }
+}
+
+@MainActor
+func presentActivitySheet(items: [Any], sourceView: UIView? = nil) {
+    guard let scene = UIApplication.shared.connectedScenes
+        .compactMap({ $0 as? UIWindowScene })
+        .first(where: { $0.activationState == .foregroundActive }),
+        let root = scene.keyWindow?.rootViewController
+    else { return }
+
+    var presenter = root
+    while let presented = presenter.presentedViewController {
+        presenter = presented
+    }
+    let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+    if let popover = controller.popoverPresentationController {
+        popover.sourceView = sourceView ?? presenter.view
+        popover.sourceRect = sourceView?.bounds ?? CGRect(
+            x: presenter.view.bounds.midX,
+            y: presenter.view.bounds.midY,
+            width: 1,
+            height: 1
+        )
+    }
+    presenter.present(controller, animated: true)
+}
+
 // MARK: - Image Cache
 
 /// In-memory image cache shared across all thumbnails to avoid re-downloads on scroll.
@@ -153,6 +336,11 @@ struct SpeciesCard: View {
 
 // MARK: - Context Menu
 
+struct ContextMenuAccessibilityAction {
+    let name: String
+    let handler: () -> Void
+}
+
 /// UIKit-backed context menu host that supports preview commit (tap preview to navigate).
 ///
 /// WHY UIKit instead of SwiftUI .contextMenu:
@@ -168,12 +356,16 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
     let preview: Preview
     let menu: UIMenu
     let previewSize: CGSize?
+    let accessibilityLabel: String
+    let accessibilityActions: [ContextMenuAccessibilityAction]
     let onTap: () -> Void
     let onCommit: () -> Void
 
     init(
         menu: UIMenu,
         previewSize: CGSize? = nil,
+        accessibilityLabel: String,
+        accessibilityActions: [ContextMenuAccessibilityAction] = [],
         onTap: @escaping () -> Void,
         onCommit: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content,
@@ -183,6 +375,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
         self.preview = preview()
         self.menu = menu
         self.previewSize = previewSize
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityActions = accessibilityActions
         self.onTap = onTap
         self.onCommit = onCommit ?? onTap
     }
@@ -194,6 +388,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             preview: AnyView(preview),
             menu: menu,
             previewSize: previewSize,
+            accessibilityLabel: accessibilityLabel,
+            accessibilityActions: accessibilityActions,
             onTap: onTap,
             onCommit: onCommit
         )
@@ -206,6 +402,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             preview: AnyView(preview),
             menu: menu,
             previewSize: previewSize,
+            accessibilityLabel: accessibilityLabel,
+            accessibilityActions: accessibilityActions,
             onTap: onTap,
             onCommit: onCommit
         )
@@ -234,6 +432,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             preview: AnyView,
             menu: UIMenu,
             previewSize: CGSize?,
+            accessibilityLabel: String,
+            accessibilityActions: [ContextMenuAccessibilityAction],
             onTap: @escaping () -> Void,
             onCommit: @escaping () -> Void
         ) {
@@ -242,6 +442,13 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             previewView = preview
             contextMenu = menu
             preferredPreviewSize = previewSize
+            view.accessibilityLabel = accessibilityLabel
+            view.accessibilityCustomActions = accessibilityActions.map { action in
+                UIAccessibilityCustomAction(name: action.name) { _ in
+                    action.handler()
+                    return true
+                }
+            }
             onTapAction = onTap
             onCommitAction = onCommit
         }
@@ -251,6 +458,8 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
             didSetup = true
 
             view.backgroundColor = .clear
+            view.isAccessibilityElement = true
+            view.accessibilityTraits = .button
             hostingController.view.backgroundColor = .clear
 
             addChild(hostingController)
@@ -272,6 +481,11 @@ struct PeekPopContextMenu<Content: View, Preview: View>: UIViewControllerReprese
         @objc
         private func handleTap() {
             onTapAction?()
+        }
+
+        override func accessibilityActivate() -> Bool {
+            onTapAction?()
+            return true
         }
 
         func contextMenuInteraction(

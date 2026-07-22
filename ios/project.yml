@@ -65,12 +65,54 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - wingdex
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: app.wingdex.quick-action.take-photo
+            UIApplicationShortcutItemTitle: Take Photo
+            UIApplicationShortcutItemIconSymbolName: camera.fill
+          - UIApplicationShortcutItemType: app.wingdex.quick-action.upload-photos
+            UIApplicationShortcutItemTitle: Upload Photos
+            UIApplicationShortcutItemIconSymbolName: photo.on.rectangle
+          - UIApplicationShortcutItemType: app.wingdex.quick-action.view-wingdex
+            UIApplicationShortcutItemTitle: View WingDex
+            UIApplicationShortcutItemIconSymbolName: bird
     dependencies:
+      - target: WingDexShareExtension
+        embed: true
       - package: swift-openapi-runtime
         product: OpenAPIRuntime
       - package: swift-openapi-urlsession
         product: OpenAPIURLSession
       - package: KeychainAccess
+
+  WingDexShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: WingDexShareExtension
+        excludes:
+          - "*.entitlements"
+      - path: WingDex/Services/IncomingShareStore.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.wingdex.share
+        MARKETING_VERSION: "0.6.2"
+        CURRENT_PROJECT_VERSION: 1
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: WingDexShareExtension/WingDexShareExtension.entitlements
+        SKIP_INSTALL: "YES"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: WingDexShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: WingDex
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 50
 
   WingDexTests:
     type: bundle.unit-test
