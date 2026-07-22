@@ -28,6 +28,12 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for project setup, commit conventions,
 - Don't push without asking.
 - Follow the commit convention in [CONTRIBUTING.md](../CONTRIBUTING.md#commits).
 
+## Public Writing Voice
+- When writing GitHub comments, issues, PR descriptions, or other public text under the user's identity, sound conversational, concise, and technically specific.
+- Start from the concrete use case, ask the key question plainly, and offer suggestions as possibilities rather than demands. Leave room for maintainers to choose scope or a different approach.
+- Prefer natural wording such as "Would it make sense to..." and "Not sure if this fits here or as a follow-up" when that reflects the intent.
+- Avoid canned review language, inflated praise, excessive headings, exhaustive lists, and overly polished corporate phrasing.
+
 ## Text Encoding
 - Use commas, colons, semicolons, or hyphens (`-`) instead of em-dashes or en-dashes.
 - Stick to ASCII punctuation in commit messages, PR descriptions, issue comments, and code comments.
