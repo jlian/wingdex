@@ -82,6 +82,10 @@ if command -v xcodegen &> /dev/null; then
   [[ "$QUIET" == false ]] && echo "Running xcodegen..."
   xcodegen generate
 else
+  if [[ "${CI:-}" == "true" ]]; then
+    echo "Error: xcodegen is required in CI to keep the generated project in sync" >&2
+    exit 1
+  fi
   [[ "$QUIET" == false ]] && echo "Warning: xcodegen not found - run it manually to sync the .xcodeproj"
 fi
 

@@ -72,6 +72,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
       - name: Run semantic-release (iOS)
         id: semrel
         working-directory: ios
@@ -97,10 +100,6 @@ jobs:
             echo "No new version released"
             echo "released=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Install XcodeGen
-        if: steps.semrel.outputs.released == 'true'
-        run: brew install xcodegen
 
       - name: Generate GitInfo.swift
         if: steps.semrel.outputs.released == 'true'
