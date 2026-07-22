@@ -6,19 +6,35 @@ enum Config {
     ///
     /// Resolution order:
     /// 1. `API_BASE_URL` environment variable (set per-scheme in project.yml)
-    /// 2. Release builds fall back to production (wingdex.app)
-    /// 3. Debug builds fall back to localhost (localhost.wingdex.app)
+    /// 2. `APIBaseURL` embedded by the selected build configuration
+    /// 3. Release builds fall back to production; Debug falls back to localhost
     static let apiBaseURL: URL = {
-        if let envURL = ProcessInfo.processInfo.environment["API_BASE_URL"],
-           let url = URL(string: envURL) {
+        #if DEBUG
+        let isDebug = true
+        #else
+        let isDebug = false
+        #endif
+        return resolveAPIBaseURL(
+            environment: ProcessInfo.processInfo.environment,
+            infoDictionary: Bundle.main.infoDictionary,
+            isDebug: isDebug
+        )
+    }()
+
+    static func resolveAPIBaseURL(
+        environment: [String: String],
+        infoDictionary: [String: Any]?,
+        isDebug: Bool
+    ) -> URL {
+        if let value = environment["API_BASE_URL"], let url = URL(string: value) {
             return url
         }
-        #if DEBUG
-        return URL(string: "https://localhost.wingdex.app")!
-        #else
-        return URL(string: "https://wingdex.app")!
-        #endif
-    }()
+        if let value = infoDictionary?["APIBaseURL"] as? String,
+           let url = URL(string: value) {
+            return url
+        }
+        return URL(string: isDebug ? "https://localhost.wingdex.app" : "https://wingdex.app")!
+    }
 
     /// Bundle identifier.
     static let bundleID = "app.wingdex"

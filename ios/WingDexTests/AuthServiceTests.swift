@@ -278,6 +278,26 @@ final class ConfigURLTests: XCTestCase {
         XCTAssertTrue(url.scheme == "http" || url.scheme == "https")
     }
 
+    func testAPIBaseURLUsesBundledBuildConfigurationWithoutLaunchEnvironment() {
+        let url = Config.resolveAPIBaseURL(
+            environment: [:],
+            infoDictionary: ["APIBaseURL": "https://dev.wingdex.app"],
+            isDebug: true
+        )
+
+        XCTAssertEqual(url.absoluteString, "https://dev.wingdex.app")
+    }
+
+    func testAPIBaseURLLaunchEnvironmentOverridesBundledConfiguration() {
+        let url = Config.resolveAPIBaseURL(
+            environment: ["API_BASE_URL": "https://localhost.wingdex.app"],
+            infoDictionary: ["APIBaseURL": "https://dev.wingdex.app"],
+            isDebug: true
+        )
+
+        XCTAssertEqual(url.absoluteString, "https://localhost.wingdex.app")
+    }
+
     func testBundleID() {
         XCTAssertEqual(Config.bundleID, "app.wingdex")
     }

@@ -7,6 +7,11 @@ options:
   createIntermediateGroups: true
   postGenCommand: scripts/fix-icon-ref.sh && scripts/gen-git-info.sh
 
+configs:
+  Localhost Debug: debug
+  Dev Debug: debug
+  Release: release
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -56,12 +61,20 @@ targets:
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.lifestyle"
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
+      configs:
+        Localhost Debug:
+          API_BASE_URL: https://localhost.wingdex.app
+        Dev Debug:
+          API_BASE_URL: https://dev.wingdex.app
+        Release:
+          API_BASE_URL: https://wingdex.app
     info:
       path: WingDex/Info.plist
       properties:
         CFBundleDisplayName: WingDex
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        APIBaseURL: "$(API_BASE_URL)"
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
@@ -142,38 +155,38 @@ schemes:
       targets:
         WingDex: all
     run:
-      config: Debug
+      config: Localhost Debug
       environmentVariables:
         - variable: API_BASE_URL
           value: https://localhost.wingdex.app
           isEnabled: true
     test:
-      config: Debug
+      config: Localhost Debug
       targets:
         - WingDexTests
     profile:
       config: Release
     analyze:
-      config: Debug
+      config: Localhost Debug
 
   Dev:
     build:
       targets:
         WingDex: all
     run:
-      config: Debug
+      config: Dev Debug
       environmentVariables:
         - variable: API_BASE_URL
           value: https://dev.wingdex.app
           isEnabled: true
     test:
-      config: Debug
+      config: Dev Debug
       targets:
         - WingDexTests
     profile:
       config: Release
     analyze:
-      config: Debug
+      config: Dev Debug
 
   Production:
     build:
