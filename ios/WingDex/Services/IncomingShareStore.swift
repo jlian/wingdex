@@ -47,8 +47,18 @@ enum IncomingShareStore {
     }
 
     static func hasPendingShare(in directory: URL) -> Bool {
-        guard let manifests = try? manifests(in: directory) else { return false }
-        return !manifests.isEmpty
+        // Cheap existence check: only scan for a `.json` manifest file rather than
+        // reading and decoding every manifest. Called on the main actor from
+        // scene-phase paths, so avoid the synchronous I/O + decode cost here.
+        let manifestsDirectory = directory.appendingPathComponent(
+            manifestsDirectoryName,
+            isDirectory: true
+        )
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: manifestsDirectory,
+            includingPropertiesForKeys: nil
+        ) else { return false }
+        return entries.contains { $0.pathExtension == "json" }
     }
 
     nonisolated static func stage(fileURLs: [URL], in directory: URL) async throws {
