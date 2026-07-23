@@ -38,7 +38,7 @@ struct WingDexView: View {
         switch sortField {
         case .date:
             sorted = store.dex.sorted {
-                DateFormatting.sortDate($0.firstSeenDate).compare(DateFormatting.sortDate($1.firstSeenDate))
+                store.sortDate(for: $0).compare(store.sortDate(for: $1))
                 == (sortAscending ? .orderedAscending : .orderedDescending)
             }
         case .count:

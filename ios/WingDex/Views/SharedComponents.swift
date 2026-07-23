@@ -206,6 +206,14 @@ private final class ImageCache {
     func set(_ image: UIImage, for key: String) { cache.setObject(image, forKey: key as NSString) }
 }
 
+private enum ImageDecoder {
+    static func decode(_ data: Data) async -> UIImage? {
+        await Task.detached(priority: .utility) {
+            UIImage(data: data)
+        }.value
+    }
+}
+
 // MARK: - Bird Thumbnail
 
 /// Portrait-aware bird thumbnail that crops tall images near the top (head area).
@@ -240,7 +248,9 @@ struct BirdThumbnail: View {
         }
         do {
             let (data, _) = try await URLSession.shared.data(from: imageURL)
-            guard let loaded = UIImage(data: data) else { return }
+            try Task.checkCancellation()
+            guard let loaded = await ImageDecoder.decode(data) else { return }
+            try Task.checkCancellation()
             ImageCache.shared.set(loaded, for: url)
             uiImage = loaded
         } catch {
@@ -256,6 +266,17 @@ struct BirdThumbnail: View {
                     .foregroundStyle(Color.mutedText.opacity(0.3))
             }
     }
+}
+
+@MainActor
+private final class MapSnapshotCache {
+    static let shared = MapSnapshotCache()
+    private let cache = NSCache<NSString, UIImage>()
+
+    init() { cache.countLimit = 100 }
+
+    func image(for key: String) -> UIImage? { cache.object(forKey: key as NSString) }
+    func set(_ image: UIImage, for key: String) { cache.setObject(image, forKey: key as NSString) }
 }
 
 // MARK: - Bird Row
@@ -641,6 +662,10 @@ private struct MiniMapSnapshot: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var image: UIImage?
 
+    private var cacheKey: String {
+        "\(latitude):\(longitude):\(Int(size)):\(colorScheme == .dark ? "dark" : "light")"
+    }
+
     var body: some View {
         Group {
             if let image {
@@ -653,10 +678,17 @@ private struct MiniMapSnapshot: View {
             }
         }
         .frame(width: size, height: size)
-        .task(id: colorScheme) { await snapshot() }
+        .task(id: cacheKey) {
+            image = nil
+            await snapshot(cacheKey: cacheKey)
+        }
     }
 
-    private func snapshot() async {
+    private func snapshot(cacheKey: String) async {
+        if let cached = MapSnapshotCache.shared.image(for: cacheKey) {
+            image = cached
+            return
+        }
         let options = MKMapSnapshotter.Options()
         options.region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
@@ -674,7 +706,9 @@ private struct MiniMapSnapshot: View {
         do {
             let snapshotter = MKMapSnapshotter(options: options)
             let result = try await snapshotter.start()
-            await MainActor.run { image = result.image }
+            try Task.checkCancellation()
+            MapSnapshotCache.shared.set(result.image, for: cacheKey)
+            image = result.image
         } catch {
             // Leave placeholder
         }

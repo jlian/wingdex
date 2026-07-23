@@ -5,7 +5,7 @@ final class ShareViewController: UIViewController {
     private let titleLabel = UILabel()
     private let statusLabel = UILabel()
     private let progressView = UIProgressView(progressViewStyle: .default)
-    private let openButton = UIButton(type: .system)
+    private let doneButton = UIButton(type: .system)
     private let cancelButton = UIButton(type: .system)
     private var stagingTask: Task<Void, Never>?
 
@@ -34,10 +34,10 @@ final class ShareViewController: UIViewController {
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
 
-        openButton.configuration = .filled()
-        openButton.configuration?.title = "Done"
-        openButton.isHidden = true
-        openButton.addTarget(self, action: #selector(finish), for: .touchUpInside)
+        doneButton.configuration = .filled()
+        doneButton.configuration?.title = "Done"
+        doneButton.isHidden = true
+        doneButton.addTarget(self, action: #selector(finish), for: .touchUpInside)
 
         cancelButton.configuration = .plain()
         cancelButton.configuration?.title = "Cancel"
@@ -47,7 +47,7 @@ final class ShareViewController: UIViewController {
             titleLabel,
             statusLabel,
             progressView,
-            openButton,
+            doneButton,
             cancelButton,
         ])
         stack.axis = .vertical
@@ -59,7 +59,7 @@ final class ShareViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
             stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            openButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 50),
+            doneButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 50),
         ])
     }
 
@@ -97,10 +97,10 @@ final class ShareViewController: UIViewController {
             try Task.checkCancellation()
             try await stageInBackground(fileURLs: temporaryFiles)
             statusLabel.text = providers.count == 1
-                ? "Your photo is ready. Open WingDex to identify it."
-                : "Your \(providers.count) photos are ready. Open WingDex to identify them."
+                ? "Saved to WingDex. Tap Done, then open WingDex to continue."
+                : "Saved \(providers.count) photos to WingDex. Tap Done, then open WingDex to continue."
             progressView.isHidden = true
-            openButton.isHidden = false
+            doneButton.isHidden = false
             cancelButton.isHidden = true
         } catch is CancellationError {
             return
@@ -144,7 +144,7 @@ final class ShareViewController: UIViewController {
                         if let error { throw error }
                         guard let url else { throw IncomingShareError.noPhotos }
                         guard let sourceBytes = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-                              sourceBytes >= 0
+                            sourceBytes > 0
                         else { throw IncomingShareError.stagingFailed }
                         guard sourceBytes <= IncomingShareStore.maximumPhotoBytes else {
                             throw IncomingShareError.photoTooLarge
@@ -158,7 +158,7 @@ final class ShareViewController: UIViewController {
                         try FileManager.default.copyItem(at: url, to: destination)
                         do {
                             guard let copiedBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-                                  copiedBytes >= 0
+                                    copiedBytes > 0
                             else { throw IncomingShareError.stagingFailed }
                             guard copiedBytes <= IncomingShareStore.maximumPhotoBytes else {
                                 throw IncomingShareError.photoTooLarge

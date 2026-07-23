@@ -1,8 +1,90 @@
 @testable import WingDex
+import Observation
 import XCTest
 
 @MainActor
 final class DataStoreCacheTests: XCTestCase {
+    func testDerivedDataRebuildsWhenRawCollectionsChange() {
+        let store = DataStore(service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))))
+        let older = Outing(
+            id: "older",
+            userId: "account-a",
+            startTime: "2026-01-01T12:00:00Z",
+            endTime: "2026-01-01T13:00:00Z",
+            locationName: "Older Marsh",
+            notes: "",
+            createdAt: "2026-01-01T12:00:00Z"
+        )
+        let newer = Outing(
+            id: "newer",
+            userId: "account-a",
+            startTime: "2026-02-01T12:00:00Z",
+            endTime: "2026-02-01T13:00:00Z",
+            locationName: "Newer Marsh",
+            notes: "",
+            createdAt: "2026-02-01T12:00:00Z"
+        )
+        store.outings = [older, newer]
+        store.observations = [
+            BirdObservation(
+                id: "confirmed",
+                outingId: newer.id,
+                speciesName: "American Robin",
+                count: 1,
+                certainty: .confirmed,
+                notes: ""
+            ),
+            BirdObservation(
+                id: "possible",
+                outingId: newer.id,
+                speciesName: "Northern Cardinal",
+                count: 1,
+                certainty: .possible,
+                notes: ""
+            ),
+        ]
+        store.dex = [
+            fixtureDex(speciesName: "Older Bird", totalCount: 1, firstSeenDate: "2026-01-01T12:00:00Z"),
+            fixtureDex(speciesName: "Newer Bird", totalCount: 1, firstSeenDate: "2026-02-01T12:00:00Z"),
+        ]
+
+        XCTAssertEqual(store.recentOutings().map(\.id), [newer.id, older.id])
+        XCTAssertEqual(store.confirmedObservations(newer.id).map(\.id), ["confirmed"])
+        XCTAssertEqual(store.possibleObservations(newer.id).map(\.id), ["possible"])
+        XCTAssertEqual(store.outingObservations(newer.id).map(\.id), ["confirmed", "possible"])
+        XCTAssertEqual(store.speciesCount(for: newer.id), 1)
+        XCTAssertEqual(store.recentSpecies().map(\.speciesName), ["Newer Bird", "Older Bird"])
+
+        store.observations = []
+
+        XCTAssertTrue(store.confirmedObservations(newer.id).isEmpty)
+        XCTAssertEqual(store.speciesCount(for: newer.id), 0)
+    }
+
+    func testDerivedDataMutationInvalidatesObservationConsumer() {
+        let store = DataStore(service: ServiceStub(result: .failure(URLError(.notConnectedToInternet))))
+        store.observations = [BirdObservation(
+            id: "observation",
+            outingId: "outing",
+            speciesName: "American Robin",
+            count: 1,
+            certainty: .confirmed,
+            notes: ""
+        )]
+        let invalidated = expectation(description: "Derived species count invalidated")
+
+        withObservationTracking {
+            _ = store.speciesCount(for: "outing")
+        } onChange: {
+            invalidated.fulfill()
+        }
+
+        store.observations[0].certainty = .rejected
+
+        wait(for: [invalidated], timeout: 1)
+        XCTAssertEqual(store.speciesCount(for: "outing"), 0)
+    }
+
     func testActivateHydratesCacheWithoutEnablingMutations() throws {
         let cache = CacheStub(snapshot: AccountDataSnapshot(
             response: fixtureResponse(locationName: "Cached Marsh"),
@@ -364,10 +446,14 @@ final class DataStoreCacheTests: XCTestCase {
         )
     }
 
-    private func fixtureDex(speciesName: String, totalCount: Int) -> DexEntry {
+    private func fixtureDex(
+        speciesName: String,
+        totalCount: Int,
+        firstSeenDate: String = "2026-07-20"
+    ) -> DexEntry {
         DexEntry(
             speciesName: speciesName,
-            firstSeenDate: "2026-07-20",
+            firstSeenDate: firstSeenDate,
             lastSeenDate: "2026-07-20",
             totalOutings: 1,
             totalCount: totalCount,

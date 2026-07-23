@@ -130,6 +130,29 @@ final class AuthCallbackParsingTests: XCTestCase {
 // MARK: - Session Validation Tests
 
 final class SessionValidationTests: XCTestCase {
+    func testSessionValidationIsRequiredWithoutSuccessfulValidation() {
+        XCTAssertTrue(AuthService.shouldValidateSession(
+            lastSuccessfulValidation: nil,
+            now: Date(timeIntervalSince1970: 100)
+        ))
+    }
+
+    func testRecentSuccessfulSessionValidationSkipsForegroundRequest() {
+        let validation = Date(timeIntervalSince1970: 100)
+        XCTAssertFalse(AuthService.shouldValidateSession(
+            lastSuccessfulValidation: validation,
+            now: validation.addingTimeInterval(59)
+        ))
+    }
+
+    func testExpiredSessionValidationFreshnessRequiresRequest() {
+        let validation = Date(timeIntervalSince1970: 100)
+        XCTAssertTrue(AuthService.shouldValidateSession(
+            lastSuccessfulValidation: validation,
+            now: validation.addingTimeInterval(60)
+        ))
+    }
+
     func testExpectedAccountMustMatchCurrentAccount() {
         XCTAssertTrue(AuthService.isSameAccount(currentAccountID: "account-a", expectedAccountID: "account-a"))
         XCTAssertFalse(AuthService.isSameAccount(currentAccountID: "account-b", expectedAccountID: "account-a"))

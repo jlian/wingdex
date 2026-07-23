@@ -2,6 +2,23 @@
 import XCTest
 
 final class Phase9FoundationTests: XCTestCase {
+    func testSortDateParsesStoredAPITimestamps() {
+        XCTAssertEqual(
+            DateFormatting.sortDate("2026-07-20T12:00:00Z"),
+            Date(timeIntervalSince1970: 1_784_548_800)
+        )
+        XCTAssertEqual(
+            DateFormatting.sortDate("2026-07-20T12:00:00.123Z").timeIntervalSince1970,
+            1_784_548_800.123,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            DateFormatting.sortDate("2026-07-20T12:00:00-07:00"),
+            Date(timeIntervalSince1970: 1_784_574_000)
+        )
+        XCTAssertEqual(DateFormatting.sortDate("not-a-date"), .distantPast)
+    }
+
     @MainActor
     func testNavigationQueuesRouteUntilMainInterfaceIsReady() {
         let navigation = AppNavigationModel()
@@ -187,6 +204,69 @@ final class Phase9FoundationTests: XCTestCase {
         let newer = try XCTUnwrap(IncomingShareStore.pendingShare(in: container))
         XCTAssertNotEqual(newer.id, older.id)
         XCTAssertEqual(try Data(contentsOf: newer.photos[0].fileURL), Data("second".utf8))
+    }
+
+    func testIncomingShareStoreAcceptsMaximumPhotoCountInOrder() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let sources = root.appendingPathComponent("sources", isDirectory: true)
+        let container = root.appendingPathComponent("container", isDirectory: true)
+        try FileManager.default.createDirectory(at: sources, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let files = try (0..<IncomingShareStore.maximumPhotoCount).map { index in
+            let file = sources.appendingPathComponent("photo-\(index).jpg")
+            try Data("photo-\(index)".utf8).write(to: file)
+            return file
+        }
+
+        try await IncomingShareStore.stage(fileURLs: files, in: container)
+
+        let snapshot = try XCTUnwrap(IncomingShareStore.pendingShare(in: container))
+        XCTAssertEqual(snapshot.photos.count, IncomingShareStore.maximumPhotoCount)
+        XCTAssertEqual(
+            try snapshot.photos.map { try String(decoding: Data(contentsOf: $0.fileURL), as: UTF8.self) },
+            (0..<IncomingShareStore.maximumPhotoCount).map { "photo-\($0)" }
+        )
+    }
+
+    func testIncomingShareStoreRejectsMoreThanMaximumPhotoCount() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let container = root.appendingPathComponent("container", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let files = (0...IncomingShareStore.maximumPhotoCount).map {
+            root.appendingPathComponent("photo-\($0).jpg")
+        }
+
+        do {
+            try await IncomingShareStore.stage(fileURLs: files, in: container)
+            XCTFail("Expected the share photo count limit")
+        } catch IncomingShareError.tooManyPhotos {
+        } catch {
+            XCTFail("Expected tooManyPhotos, got \(error)")
+        }
+    }
+
+    func testIncomingShareStoreRejectsEmptyPhotoFile() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let container = root.appendingPathComponent("container", isDirectory: true)
+        let emptyPhoto = root.appendingPathComponent("empty.jpg")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data().write(to: emptyPhoto)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        do {
+            try await IncomingShareStore.stage(fileURLs: [emptyPhoto], in: container)
+            XCTFail("Expected an empty shared photo to be rejected")
+        } catch IncomingShareError.stagingFailed {
+        } catch {
+            XCTFail("Expected stagingFailed, got \(error)")
+        }
+        XCTAssertFalse(IncomingShareStore.hasPendingShare(in: container))
     }
 
     func testIntentErrorsMapNetworkAndSessionFailures() {

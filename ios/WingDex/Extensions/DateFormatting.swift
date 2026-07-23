@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// Helpers for formatting offset-aware ISO 8601 date strings stored by the API.
 ///
@@ -6,6 +7,9 @@ import Foundation
 /// original local timezone, so we display the local datetime components directly
 /// (formatted via UTC to avoid the device timezone shifting them).
 enum DateFormatting {
+    private static let internetDateFormat = Date.ISO8601FormatStyle()
+    private static let fractionalDateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+
 
     // MARK: - Date Only
 
@@ -84,14 +88,8 @@ enum DateFormatting {
     /// Parse a stored date string into a Date for sorting purposes.
     /// Falls back to .distantPast if unparseable.
     static func sortDate(_ timeStr: String) -> Date {
-        // Try ISO8601 with offset first
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        if let date = formatter.date(from: timeStr) { return date }
-
-        // Try with fractional seconds
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: timeStr) { return date }
+        if let date = try? Date(timeStr, strategy: internetDateFormat) { return date }
+        if let date = try? Date(timeStr, strategy: fractionalDateFormat) { return date }
 
         return .distantPast
     }
@@ -171,49 +169,74 @@ func getScientificName(_ speciesName: String) -> String? {
     return String(speciesName[openParen.upperBound..<closeParen.lowerBound])
 }
 
-/// Lowercased common name lookups built from the bundled taxonomy.json in a single pass.
-/// Array index -> taxonomic order. Slot [2] -> eBird code. Slot [5] -> BirdLife ID.
-private let taxonomyLookups: (ebird: [String: String], birdlife: [String: String], order: [String: Int]) = {
-    guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
-          let data = try? Data(contentsOf: url),
-          let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
-    else {
-        return ([:], [:], [:])
-    }
-
+private struct TaxonomyLookups: Sendable {
     var ebird: [String: String] = [:]
     var birdlife: [String: String] = [:]
     var order: [String: Int] = [:]
-    ebird.reserveCapacity(rawEntries.count)
-    birdlife.reserveCapacity(rawEntries.count)
-    order.reserveCapacity(rawEntries.count)
+}
 
-    for (index, entry) in rawEntries.enumerated() {
-        guard let commonName = entry.first as? String else { continue }
-        let key = commonName.lowercased()
-        order[key] = index
+@MainActor
+@Observable
+private final class TaxonomyLookupStore {
+    static let shared = TaxonomyLookupStore()
 
-        if entry.count > 2, let code = entry[2] as? String, !code.isEmpty {
-            ebird[key] = code
+    private(set) var lookups = TaxonomyLookups()
+    @ObservationIgnored private var loadTask: Task<TaxonomyLookups, Never>?
+
+    func load() async {
+        if !lookups.order.isEmpty { return }
+        if let loadTask {
+            lookups = await loadTask.value
+            return
         }
-        if entry.count > 5, let id = entry[5] as? String, !id.isEmpty {
-            birdlife[key] = id
-        }
+
+        let task = Task.detached(priority: .utility) { Self.loadFromBundle() }
+        loadTask = task
+        lookups = await task.value
+        loadTask = nil
     }
 
-    return (ebird, birdlife, order)
-}()
+    nonisolated private static func loadFromBundle() -> TaxonomyLookups {
+        guard let url = Bundle.main.url(forResource: "taxonomy", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let rawEntries = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
+        else { return TaxonomyLookups() }
 
-private var ebirdCodeLookup: [String: String] { taxonomyLookups.ebird }
-private var birdlifeIdLookup: [String: String] { taxonomyLookups.birdlife }
+        var lookups = TaxonomyLookups()
+        lookups.ebird.reserveCapacity(rawEntries.count)
+        lookups.birdlife.reserveCapacity(rawEntries.count)
+        lookups.order.reserveCapacity(rawEntries.count)
+
+        for (index, entry) in rawEntries.enumerated() {
+            guard let commonName = entry.first as? String else { continue }
+            let key = commonName.lowercased()
+            lookups.order[key] = index
+
+            if entry.count > 2, let code = entry[2] as? String, !code.isEmpty {
+                lookups.ebird[key] = code
+            }
+            if entry.count > 5, let id = entry[5] as? String, !id.isEmpty {
+                lookups.birdlife[key] = id
+            }
+        }
+        return lookups
+    }
+}
+
+@MainActor
+func prewarmTaxonomyLookups() async {
+    await TaxonomyLookupStore.shared.load()
+}
 
 /// Return the bundled eBird taxonomy index for sorting, or Int.max when unknown.
+@MainActor
 func getTaxonomicOrder(_ speciesName: String) -> Int {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    return taxonomyLookups.order[commonName.lowercased()] ?? Int.max
+    return TaxonomyLookupStore.shared.lookups.order[commonName.lowercased()] ?? Int.max
 }
 
 /// Compare stored species names by taxonomic sequence, keeping unknown species last.
+@MainActor
 func taxonomicSpeciesPrecedes(_ lhs: String, _ rhs: String, ascending: Bool) -> Bool {
     let lhsOrder = getTaxonomicOrder(lhs)
     let rhsOrder = getTaxonomicOrder(rhs)
@@ -226,9 +249,10 @@ func taxonomicSpeciesPrecedes(_ lhs: String, _ rhs: String, ascending: Bool) -> 
 }
 
 /// Build the eBird species URL for a stored species name.
+@MainActor
 func getEbirdURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let ebirdCode = ebirdCodeLookup[commonName.lowercased()] else { return nil }
+    guard let ebirdCode = TaxonomyLookupStore.shared.lookups.ebird[commonName.lowercased()] else { return nil }
     return URL(string: "https://ebird.org/species/\(ebirdCode)")
 }
 
@@ -240,8 +264,9 @@ func getWikipediaURL(for wikiTitle: String?) -> URL? {
 }
 
 /// Build the BirdLife DataZone factsheet URL for a stored species name.
+@MainActor
 func getBirdlifeFactsheetURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let id = birdlifeIdLookup[commonName.lowercased()] else { return nil }
+    guard let id = TaxonomyLookupStore.shared.lookups.birdlife[commonName.lowercased()] else { return nil }
     return URL(string: "https://datazone.birdlife.org/species/factsheet/\(id)")
 }

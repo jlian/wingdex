@@ -92,7 +92,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, auth.isAuthenticated, !isValidating else { return }
-            Task { await auth.validateSession() }
+            Task { await auth.validateSession(force: false) }
         }
         .task {
             if let discardedAccountID = auth.consumeDiscardedAccountID() {
@@ -179,6 +179,7 @@ struct MainTabView: View {
         }
         .task {
             navigation.setMainInterfaceReady(true)
+            async let taxonomyWarmup: Void = prewarmTaxonomyLookups()
             await store.loadAll()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--auto-demo-data"),
@@ -187,6 +188,7 @@ struct MainTabView: View {
             }
             #endif
             await completeInitialLoadIfReady()
+            _ = await taxonomyWarmup
         }
         .onChange(of: store.hasLoadedAll) { _, hasLoadedAll in
             guard hasLoadedAll else { return }

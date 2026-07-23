@@ -146,6 +146,10 @@ targets:
           NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
           NSExtensionAttributes:
             NSExtensionActivationRule:
+              NSExtensionActivationDictionaryVersion: 2
+              NSExtensionActivationUsesStrictMatching: true
+              NSExtensionActivationSupportsAttachmentsWithMinCount: 1
+              NSExtensionActivationSupportsAttachmentsWithMaxCount: 50
               NSExtensionActivationSupportsImageWithMaxCount: 50
 
   WingDexTests:

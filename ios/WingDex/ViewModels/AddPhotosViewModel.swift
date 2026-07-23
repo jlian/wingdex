@@ -266,9 +266,11 @@ final class AddPhotosViewModel {
                 if let photo = makeProcessedPhoto(data: data, fileName: sharedPhoto.fileName) {
                     appendByDuplicateStatus(photo, newPhotos: &newPhotos, duplicatePhotos: &duplicatePhotos)
                 } else {
+                    log.error("Shared photo could not be decoded: \(sharedPhoto.fileName, privacy: .private(mask: .hash))")
                     rejectedSharedFileNames.append(sharedPhoto.fileName)
                 }
             } catch {
+                log.error("Shared photo read failed after retry: \(sharedPhoto.fileName, privacy: .private(mask: .hash))")
                 rejectedSharedFileNames.append(sharedPhoto.fileName)
             }
             processedCount += 1
@@ -338,8 +340,23 @@ final class AddPhotosViewModel {
     }
 
     private func readSharedPhotoData(from fileURL: URL) async throws -> Data {
+        do {
+            return try await readSharedPhotoDataOnce(from: fileURL, options: .mappedIfSafe)
+        } catch {
+            try Task.checkCancellation()
+            try await Task.sleep(for: .milliseconds(100))
+            return try await readSharedPhotoDataOnce(from: fileURL, options: [])
+        }
+    }
+
+    private func readSharedPhotoDataOnce(
+        from fileURL: URL,
+        options: Data.ReadingOptions
+    ) async throws -> Data {
         let readTask = Task.detached(priority: .userInitiated) {
-            try Data(contentsOf: fileURL, options: .mappedIfSafe)
+            let data = try Data(contentsOf: fileURL, options: options)
+            guard !data.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+            return data
         }
         return try await withTaskCancellationHandler {
             try await readTask.value
