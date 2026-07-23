@@ -107,7 +107,8 @@ final class ShareViewController: UIViewController {
         } catch {
             progressView.isHidden = true
             statusLabel.textColor = .systemRed
-            statusLabel.text = error.localizedDescription
+            statusLabel.text = (error as? IncomingShareError)?.localizedDescription
+                ?? IncomingShareError.stagingFailed.localizedDescription
             cancelButton.configuration?.title = "Close"
         }
     }
