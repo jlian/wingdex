@@ -75,6 +75,35 @@ jobs:
         working-directory: ios
         run: xcodebuild -resolvePackageDependencies -project WingDex.xcodeproj -scheme Dev
 
+      - name: Prepare iOS Simulator
+        run: |
+          set -euo pipefail
+          RUNTIME_ID=$(xcrun simctl list runtimes -j | jq -r '[.runtimes[] | select(.isAvailable == true and ((.identifier // "") | startswith("com.apple.CoreSimulator.SimRuntime.iOS-")))] | last | .identifier // empty')
+          if [ -z "$RUNTIME_ID" ]; then
+            xcodebuild -downloadPlatform iOS
+            RUNTIME_ID=$(xcrun simctl list runtimes -j | jq -r '[.runtimes[] | select(.isAvailable == true and ((.identifier // "") | startswith("com.apple.CoreSimulator.SimRuntime.iOS-")))] | last | .identifier // empty')
+          fi
+          if [ -z "$RUNTIME_ID" ]; then
+            echo "No available iOS Simulator runtime after download"
+            exit 1
+          fi
+
+          DEVICE_TYPE_ID=$(xcrun simctl list devicetypes -j | jq -r '
+            [.devicetypes[] | select(.productFamily == "iPhone")]
+            | sort_by(if .name == "iPhone 17 Pro" then 0 else 1 end)
+            | first
+            | .identifier // empty
+          ')
+          if [ -z "$DEVICE_TYPE_ID" ]; then
+            echo "No iPhone Simulator device type is available"
+            exit 1
+          fi
+
+          IOS_SIMULATOR_UDID=$(xcrun simctl create "WingDex CI" "$DEVICE_TYPE_ID" "$RUNTIME_ID")
+          echo "IOS_SIMULATOR_UDID=$IOS_SIMULATOR_UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$IOS_SIMULATOR_UDID"
+          xcrun simctl bootstatus "$IOS_SIMULATOR_UDID" -b
+
       - name: Build for Simulator
         working-directory: ios
         run: |
@@ -82,7 +111,7 @@ jobs:
           xcodebuild build-for-testing \
             -project WingDex.xcodeproj \
             -scheme Dev \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_UDID" \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) CI'
@@ -94,6 +123,6 @@ jobs:
           xcodebuild test-without-building \
             -project WingDex.xcodeproj \
             -scheme Dev \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_UDID" \
             -only-testing:WingDexTests \
             CODE_SIGNING_ALLOWED=NO
