@@ -269,6 +269,41 @@ final class Phase9FoundationTests: XCTestCase {
         XCTAssertFalse(IncomingShareStore.hasPendingShare(in: container))
     }
 
+    func testCorruptIncomingShareManifestRemovesOrphanedPayloadDirectory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let manifests = root.appendingPathComponent("incoming-share-manifests", isDirectory: true)
+        let shareID = UUID().uuidString
+        let payloadDirectory = root.appendingPathComponent(shareID, isDirectory: true)
+        let manifestURL = manifests.appendingPathComponent("\(shareID).json")
+        try FileManager.default.createDirectory(at: manifests, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: payloadDirectory, withIntermediateDirectories: true)
+        try Data("staged-photo".utf8).write(to: payloadDirectory.appendingPathComponent("photo.jpg"))
+        try Data("not-json".utf8).write(to: manifestURL)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        XCTAssertNil(try IncomingShareStore.pendingShare(in: root))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: manifestURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: payloadDirectory.path))
+    }
+
+    func testCorruptIncomingShareManifestWithInvalidIDDoesNotRemoveDirectory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let manifests = root.appendingPathComponent("incoming-share-manifests", isDirectory: true)
+        let payloadDirectory = root.appendingPathComponent("not-a-share-id", isDirectory: true)
+        let manifestURL = manifests.appendingPathComponent("not-a-share-id.json")
+        try FileManager.default.createDirectory(at: manifests, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: payloadDirectory, withIntermediateDirectories: true)
+        try Data("keep-me".utf8).write(to: payloadDirectory.appendingPathComponent("file"))
+        try Data("not-json".utf8).write(to: manifestURL)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        XCTAssertNil(try IncomingShareStore.pendingShare(in: root))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: manifestURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: payloadDirectory.path))
+    }
+
     func testIntentErrorsMapNetworkAndSessionFailures() {
         XCTAssertEqual(
             IntentDataError.map(URLError(.notConnectedToInternet)),

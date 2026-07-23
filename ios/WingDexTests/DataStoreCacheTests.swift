@@ -331,8 +331,17 @@ final class DataStoreCacheTests: XCTestCase {
 
         let firstLoad = Task { await store.loadAll() }
         await service.waitForFetchCount(1)
-        let cancelledLoad = Task { await store.loadAll() }
+        let cancellationCompleted = expectation(description: "Queued refresh cancelled promptly")
+        let cancelledLoad = Task {
+            await store.loadAll()
+            cancellationCompleted.fulfill()
+        }
+        await Task.yield()
         cancelledLoad.cancel()
+        await fulfillment(of: [cancellationCompleted], timeout: 1)
+        let fetchCountAfterCancellation = await service.fetchCount()
+        XCTAssertEqual(fetchCountAfterCancellation, 1)
+
         await service.complete(index: 0, with: fixtureResponse(locationName: "First Marsh"))
         await firstLoad.value
         await cancelledLoad.value
