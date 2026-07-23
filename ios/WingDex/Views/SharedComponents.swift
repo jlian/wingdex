@@ -118,6 +118,7 @@ private struct OutingRowActionsModifier: ViewModifier {
             .accessibilityAction(named: "View Outing", onView)
     }
 
+    @MainActor
     private func exportOuting() async {
         guard !observations.isEmpty else { return }
         isExporting = true
@@ -130,6 +131,7 @@ private struct OutingRowActionsModifier: ViewModifier {
         }
     }
 
+    @MainActor
     private func deleteOuting() async {
         do {
             try await store.deleteOuting(id: outing.id)
@@ -162,10 +164,16 @@ extension View {
 
 @MainActor
 func presentActivitySheet(items: [Any], sourceView: UIView? = nil) {
-    guard let scene = UIApplication.shared.connectedScenes
+    let activeScenes = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
-        .first(where: { $0.activationState == .foregroundActive }),
-        let root = scene.keyWindow?.rootViewController
+        .filter { $0.activationState == .foregroundActive }
+    guard let window = activeScenes.lazy.compactMap({ scene in
+        scene.windows.first(where: { $0.isKeyWindow })
+            ?? scene.windows.first(where: {
+                !$0.isHidden && $0.alpha > 0 && $0.windowLevel == .normal
+            })
+    }).first,
+        let root = window.rootViewController
     else { return }
 
     var presenter = root

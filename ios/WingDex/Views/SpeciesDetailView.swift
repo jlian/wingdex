@@ -291,6 +291,7 @@ struct SpeciesDetailView: View {
         return URL(string: value)
     }
 
+    @MainActor
     private func shareHeroImage() async {
         guard let heroImageURL else { return }
         do {
@@ -301,6 +302,7 @@ struct SpeciesDetailView: View {
         }
     }
 
+    @MainActor
     private func saveHeroImage() async {
         guard let heroImageURL else { return }
         do {
