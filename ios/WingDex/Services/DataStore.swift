@@ -61,7 +61,12 @@ final class DataStore {
     private var loadRequestID = UUID()
     private var confirmedSnapshot: AllDataResponse?
     private var operationInProgress = false
-    private var operationWaiters: [CheckedContinuation<Void, Never>] = []
+    private var operationWaiters: [OperationWaiter] = []
+
+    private struct OperationWaiter {
+        let id: UUID
+        let continuation: CheckedContinuation<Void, Error>
+    }
 
     init(service: any DataStoreService, cache: (any AccountDataCaching)? = nil) {
         self.service = service
@@ -146,7 +151,7 @@ final class DataStore {
     func reset() {
         generation += 1
         operationInProgress = false
-        operationWaiters.forEach { $0.resume() }
+        operationWaiters.forEach { $0.continuation.resume(throwing: CancellationError()) }
         operationWaiters.removeAll()
         outings = []
         photos = []
@@ -493,7 +498,17 @@ final class DataStore {
         if !operationInProgress {
             operationInProgress = true
         } else {
-            await withCheckedContinuation { operationWaiters.append($0) }
+            try Task.checkCancellation()
+            let waiterID = UUID()
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    operationWaiters.append(OperationWaiter(id: waiterID, continuation: continuation))
+                }
+            } onCancel: {
+                Task { @MainActor [weak self] in
+                    self?.cancelOperationWaiter(id: waiterID)
+                }
+            }
         }
         do {
             try Task.checkCancellation()
@@ -525,8 +540,13 @@ final class DataStore {
         if operationWaiters.isEmpty {
             operationInProgress = false
         } else {
-            operationWaiters.removeFirst().resume()
+            operationWaiters.removeFirst().continuation.resume()
         }
+    }
+
+    private func cancelOperationWaiter(id: UUID) {
+        guard let index = operationWaiters.firstIndex(where: { $0.id == id }) else { return }
+        operationWaiters.remove(at: index).continuation.resume(throwing: CancellationError())
     }
 
     private func isCurrentMutation(_ context: (accountID: String, generation: Int)) -> Bool {

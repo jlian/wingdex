@@ -158,7 +158,15 @@ enum IncomingShareStore {
             // A manifest that can't be decoded (corrupt/truncated) would otherwise
             // keep `hasPendingShare` true forever while `pendingShare` returns nil,
             // wedging the app into a "share pending but unimportable" state. Drop the
-            // dead manifest so the cheap presence check and the decode path converge.
+            // dead manifest and its payload directory so the decode path self-heals
+            // without leaking staged images.
+            if let shareID = UUID(uuidString: url.deletingPathExtension().lastPathComponent) {
+                let shareDirectory = directory.appendingPathComponent(
+                    shareID.uuidString,
+                    isDirectory: true
+                )
+                try? FileManager.default.removeItem(at: shareDirectory)
+            }
             try? FileManager.default.removeItem(at: url)
             return nil
         }
