@@ -182,6 +182,16 @@ private final class TaxonomyLookupStore {
 
     private(set) var lookups = TaxonomyLookups()
     @ObservationIgnored private var loadTask: Task<TaxonomyLookups, Never>?
+    @ObservationIgnored private var publicationTask: Task<Void, Never>?
+
+    func loadIfNeeded() {
+        guard lookups.order.isEmpty, publicationTask == nil else { return }
+        publicationTask = Task { [weak self] in
+            guard let self else { return }
+            await self.load()
+            self.publicationTask = nil
+        }
+    }
 
     func load() async {
         if !lookups.order.isEmpty { return }
@@ -232,7 +242,9 @@ func prewarmTaxonomyLookups() async {
 @MainActor
 func getTaxonomicOrder(_ speciesName: String) -> Int {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    return TaxonomyLookupStore.shared.lookups.order[commonName.lowercased()] ?? Int.max
+    let store = TaxonomyLookupStore.shared
+    store.loadIfNeeded()
+    return store.lookups.order[commonName.lowercased()] ?? Int.max
 }
 
 /// Compare stored species names by taxonomic sequence, keeping unknown species last.
@@ -252,7 +264,9 @@ func taxonomicSpeciesPrecedes(_ lhs: String, _ rhs: String, ascending: Bool) -> 
 @MainActor
 func getEbirdURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let ebirdCode = TaxonomyLookupStore.shared.lookups.ebird[commonName.lowercased()] else { return nil }
+    let store = TaxonomyLookupStore.shared
+    store.loadIfNeeded()
+    guard let ebirdCode = store.lookups.ebird[commonName.lowercased()] else { return nil }
     return URL(string: "https://ebird.org/species/\(ebirdCode)")
 }
 
@@ -267,6 +281,8 @@ func getWikipediaURL(for wikiTitle: String?) -> URL? {
 @MainActor
 func getBirdlifeFactsheetURL(for speciesName: String) -> URL? {
     let commonName = getDisplayName(speciesName).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let id = TaxonomyLookupStore.shared.lookups.birdlife[commonName.lowercased()] else { return nil }
+    let store = TaxonomyLookupStore.shared
+    store.loadIfNeeded()
+    guard let id = store.lookups.birdlife[commonName.lowercased()] else { return nil }
     return URL(string: "https://datazone.birdlife.org/species/factsheet/\(id)")
 }
