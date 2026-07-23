@@ -15,6 +15,13 @@ Prefer up-to-date sources over training data. Search for error messages, check o
 - **Dev server:** `npm run dev` (Vite on `:5000`, Wrangler on `:8787`)
 - **Stop:** `npm stop`
 
+## Commit History
+
+- Write Conventional Commit subjects that describe the behavior or technical change. Never use process-oriented subjects such as "address review feedback", "fix review comments", or "review follow-up".
+- Keep each commit focused on one logical change so the history produces useful semantic versions and changelog entries.
+- Preserve a linear history. When safe, fold review fixups into their originating logical commit before the final push; use `--force-with-lease` for an already-published branch rewrite.
+- Prefer rebase merge when the commits are clean and independently meaningful. Prefer squash merge when a PR is one logical change but its commit series is not useful history.
+
 ## iOS UI Verification
 
 For any iOS implementation, review, or validation task, check the latest official Apple documentation and the interfaces in the installed Xcode SDK before deciding on APIs, availability, lifecycle behavior, entitlements, privacy keys, background execution, or App Store requirements. Treat repository patterns and model knowledge as secondary when they conflict with current Apple guidance. Record any simulator or device limitation that prevents verification.
