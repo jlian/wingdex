@@ -987,22 +987,25 @@ Spotlight is not a dependency. This is a server-authoritative read cache for lau
 - [x] Simulator reports camera unavailability without constructing a camera picker
 - [x] SwiftData cache unit/integration tests pass
 - [x] Simulator: cached launch and offline browsing
-- [ ] Physical iPhone: camera and location allow/deny paths, capture metadata, and identification
-- [ ] Physical iPhone: Siri phrases, Action button assignment, Photos save permission, and Share Extension handoff
-- [ ] Complete the Phase 10 accessibility final pass
-
-> On the iOS 26.5 Simulator, a preconfigured App Shortcut tile can fail with `Couldn't find AppShortcutsProvider` even when the provider, metadata, and raw intent are valid. Test the raw custom-shortcut action in Simulator and complete the preconfigured-tile/Siri smoke tests on a physical device.
+- [x] Physical iPhone: camera and location allow/deny paths, capture metadata, and identification
+- [x] Physical iPhone: Siri phrases, Action button assignment, Photos save permission, and Share Extension handoff
 
 ---
 
 ## Phase 10 - Polish & App Store
 
-### 10.1: Error Handling Audit
+### 10.1: TestFlight
 
-- [x] Complete the implementation audit in Phase 8.7
-- [ ] Perform the final release-build and App Store submission audit for error copy and accessibility
+- [x] Internal testing build
+- [x] Fix any remaining signing/provisioning issues (register physical test devices or use App Store Connect automatic distribution)
+- [x] First round of real-device testing on various iPhone sizes
 
-### 10.2: Accessibility Final Pass
+### 10.2: App Icon & Launch Screen
+
+- [x] **App icon**: Finalize app icon
+- [x] **Launch screen**: Branded launch screen that looks good
+
+### 10.3: Accessibility Final Pass
 
 - [ ] Accessibility Inspector audit has no actionable errors on representative screens
 - [ ] VoiceOver completes authentication, AddPhotos, navigation, menus, sheets, errors, and destructive confirmations on a physical iPhone
@@ -1011,17 +1014,15 @@ Spotlight is not a dependency. This is a server-authoritative read cache for lau
 - [ ] Large Content Viewer supports key metrics such as species count and outing stats
 - [ ] Reduce Motion removes or simplifies all custom motion, including celebrations and parallax/spring effects
 - [ ] Color contrast meets WCAG AA and status never relies on color alone
+- [ ] Audit for error message copy and accessibility
 
-### 10.3: App Icon & Launch Screen
+### 10.4: Production Readiness
 
-- [ ] **App icon**: Export the new bird icon (updated March 2026 on web: `public/icon-512.png`, `public/favicon.svg`) as a 1024x1024 PNG and add to `Assets.xcassets/AppIcon.appiconset`. The current AppIcon slot is empty - Xcode auto-generates all required sizes from the single 1024x1024 source
-- [ ] **Launch screen**: Simple branded launch screen matching the warm color palette (beige background, centered new bird icon)
-
-### 10.4: TestFlight
-
-- [ ] Internal testing build
-- [ ] Fix any remaining signing/provisioning issues (register physical test devices or use App Store Connect automatic distribution)
-- [ ] First round of real-device testing on various iPhone sizes
+- [ ] Audit observability stack end-to-end to ensure logs and traces are properly queryable
+- [ ] Alerts
+- [ ] Metrics and KPI dashboards
+- [ ] (Stretch) Use on-device MobileCLIP model for bird ID
+- [ ] Secrets rotation and store robustness
 
 ### 10.5: App Store Listing
 
@@ -1034,7 +1035,7 @@ Spotlight is not a dependency. This is a server-authoritative read cache for lau
 ### 10.6: App Store Submission
 
 - [ ] Review Apple's App Store Review Guidelines for compliance
-- [ ] Ensure demo account or demo data available for reviewer
+- [ ] Ensure demo account or demo data available for reviewer or prepare for easy passkey sign-up with reviewer note
 - [ ] Submit for review
 
 ---
