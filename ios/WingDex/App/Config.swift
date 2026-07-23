@@ -5,7 +5,7 @@ enum Config {
     /// Base URL for the WingDex API.
     ///
     /// Resolution order:
-    /// 1. `API_BASE_URL` environment variable (set per-scheme in project.yml)
+    /// 1. `API_BASE_URL` environment variable (optional launch-time override)
     /// 2. `APIBaseURL` embedded by the selected build configuration
     /// 3. Release builds fall back to production; Debug falls back to localhost
     static let apiBaseURL: URL = {
