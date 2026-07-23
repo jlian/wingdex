@@ -84,7 +84,7 @@ enum IncomingShareStore {
                     to: destination
                 )
                 guard let fileBytes = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-                      fileBytes >= 0
+                        fileBytes > 0
                 else { throw IncomingShareError.stagingFailed }
                 guard fileBytes <= maximumPhotoBytes else { throw IncomingShareError.photoTooLarge }
                 totalBytes += fileBytes

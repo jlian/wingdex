@@ -28,6 +28,9 @@ final class AuthService: @unchecked Sendable {
     /// Needed by passkey plugin endpoints which use internal cookie validation.
     private(set) var signedSessionToken: String?
     private var sessionExpiry: Date?
+    private var sessionValidationTask: Task<Void, Never>?
+    private var sessionValidationID: UUID?
+    private var lastSuccessfulSessionValidation: Date?
     private let keychain = Keychain(service: Config.bundleID)
         .accessibility(.whenUnlockedThisDeviceOnly)
 
@@ -57,8 +60,31 @@ final class AuthService: @unchecked Sendable {
     /// Signs out when Better Auth rejects the session so the UI goes straight to
     /// sign-in instead of flashing authenticated content. Network errors are
     /// ignored - the user may be offline with a valid cached session.
-    func validateSession() async {
+    func validateSession(force: Bool = true, now: Date = .now) async {
+        guard force || Self.shouldValidateSession(
+            lastSuccessfulValidation: lastSuccessfulSessionValidation,
+            now: now
+        ) else { return }
+        if let sessionValidationTask {
+            await sessionValidationTask.value
+            return
+        }
         guard let token = sessionToken else { return }
+        let validationID = UUID()
+        sessionValidationID = validationID
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.performSessionValidation(token: token, now: now)
+        }
+        sessionValidationTask = task
+        await task.value
+        if sessionValidationID == validationID {
+            sessionValidationTask = nil
+            sessionValidationID = nil
+        }
+    }
+
+    private func performSessionValidation(token: String, now: Date) async {
         let url = Config.apiBaseURL.appendingPathComponent("api/auth/get-session")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -73,11 +99,24 @@ final class AuthService: @unchecked Sendable {
                Self.sessionValidationRejects(statusCode: http.statusCode, data: data) {
                 log.warning("Session rejected by server, signing out")
                 invalidateSession(rejectedToken: token)
+            } else if let http = response as? HTTPURLResponse,
+                    (200...299).contains(http.statusCode),
+                    isCurrentSession(token: token) {
+                lastSuccessfulSessionValidation = now
             }
         } catch {
             // Network error - don't sign out, user may be offline
             log.info("Session validation skipped because the request failed")
         }
+    }
+
+    nonisolated static func shouldValidateSession(
+        lastSuccessfulValidation: Date?,
+        now: Date,
+        freshness: TimeInterval = 60
+    ) -> Bool {
+        guard let lastSuccessfulValidation else { return true }
+        return now.timeIntervalSince(lastSuccessfulValidation) >= freshness
     }
 
     nonisolated static func sessionValidationRejects(statusCode: Int, data: Data) -> Bool {
@@ -251,6 +290,7 @@ final class AuthService: @unchecked Sendable {
     }
 
     private func clearSession() {
+        resetSessionValidation()
         if let userId {
             discardedAccountID = userId
         }
@@ -264,6 +304,13 @@ final class AuthService: @unchecked Sendable {
         userImage = nil
         clearKeychain()
         clearAPICookies()
+    }
+
+    private func resetSessionValidation() {
+        sessionValidationTask?.cancel()
+        sessionValidationTask = nil
+        sessionValidationID = nil
+        lastSuccessfulSessionValidation = nil
     }
 
     // MARK: - Profile Updates
@@ -342,6 +389,7 @@ final class AuthService: @unchecked Sendable {
         let service = PasskeyService()
         let result = try await service.authenticate()
 
+        resetSessionValidation()
         sessionToken = result.token
         signedSessionToken = result.signedToken
         sessionExpiry = result.expiresAt ?? Date.now.addingTimeInterval(7 * 24 * 60 * 60)
@@ -363,6 +411,7 @@ final class AuthService: @unchecked Sendable {
         // 0. Clean slate - clear any stale session
         clearAPICookies()
         clearKeychain()
+        resetSessionValidation()
         sessionToken = nil
         signedSessionToken = nil
         sessionExpiry = nil
@@ -674,6 +723,7 @@ final class AuthService: @unchecked Sendable {
         let result = try Self.parseCallbackURL(url)
         log.info("Got token (\(result.token.count) chars)")
 
+        resetSessionValidation()
         sessionToken = result.token
         signedSessionToken = result.signedToken
         sessionExpiry = result.expiry
@@ -702,6 +752,8 @@ final class AuthService: @unchecked Sendable {
         guard let rawToken = json["token"] as? String else {
             throw AuthError.oauthFailed("No session token in response")
         }
+
+        resetSessionValidation()
 
         // Signed token from set-auth-token header - used for cookie auth on passkey endpoints
         if let httpResponse = response as? HTTPURLResponse,

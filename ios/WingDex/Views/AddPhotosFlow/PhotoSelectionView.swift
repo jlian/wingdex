@@ -39,9 +39,8 @@ struct PhotoSelectionView: View {
     @State private var showCamera = false
     @State private var showCameraUnavailable = false
     @State private var collageDrag: CGSize = .zero
+    @State private var collageCache = CollageImageCache.shared
     @StateObject private var locationService = LocationService()
-
-    private static let collageImages = CollageImageCache.names
 
     var body: some View {
         GeometryReader { geo in
@@ -51,7 +50,7 @@ struct PhotoSelectionView: View {
             Color.pageBg.ignoresSafeArea()
 
             // Diagonal photo collage -- full screen
-            DiagonalPhotoCollage(imageNames: Self.collageImages)
+            DiagonalPhotoCollage(imageNames: CollageImageCache.names, images: collageCache.images)
                 .offset(collageDrag)
                 .ignoresSafeArea()
 
@@ -163,6 +162,7 @@ struct PhotoSelectionView: View {
         )
         .toolbar(.hidden, for: .navigationBar)
         }
+        .task { await collageCache.load() }
         .onChange(of: viewModel.selectedItems) {
             if !viewModel.selectedItems.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }
@@ -223,6 +223,7 @@ struct PhotoSelectionView: View {
 /// Netflix-style diagonal scrolling photo grid background.
 private struct DiagonalPhotoCollage: View {
     let imageNames: [String]
+    let images: [String: UIImage]
 
     var body: some View {
         if imageNames.isEmpty { Color.clear } else {
@@ -240,10 +241,14 @@ private struct DiagonalPhotoCollage: View {
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
-                            if let img = CollageImageCache.images[name] {
+                            if let img = images[name] {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
+                                    .frame(width: collageTileSize, height: collageTileSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: collageCornerRadius))
+                            } else {
+                                Color.warmBorder.opacity(0.15)
                                     .frame(width: collageTileSize, height: collageTileSize)
                                     .clipShape(RoundedRectangle(cornerRadius: collageCornerRadius))
                             }

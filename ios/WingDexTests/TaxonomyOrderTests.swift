@@ -1,7 +1,13 @@
 @testable import WingDex
 import XCTest
 
+@MainActor
 final class TaxonomyOrderTests: XCTestCase {
+    override func setUp() async throws {
+        try await super.setUp()
+        await prewarmTaxonomyLookups()
+    }
+
     func testTaxonomyOrderUsesBundledSequence() {
         XCTAssertLessThan(getTaxonomicOrder("Common Ostrich"), getTaxonomicOrder("Emu"))
     }

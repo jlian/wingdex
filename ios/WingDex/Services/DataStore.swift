@@ -22,10 +22,25 @@ struct OutingUpdate: Codable, Sendable {
 final class DataStore {
     // MARK: - Raw Data
 
-    var outings: [Outing] = []
+    var outings: [Outing] = [] {
+        didSet { rebuildOutingDerivedData() }
+    }
     var photos: [Photo] = []
-    var observations: [BirdObservation] = []
-    var dex: [DexEntry] = []
+    var observations: [BirdObservation] = [] {
+        didSet { rebuildObservationDerivedData() }
+    }
+    var dex: [DexEntry] = [] {
+        didSet { rebuildDexDerivedData() }
+    }
+
+    private var outingObservationsByID: [String: [BirdObservation]] = [:]
+    private var confirmedObservationsByOutingID: [String: [BirdObservation]] = [:]
+    private var possibleObservationsByOutingID: [String: [BirdObservation]] = [:]
+    private var speciesCountByOutingID: [String: Int] = [:]
+    private var outingDateByID: [String: Date] = [:]
+    private var dexDateBySpeciesName: [String: Date] = [:]
+    private var recentOutingsByDate: [Outing] = []
+    private var recentSpeciesByDate: [DexEntry] = []
 
     // MARK: - State
 
@@ -170,38 +185,40 @@ final class DataStore {
 
     /// Observations for a specific outing, excluding rejected ones.
     func outingObservations(_ outingId: String) -> [BirdObservation] {
-        observations.filter { $0.outingId == outingId && $0.certainty != .rejected }
+        outingObservationsByID[outingId] ?? []
     }
 
     /// Confirmed observations for a specific outing.
     func confirmedObservations(_ outingId: String) -> [BirdObservation] {
-        observations.filter { $0.outingId == outingId && $0.certainty == .confirmed }
+        confirmedObservationsByOutingID[outingId] ?? []
     }
 
     /// Possible observations for a specific outing.
     func possibleObservations(_ outingId: String) -> [BirdObservation] {
-        observations.filter { $0.outingId == outingId && $0.certainty == .possible }
+        possibleObservationsByOutingID[outingId] ?? []
     }
 
     /// Species count for an outing (confirmed only).
     func speciesCount(for outingId: String) -> Int {
-        Set(confirmedObservations(outingId).map(\.speciesName)).count
+        speciesCountByOutingID[outingId] ?? 0
+    }
+
+    func sortDate(for outing: Outing) -> Date {
+        outingDateByID[outing.id] ?? .distantPast
+    }
+
+    func sortDate(for entry: DexEntry) -> Date {
+        dexDateBySpeciesName[entry.speciesName] ?? .distantPast
     }
 
     /// Recent outings sorted by date descending, limited to `count`.
     func recentOutings(_ count: Int = 5) -> [Outing] {
-        outings
-            .sorted { DateFormatting.sortDate($0.startTime) > DateFormatting.sortDate($1.startTime) }
-            .prefix(count)
-            .map { $0 }
+        Array(recentOutingsByDate.prefix(count))
     }
 
     /// Recent species from the dex, sorted by firstSeenDate descending.
     func recentSpecies(_ count: Int = 6) -> [DexEntry] {
-        dex
-            .sorted { DateFormatting.sortDate($0.firstSeenDate) > DateFormatting.sortDate($1.firstSeenDate) }
-            .prefix(count)
-            .map { $0 }
+        Array(recentSpeciesByDate.prefix(count))
     }
 
     /// All sightings of a species across outings.
@@ -415,6 +432,31 @@ final class DataStore {
         photos = response.photos
         observations = response.observations
         dex = response.dex
+    }
+
+    private func rebuildOutingDerivedData() {
+        let datedOutings = outings.map { (outing: $0, date: DateFormatting.sortDate($0.startTime)) }
+        outingDateByID = Dictionary(uniqueKeysWithValues: datedOutings.map { ($0.outing.id, $0.date) })
+        recentOutingsByDate = datedOutings
+            .sorted { $0.date > $1.date }
+            .map(\.outing)
+    }
+
+    private func rebuildObservationDerivedData() {
+        outingObservationsByID = Dictionary(grouping: observations.filter { $0.certainty != .rejected }, by: \.outingId)
+        confirmedObservationsByOutingID = Dictionary(grouping: observations.filter { $0.certainty == .confirmed }, by: \.outingId)
+        possibleObservationsByOutingID = Dictionary(grouping: observations.filter { $0.certainty == .possible }, by: \.outingId)
+        speciesCountByOutingID = confirmedObservationsByOutingID.mapValues {
+            Set($0.map(\.speciesName)).count
+        }
+    }
+
+    private func rebuildDexDerivedData() {
+        let datedEntries = dex.map { (entry: $0, date: DateFormatting.sortDate($0.firstSeenDate)) }
+        dexDateBySpeciesName = Dictionary(uniqueKeysWithValues: datedEntries.map { ($0.entry.speciesName, $0.date) })
+        recentSpeciesByDate = datedEntries
+            .sorted { $0.date > $1.date }
+            .map(\.entry)
     }
 
     private func confirmAndPersistCurrentSnapshot() {

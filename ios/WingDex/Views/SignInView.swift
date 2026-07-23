@@ -41,8 +41,7 @@ struct SignInView: View {
     @State private var isSigningIn = false
     @State private var errorMessage: String?
     @State private var parallaxOffset: CGSize = .zero
-
-    private static let collageImages = CollageImageCache.names
+    @State private var collageCache = CollageImageCache.shared
 
     var body: some View {
         GeometryReader { geo in
@@ -52,7 +51,7 @@ struct SignInView: View {
             Color.pageBg.ignoresSafeArea()
 
             // 3D perspective diagonal photo collage -- full screen
-            SignInCollage(imageNames: Self.collageImages)
+            SignInCollage(imageNames: CollageImageCache.names, images: collageCache.images)
                 .offset(parallaxOffset)
                 .ignoresSafeArea()
 
@@ -286,6 +285,7 @@ struct SignInView: View {
             }
         }
         .animation(.default, value: errorMessage)
+        .task { await collageCache.load() }
         .onAppear {
             errorMessage = auth.consumeSignInMessage()
             startParallax()
@@ -353,6 +353,7 @@ struct SignInView: View {
 /// Diagonal photo grid with 3D perspective tilt for a cinematic background.
 private struct SignInCollage: View {
     let imageNames: [String]
+    let images: [String: UIImage]
 
     var body: some View {
         if imageNames.isEmpty { Color.clear } else {
@@ -370,10 +371,14 @@ private struct SignInCollage: View {
                         ForEach(0..<tilesPerRow, id: \.self) { col in
                             let index = (row * tilesPerRow + col) % imageNames.count
                             let name = imageNames[index]
-                            if let img = CollageImageCache.images[name] {
+                            if let img = images[name] {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()
+                                    .frame(width: signInTileSize, height: signInTileSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: signInCornerRadius))
+                            } else {
+                                Color.black.opacity(0.15)
                                     .frame(width: signInTileSize, height: signInTileSize)
                                     .clipShape(RoundedRectangle(cornerRadius: signInCornerRadius))
                             }

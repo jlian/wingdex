@@ -36,7 +36,7 @@ struct OutingsView: View {
         switch sortField {
         case .date:
             sorted = store.outings.sorted {
-                DateFormatting.sortDate($0.startTime).compare(DateFormatting.sortDate($1.startTime))
+                store.sortDate(for: $0).compare(store.sortDate(for: $1))
                 == (sortAscending ? .orderedAscending : .orderedDescending)
             }
         case .species:
