@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/jlian/wingdex/compare/v1.22.0...v1.22.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **ios:** harden generated Xcode configuration ([a5ba94b](https://github.com/jlian/wingdex/commit/a5ba94b158010347a6c008bb5f407277e23af83c))
+
 # [1.22.0](https://github.com/jlian/wingdex/compare/v1.21.2...v1.22.0) (2026-07-21)
 
 
