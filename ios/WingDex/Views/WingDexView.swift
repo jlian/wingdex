@@ -139,6 +139,8 @@ struct WingDexView: View {
 
                 Button { showSettings() } label: {
                     AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Settings")
                 }
             }
             .padding(.trailing, -12)
@@ -159,7 +161,10 @@ struct WingDexView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        if let error = store.error, store.dex.isEmpty {
+        if store.isLoading && store.dex.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.error, store.dex.isEmpty {
             ContentUnavailableView {
                 Label("Could Not Load WingDex", systemImage: "wifi.exclamationmark")
             } description: {

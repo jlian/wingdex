@@ -24,6 +24,8 @@ async function passModelGate(page: Page) {
   // The gate renders INSIDE the upload dialog, after "Continue to Species", so
   // this must be called at that point rather than before the dialog opens.
   const gate = page.getByRole('button', { name: 'Download and continue' })
+  const error = page.getByText(/^Download failed:/)
+  const result = page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).first()
   // Race the gate against the step it hands off to. On a warm cache the gate
   // self-clears and the button never appears, so waiting on it alone burned the
   // full 60s on every run. Losing the race costs only the old behaviour.
@@ -34,44 +36,61 @@ async function passModelGate(page: Page) {
     // here caused a flake that passed on retry.
     gate.waitFor({ state: 'visible', timeout: 60_000 }),
     handedOff.waitFor({ state: 'visible', timeout: 60_000 }),
+    result.waitFor({ state: 'visible', timeout: 60_000 }),
   ]).catch(() => {
     // Neither appeared. Already cached and already past it, so nothing to do.
   })
   if (await gate.isVisible().catch(() => false)) {
     await gate.click()
+    await Promise.race([
+      result.waitFor({ state: 'visible', timeout: 120_000 }),
+      error.waitFor({ state: 'visible', timeout: 120_000 }),
+    ])
+    if (await error.isVisible().catch(() => false)) {
+      throw new Error(await error.innerText())
+    }
   }
 }
 
-/** Mock Nominatim geocoding to return a canned location name. */
-function mockNominatim(page: Page, locationName: string) {
-  return page.route('**/nominatim.openstreetmap.org/**', (route: Route) => {
+/** Mock WingDex geocoding routes to return a canned normalized location. */
+function mockGeocoding(page: Page, locationName: string) {
+  return page.route('**/api/geocoding/**', (route: Route) => {
     const url = new URL(route.request().url())
     if (url.pathname.includes('reverse')) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          display_name: locationName,
-          address: {
-            leisure: locationName.split(',')[0],
-            city: locationName.split(',').pop()?.trim() || '',
+          result: {
+            label: locationName,
+            lat: 47.66,
+            lon: -122.41,
+            stateProvince: 'US-WA',
+            countryCode: 'US',
+            attribution: {
+              label: 'Location data © OpenStreetMap contributors',
+              url: 'https://www.openstreetmap.org/copyright',
+            },
           },
         }),
       })
     } else {
-      // search endpoint, return a park-like result
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            display_name: locationName,
-            lat: '47.66',
-            lon: '-122.41',
-            class: 'leisure',
-            type: 'park',
-          },
-        ]),
+        body: JSON.stringify({
+          results: [{
+            label: locationName,
+            lat: 47.66,
+            lon: -122.41,
+            stateProvince: 'US-WA',
+            countryCode: 'US',
+            attribution: {
+              label: 'Location data © OpenStreetMap contributors',
+              url: 'https://www.openstreetmap.org/copyright',
+            },
+          }],
+        }),
       })
     }
   })
@@ -203,7 +222,7 @@ test.describe('CSV import + photo upload integration', () => {
     // download alone can exceed, and the waits below ask for far more than
     // that, so without this they are unreachable and the test dies mid-gate.
     test.slow()
-    await mockNominatim(page, 'Haleakala National Park, Maui')
+    await mockGeocoding(page, 'Haleakala National Park, Maui')
     await mockWikimedia(page)
 
     await loadApp(page)
@@ -264,11 +283,40 @@ test.describe('CSV import + photo upload integration', () => {
     ).toBeVisible({ timeout: 5_000 })
   })
 
+  test('location search waits for explicit submission and uses the WingDex route', async ({ page }) => {
+    await mockGeocoding(page, 'Discovery Park, Seattle')
+    await loadApp(page)
+
+    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('input[type="file"]').setInputFiles(
+      path.resolve('src/assets/images/Chukar_partridge_near_Haleakala_summit_Maui.jpg')
+    )
+    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
+
+    await dialog.getByText('Discovery Park, Seattle').click()
+    const input = dialog.getByPlaceholder('Search for a place...')
+    let searchRequestCount = 0
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/api/geocoding/search') searchRequestCount += 1
+    })
+
+    await input.fill('Discovery Park')
+    await page.waitForTimeout(600)
+    expect(searchRequestCount).toBe(0)
+
+    await dialog.getByRole('button', { name: 'Search locations' }).click()
+    await expect(dialog.getByText('Discovery Park, Seattle')).toBeVisible()
+    expect(searchRequestCount).toBe(1)
+    await expect(dialog.getByRole('link', { name: 'Location data © OpenStreetMap contributors' })).toBeVisible()
+  })
+
   // @live: asserts CONVERGENCE onto a named species, which needs a known
   // identity. On-device inference cannot guarantee one without pinning weights,
   // and species agreement is what ml/parity/jobs/rank_parity.ts measures across
   // 11,070 photos. Kept runnable on demand against a real model.
   test('@live species convergence: CSV import + photo upload for same species increases count', async ({ page }) => {
+    test.slow()
     // Seed CSV data (includes Chukar) via direct API calls
     await loadApp(page)
 
@@ -299,7 +347,7 @@ test.describe('CSV import + photo upload integration', () => {
     await expect(page.locator('p:visible', { hasText: 'Chukar' }).first()).toBeVisible()
 
     // Now upload a Chukar photo, the same species should converge
-    await mockNominatim(page, 'Haleakala National Park, Maui')
+    await mockGeocoding(page, 'Haleakala National Park, Maui')
     await mockWikimedia(page)
 
     // Navigate home and open upload wizard
@@ -353,7 +401,8 @@ test.describe('CSV import + photo upload integration', () => {
   // outings split. The clustering logic it targets is geographic, and is covered
   // by unit tests; only the species labels here required the old per-call mock.
   test('@live multi-photo clustering: photos from different locations create separate outings', async ({ page }) => {
-    await mockNominatim(page, 'Discovery Park, Seattle')
+    test.slow()
+    await mockGeocoding(page, 'Discovery Park, Seattle')
     await mockWikimedia(page)
 
     await loadApp(page)

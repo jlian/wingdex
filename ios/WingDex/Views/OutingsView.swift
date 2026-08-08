@@ -100,6 +100,8 @@ struct OutingsView: View {
 
                             Button { showSettings() } label: {
                                 AvatarView(imageURL: auth.userImage, name: auth.userName, size: 40)
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel("Settings")
                             }
                         }
                         .padding(.trailing, -12)
@@ -144,7 +146,10 @@ struct OutingsView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        if let error = store.error, store.outings.isEmpty {
+        if store.isLoading && store.outings.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.error, store.outings.isEmpty {
             ContentUnavailableView {
                 Label("Could Not Load Outings", systemImage: "wifi.exclamationmark")
             } description: {

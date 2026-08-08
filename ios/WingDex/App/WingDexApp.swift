@@ -55,8 +55,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if isValidating {
-                // Blank screen while validating session with server
-                Color.pageBg.ignoresSafeArea()
+                SessionValidationView()
             } else if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
@@ -95,6 +94,11 @@ struct ContentView: View {
             Task { await auth.validateSession(force: false) }
         }
         .task {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-sign-out") {
+                auth.signOut()
+            }
+            #endif
             if let discardedAccountID = auth.consumeDiscardedAccountID() {
                 store.clearCachedAccount(accountID: discardedAccountID)
             }
@@ -106,6 +110,22 @@ struct ContentView: View {
                 isValidating = false
             }
         }
+    }
+}
+
+private struct SessionValidationView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.large)
+            Text("Checking your session...")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.pageBg.ignoresSafeArea())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Checking your session")
     }
 }
 
@@ -254,12 +274,24 @@ struct MainTabView: View {
               args.index(after: flag) < args.endIndex,
               let image = UIImage(contentsOfFile: args[args.index(after: flag)])
         else { return }
+        let latitude = launchArgument("--ui-test-lat", in: args).flatMap(Double.init)
+        let longitude = launchArgument("--ui-test-lon", in: args).flatMap(Double.init)
         addPhotosVM.configure(
             auth: auth,
             dataStore: store
         )
-        addPhotosVM.addCameraPhoto(image, lat: nil, lon: nil)
+        if args.contains("--ui-test-clear-last-location") {
+            addPhotosVM.lastLocationName = ""
+        }
+        addPhotosVM.addCameraPhoto(image, lat: latitude, lon: longitude)
         await addPhotosVM.processSelectedPhotos()
+    }
+
+    private func launchArgument(_ name: String, in arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: name),
+              arguments.index(after: index) < arguments.endIndex
+        else { return nil }
+        return arguments[arguments.index(after: index)]
     }
     #endif
 }
@@ -319,24 +351,20 @@ struct AvatarView: View {
     }
 
     private var fallbackView: some View {
-        Group {
-            if let initial = name?.first {
-                Text(String(initial).uppercased())
-                    .font(.system(size: size * 0.45, weight: .medium))
-                    .foregroundStyle(Color.mutedText)
-                    .frame(width: size, height: size)
-                    .background(Color.mutedText.opacity(0.15))
-                    .clipShape(Circle())
-            } else {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: size * 0.8))
-                    .foregroundStyle(Color.mutedText)
-            }
-        }
+        Image(systemName: "person.fill")
+            .font(.system(size: size * 0.42, weight: .medium))
+            .foregroundStyle(Color.foregroundText)
+            .frame(width: size, height: size)
+            .background(Color.cardBg)
+            .clipShape(Circle())
     }
 }
 
 #if DEBUG
+#Preview("App - Session Validation") {
+    SessionValidationView()
+}
+
 #Preview("App - Authenticated") {
     ContentView()
         .environment(AuthService())

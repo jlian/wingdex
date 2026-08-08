@@ -37,6 +37,8 @@ struct SignInView: View {
     @Environment(DataStore.self) private var store
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var isSigningIn = false
     @State private var errorMessage: String?
@@ -54,6 +56,7 @@ struct SignInView: View {
             SignInCollage(imageNames: CollageImageCache.names, images: collageCache.images)
                 .offset(parallaxOffset)
                 .ignoresSafeArea()
+                .accessibilityHidden(true)
 
             // Blur + darkening mask (shared shape)
             //
@@ -98,6 +101,7 @@ struct SignInView: View {
                 .ignoresSafeArea()
 
             // Foreground content
+            ScrollView {
             VStack(spacing: 0) {
                 // Top bar
                 HStack {
@@ -119,6 +123,8 @@ struct SignInView: View {
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.8))
                     }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .menuStyle(.borderlessButton)
                     .buttonStyle(.plain)
                     #endif
@@ -131,24 +137,27 @@ struct SignInView: View {
                 // Big left-aligned title
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Start your")
-                        .font(.system(size: 52, weight: .bold, design: .serif))
+                        .font(.system(.largeTitle, design: .serif, weight: .bold))
                     Text("WingDex")
-                        .font(.system(size: 52, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.accentColor)
-                        .environment(\.colorScheme, .dark)
+                        .font(.system(.largeTitle, design: .serif, weight: .bold))
+                        .foregroundStyle(.white)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(.white)
-                .padding(.horizontal, 28)
+                .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? 16 : 28)
+                .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 16 : 0)
+                .background {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        Color.black
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .padding(.horizontal, 12)
+                    }
+                }
                 .padding(.bottom, 32)
 
                 // Social sign-in buttons
                 let btnHeight: CGFloat = 44
                 let iconSize: CGFloat = btnHeight * 0.32
-                let fontSize: CGFloat = btnHeight * 0.38
-
-                // Glass button styles add ~14pt of chrome padding around the label
-                let glassLabelHeight: CGFloat = btnHeight - 14
                 VStack(spacing: 12) {
                     // Apple -- native SignInWithAppleButton
                     SignInWithAppleButton(.continue) { request in
@@ -177,14 +186,15 @@ struct SignInView: View {
                                 .scaledToFit()
                                 .frame(width: iconSize, height: iconSize)
                             Text("Continue with Google")
-                                .font(.system(size: fontSize, weight: .medium))
+                                .font(.body.weight(.medium))
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: glassLabelHeight)
+                        .frame(minHeight: btnHeight)
+                        .background(.white, in: Capsule())
                         .clipShape(Capsule())
                     }
-                    .buttonStyle(.glass)
-                    .colorScheme(colorScheme == .dark ? .light : .dark)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.black)
 
                     // GitHub -- neutral style matching Google
                     Button {
@@ -197,14 +207,15 @@ struct SignInView: View {
                                 .scaledToFit()
                                 .frame(width: iconSize, height: iconSize)
                             Text("Continue with GitHub")
-                                .font(.system(size: fontSize, weight: .medium))
+                                .font(.body.weight(.medium))
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: glassLabelHeight)
+                        .frame(minHeight: btnHeight)
+                        .background(.white, in: Capsule())
                         .clipShape(Capsule())
                     }
-                    .buttonStyle(.glass)
-                    .colorScheme(colorScheme == .dark ? .light : .dark)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.black)
                 }
                 .padding(.horizontal, 28)
 
@@ -213,7 +224,10 @@ struct SignInView: View {
                     Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
                     Text("OR")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black, in: Capsule())
                     Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
                 }
                 .padding(.horizontal, 28)
@@ -221,60 +235,77 @@ struct SignInView: View {
 
                 // Passkey section
                 VStack(spacing: 12) {
-                    Label("Continue with a Passkey", systemImage: "person.badge.key.fill")
-                        .font(.system(size: fontSize, weight: .medium))
-                        .foregroundStyle(.white)
+                    VStack(spacing: 6) {
+                        Image(systemName: "person.badge.key.fill")
+                            .accessibilityHidden(true)
+                        Text("Continue with a Passkey")
+                            .multilineTextAlignment(.center)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .layoutPriority(1)
+                    }
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.white)
 
                     HStack(spacing: 12) {
                         Button {
                             signIn { try await auth.signInWithPasskey() }
                         } label: {
                             Text("Log in")
-                                .font(.system(size: fontSize, weight: .medium))
-                                .frame(height: glassLabelHeight)
+                                .font(.body.weight(.medium))
+                                .frame(minHeight: btnHeight)
                         }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.plain)
                         .buttonSizing(.flexible)
+                        .frame(minHeight: btnHeight)
+                        .contentShape(Rectangle())
+                        .foregroundStyle(.black)
+                        .background(.white, in: Capsule())
 
                         Button {
                             signIn { try await auth.signUpWithPasskey() }
                         } label: {
                             Text("Sign up")
-                                .font(.system(size: fontSize, weight: .medium))
-                                .frame(height: glassLabelHeight)
+                                .font(.body.weight(.medium))
+                                .frame(minHeight: btnHeight)
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.plain)
                         .buttonSizing(.flexible)
-                        .colorScheme(colorScheme == .dark ? .light : .dark)
+                        .frame(minHeight: btnHeight)
+                        .contentShape(Rectangle())
+                        .foregroundStyle(.black)
+                        .background(.white, in: Capsule())
                     }
                 }
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 22)
-                        .fill(.ultraThinMaterial)
-                        .environment(\.colorScheme, .dark)
+                        .fill(.black)
                 )
                 .padding(.horizontal, 28)
 
                 // Error message (stable layout)
-                Text(errorMessage ?? " ")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .opacity(errorMessage != nil ? 1 : 0)
-                    .accessibilityHidden(errorMessage == nil)
-                    .padding(.top, 8)
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 8)
+                }
 
                 // Legal text
                 Text("By continuing, you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy).")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .tint(.white.opacity(0.7))
+                    .foregroundStyle(.white)
+                    .tint(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
                     .padding(.top, 4)
                     .padding(.bottom, 8)
             }
+                    .frame(minHeight: screenH)
+                    }
+                    .scrollIndicators(.hidden)
         }
         .disabled(isSigningIn)
         .overlay {
@@ -290,6 +321,13 @@ struct SignInView: View {
             errorMessage = auth.consumeSignInMessage()
             startParallax()
         }
+        .onChange(of: reduceMotion) { _, shouldReduceMotion in
+            if shouldReduceMotion {
+                stopParallax()
+            } else {
+                startParallax()
+            }
+        }
         .onDisappear { stopParallax() }
         }
     }
@@ -301,7 +339,10 @@ struct SignInView: View {
 
     private func startParallax() {
         let manager = Self.motionManager
-        guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
+        guard !reduceMotion,
+              manager.isDeviceMotionAvailable,
+              !manager.isDeviceMotionActive
+        else { return }
         gravityBaseline = nil
         manager.deviceMotionUpdateInterval = 1.0 / 30.0
         manager.startDeviceMotionUpdates(to: .main) { motion, _ in
@@ -329,6 +370,7 @@ struct SignInView: View {
     private func stopParallax() {
         Self.motionManager.stopDeviceMotionUpdates()
         gravityBaseline = nil
+        parallaxOffset = .zero
     }
 
     // MARK: - Sign-In Handler
