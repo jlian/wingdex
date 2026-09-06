@@ -8,7 +8,6 @@ struct OutingsView: View {
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
     @State private var actionDestination: OutingActionDestination?
-    @State private var outingPendingDeletion: Outing?
 
     // MARK: - Sort Options
 
@@ -132,10 +131,7 @@ struct OutingsView: View {
                     OutingDetailView(outingId: outing.id)
                 }
                 .navigationDestination(item: $actionDestination) { destination in
-                    OutingDetailView(
-                        outingId: destination.outing.id,
-                        beginsLocationEditing: destination.beginsLocationEditing
-                    )
+                    OutingDetailView(outingId: destination.outing.id)
                 }
         }
     }
@@ -207,25 +203,14 @@ struct OutingsView: View {
             }
             .outingRowActions(
                 outing: outing,
-                pendingDeletion: $outingPendingDeletion,
                 onView: {
-                    actionDestination = OutingActionDestination(
-                        outing: outing,
-                        beginsLocationEditing: false
-                    )
-                },
-                onEditLocation: {
-                    actionDestination = OutingActionDestination(
-                        outing: outing,
-                        beginsLocationEditing: true
-                    )
+                    actionDestination = OutingActionDestination(outing: outing)
                 }
             )
         }
         .listStyle(.plain)
         .listSectionSeparator(.hidden, edges: .top)
         .scrollContentBackground(.hidden)
-        .outingDeletionConfirmation($outingPendingDeletion)
     }
 }
 

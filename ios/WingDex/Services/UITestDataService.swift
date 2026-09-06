@@ -20,9 +20,11 @@ final class UITestDataService: DataStoreService, Sendable {
     }
 
     private let mode: Mode
+    private let allowsOutingUpdates: Bool
 
-    init(mode: Mode) {
+    init(mode: Mode, allowsOutingUpdates: Bool = false) {
         self.mode = mode
+        self.allowsOutingUpdates = allowsOutingUpdates
     }
 
     func fetchAllData() async throws -> AllDataResponse {
@@ -38,8 +40,19 @@ final class UITestDataService: DataStoreService, Sendable {
         throw URLError(.unsupportedURL)
     }
 
-    func updateOuting(id _: String, fields _: OutingUpdate) async throws -> Outing {
-        throw URLError(.unsupportedURL)
+    func updateOuting(id: String, fields: OutingUpdate) async throws -> Outing {
+        guard allowsOutingUpdates, let outing = Self.populatedResponse.outings.first(where: { $0.id == id }) else {
+            throw URLError(.unsupportedURL)
+        }
+        return Outing(
+            id: outing.id, userId: outing.userId, startTime: outing.startTime, endTime: outing.endTime,
+            locationName: fields.locationName ?? outing.locationName,
+            defaultLocationName: fields.defaultLocationName ?? outing.defaultLocationName,
+            lat: outing.lat, lon: outing.lon, stateProvince: outing.stateProvince, countryCode: outing.countryCode,
+            protocol: outing.protocol, numberObservers: outing.numberObservers, allObsReported: outing.allObsReported,
+            effortDistanceMiles: outing.effortDistanceMiles, effortAreaAcres: outing.effortAreaAcres,
+            notes: fields.notes ?? outing.notes, createdAt: outing.createdAt
+        )
     }
 
     func updateDexEntry(fields _: DexUpdate) async throws -> [DexEntry] {

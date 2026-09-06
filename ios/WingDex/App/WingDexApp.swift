@@ -68,7 +68,10 @@ struct WingDexApp: App {
             serviceFactory: { accountID in
                 #if DEBUG
                 if let uiTestDataMode {
-                    return UITestDataService(mode: uiTestDataMode)
+                    return UITestDataService(
+                        mode: uiTestDataMode,
+                        allowsOutingUpdates: ProcessInfo.processInfo.arguments.contains("--ui-test-allow-outing-updates")
+                    )
                 }
                 #endif
                 return DataService(auth: auth, expectedAccountID: accountID)

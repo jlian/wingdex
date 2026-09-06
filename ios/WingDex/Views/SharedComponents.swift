@@ -34,27 +34,16 @@ struct ActivityView: UIViewControllerRepresentable {
 
 struct OutingActionDestination: Identifiable, Hashable {
     let outing: Outing
-    let beginsLocationEditing: Bool
-
-    var id: String { "\(outing.id):\(beginsLocationEditing)" }
+    var id: String { outing.id }
 }
 
 private struct OutingRowActionsModifier: ViewModifier {
     let outing: Outing
-    @Binding var pendingDeletion: Outing?
     let onView: () -> Void
-    let onEditLocation: () -> Void
 
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(ToastCenter.self) private var toasts
-    @State private var exportItem: ExportFileItem?
-    @State private var isExporting = false
-    @State private var operationError: String?
-
-    private var observations: [BirdObservation] {
-        store.confirmedObservations(outing.id)
-    }
 
     func body(content: Content) -> some View {
         content
@@ -62,27 +51,6 @@ private struct OutingRowActionsModifier: ViewModifier {
                 Button(action: onView) {
                     Label("View Details", systemImage: "binoculars")
                 }
-                Button(action: onEditLocation) {
-                    Label("Edit Location", systemImage: "pencil")
-                }
-                .disabled(!store.hasLoadedAll)
-                if auth.isRegisteredAccount {
-                    Button {
-                        Task { await exportOuting() }
-                    } label: {
-                        Label("Export eBird CSV", systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(observations.isEmpty || isExporting)
-                }
-                ShareLink(item: SharePayload.outing(outing, observations: observations, dex: store.dex)) {
-                    Label("Share Summary", systemImage: "text.bubble")
-                }
-                Button(role: .destructive) {
-                    pendingDeletion = outing
-                } label: {
-                    Label("Delete Outing", systemImage: "trash")
-                }
-                .disabled(!store.hasLoadedAll)
             } preview: {
                 // Context-menu previews render outside the app's environment hierarchy.
                 NavigationStack {
@@ -92,120 +60,21 @@ private struct OutingRowActionsModifier: ViewModifier {
                 .environment(store)
                 .environment(toasts)
             }
-            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                if auth.isRegisteredAccount {
-                    Button {
-                        Task { await exportOuting() }
-                    } label: {
-                        Label("Export", systemImage: "square.and.arrow.up")
-                    }
-                    .tint(.accentColor)
-                    .disabled(observations.isEmpty || isExporting)
-                }
-            }
-            .sheet(item: $exportItem) { item in
-                ActivityView(item: item)
-            }
-            .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
-                Button("OK", role: .cancel) { operationError = nil }
-            } message: {
-                Text(operationError ?? "Something went wrong. Try again.")
-            }
             .accessibilityAction(named: "View Details", onView)
-    }
-
-    @MainActor
-    private func exportOuting() async {
-        guard !observations.isEmpty else { return }
-        isExporting = true
-        defer { isExporting = false }
-        do {
-            let data = try await store.exportOutingCSV(outingId: outing.id)
-            exportItem = try ExportFileFactory.outing(data: data, outing: outing)
-            toasts.show("Outing exported in eBird Record CSV format")
-        } catch {
-            operationError = AppError.map(error, fallback: "Could not export outing. Try again.")?.message
-        }
-    }
-
-    private var operationErrorBinding: Binding<Bool> {
-        Binding(
-            get: { operationError != nil },
-            set: { if !$0 { operationError = nil } }
-        )
-    }
-}
-
-/// Hosts the outing delete confirmation above the list rather than on the row. An alert
-/// anchored to a row is torn down with the swipe container before it can present, so the
-/// confirmation appeared and vanished in the same frame.
-private struct OutingDeletionConfirmationModifier: ViewModifier {
-    @Binding var outing: Outing?
-
-    @Environment(DataStore.self) private var store
-    @Environment(ToastCenter.self) private var toasts
-    @State private var operationError: String?
-
-    func body(content: Content) -> some View {
-        content
-            .alert("Delete this outing?", isPresented: isPresented, presenting: outing) { target in
-                Button("Cancel", role: .cancel) {}
-                Button("Delete Outing", role: .destructive) {
-                    Task { await delete(target) }
-                }
-            } message: { _ in
-                Text("This will permanently delete this outing and all its observations.")
-            }
-            .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
-                Button("OK", role: .cancel) { operationError = nil }
-            } message: {
-                Text(operationError ?? "Something went wrong. Try again.")
-            }
-    }
-
-    private var isPresented: Binding<Bool> {
-        Binding(
-            get: { outing != nil },
-            set: { if !$0 { outing = nil } }
-        )
-    }
-
-    @MainActor
-    private func delete(_ target: Outing) async {
-        do {
-            try await store.deleteOuting(id: target.id)
-            toasts.show("Outing deleted")
-        } catch {
-            operationError = AppError.map(error, fallback: "Could not delete outing. Try again.")?.message
-        }
-    }
-
-    private var operationErrorBinding: Binding<Bool> {
-        Binding(
-            get: { operationError != nil },
-            set: { if !$0 { operationError = nil } }
-        )
     }
 }
 
 extension View {
     func outingRowActions(
         outing: Outing,
-        pendingDeletion: Binding<Outing?>,
-        onView: @escaping () -> Void,
-        onEditLocation: @escaping () -> Void
+        onView: @escaping () -> Void
     ) -> some View {
         modifier(OutingRowActionsModifier(
             outing: outing,
-            pendingDeletion: pendingDeletion,
-            onView: onView,
-            onEditLocation: onEditLocation
+            onView: onView
         ))
     }
 
-    func outingDeletionConfirmation(_ outing: Binding<Outing?>) -> some View {
-        modifier(OutingDeletionConfirmationModifier(outing: outing))
-    }
 }
 
 @MainActor
