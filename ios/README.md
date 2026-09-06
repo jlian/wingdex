@@ -11,6 +11,16 @@ Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same
 - **Auth:** anonymous sessions, passkeys (WebAuthn), and social OAuth (GitHub, Google, Apple) via Better Auth bearer tokens
 - **Strict concurrency** (`SWIFT_STRICT_CONCURRENCY: complete`)
 
+## Photo and outing behavior
+
+- **Camera saving:** Settings → Camera → Save Camera Photos defaults to On. Accepting a camera capture saves its full-resolution JPEG and capture metadata to Photos independently of identification, even if identification is later canceled. Retakes, canceled captures, and library selections do not create copies. Saving requests add-only Photos access; turning the preference off skips both saving and authorization. Denied access or a save failure never blocks identification, and Settings provides a recovery link when access is denied.
+- **Outing-local time:** EXIF `OffsetTimeOriginal` takes precedence. Photos with only a local EXIF clock use the outing timezone once reverse geocoding or location search resolves it; otherwise they retain the EXIF/device fallback. The review date picker and outgoing timestamps use the resolved timezone. API responses and eBird CSV exports localize legacy UTC (`Z`) outing timestamps with valid coordinates without rewriting historical data or moving their instants. Explicit offsets and records without reliable coordinates remain unchanged.
+- **Outing actions:** Rename, Share Summary, eBird CSV export (registered accounts), and Delete live in the detail toolbar menu. Rename uses a native sheet with explicit Save/Cancel; failed saves retain the draft. Outing rows only open/preview details and have no swipe actions. Species-row actions are unchanged.
+
+The implementation uses Apple's documented `UIImagePickerController.InfoKey.mediaMetadata`, `PHAssetCreationRequest`, `PHAccessLevel.addOnly`, and SwiftUI form, menu, and focus APIs. It leaves the native library picker unchanged.
+
+For device validation, check camera acceptance versus Retake/Cancel, denied Photos permission, Settings recovery, saving with location access on/off, image orientation, and identification canceled after a capture. Simulator tests cover metadata, save deduplication, timezone resolution, rename behavior, outing actions, and preference persistence; they cannot exercise a physical camera.
+
 ## Prerequisites
 
 - Xcode 26.3+
