@@ -109,10 +109,7 @@ final class AddPhotosViewModel {
     var selectedItems: [PhotosPickerItem] = []
     var processedPhotos: [ProcessedPhoto] = []
 
-    /// Photos captured via the camera (UIImage + capture-time location, not from
-    /// PhotosPicker). The in-app camera returns bare pixels with no EXIF GPS, so
-    /// we carry the device location captured alongside each shot.
-    var cameraPhotos: [(image: UIImage, lat: Double?, lon: Double?)] = []
+    var cameraPhotos: [CameraCapture] = []
     private var incomingSharedPhotos: [IncomingSharedPhoto] = []
     private var incomingShareID: String?
 
@@ -272,8 +269,8 @@ final class AddPhotosViewModel {
 
     /// Add a photo captured from the camera, with the device location at capture
     /// time (nil if location was unavailable or permission was denied).
-    func addCameraPhoto(_ image: UIImage, lat: Double?, lon: Double?) {
-        cameraPhotos.append((image: image, lat: lat, lon: lon))
+    func addCameraPhoto(_ capture: CameraCapture) {
+        cameraPhotos.append(capture)
     }
 
     func importIncomingShareIfAvailable() async -> IncomingShareImportResult {
@@ -449,15 +446,11 @@ final class AddPhotosViewModel {
             return
         }
 
-        // Process camera-captured photos (no EXIF GPS; use the device location
-        // captured at shot time, and the processing time as the timestamp).
         var totalPreparedBytes = candidatePhotos.reduce(0) { $0 + $1.byteCount }
         for camera in cameraPhotos {
-            let uiImage = camera.image
-            let id = UUID().uuidString
-            let compressed = PhotoService.compressImage(uiImage, quality: 0.7) ?? Data()
+            let id = camera.id.uuidString
             do {
-                let fileURL = try PhotoFlowStore.writeCameraData(compressed)
+                let fileURL = try PhotoFlowStore.writeCameraData(camera.data)
                 guard let prepared = PhotoService.preparePhoto(at: fileURL) else {
                     PhotoFlowStore.remove([fileURL])
                     continue
@@ -468,12 +461,13 @@ final class AddPhotosViewModel {
                     originalURL: fileURL,
                     cleanupOriginal: true,
                     thumbnail: prepared.thumbnail,
-                    exifTime: Date(),
-                    gpsLat: camera.lat,
-                    gpsLon: camera.lon,
+                    exifTime: camera.captureTime.date,
+                    gpsLat: camera.latitude,
+                    gpsLon: camera.longitude,
                     fileHash: prepared.fileHash,
                     fileName: "camera_\(id).jpg",
-                    byteCount: prepared.byteCount
+                    byteCount: prepared.byteCount,
+                    captureTime: camera.captureTime
                 ))
                 guard prepared.byteCount <= IncomingShareStore.maximumTotalBytes - totalPreparedBytes else {
                     PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))

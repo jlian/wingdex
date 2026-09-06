@@ -696,6 +696,7 @@ struct MainTabView: View {
                     onReverseGeocodingCancellationAcknowledged: acknowledgeReverseGeocodingCancellation
                 )
             }
+            .toastPresenter(toasts.notice)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
@@ -1040,7 +1041,10 @@ struct MainTabView: View {
             addPhotosVM.lastLocationName = name
         }
         addPhotosVM.useGeoContext = !args.contains("--ui-test-disable-geo-context")
-        addPhotosVM.addCameraPhoto(image, lat: latitude, lon: longitude)
+        guard let capture = try? CameraCapture.make(
+            image: image, metadata: [:], latitude: latitude, longitude: longitude
+        ) else { return }
+        addPhotosVM.addCameraPhoto(capture)
         await addPhotosVM.processSelectedPhotos()
         if args.contains("--ui-test-match-outing"), let outing = store.outings.first,
            !addPhotosVM.clusters.isEmpty {

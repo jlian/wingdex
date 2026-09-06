@@ -34,6 +34,8 @@ private let collageBlurFadeLength: Double = 0.25
 /// extraction -> clustering -> identification pipeline as library photos.
 struct PhotoSelectionView: View {
     @Environment(AppNavigationModel.self) private var navigation
+    @Environment(ToastCenter.self) private var toasts
+    @AppStorage(CameraPhotoSaver.preferenceKey) private var saveCameraPhotos = true
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showLibrary = false
     @State private var showCamera = false
@@ -41,6 +43,7 @@ struct PhotoSelectionView: View {
     @State private var collageDrag: CGSize = .zero
     @State private var collageCache = CollageImageCache.shared
     @StateObject private var locationService = LocationService()
+    @State private var cameraPhotoSaver = CameraPhotoSaver()
 
     var body: some View {
         GeometryReader { geo in
@@ -194,13 +197,33 @@ struct PhotoSelectionView: View {
         }
         .fullScreenCover(isPresented: $showCamera, onDismiss: {
             locationService.stop()
+            let captures = viewModel.cameraPhotos
+            let shouldSave = saveCameraPhotos
+            for capture in captures {
+                Task {
+                    do {
+                        _ = try await cameraPhotoSaver.save(capture, enabled: shouldSave)
+                    } catch ImageSharingError.photoLibraryAccessDenied {
+                        toasts.showError("Photo not saved to Photos. Enable Photos access in Settings. You can still identify it.")
+                    } catch {
+                        toasts.showError("Photo could not be saved to Photos. You can still identify it.")
+                    }
+                }
+            }
             if !viewModel.cameraPhotos.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }
             }
         }) {
-            CameraCaptureView { image in
+            CameraCaptureView { image, metadata in
                 let coord = locationService.latestCoordinate
-                viewModel.addCameraPhoto(image, lat: coord?.lat, lon: coord?.lon)
+                do {
+                    let capture = try CameraCapture.make(
+                        image: image, metadata: metadata, latitude: coord?.lat, longitude: coord?.lon
+                    )
+                    viewModel.addCameraPhoto(capture)
+                } catch {
+                    toasts.showError(error.localizedDescription)
+                }
             }
             .ignoresSafeArea()
         }
@@ -270,7 +293,7 @@ private struct DiagonalPhotoCollage: View {
 /// UIKit camera wrapper for SwiftUI. Uses UIImagePickerController which is
 /// the standard iOS camera interface with built-in photo capture UI.
 struct CameraCaptureView: UIViewControllerRepresentable {
-    let onCapture: (UIImage) -> Void
+    let onCapture: (UIImage, [String: Any]) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -287,17 +310,17 @@ struct CameraCaptureView: UIViewControllerRepresentable {
     }
 
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let onCapture: (UIImage) -> Void
+        let onCapture: (UIImage, [String: Any]) -> Void
         let dismiss: DismissAction
 
-        init(onCapture: @escaping (UIImage) -> Void, dismiss: DismissAction) {
+        init(onCapture: @escaping (UIImage, [String: Any]) -> Void, dismiss: DismissAction) {
             self.onCapture = onCapture
             self.dismiss = dismiss
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage {
-                onCapture(image)
+                onCapture(image, info[.mediaMetadata] as? [String: Any] ?? [:])
             }
             dismiss()
         }
