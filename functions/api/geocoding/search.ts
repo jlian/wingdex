@@ -1,5 +1,6 @@
 import { GeocodingConfigurationError, GeocodingUpstreamError, rateLimitKey, searchPlaces } from '../../lib/geocoding-gateway'
 import { createRouteResponder } from '../../lib/log'
+import { coordinateTimeZone } from '../../lib/outing-time'
 
 export const onRequestPost: ApiHandler = async context => {
   const route = createRouteResponder((context.data as RequestData).log, 'geocoding/search/read', 'Application')
@@ -17,7 +18,10 @@ export const onRequestPost: ApiHandler = async context => {
     const query = typeof body?.query === 'string' ? body.query : ''
     const results = await searchPlaces(context.env.GEOAPIFY_KEY, query, fetch)
     return route.complete(
-      Response.json({ results }, { headers: { 'Cache-Control': 'private, no-store' } }),
+      Response.json({ results: results.map(result => ({
+        ...result,
+        timeZone: coordinateTimeZone(result.lat, result.lon),
+      })) }, { headers: { 'Cache-Control': 'private, no-store' } }),
       `Completed geocoding search with ${results.length} results`,
     )
   } catch (error) {

@@ -1,6 +1,7 @@
 import { computeDex, enrichDexEntries } from '../../../lib/dex-query'
 import { getOutingColumnNames } from '../../../lib/schema'
 import { createRouteResponder } from '../../../lib/log'
+import { localizeOutingTimes } from '../../../lib/outing-time'
 
 type UpdateOutingBody = {
   startTime?: string
@@ -174,7 +175,7 @@ export const onRequestPatch: ApiHandler<'id'> = async context => {
 
   stage = 'updated outing response assembly'
   return route.complete(Response.json({
-    ...outing,
+    ...localizeOutingTimes(outing),
     defaultLocationName: outing.defaultLocationName || undefined,
     lat: outing.lat ?? undefined,
     lon: outing.lon ?? undefined,

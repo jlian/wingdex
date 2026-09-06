@@ -25,6 +25,9 @@ struct OutingReviewView: View {
     @State private var suggestedLocation = ""
     @State private var suggestedStateProvince: String?
     @State private var suggestedCountryCode: String?
+    @State private var suggestedTimeZone: TimeZone?
+    @State private var inferredTimeZone: TimeZone?
+    @State private var fallbackTimeZone = TimeZone.current
     @State private var suggestedCoords: CLLocationCoordinate2D?
     @State private var suggestedSource: LocationSource = .gps
     @State private var overriddenSource: LocationSource = .search
@@ -98,6 +101,14 @@ struct OutingReviewView: View {
     /// Effective start time: manual override or cluster start.
     private var effectiveStartTime: Date {
         overriddenStartTime ?? cluster?.startTime ?? Date()
+    }
+
+    private var effectiveTimeZone: TimeZone {
+        if useExistingOuting, let existing = matchingOuting,
+           let timeZone = DateFormatting.storedTimeZone(existing.startTime) {
+            return timeZone
+        }
+        return inferredTimeZone ?? fallbackTimeZone
     }
 
     /// Effective end time: preserves the cluster's duration.
@@ -218,6 +229,7 @@ struct OutingReviewView: View {
         )
         .foregroundStyle(.primary)
         .tint(.primary)
+        .environment(\.timeZone, effectiveTimeZone)
     }
 
     // MARK: - GPS Status
@@ -569,6 +581,8 @@ struct OutingReviewView: View {
         suggestedLocation = ""
         suggestedStateProvince = nil
         suggestedCountryCode = nil
+        suggestedTimeZone = nil
+        inferredTimeZone = nil
         suggestedCoords = nil
         suggestedSource = .gps
         overriddenSource = .search
@@ -593,6 +607,7 @@ struct OutingReviewView: View {
     private func initializeIfNeeded() {
         guard !didInitialize else { return }
         didInitialize = true
+        fallbackTimeZone = cluster?.photos.compactMap(\.captureTime).first?.timeZone ?? .current
 
         // Find matching existing outing
         if let c = cluster {
@@ -678,6 +693,8 @@ struct OutingReviewView: View {
         let generation = locationRequestGeneration
         suggestedCoords = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         suggestedSource = source
+        suggestedTimeZone = nil
+        applyTimeZone(nil)
         nearbyPlaces = []
         applyCoordinateFallback(latitude: latitude, longitude: longitude, state: .ok)
         isLoadingLocation = true
@@ -741,6 +758,8 @@ struct OutingReviewView: View {
             try Task.checkCancellation()
             guard locationRequestGeneration == generation, cluster?.id == clusterID, !useExistingOuting else { return }
             nearbyPlaces = lookup.nearby
+            suggestedTimeZone = lookup.timeZone.flatMap(TimeZone.init(identifier:))
+            applyTimeZone(suggestedTimeZone)
             if let result = lookup.result {
                 applyGeocodedPlace(result)
             } else {
@@ -865,9 +884,11 @@ struct OutingReviewView: View {
         if overridesPhotoGPS, CLLocationCoordinate2DIsValid(coordinate) {
             overriddenCoords = coordinate
             overriddenSource = .search
+            applyTimeZone(result.timeZone.flatMap(TimeZone.init(identifier:)))
         } else {
             overriddenCoords = suggestedSource == .current ? suggestedCoords : nil
             overriddenSource = suggestedSource
+            applyTimeZone(suggestedTimeZone)
         }
         locationName = result.label
         inferredCountryCode = result.countryCode
@@ -883,7 +904,16 @@ struct OutingReviewView: View {
         inferredCountryCode = suggestedCountryCode
         overriddenCoords = suggestedSource == .current ? suggestedCoords : nil
         overriddenSource = suggestedSource
+        applyTimeZone(suggestedTimeZone)
         dismissLocationSearch()
+    }
+
+    private func applyTimeZone(_ timeZone: TimeZone?) {
+        inferredTimeZone = timeZone
+        viewModel.resolveCurrentClusterTimeZone(timeZone ?? fallbackTimeZone)
+        if let cluster, !useExistingOuting {
+            matchingOuting = findMatchingOuting(cluster: cluster, outings: store.outings)
+        }
     }
 
     /// Confirm the outing and proceed to species identification.
@@ -891,6 +921,7 @@ struct OutingReviewView: View {
         cancelLocationWork()
         dismissLocationSearch()
         if useExistingOuting, let existing = matchingOuting {
+            viewModel.resolveCurrentClusterTimeZone(effectiveTimeZone)
             // Merge into existing outing
             viewModel.outingConfirmed(
                 outing: nil,
@@ -910,8 +941,8 @@ struct OutingReviewView: View {
         let outing = Outing(
             id: "outing_\(UUID().uuidString)",
             userId: "",
-            startTime: formatter.string(from: effectiveStartTime),
-            endTime: formatter.string(from: effectiveEndTime),
+            startTime: DateFormatting.storageString(effectiveStartTime, timeZone: effectiveTimeZone),
+            endTime: DateFormatting.storageString(effectiveEndTime, timeZone: effectiveTimeZone),
             locationName: finalLocationName,
             defaultLocationName: finalLocationName,
             lat: effectiveLat,

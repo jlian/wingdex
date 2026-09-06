@@ -716,7 +716,8 @@ final class AddPhotosViewModel {
             gpsLon: prepared.gpsLon,
             fileHash: prepared.fileHash,
             fileName: fileName ?? fileURL.lastPathComponent,
-            byteCount: prepared.byteCount
+            byteCount: prepared.byteCount,
+            captureTime: prepared.captureTime
         )
     }
 
@@ -833,13 +834,35 @@ final class AddPhotosViewModel {
         Task { await runSpeciesId(photoIndex: 0) }
     }
 
-  private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
-        let formatter = ISO8601DateFormatter()
-    return clusterPhotos.map { photo in
+    func resolveCurrentClusterTimeZone(_ timeZone: TimeZone) {
+        guard clusters.indices.contains(currentClusterIndex) else { return }
+        let resolved = clusters[currentClusterIndex].photos.map { photo in
+            var photo = photo
+            if let captureTime = photo.captureTime?.resolved(in: timeZone) {
+                photo.captureTime = captureTime
+                photo.exifTime = captureTime.date
+            }
+            return photo
+        }.sorted { ($0.exifTime ?? .distantPast) < ($1.exifTime ?? .distantPast) }
+        clusters[currentClusterIndex].photos = resolved
+        let dates = resolved.compactMap(\.exifTime)
+        if let start = dates.min(), let end = dates.max() {
+            clusters[currentClusterIndex].startTime = start
+            clusters[currentClusterIndex].endTime = end
+        }
+        let photosByID = Dictionary(uniqueKeysWithValues: resolved.map { ($0.id, $0) })
+        processedPhotos = processedPhotos.map { photosByID[$0.id] ?? $0 }
+    }
+
+    private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
+        let fallbackTimeZone = pendingOuting.flatMap { DateFormatting.storedTimeZone($0.startTime) } ?? .current
+        return clusterPhotos.map { photo in
             DataService.PhotoPayload(
                 id: photo.id,
                 outingId: outingId,
-                exifTime: photo.exifTime.map { formatter.string(from: $0) },
+                exifTime: photo.captureTime?.storedValue ?? photo.exifTime.map {
+                    DateFormatting.storageString($0, timeZone: fallbackTimeZone)
+                },
                 gps: (photo.gpsLat != nil && photo.gpsLon != nil)
                     ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
                     : nil,
@@ -1470,7 +1493,7 @@ struct ProcessedPhoto: Identifiable, Sendable {
     let originalURL: URL
     let cleanupOriginal: Bool
     var thumbnail: Data    // Small thumbnail for display
-    let exifTime: Date?
+    var exifTime: Date?
     let gpsLat: Double?
     let gpsLon: Double?
     let fileHash: String
@@ -1478,6 +1501,7 @@ struct ProcessedPhoto: Identifiable, Sendable {
     let byteCount: Int
     /// User-confirmed cropped image used for re-analysis and preview, matching web croppedDataUrl.
     var croppedImage: Data? = nil
+    var captureTime: PhotoCaptureTime? = nil
 }
 
 /// A group of photos clustered into a single outing by time and GPS proximity.

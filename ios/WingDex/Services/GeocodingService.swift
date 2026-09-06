@@ -11,6 +11,7 @@ struct GeocodingResult: Codable, Identifiable, Sendable {
     let longitude: Double
     let stateProvince: String?
     let countryCode: String?
+    var timeZone: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case label
@@ -19,6 +20,7 @@ struct GeocodingResult: Codable, Identifiable, Sendable {
         case longitude = "lon"
         case stateProvince
         case countryCode
+        case timeZone
     }
 }
 
@@ -34,6 +36,7 @@ final class GeocodingService {
         let result: GeocodingResult?
         let nearby: [GeocodingResult]?
         let regionCodes: RegionCodes?
+        let timeZone: String?
     }
 
     /// ISO 3166 codes for the jurisdiction a coordinate sits in.
@@ -63,12 +66,12 @@ final class GeocodingService {
     func reverse(
         latitude: Double,
         longitude: Double
-    ) async throws -> (result: GeocodingResult?, nearby: [GeocodingResult], regionCodes: RegionCodes?) {
+    ) async throws -> (result: GeocodingResult?, nearby: [GeocodingResult], regionCodes: RegionCodes?, timeZone: String?) {
         let response: ReverseResponse = try await post(
             path: "api/geocoding/reverse",
             body: ["lat": latitude, "lon": longitude]
         )
-        return (response.result, response.nearby ?? [], response.regionCodes)
+        return (response.result, response.nearby ?? [], response.regionCodes, response.timeZone)
     }
 
     func search(query: String) async throws -> [GeocodingResult] {

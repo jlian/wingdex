@@ -97,6 +97,18 @@ final class PhotoServiceTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(prepared.gpsLon), -122.33, accuracy: 0.000_001)
     }
 
+    func testPreparationPreservesEXIFOffset() throws {
+        let original = try makeImageData(width: 64, height: 64, properties: [
+            kCGImagePropertyExifDictionary: [
+                kCGImagePropertyExifDateTimeOriginal: "2026:08:18 07:13:00",
+                kCGImagePropertyExifOffsetTimeOriginal: "-06:00",
+            ],
+        ])
+        let prepared = try XCTUnwrap(PhotoService.preparePhoto(from: original))
+        XCTAssertEqual(prepared.captureTime?.storedValue, "2026-08-18T07:13:00-06:00")
+        XCTAssertEqual(prepared.exifTime, DateFormatting.sortDate("2026-08-18T13:13:00Z"))
+    }
+
     func testFilePreparationPreservesMetadataAndIdentity() throws {
         let original = try makeImageData(
             width: 1_200,

@@ -22,6 +22,13 @@ final class GeocodingServiceTests: XCTestCase {
         XCTAssertEqual(result.longitude, -122.4055)
         XCTAssertEqual(result.stateProvince, "US-WA")
         XCTAssertEqual(result.countryCode, "US")
+        XCTAssertNil(result.timeZone)
+    }
+
+    func testDecodesOptionalGeographicTimeZone() throws {
+        let data = Data(#"{"label":"Quetzal","lat":15.23,"lon":-90.23,"timeZone":"America/Guatemala"}"#.utf8)
+        let result = try JSONDecoder().decode(GeocodingResult.self, from: data)
+        XCTAssertEqual(result.timeZone, "America/Guatemala")
     }
 
     func testResultIdentityIncludesCoordinatesAndLabel() throws {

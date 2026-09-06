@@ -1,5 +1,6 @@
 import { getOutingColumnNames } from '../../lib/schema'
 import { createRouteResponder } from '../../lib/log'
+import { localizeOutingTimes } from '../../lib/outing-time'
 
 type CreateOutingBody = {
   id: string
@@ -185,11 +186,12 @@ export const onRequestPost: ApiHandler = async context => {
         .run()
     }
 
+    const localTimes = localizeOutingTimes(body)
     return route.complete(Response.json({
       id: body.id,
       userId,
-      startTime: body.startTime,
-      endTime: body.endTime,
+      startTime: localTimes.startTime,
+      endTime: localTimes.endTime,
       locationName: body.locationName,
       defaultLocationName: body.defaultLocationName,
       lat: body.lat,
