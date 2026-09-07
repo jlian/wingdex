@@ -131,11 +131,12 @@ Vitest runs pure logic/assets in Node and only component/browser-global tests
 in jsdom. Pixel parity uses whole typed-array equality rather than hundreds of
 thousands of individual matchers, preserving every pixel comparison.
 
-Web CI runs lint/types/unit tests alongside three isolated browser shards on
+Web CI runs lint/types/unit tests alongside four isolated browser shards on
 Linux. Each shard builds the app and owns its Worker/D1; preview deployment
 uses one tested build only after every lane passes. Locally,
-`npm run check:all` runs the same checks sequentially, and
-`npm run test:e2e -- --shard=1/3` reproduces a specific browser shard.
+`npm run check` runs lint, typechecking, and unit tests concurrently;
+`npm run check:all` then builds and runs every browser journey.
+`npm run test:e2e -- --shard=1/4` reproduces a specific browser shard.
 Web CI stays on Linux and iOS on macOS. Independent, self-contained suites
 avoid waiting for a deployed backend or coupling web feedback to simulator
 startup, while retaining the cheaper Linux runner for web work. The runtime
@@ -146,9 +147,11 @@ For reference, a local Node 24 run on 2026-09-07 completed `npm run check:all`
 in 95 seconds, including all 1,122 unit/component and 42 browser tests. This
 does not establish the hosted-runner budget. The first unsharded hosted run
 took 3m47s including cold setup and deployment (2m32s for verification), down
-from roughly nine minutes. CI now overlaps the independent verification lanes
-and avoids reinstalling browser libraries already present in the runner image;
-compare its end-to-end timing rather than just the browser runner's duration.
+from roughly nine minutes. The three-shard hosted run completed in 1m46s
+including setup and preview deployment with dependency/browser caches restored.
+CI overlaps the independent verification lanes and avoids reinstalling browser
+libraries already present in the runner image; compare its end-to-end timing
+rather than just the browser runner's duration.
 
 | Path | Purpose |
 |------|---------|

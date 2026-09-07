@@ -25,6 +25,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -35,12 +36,12 @@ jobs:
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci --no-audit --no-fund
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - run: npm run check
 
   browser:
-    name: Browser journeys (${{ matrix.shard }}/3)
+    name: Browser journeys (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -48,13 +49,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -65,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci --no-audit --no-fund
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Cache Chromium
         uses: actions/cache@v5
@@ -83,7 +85,7 @@ jobs:
       - name: Build and test browser journeys
         # Each shard owns its Worker/D1 on a separate VM. Increasing workers
         # inside one process would bring back shared-runtime contention.
-        run: npm run test:e2e -- --shard=${{ matrix.shard }}/3
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4
 
       - name: Upload browser failures
         if: failure()
@@ -136,6 +138,10 @@ jobs:
 
       - uses: actions/checkout@v6
         if: steps.cloudflare.outputs.available == 'true'
+        with:
+          # Root manifests/config plus migrations; deploy the tested artifact,
+          # not another checkout of the model assets or application sources.
+          sparse-checkout: migrations
 
       - uses: actions/setup-node@v6
         if: steps.cloudflare.outputs.available == 'true'
@@ -156,7 +162,7 @@ jobs:
 
       - name: Restore tested preview build
         if: steps.cloudflare.outputs.available == 'true'
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: web-preview-build
 
@@ -229,7 +235,7 @@ jobs:
               ...context.repo,
               run_id: context.runId,
             });
-            const elapsed = Math.ceil((Date.now() - Date.parse(run.created_at)) / 1000);
+            const elapsed = Math.ceil((Date.now() - Date.parse(run.run_started_at)) / 1000);
             await core.summary
               .addRaw(`Web workflow: ${elapsed}s through deployment, including queueing and setup; remaining job cleanup is excluded. Target: under 120s.`)
               .write();
