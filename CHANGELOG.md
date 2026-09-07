@@ -1,3 +1,10 @@
+## [1.31.3](https://github.com/jlian/wingdex/compare/v1.31.2...v1.31.3) (2026-09-07)
+
+
+### Bug Fixes
+
+* **Outings:** decode RAW photos in review carousel ([#419](https://github.com/jlian/wingdex/issues/419)) ([76ea8b0](https://github.com/jlian/wingdex/commit/76ea8b0c12023021d1badcbae95a2ea2d549bf16)), closes [#418](https://github.com/jlian/wingdex/issues/418)
+
 ## [1.31.2](https://github.com/jlian/wingdex/compare/v1.31.1...v1.31.2) (2026-09-07)
 
 
