@@ -40,7 +40,7 @@ jobs:
       - run: npm run check
 
   browser:
-    name: Browser journeys (${{ matrix.shard }}/2)
+    name: Browser journeys (${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v6
 
@@ -83,11 +83,11 @@ jobs:
       - name: Build and test browser journeys
         # Each shard owns its Worker/D1 on a separate VM. Increasing workers
         # inside one process would bring back shared-runtime contention.
-        run: npm run test:e2e -- --shard=${{ matrix.shard }}/2
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/3
 
       - name: Upload browser failures
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-test-results-${{ matrix.shard }}
           path: test-results/
@@ -95,7 +95,7 @@ jobs:
 
       - name: Keep tested preview build
         if: matrix.shard == 1
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-preview-build
           path: |
@@ -156,7 +156,7 @@ jobs:
 
       - name: Restore tested preview build
         if: steps.cloudflare.outputs.available == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: web-preview-build
 
