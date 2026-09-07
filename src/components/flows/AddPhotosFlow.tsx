@@ -471,6 +471,7 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
     }
 
     if (newPhotos.length === 0 && duplicatePhotos.length === 0) {
+      if (fileInputRef.current) fileInputRef.current.value = ''
       setStep('upload')
       return
     }
@@ -487,7 +488,9 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    await handleSelectedFiles(Array.from(e.target.files || []))
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    await handleSelectedFiles(files)
   }
 
   const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {

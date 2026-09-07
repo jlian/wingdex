@@ -91,17 +91,97 @@ export async function* embeddedJpegPreviews(file: Blob): AsyncGenerator<Blob> {
     }
   }
 
-  // Prefer the full rendered image over the camera's tiny EXIF thumbnail.
-  previews.sort((a, b) => b.length - a.length)
+  const candidates: {
+    offset: number
+    length: number
+    orientation?: number
+    area: number
+  }[] = []
   const emitted = new Set<string>()
   for (const { offset, length, orientation } of previews) {
     const key = `${offset}:${length}`
     if (emitted.has(key)) continue
     emitted.add(key)
-    const start = await read(offset, 2)
-    if (start?.getUint16(0) !== 0xffd8) continue
+    const head = await read(offset, Math.min(length, 65536))
+    if (!head || head.byteLength < 4 || head.getUint16(0) !== 0xffd8) continue
+    const parsed = parseJpegHeader(head)
+    const area = parsed ? parsed.width * parsed.height : 0
+    candidates.push({
+      offset,
+      length,
+      orientation: orientation ?? parsed?.orientation,
+      area,
+    })
+  }
+
+  // Prefer the full rendered image (by pixel area) over thumbnails, using byte length as tie-breaker.
+  candidates.sort((a, b) => (b.area - a.area) || (b.length - a.length))
+  for (const { offset, length, orientation } of candidates) {
     yield await orientPreview(file.slice(offset, offset + length, 'image/jpeg'), orientation ?? originalOrientation)
   }
+}
+
+/**
+ * Read SOF dimensions and optional EXIF orientation from a JPEG data view
+ * without decoding the full image.
+ */
+export function parseJpegHeader(view: DataView, offset = 0, length = view.byteLength): {
+  width: number
+  height: number
+  orientation?: number
+} | undefined {
+  if (length < 4 || offset + 4 > view.byteLength) return undefined
+  if (view.getUint16(offset) !== 0xffd8) return undefined
+  let pos = offset + 2
+  const end = offset + length
+  let orientation: number | undefined
+  let width: number | undefined
+  let height: number | undefined
+
+  while (pos + 4 <= end) {
+    if (view.getUint8(pos) !== 0xff) break
+    const marker = view.getUint8(pos + 1)
+    if (marker === 0xd9 || marker === 0xda) break
+    const size = view.getUint16(pos + 2)
+    if (size < 2 || pos + 2 + size > end) break
+
+    if (marker === 0xe1 && size >= 16
+      && view.getUint32(pos + 4) === 0x45786966
+      && view.getUint16(pos + 8) === 0) {
+      const tiff = pos + 10
+      const little = tiffByteOrder(view, tiff)
+      if (little !== undefined && tiff + 8 <= end) {
+        const ifd = tiff + view.getUint32(tiff + 4, little)
+        if (ifd + 2 <= end) {
+          const count = view.getUint16(ifd, little)
+          for (let i = 0; i < count && ifd + 2 + (i + 1) * 12 <= end; i++) {
+            const entry = ifd + 2 + i * 12
+            if (view.getUint16(entry, little) === 0x0112) {
+              const val = view.getUint16(entry + 8, little)
+              if (val >= 1 && val <= 8) orientation = val
+              break
+            }
+          }
+        }
+      }
+    }
+
+    const isSof =
+      marker >= 0xc0 && marker <= 0xcf &&
+      marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+    if (isSof && pos + 9 <= end) {
+      height = view.getUint16(pos + 5)
+      width = view.getUint16(pos + 7)
+      break
+    }
+
+    pos += 2 + size
+  }
+
+  if (width !== undefined && height !== undefined) {
+    return { width, height, orientation }
+  }
+  return undefined
 }
 
 async function orientPreview(jpeg: Blob, orientation: number): Promise<Blob> {

@@ -207,4 +207,16 @@ describe('AddPhotosFlow upload', () => {
     expect(revoke).toHaveBeenCalledWith('blob:failed-photo')
     await waitFor(() => expect(document.querySelector('input[type="file"]')).not.toBeNull())
   })
+
+  it('clears file input value so selecting the same file again triggers change', async () => {
+    vi.mocked(preparePhotoImage).mockRejectedValue(new PhotoDecodeError())
+    render(
+      <AddPhotosFlow data={createDataStore()} onClose={vi.fn()}
+        ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+    )
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!
+    const badFile = new File(['bad'], 'test.raw')
+    fireEvent.change(input, { target: { files: [badFile] } })
+    await waitFor(() => expect(input.value).toBe(''))
+  })
 })

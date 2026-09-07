@@ -59,6 +59,28 @@ describe('RAW TIFF metadata and rendered previews', () => {
     expect((await previews(fileFrom(bytes))).map(image => image.size)).toEqual([100, 10])
   })
 
+  it('ranks candidate previews by pixel area over compressed byte size', async () => {
+    const { bytes, directory } = rawFixture()
+    const thumb = new Uint8Array(2000)
+    thumb.set([
+      0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08,
+      0x00, 0x78, 0x00, 0xa0, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+    ])
+    thumb[1998] = 0xff; thumb[1999] = 0xd9
+    const full = new Uint8Array(1000)
+    full.set([
+      0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08,
+      0x07, 0xd0, 0x0b, 0xb8, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+    ])
+    full[998] = 0xff; full[999] = 0xd9
+    bytes.set(thumb, 500)
+    bytes.set(full, 100_000)
+    directory(200, [[0x201, 4, 1, 100_000], [0x202, 4, 1, 1000]])
+    directory(300, [[0x201, 4, 1, 500], [0x202, 4, 1, 2000]])
+    const images = await previews(fileFrom(bytes))
+    expect(images.map(image => image.size)).toEqual([1000, 2000])
+  })
+
   it.each([true, false])('reads a self-contained JPEG preview strip, endian=%s', async little => {
     const { bytes, directory } = rawFixture(little)
     directory(8, [[0x14a, 13, 1, 200]])
