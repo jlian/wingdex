@@ -6,9 +6,9 @@
  * has a session to upgrade. It exercises the other branch of
  * afterVerification, where the durable user is created rather than promoted.
  *
- * The upgrade path is covered by passkey-upgrade.spec.ts.
+ * The upgrade path is covered by anonymous-journey.spec.ts.
  */
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { loadApp, promoteAnonymousUser } from './helpers'
 
 async function readSession(page: import('@playwright/test').Page) {

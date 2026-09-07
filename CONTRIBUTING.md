@@ -11,6 +11,11 @@ See the [README](README.md) for setup, project structure, and verification comma
 
 Keep a PR to one logical change. Release Please reads PR titles, so a mixed-bag PR produces a misleading changelog entry.
 
+Browser tests need a one-time `npx playwright install --with-deps --only-shell chromium`.
+They build and start their own isolated local backend; do not start `npm run dev`,
+migrate your development database, or configure Cloudflare credentials for them.
+See [Tests](README.md#tests) for focused and opt-in live commands.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org/) with a scope, for both commit subjects and PR titles:

@@ -1,9 +1,8 @@
 import XCTest
 
 extension XCUIElement {
-    /// XCTest's predicate waiter checks on an approximately one-second cadence.
-    /// Take one current snapshot first so already-satisfied state does not pay
-    /// that delay, then retain XCTest's native synchronization for real waits.
+    /// Avoid entering the waiter for an already-satisfied snapshot. XCTest
+    /// does not promise a particular polling cadence.
     func existsOrWait(timeout: TimeInterval) -> Bool {
         exists || waitForExistence(timeout: timeout)
     }
@@ -15,12 +14,13 @@ extension XCUIElement {
     func isEnabledOrWait(timeout: TimeInterval) -> Bool {
         isEnabled || wait(for: \.isEnabled, toEqual: true, timeout: timeout)
     }
+
+    func labelOrWait(_ value: String, timeout: TimeInterval) -> Bool {
+        label == value || wait(for: \.label, toEqual: value, timeout: timeout)
+    }
 }
 
-/// Shared fixtures, launch helpers, and accessibility-audit plumbing for the
-/// add-photos UI tests. Split into a base class so the audit tests can live in
-/// their own XCTestCase: XCTest parallelizes by class, not by method, so a
-/// single class always runs on one worker.
+/// Shared launch, synchronization and audit helpers for both UI test targets.
 @MainActor
 class BirdIdFlowUITestCase: XCTestCase {
     /// A shared fixture, also used by BirdIdAccuracyTests and the web tests. Read from
@@ -28,24 +28,6 @@ class BirdIdFlowUITestCase: XCTestCase {
     static let photo = "Great_blue_heron_roosting_at_Carkeek_Park.jpg"
     static let expectedSpecies = "Great Blue Heron"
     static let avatarEmojiLabels: Set<String> = ["🐦", "🦉", "🦜", "🐧", "🦆", "🦩", "🦅", "🐤"]
-
-    nonisolated var configuredAPIBaseURLValue: String? {
-        ProcessInfo.processInfo.environment["API_BASE_URL"]
-    }
-
-    nonisolated var configuredAPIBaseURL: URL? {
-        guard let value = configuredAPIBaseURLValue,
-              let url = URL(string: value),
-              let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              url.host != nil
-        else { return nil }
-        return url
-    }
-
-    var apiBaseURL: URL {
-        configuredAPIBaseURL ?? URL(string: "http://127.0.0.1:5000")!
-    }
 
     static var photoPath: String {
         URL(fileURLWithPath: #filePath)
@@ -56,22 +38,9 @@ class BirdIdFlowUITestCase: XCTestCase {
             .path
     }
 
-    static var seedCSVPath: String {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("e2e/fixtures/ebird-import.csv")
-            .path
-    }
-
-    /// Stop at the first failure. Later steps wait up to 180s for the model, so letting a
-    /// failed run continue turns one broken assertion into minutes of dead waiting.
+    /// Stop broken journeys before subsequent navigation adds unrelated failures.
     override func setUp() {
         continueAfterFailure = false
-        if configuredAPIBaseURLValue != nil {
-            XCTAssertNotNil(configuredAPIBaseURL, "API_BASE_URL must be an absolute HTTP(S) URL")
-        }
     }
 
     func scrollUntilVisible(
@@ -79,15 +48,11 @@ class BirdIdFlowUITestCase: XCTestCase {
         in app: XCUIApplication,
         maximumSwipes: Int = 5
     ) -> Bool {
-        if element.exists && element.isHittable { return true }
-
         let container = app.collectionViews.firstMatch.exists
             ? app.collectionViews.firstMatch
             : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
 
-        for _ in 0..<maximumSwipes {
-            if element.exists && element.isHittable { return true }
-
+        for swipe in 0...maximumSwipes {
             let keyboard = app.keyboards.firstMatch
             let topNav = app.navigationBars.firstMatch
 
@@ -96,6 +61,15 @@ class BirdIdFlowUITestCase: XCTestCase {
                 ? keyboard.frame.minY
                 : container.frame.maxY
             let visibleHeight = visibleBottom - visibleTop
+
+            // A clipped control can be hittable while its tap center is behind
+            // the navigation bar or keyboard, especially after sheet dismissal.
+            if element.exists && element.isHittable,
+                element.frame.midY > visibleTop + 10,
+                element.frame.midY < visibleBottom - 10 {
+                return true
+            }
+            if swipe == maximumSwipes { break }
 
             guard visibleHeight > 60 else {
                 app.swipeUp()
@@ -133,7 +107,7 @@ class BirdIdFlowUITestCase: XCTestCase {
 
             startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
         }
-        return element.exists && element.isHittable
+        return false
     }
 
     /// The accepted name is on the adjustLocation button; empty is displayed as 'No location'.
@@ -185,7 +159,7 @@ class BirdIdFlowUITestCase: XCTestCase {
     /// Map coordinates are included in the native toolbar button's spoken label.
     func mapCoordinatesText(in app: XCUIApplication) -> String {
         let recenter = app.buttons["outing.mapRecenter"]
-        XCTAssertTrue(recenter.existsOrWait(timeout: 5))
+        XCTAssertTrue(recenter.existsOrWait(timeout: 5), app.debugDescription)
         let label = recenter.label
         guard let range = label.range(of: #"\(-?\d+\.\d{4}, -?\d+\.\d{4}\)$"#, options: .regularExpression) else {
             XCTFail("Recenter is missing its coordinate description: \(label)")
@@ -204,25 +178,17 @@ class BirdIdFlowUITestCase: XCTestCase {
         for auditTypes: XCUIAccessibilityAuditType = .all,
         handlingKnownIssue: ((XCUIAccessibilityAuditIssue) -> Bool)? = nil
     ) throws {
-        do {
-            try app.performAccessibilityAudit(for: auditTypes) { issue in
-                handlingKnownIssue?(issue) ?? false
-            }
-        } catch {
-            if Self.isAccessibilityAuditInfrastructureTimeout(error) {
-                XCTFail("XCTest accessibility audit infrastructure timed out before reporting results (Code=-56)")
-                return
-            }
-            throw error
+        let selectedTypes = deepAudits
+            ? auditTypes
+            : auditTypes.intersection([.hitRegion, .sufficientElementDescription, .trait])
+        guard !selectedTypes.isEmpty else { return }
+        try app.performAccessibilityAudit(for: selectedTypes) { issue in
+            handlingKnownIssue?(issue) ?? false
         }
     }
 
-    nonisolated static func isAccessibilityAuditInfrastructureTimeout(
-        _ error: Error
-    ) -> Bool {
-        let auditError = error as NSError
-        return auditError.domain == "com.apple.xcode.xctest.accessibilityAudit"
-            && auditError.code == -56
+    var deepAudits: Bool {
+        ProcessInfo.processInfo.environment["WINGDEX_DEEP_AUDITS"] == "1"
     }
 
     func isKnownAddPhotosAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
@@ -284,6 +250,12 @@ class BirdIdFlowUITestCase: XCTestCase {
     func isKnownSettingsAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
         switch issue.auditType {
         case .contrast:
+            // iOS 27 flags this decorative glyph even at measured 10.30:1 contrast
+            // and with accessibilityHidden(true). Keep links and all other text audited.
+            if issue.element?.identifier == "settings.footerSeparator",
+                issue.element?.label == "·" {
+                return true
+            }
             let systemSectionHeaders = [
                 "Account", "Avatar", "Import & Export", "Security",
                 "Bird Identification", "Camera", "Legal", "Data Management",
@@ -371,18 +343,11 @@ class BirdIdFlowUITestCase: XCTestCase {
             )
         ).firstMatch
         XCTAssertTrue(
-            outcome.existsOrWait(timeout: 120),
+            outcome.existsOrWait(timeout: 15),
             "UI test data setup did not finish"
         )
         XCTAssertTrue(complete.exists || failed.exists, "UI test data setup reported an unknown outcome")
-        XCTAssertFalse(failed.exists, "UI test data setup failed")
-    }
-
-    func waitForSeededData(in app: XCUIApplication) {
-        waitForDataSetup(in: app)
-        let elements = app.descendants(matching: .any)
-        XCTAssertTrue(elements["Chalk-browed Mockingbird"].existsOrWait(timeout: 10))
-        XCTAssertTrue(elements["Eared Dove"].existsOrWait(timeout: 10))
+        XCTAssertFalse(failed.exists, "UI test data setup failed: \(failed.value as? String ?? "unknown error")")
     }
 
     func waitForOutingReview(
@@ -391,7 +356,7 @@ class BirdIdFlowUITestCase: XCTestCase {
     ) -> XCUIElement {
         waitForDataSetup(in: app)
         let continueButton = app.buttons["outing.continue"]
-        XCTAssertTrue(continueButton.existsOrWait(timeout: 60), "Outing review never appeared")
+        XCTAssertTrue(continueButton.existsOrWait(timeout: 15), "Outing review never appeared")
         if requireEnabled {
             XCTAssertTrue(
                 continueButton.isEnabledOrWait(timeout: 15),
@@ -401,22 +366,11 @@ class BirdIdFlowUITestCase: XCTestCase {
         return continueButton
     }
 
-    /// An account can already hold an outing that matches the injected cluster, which
-    /// inherits its location instead of offering an editable one. Start from a new outing.
-    func startNewOuting(in app: XCUIApplication) {
-        // SwiftUI puts the Toggle's identifier on its cell, so match the switch by label.
-        let toggle = app.switches
-            .matching(NSPredicate(format: "label BEGINSWITH 'Add to existing outing?'"))
-            .firstMatch
-        guard toggle.exists else { return }
-        guard toggle.value as? String == "1" else { return }
-        // The element spans the whole row but only the trailing switch flips it.
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-    }
-
     func application() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchEnvironment["API_BASE_URL"] = apiBaseURL.absoluteString
+        app.launchEnvironment["API_BASE_URL"] = "https://ui-tests.invalid"
+        app.launchEnvironment["WINGDEX_UI_TESTING"] = "1"
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         return app
     }
 
@@ -426,7 +380,8 @@ class BirdIdFlowUITestCase: XCTestCase {
         extraArguments: [String] = []
     ) -> XCUIApplication {
         let app = application()
-        app.launchArguments = [
+        app.launchArguments += [
+            "--ui-test-ignore-shares",
             "--ui-test-reset-signup-prompt",
             "--ui-test-photo", Self.photoPath,
         ] + extraArguments
@@ -437,8 +392,8 @@ class BirdIdFlowUITestCase: XCTestCase {
             let usesLocalFixture = extraArguments.contains("--ui-test-fixture-empty")
                 || extraArguments.contains("--ui-test-fixture-populated")
             let setupArguments = usesLocalFixture
-                ? ["--auto-sign-in"]
-                : ["--auto-sign-in", "--ui-test-clear-data"]
+                ? []
+                : ["--ui-test-fixture-empty"]
             app.launchArguments.insert(contentsOf: setupArguments, at: 0)
         } else {
             app.launchArguments.insert("--ui-test-sign-out", at: 0)
@@ -447,22 +402,4 @@ class BirdIdFlowUITestCase: XCTestCase {
         return app
     }
 
-    func backendUnavailableReason() async -> String? {
-        let url = apiBaseURL.appendingPathComponent("api/health")
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let http = response as? HTTPURLResponse else {
-                return "\(url) returned a non-HTTP response"
-            }
-            guard (200...299).contains(http.statusCode) else {
-                return "\(url) returned HTTP \(http.statusCode)"
-            }
-            guard !data.isEmpty else {
-                return "\(url) returned an empty body"
-            }
-            return nil
-        } catch {
-            return "\(url) is unreachable: \(error.localizedDescription)"
-        }
-    }
 }

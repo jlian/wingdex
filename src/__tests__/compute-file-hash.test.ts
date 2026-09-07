@@ -1,19 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { computeFileHash } from '@/lib/photo-utils'
-
-// jsdom's File doesn't implement arrayBuffer(), polyfill it
-beforeAll(() => {
-  if (!File.prototype.arrayBuffer) {
-    File.prototype.arrayBuffer = function () {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as ArrayBuffer)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsArrayBuffer(this)
-      })
-    }
-  }
-})
 
 describe('computeFileHash', () => {
   it('returns a 64-character hex string (SHA-256)', async () => {

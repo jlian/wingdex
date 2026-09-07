@@ -4,7 +4,7 @@ import XCTest
 final class CameraSettingsUITests: BirdIdFlowUITestCase {
     func testCameraPreferencePersistsWithoutPromptingForPermission() {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-populated", "--ui-test-open-settings"]
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-open-settings", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         let setting = cameraSetting(in: app)

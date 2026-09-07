@@ -164,17 +164,17 @@ struct SettingsView: View {
                             Link("WingDex™ \(version)", destination: releaseURL)
                             .accessibilityIdentifier("settings.versionLink")
                             Text("·")
-                                .foregroundStyle(.tertiary)
+                                .accessibilityIdentifier("settings.footerSeparator")
                                 .accessibilityHidden(true)
                             Link("By John Lian", destination: URL(string: "https://johnlian.net")!)
                                 .accessibilityIdentifier("settings.authorLink")
                         }
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.foregroundText)
                         #if DEBUG
                         Text("\(GitInfo.branch)@\(GitInfo.commit)")
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Color.foregroundText)
                         #endif
                     }
                     Spacer()
@@ -458,7 +458,7 @@ struct SettingsView: View {
                 DataManagementView()
             } label: {
                 Label("Delete Data...", systemImage: "trash")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.destructiveText)
             }
         }
         .headerProminence(.increased)
@@ -469,7 +469,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var logOutSection: some View {
         Section {
-            Button("Log Out", role: .destructive) {
+            Button("Log Out") {
         if store.pendingUploadStoreUnavailable {
           logoutError = .message(
             "WingDex couldn't open saved uploads. Restart WingDex before logging out."
@@ -480,6 +480,7 @@ struct SettingsView: View {
           Task { await logOut(discardPendingUploads: false) }
                 }
             }
+            .accessibilityIdentifier("settings.logOut")
         }
     }
 

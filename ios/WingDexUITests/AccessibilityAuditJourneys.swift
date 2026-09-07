@@ -1,8 +1,8 @@
 import XCTest
 
-/// Render-only audits use local deterministic data. Functional UI tests retain
-/// preview-backend coverage in BirdIdFlowUITests. Main screens share a launch,
-/// while named activities preserve screen-specific diagnostics.
+/// All audits use local fixtures. The default structural checks do not resize
+/// text or sample screenshots; the explicit deep lane adds those OS-sensitive
+/// checks. Named activities retain screen-specific diagnostics.
 @MainActor
 final class PopulatedAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testMainScreensPassAccessibilityAudit() {
@@ -55,7 +55,7 @@ final class PopulatedAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
     private func launchPopulatedApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-populated"]
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         return app
@@ -109,7 +109,7 @@ final class EmptyAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
     private func launchEmptyApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-empty"]
+        app.launchArguments += ["--ui-test-fixture-empty", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         return app
@@ -119,10 +119,19 @@ final class EmptyAccessibilityAuditUITests: BirdIdFlowUITestCase {
 @MainActor
 final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testSettingsAndDeletionConfirmationsPassAccessibilityAudit() throws {
+        continueAfterFailure = true
+        if deepAudits {
+            let app = launchSettingsApp()
+            showSettingsFooter(in: app)
+            try runAccessibilityAudit(in: app, for: .contrast) {
+                self.isKnownSettingsFooterAuditIssue($0, in: app)
+            }
+        }
+
         let app = launchSettingsApp()
         try runAccessibilityAudit(
             in: app,
-            for: .all.subtracting(.contrast),
+            for: .all,
             handlingKnownIssue: isKnownSettingsAuditIssue
         )
 
@@ -137,33 +146,33 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         try runAccessibilityAudit(in: app, for: .all.subtracting(.dynamicType))
     }
 
-    func testSettingsPassesContrastAudit() throws {
-        let app = application()
-        app.launchArguments = [
-            "--ui-test-fixture-populated",
-            "--ui-test-open-settings",
-        ]
-        app.launch()
-        waitForDataSetup(in: app)
-        XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
+    private func showSettingsFooter(in app: XCUIApplication) {
+        let logOut = app.buttons["settings.logOut"]
+        app.swipeUp(velocity: .fast)
+        app.swipeUp(velocity: .fast)
+        XCTAssertTrue(logOut.isHittable)
+        XCTAssertTrue(app.links["settings.versionLink"].isHittable)
+    }
 
-        try runAccessibilityAudit(
-            in: app,
-            for: .contrast,
-            handlingKnownIssue: isKnownSettingsAuditIssue
-        )
-        let legalHeader = app.staticTexts["Legal"]
-        XCTAssertTrue(scrollUntilVisible(legalHeader, in: app))
-        try runAccessibilityAudit(
-            in: app,
-            for: .contrast,
-            handlingKnownIssue: isKnownSettingsAuditIssue
-        )
+    private func isKnownSettingsFooterAuditIssue(
+        _ issue: XCUIAccessibilityAuditIssue,
+        in app: XCUIApplication
+    ) -> Bool {
+        if isKnownSettingsAuditIssue(issue) { return true }
+        guard issue.auditType == .contrast,
+            let element = issue.element,
+            element.elementType == .staticText,
+            element.label == "Use Location and Time" else { return false }
+        // iOS 27 reads this scrolled-out label through the glass navigation bar.
+        // Its unobscured contrast remains audited in the initial Settings view.
+        let bar = app.navigationBars["Settings"]
+        guard bar.exists, !element.frame.isEmpty else { return false }
+        return bar.frame.contains(CGPoint(x: element.frame.midX, y: element.frame.midY))
     }
 
     private func launchSettingsApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-populated", "--ui-test-open-settings"]
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-open-settings", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
@@ -176,7 +185,7 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
 final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testSignInPassesAccessibilityAudit() throws {
         let app = application()
-        app.launchArguments = [
+        app.launchArguments += [
             "--ui-test-sign-out",
             "--ui-test-share-store",
             "--ui-test-reset-share-store",
@@ -192,6 +201,9 @@ final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
 @MainActor
 final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
+    // Keep full audits terminal. After a full audit of the active search field,
+    // XCTest can spend 60s waiting for an animation before each next tap.
+    // Fresh per-screen launches preserve every category without bypassing waits.
     func testPhotoReviewSheetPassesAccessibilityAudit() throws {
         continueAfterFailure = true
         let secondPhoto = URL(fileURLWithPath: #filePath)
@@ -216,6 +228,38 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
     }
 
     func testOutingReviewPassesAccessibilityAudit() throws {
+        let app = launchReview()
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+    }
+
+    func testLocationSearchPassesAccessibilityAudit() throws {
+        let app = launchReview()
+        _ = showPlaceSearch(in: app)
+        try runAccessibilityAudit(in: app) {
+            self.isKnownAddPhotosSearchAuditIssue($0, in: app)
+        }
+    }
+
+    func testLocationMapPassesAccessibilityAudit() throws {
+        let app = launchReview()
+        showPlaceSearch(in: app).tap()
+        XCTAssertTrue(app.searchFields.firstMatch.disappearsOrWait(timeout: 5))
+        let preview = mapPreviewElement(in: app)
+        XCTAssertTrue(scrollUntilVisible(preview, in: app))
+        preview.tap()
+        XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosMapAuditIssue)
+    }
+
+    private func showPlaceSearch(in app: XCUIApplication) -> XCUIElement {
+        openLocationPicker(in: app)
+        setLocationQuery("Discovery", in: app)
+        let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
+        XCTAssertTrue(result.existsOrWait(timeout: 5))
+        return result
+    }
+
+    private func launchReview() -> XCUIApplication {
         continueAfterFailure = true
         let app = launchApp(extraArguments: [
             "--ui-test-fixture-empty",
@@ -224,19 +268,6 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
             "--ui-test-stub-identification",
         ])
         _ = waitForOutingReview(in: app)
-        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
-        openLocationPicker(in: app)
-        setLocationQuery("Discovery", in: app)
-        let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
-        XCTAssertTrue(result.existsOrWait(timeout: 5))
-        try runAccessibilityAudit(in: app) {
-            self.isKnownAddPhotosSearchAuditIssue($0, in: app)
-        }
-        result.tap()
-        let preview = mapPreviewElement(in: app)
-        XCTAssertTrue(scrollUntilVisible(preview, in: app))
-        preview.tap()
-        XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
-        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosMapAuditIssue)
+        return app
     }
 }

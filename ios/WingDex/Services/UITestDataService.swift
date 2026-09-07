@@ -1,8 +1,8 @@
 #if DEBUG
 import Foundation
 
-/// Deterministic data for render-only UI tests. Functional UI tests continue to
-/// use DataService so this fixture cannot replace backend integration coverage.
+/// Deterministic account snapshots for UI tests. AuthTransportTests exercise
+/// native HTTP behavior; the Worker tests own backend integration coverage.
 final class UITestDataService: DataStoreService, Sendable {
     enum Mode: Sendable {
         case empty

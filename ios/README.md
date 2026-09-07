@@ -47,7 +47,257 @@ The app connects to the web API. For local development, start the web backend fi
 npm run dev
 ```
 
-Then run the iOS app in the simulator pointing at `http://localhost:5000`.
+The `Localhost` app scheme uses `https://localhost.wingdex.app`, through the LAN
+reverse proxy described in the root README. This is only for interactive backend
+development; **none of the iOS tests require that host or a running backend**.
+
+## Tests
+
+From the repository root:
+
+```bash
+npm run test:ios                      # all required unit, UI and accessibility tests
+make -C ios                           # the same default, without Node/npm
+make -C ios core                      # unit tests and native interaction smoke tests
+make -C ios accessibility             # deterministic structural accessibility audits
+make -C ios accessibility-deep        # opt-in OS-sensitive full audits
+
+# A selector replaces the lane's default target selection:
+make -C ios core TESTS=-only-testing:WingDexTests/AuthTransportTests
+```
+
+The Makefile is the shared local/CI entry point; `scripts/test.sh` owns the one
+simulator/build lifecycle underneath it. `npm run test:ios -- core` also works.
+Install Xcode and XcodeGen, then
+run it; do not boot a simulator, launch a server, choose an API URL, or generate
+the project first. It uses the selected Xcode (`DEVELOPER_DIR` is respected) and
+the newest installed iOS 26+ runtime. `IOS_TEST_DEVICE_TYPE` optionally overrides
+the default `com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro`.
+
+The runner first builds for `generic/platform=iOS Simulator` with the host
+architecture, without waiting for a particular simulator to become ready. It then
+creates a uniquely named simulator, boots it, waits for `simctl bootstatus`, and
+runs tests serially on that UDID. Build and boot are intentionally separate to
+avoid compiler/simulator memory and disk contention on smaller hosted machines.
+`test-without-building` reads the generated SDK/architecture-specific `.xctestrun`
+directly, avoiding a second project/package-resolution pass. This split is
+documented in Apple's [command-line testing guide](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
+and the installed `xcodebuild` man page.
+
+Cleanup shuts down/deletes only the UDID the runner created, including on ordinary
+failure or interruption. It never erases or deletes a developer's simulator.
+A force-killed process or powered-off Mac cannot
+run cleanup; the recorded `Simulator:` UDID identifies that run's device if manual
+cleanup is needed. Builds reuse `ios/build/DerivedData`; simulator state never
+does. Raw logs, toolchain versions, elapsed times, JSON summary, and `.xcresult`
+remain in `ios/build/test-results/<lane>-<uuid>/`. Xcode's exit status is retained.
+Run one iOS lane at a time on a local Mac because the build cache/project is shared.
+
+CI's compiled-cache fallback can reuse another lane's SwiftPM/DerivedData cache
+when Xcode, OS and architecture match, rather than cold-building core after an
+accessibility lane already built the same targets. Content-keyed generated Bird
+ID assets and the pinned XcodeGen executable are cached separately. These caches
+reuse build inputs/products, never simulator state or test results; tests still
+run on a fresh device.
+The runner disables Xcode's optional **verbose system diagnostics**. Failed
+assertions, screenshots, UI hierarchies, raw stderr and result bundles remain.
+Export attachments without `--only-failures`: Xcode can mark a failed test's
+attachments as not directly associated with its assertion. On the local beta,
+one failed assertion otherwise spawned
+`simctl diagnose --timeout=600` after all tests had already finished, adding
+minutes with no test progress. This is the documented
+`xcodebuild -collect-test-diagnostics never` option, not a log filter.
+
+For simulator tests the script omits the home-screen Icon Composer asset, which
+is not under test and added almost two minutes on hosted runners. Cleanup
+regenerates the normal project, including that asset, for direct Run/Archive.
+Normal Xcode generation and release archives do not omit it.
+
+### Xcode Test navigator
+
+Open `ios/WingDex.xcodeproj` after `cd ios && xcodegen generate`, select an iPhone
+Simulator, and click any test diamond, including
+`test://com.apple.xcode/WingDex/WingDexAccessibilityUITests`. The canonical
+`WingDex` scheme contains all three required test targets. `Localhost`, `Dev`,
+and `Production` also contain them; their API build settings do not affect test
+fixtures. `Dev CI` was removed: it offered no different coverage, and disabling
+its debugger did not prevent the launch-snapshot diagnostic below. Ordinary Run,
+Profile and Archive behavior of the development/release schemes is unchanged.
+
+No launch arguments, server, backend-selection step, Cloudflare login, or special
+test scheme are required in Xcode. Fixtures are selected in test code, so running
+one test does not require running another test first. The CLI owns a fresh
+simulator; Xcode uses your chosen simulator. Prefer a dedicated test simulator
+there too, since UI tests sign out and replace the app's account with fixtures.
+
+### Coverage and runtime policy
+
+| Layer | Responsibility |
+|-------|----------------|
+| Unit | Native bearer transport, session rejection and token handling, auth/passkey parsing, view-model state and cancellation, offline persistence, RAW/JPEG/HEIF handling, real Core ML inference and web/native golden-vector parity |
+| Core UI | Sessionless photo/share entry, share failure and relaunch, crop gestures, missing-GPS permission intent/manual entry, native sheet/search/map/photo gestures, outing actions/rename retry, camera preference persistence |
+| Accessibility | Hit regions, sufficient descriptions and traits on populated/empty tabs, settings/deletion, sign-in, outing review, search, map and photo sheets |
+| Deep accessibility | The same journeys with full requested audit categories, including screenshot contrast, text clipping, element detection and Dynamic Type resizing |
+
+The previous 26 bird-flow UI tests repeated location-state permutations already
+covered by `OutingLocationReviewModelTests` and `OutingLocationSearchModelTests`.
+They are now seven native wiring/lifecycle tests. In particular, the former
+64.9-second manual-location cancellation journey is a continuation-controlled
+unit test of both late current-location and reverse-lookup responses, with no
+11-second inverted UI waits. Six outing UI launches become two journeys; five
+visual journeys become three, keeping real camera movement and photo paging.
+Single-photo/index/removal semantics remain in `PhotoReviewCarouselTests`,
+`PhotoFlowStoreTests` and `AddPhotosViewModelTests`. The repeated light/large-text
+journey is consolidated into the large-text native interaction test.
+
+Eight live `AuthIntegrationTests` mostly retested Worker HTTP CRUD/auth behavior.
+Four `AuthTransportTests` instead exercise the real native `AuthService` and
+`DataService` with an injected ephemeral `URLSession`/`URLProtocol`: anonymous
+identity and signed/raw tokens, bearer headers, no cookies, trace propagation,
+session validation/sign-out, unauthorized data, sessionless calls and failed
+sign-in. Server behavior stays in the web/Worker suites. UI auth transport is a
+Debug-only, explicitly enabled in-process fixture that rejects unknown requests
+rather than falling through to a real backend. Real model inference is not
+repeated through UI: the accuracy unit test keeps all eight real photos and their
+former JPEG derivatives, reusing each original result instead of inferring it
+twice. Missing accuracy fixtures now fail instead of silently skipping.
+
+All UI existence/disappearance waits first read `.exists` synchronously, then
+fall back to XCTest's native wait only when needed. Value/camera predicates also
+check their current value first. No private XCTest polling or quiescence settings
+are used; Apple does not guarantee the waiter's polling interval.
+
+Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
+Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
+accessibility run on separate macOS 15 ARM machines with Xcode 26.3, using the
+same fresh iPhone 17 Pro default
+as local runs. Smaller SE displays did not improve hosted runtime consistently
+and introduced tight-viewport scrolling failures, so CI does not override the
+device type.
+The 15-minute infrastructure ceiling still leaves failure diagnostics time to
+finish. CI calls these exact repo commands; it does not deploy/select a backend
+or manage a second simulator lifecycle. Backend-only changes no longer trigger
+native UI builds. Full visual/font audits run nightly or via the workflow's
+`deep_audits` input as an explicitly advisory job, not a merge gate. Run failures,
+including infrastructure timeouts, remain failures in the logs and `.xcresult`;
+they are not converted to passes/skips or swallowed with a generic issue filter.
+The default structural checks remain required. Full audits supplement, not
+replace, manual VoiceOver, contrast, dark appearance and Dynamic Type checks.
+
+Local verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone 17 Pro,
+fresh simulators and a warm build cache:
+
+| Command | Total, including build and simulator | Result |
+|---------|--------------------------------------|--------|
+| `make -C ios` | **6m 24s** | 447 passed, 0 skipped |
+| `make -C ios accessibility-deep` | **3m 22s** | 8 passed, 0 skipped |
+
+These runs used the generic build and direct `.xctestrun` lifecycle; deep-audit
+mode remained active without another package-resolution pass. Three targeted
+large-text/share regressions also passed on an SE simulator in 2m 37s.
+These are local measurements, not a claim about hosted Xcode performance.
+The pre-change hosted run `34140285029` took about 22 minutes for core and
+12 minutes for accessibility. Hosted runs must include cache restore, simulator
+setup, diagnostics and job cleanup when evaluating the lane budget.
+
+The initial deep run failed in two places; both are fixed without dropping audit
+categories or increasing timeouts:
+
+- The search-screen audit completed around 30s, but the following result/map taps
+  each waited 60s for an app-animation completion notification that never arrived.
+  It was not the map audit taking too long: that audit was never reached. Outing
+  review, search and map now have independent launches and terminal audits,
+  following Apple's [per-screen audit guidance](https://developer.apple.com/videos/play/wwdc2023/10035/).
+  The same real search/map navigation remains covered by the separate UI flow.
+  No missing-animation waits appeared in the passing full run.
+- Settings' "Contrast nearly passed" attachment identified **Log Out**, whose
+  destructive red text measured about 3.20:1 against white. Ordinary logout is
+  reversible and the web button is non-destructive; the native button now uses
+  its standard role and existing app tint. The genuinely destructive pending-upload
+  discard confirmation keeps its destructive role. This follows Apple's
+  [destructive-role guidance](https://developer.apple.com/documentation/swiftui/buttonrole/destructive)
+  and [4.5:1 requirement for normal-size text](https://developer.apple.com/design/human-interface-guidelines/accessibility).
+  Simulator screenshots measured approximately 5.82:1 in light appearance and
+  5.21:1 in dark appearance.
+- Auditing the complete Settings footer also exposed low-contrast version text
+  and the manually red **Delete Data...** navigation label. Footer text now uses
+  the existing foreground palette. `DestructiveText` preserves the web's red hue,
+  with a lighter dark variant for elevated native Form surfaces. Actual deletion
+  and discard buttons retain their native destructive roles. The navigation label
+  measured 4.69:1 in light appearance and 5.99:1 in dark appearance.
+
+The full Settings audit passed in light (27.7s) and dark (26.2s) appearance.
+The footer is audited at the end of the Form, with Log Out and the version
+link asserted hittable, before a fresh launch audits the other Settings screens.
+Two precisely bounded iOS 27 audit artifacts remain documented in the handlers:
+
+- The decorative footer separator is reported as "Contrast failed" even with
+  `accessibilityHidden(true)` and measured 10.30:1 foreground/background contrast.
+  Only `.contrast` for identifier `settings.footerSeparator` and label `·` is
+  excluded. It conveys no information and is also exempt under
+  [WCAG's decorative-text rule](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+  Neither footer link nor any other text is excluded.
+- At the bottom of the Form, XCTest reads **Use Location and Time** through the
+  glass navigation bar: its label spans y=113.5...133.8, while the bar spans
+  y=78...132. The footer-only handler requires that exact static-text label,
+  `.contrast`, and its center inside the Settings navigation bar. Its unobscured
+  contrast is still audited in the initial Settings view. Screen-coordinate
+  comparison follows the documented
+  [`XCUIElementAttributes.frame`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/frame)
+  contract, also verified in the installed SDK.
+
+Simulator MCP observations also confirmed the button remains readable and
+unclipped at the largest accessibility text size in both appearances. This
+installation lacks SimulatorKit's HID support, so a temporary native XCTest
+helper performed the scrolling before MCP captured the screenshots; that helper
+is not part of the suite. No Xcode MCP/preview renderer was available, so the
+affected preview could not be rendered separately from the installed app.
+
+### Xcode debugger-version diagnostic
+
+The baseline CI run `34140285029` emitted
+`IDELaunchParametersSnapshot` / `DebuggerLLDB.DebuggerVersionStore.StoreError`
+and `no debugger version` even with `Dev CI`'s debugger disabled. This is emitted
+by Xcode's launch metadata capture, not by WingDex or a failed assertion.
+On the installed Xcode 27 beta (`27A5252f`), UI launches give a more specific
+message: `debugger version lookup failed for path '<nil>': noURL`, while
+`xcrun lldb --version` succeeds. This demonstrates a missing debugger URL in that
+launch snapshot, **not** a missing LLDB installation. Apple has not published a
+root-cause/fix for the older `StoreError error 0` message; do not infer corrupted
+DerivedData, an app crash, or a backend problem from those two lines alone.
+
+The script records `xcodebuild -version` and `xcrun --find lldb`; additionally
+check `xcrun lldb --version`. Ensure `DEVELOPER_DIR`/`xcode-select` select the intended complete
+Xcode installation. If those fail, repair/select Xcode before testing. If they
+succeed, inspect the actual test exit status and `.xcresult`, and report a
+reproducing launch log to Apple if needed. Do not delete simulators/preferences,
+disable useful test debugging, or filter stderr to make this warning disappear.
+The runner intentionally preserves it and all real build, launch and test errors.
+Unsigned simulator runs can also report keychain entitlement warnings; they do
+not validate physical-device provisioning or credential persistence.
+
+### Apple references and SDK verification
+
+- [Wait for existence](https://developer.apple.com/documentation/xcuiautomation/xcuielement/waitforexistence(timeout:))
+  and [XCUIElement](https://developer.apple.com/documentation/xcuiautomation/xcuielement):
+  snapshot properties versus bounded native synchronization.
+- [Perform accessibility audits](https://developer.apple.com/documentation/xcuiautomation/xcuiapplication/performaccessibilityaudit(for:_:))
+  and [WWDC23: Perform accessibility audits for your app](https://developer.apple.com/videos/play/wwdc2023/10035/):
+  audit types, narrowly scoped issue handlers, per-screen coverage, and manual
+  assistive-technology testing. Returning `true` from the handler ignores an
+  issue; an audit infrastructure failure is distinct from an accessibility issue.
+- [URLSessionConfiguration.protocolClasses](https://developer.apple.com/documentation/foundation/urlsessionconfiguration/protocolclasses):
+  per-session transport injection, not supported for background sessions.
+- [Running tests and interpreting results](https://developer.apple.com/documentation/xcode/running-tests-and-interpreting-results):
+  Test navigator and result-based diagnosis.
+
+Verified against the installed Xcode 27 beta simulator SDK:
+`XCUIAutomation.framework/Headers/XCUIElement.h`, `XCUIApplication.h`,
+`XCUIAccessibilityAuditTypes.h`, its `arm64-apple-ios-simulator.swiftinterface`,
+and Foundation's `NSURLSession.h`. These confirm the native waits, audit
+availability since iOS 17, throwing audit API with **no timeout parameter**, and
+ephemeral session protocol injection. Xcode 26.3 hosted-runner measurements must
+be distinguished from local iOS 27 beta results.
 
 ## Debug sign-in
 
@@ -131,10 +381,13 @@ renamed with RAW extensions. Compare stable and beta OS versions separately.
 | `scripts/gen-git-info.sh` | Generate `GitInfo.swift` with commit hash and branch |
 | `scripts/bump-version.sh` | Bump marketing version or build number |
 | `scripts/fix-icon-ref.sh` | Fix Xcode project icon references after generation |
+| `scripts/test.sh` | Generate, build and test on a disposable simulator, locally or in CI |
 
 ## CI
 
-iOS builds and tests run via `.github/workflows/ios.yml` on PRs that touch `ios/`, `openapi.yaml`, or `functions/`. Releases are handled by `.github/workflows/ios-release.yml`.
+iOS builds and tests run via `.github/workflows/ios.yml` on PRs that touch the native
+app or its shared OpenAPI/Bird ID inputs. Backend-only changes are covered by the
+web/Worker suites. Releases are handled by `.github/workflows/ios-release.yml`.
 
 To publish a deliberate milestone version without marking a commit as breaking, dispatch the release workflow with an exact version:
 

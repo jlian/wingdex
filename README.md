@@ -86,11 +86,75 @@ The `Localhost` iOS scheme expects `localhost.wingdex.app` to resolve from the s
 
 Reverse geocoding reads the private production place archive through a remote
 R2 binding while the Worker and D1 stay local. Run `npx wrangler login` before
-starting development. Local and CI Playwright runs keep D1 local but read the
-real archive through the same remote binding; reverse-geocoding integration
-tests do not support an offline local-R2 mode.
+starting development. Default tests do not need this login; real-archive checks
+are an explicit live suite.
 
 Run `npm run check` (lint, typecheck, unit) before pushing, and `npm run check:all` (adds e2e and a production build) when the change touches `functions/`, `e2e/`, routing, auth, or data flow. Everything runnable is in `package.json` under `scripts`.
+
+### Tests
+
+Install Chromium once with `npx playwright install --with-deps --only-shell chromium`.
+After that, local and CI verification use the same commands:
+
+| Command | Coverage |
+|---------|----------|
+| `npm test` | Web and Worker unit/component tests |
+| `npm run test:ios` | Offline iOS core and accessibility lanes on a fresh simulator |
+| `make -C ios core` | Native core lane, using the same Makefile entry point as iOS CI |
+| `npm run check` | Lint, typecheck, and unit/component tests |
+| `npm run test:e2e` | Build once, then run browser/API integration tests |
+| `npm run check:all` | Complete web verification, including the production build and E2E |
+| `npm run test:e2e:built -- e2e/smoke.spec.ts` | Rerun selected browser tests against an already-current build |
+| `npm run test:e2e:live` | Opt-in real preview R2, hosted OAuth, and model convergence checks |
+
+Playwright serves the **built application and Worker**, not the Vite development
+module graph. Every run creates and migrates its own disposable D1 database,
+uses test-only credentials, and removes its state on exit. It neither reuses a
+running development server nor reads `.dev.vars`. Port 5100 is reserved for
+tests; set `PLAYWRIGHT_PORT` when running separate invocations concurrently.
+No LAN proxy, `localhost.wingdex.app`, Cloudflare login, or repository secrets
+are needed for the default suite. Wikipedia responses and images are fixtures;
+WebAuthn ceremonies, database writes, RAW decoding, shipped priors, and the
+upload-to-identification-to-save flow still run for real.
+
+The live suite keeps D1 disposable but reads the preview place archive, so it
+needs Cloudflare credentials or a Wrangler login. Hosted OAuth uses
+`PREVIEW_BASE_URL` (default `https://dev.wingdex.app`). It is intentionally
+outside the PR gate.
+
+Keep browser coverage for browser capabilities and complete user journeys.
+Theme toggles, seeded navigation, anonymous identity states, and upload
+discard/continue checks are consolidated rather than repeating setup for each
+assertion. Location search submission/error cases are covered in component
+tests; browser tests retain native permission handling and saved coordinates.
+Vitest runs pure logic/assets in Node and only component/browser-global tests
+in jsdom. Pixel parity uses whole typed-array equality rather than hundreds of
+thousands of individual matchers, preserving every pixel comparison.
+
+Web CI runs static checks, unit tests, and five isolated browser shards in
+separate Linux jobs. Each shard builds the app and owns its Worker/D1; preview deployment
+uses one tested build only after every lane passes. Locally,
+`npm run check` runs lint/typechecking alongside unit tests;
+`npm run check:all` then builds and runs every browser journey.
+`npm run test:e2e -- --shard=1/5` reproduces a specific browser shard.
+Dependency caches ignore only the root application's release version, and
+Chromium is keyed by Playwright's version rather than unrelated lockfile changes.
+Releases populate the same dependency cache on the default branch so new pull
+requests can restore it, rather than starting with a PR-scoped cache miss.
+Web CI stays on Linux and iOS on macOS. Independent, self-contained suites
+avoid waiting for a deployed backend or coupling web feedback to simulator
+startup, while retaining the cheaper Linux runner for web work. The runtime
+budgets are under two minutes for web CI and under ten minutes per iOS lane;
+cold dependency/runtime caches and hosted-runner overhead must be included
+when comparing CI runs, not just the test runner's reported duration.
+For reference, a local Node 24 run on 2026-09-07 completed `npm run check:all`
+in 95 seconds, including all 1,122 unit/component and 42 browser tests. The
+five-shard hosted workflow completed in 1m50s, then 1m55s after clearing its
+`node_modules` and Chromium caches, including setup and preview deployment.
+The previous workflow took roughly nine minutes. npm's download cache was
+not cleared for this comparison. CI overlaps the independent verification
+lanes and avoids reinstalling browser libraries already present in the runner
+image; compare its end-to-end timing rather than just the runner's duration.
 
 | Path | Purpose |
 |------|---------|

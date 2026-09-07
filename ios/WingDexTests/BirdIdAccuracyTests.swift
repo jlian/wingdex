@@ -36,20 +36,21 @@ final class BirdIdAccuracyTests: XCTestCase {
         .deletingLastPathComponent()   // repo root
         .appendingPathComponent("src/assets/images")
 
-    func testIdentifiesRealBirdPhotosAndIncludesExpectedSpeciesInTopFive() async throws {
+    func testRealPhotosAndFormerImportDerivativesIdentifyExpectedSpecies() async throws {
         var misses: [String] = []
         var missingFromTopFive: [String] = []
         var checked = 0
 
         for (file, species) in Self.expected {
             let url = Self.imageDir.appendingPathComponent(file)
-            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "Missing accuracy fixture: \(file)")
             checked += 1
 
             // No location: these are demo assets and the point here is the
             // vision path, not the geographic prior.
+            let original = try Data(contentsOf: url)
             let results = try await BirdIdEngine.shared.identify(
-                imageData: try Data(contentsOf: url), location: nil, month: nil)
+                imageData: original, location: nil, month: nil)
             let top = results.first
             if top?.commonName != species {
                 misses.append("\(file): got \(top?.commonName ?? "nothing") "
@@ -58,43 +59,16 @@ final class BirdIdAccuracyTests: XCTestCase {
             if !results.contains(where: { $0.commonName == species }) {
                 missingFromTopFive.append("\(file): \(results.map(\.commonName).joined(separator: ", "))")
             }
+            let image = try XCTUnwrap(UIImage(data: original))
+            let derivative = try XCTUnwrap(image.jpegData(compressionQuality: 0.7))
+            let derivativeTop = try await BirdIdEngine.shared.identify(
+                imageData: derivative, location: nil, month: nil
+            ).first?.commonName
+            XCTAssertEqual(derivativeTop, top?.commonName, "\(file): removing the import re-encode changed top-1")
         }
 
-        try XCTSkipIf(checked == 0, "No demo images at \(Self.imageDir.path)")
         XCTAssertEqual(misses, [], "top-1 mismatches on \(checked) photos")
         XCTAssertEqual(missingFromTopFive, [], "expected species absent from the top 5")
     }
 
-    func testOriginalBytesMatchFormerImportDerivativeTopOne() async throws {
-        var mismatches: [String] = []
-        var checked = 0
-
-        for (file, _) in Self.expected {
-            let url = Self.imageDir.appendingPathComponent(file)
-            guard FileManager.default.fileExists(atPath: url.path) else { continue }
-            let original = try Data(contentsOf: url)
-            let image = try XCTUnwrap(UIImage(data: original))
-            let formerDerivative = try XCTUnwrap(image.jpegData(compressionQuality: 0.7))
-            checked += 1
-
-            let originalTop = try await BirdIdEngine.shared.identify(
-                imageData: original,
-                location: nil,
-                month: nil
-            ).first?.commonName
-            let derivativeTop = try await BirdIdEngine.shared.identify(
-                imageData: formerDerivative,
-                location: nil,
-                month: nil
-            ).first?.commonName
-            if originalTop != derivativeTop {
-                mismatches.append(
-                    "\(file): original \(originalTop ?? "nothing"), derivative \(derivativeTop ?? "nothing")"
-                )
-            }
-        }
-
-        try XCTSkipIf(checked == 0, "No demo images at \(Self.imageDir.path)")
-        XCTAssertEqual(mismatches, [], "removing the import re-encode changed top-1 results")
-    }
 }

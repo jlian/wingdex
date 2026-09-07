@@ -30,6 +30,7 @@ private final class MockGeocodingLookup: LocationReverseGeocodingLookup {
     var reverseResult: ReverseOutcome = (nil, [], nil, nil)
     var reverseError: Error?
     private(set) var reverseCalls: [(lat: Double, lon: Double)] = []
+    private(set) var completedCalls = 0
 
     var shouldSuspend = false
     private let continuationBox = ContinuationBox<ReverseOutcome>()
@@ -39,6 +40,7 @@ private final class MockGeocodingLookup: LocationReverseGeocodingLookup {
         latitude: Double,
         longitude: Double
     ) async throws -> ReverseOutcome {
+        defer { completedCalls += 1 }
         reverseCalls.append((latitude, longitude))
         onReverseStarted?((latitude, longitude))
 
@@ -66,12 +68,14 @@ private final class MockCurrentLocationRequester: CurrentLocationRequesting {
     var requestError: Error?
     private(set) var requestCalls = 0
     private(set) var cancelCalls = 0
+    private(set) var completedCalls = 0
 
     var shouldSuspend = false
     private let continuationBox = ContinuationBox<CLLocationCoordinate2D>()
     var onRequestStarted: (() -> Void)?
 
     func request() async throws -> CLLocationCoordinate2D {
+        defer { completedCalls += 1 }
         requestCalls += 1
         onRequestStarted?()
 
@@ -888,6 +892,43 @@ final class OutingLocationReviewModelTests: XCTestCase {
         XCTAssertFalse(committed)
         XCTAssertNil(model.acceptedSelection.coordinate)
         XCTAssertEqual(model.acceptedSelection.name, "")
+    }
+
+    func testManualEntryWinsOverLateCurrentLocationAndReverseLookup() async {
+        for suspendLocation in [true, false] {
+            let lookup = MockGeocodingLookup()
+            lookup.shouldSuspend = !suspendLocation
+            let location = MockCurrentLocationRequester()
+            location.shouldSuspend = suspendLocation
+            let coordinate = CLLocationCoordinate2D(latitude: 47.7115, longitude: -122.3717)
+            location.resultCoordinate = coordinate
+            let model = OutingLocationReviewModel(
+                geocodingLookup: lookup, currentLocationRequester: location
+            )
+            model.configure(for: makeCluster(lat: nil, lon: nil), useGeoContext: false)
+            model.requestCurrentLocation()
+            let started = await waitUntil {
+                suspendLocation ? location.requestCalls == 1 : lookup.reverseCalls.count == 1
+            }
+            XCTAssertTrue(started)
+            model.commitManualName("Manual Park")
+            if suspendLocation {
+                location.resumePending(with: .success(coordinate))
+            } else {
+                let late = GeocodingResult(
+                    label: "Late Park", context: nil, latitude: coordinate.latitude,
+                    longitude: coordinate.longitude, stateProvince: nil, countryCode: nil
+                )
+                lookup.resumePending(with: .success((late, [late], nil, nil)))
+            }
+            let completed = await waitUntil {
+                suspendLocation ? location.completedCalls == 1 : lookup.completedCalls == 1
+            }
+            XCTAssertTrue(completed)
+            XCTAssertEqual(model.acceptedSelection.name, "Manual Park")
+            XCTAssertNil(model.acceptedSelection.coordinate)
+            XCTAssertFalse(model.isLocatingCurrentLocation)
+        }
     }
 
     func testCurrentLocationFailureSetsError() async {

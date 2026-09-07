@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Route } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
+import { test, expect } from './fixtures'
 import path from 'path'
 import { readFileSync } from 'fs'
 import sharp from 'sharp'
@@ -27,30 +28,13 @@ async function passModelGate(page: Page) {
   const gate = page.getByRole('button', { name: 'Download and continue' })
   const error = page.getByText(/^Download failed:/)
   const result = page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).first()
-  // Race the gate against the step it hands off to. On a warm cache the gate
-  // self-clears and the button never appears, so waiting on it alone burned the
-  // full 60s on every run. Losing the race costs only the old behaviour.
   const handedOff = page.getByText(/Identifying species/i)
-  await Promise.race([
-    // Generous: the gate appears only after the flow reaches identification,
-    // and a cold worker start can push that past a tight budget. A short wait
-    // here caused a flake that passed on retry.
-    gate.waitFor({ state: 'visible', timeout: 60_000 }),
-    handedOff.waitFor({ state: 'visible', timeout: 60_000 }),
-    result.waitFor({ state: 'visible', timeout: 60_000 }),
-  ]).catch(() => {
-    // Neither appeared. Already cached and already past it, so nothing to do.
-  })
-  if (await gate.isVisible().catch(() => false)) {
+  await expect(gate.or(handedOff).or(result).first()).toBeVisible()
+  if (await gate.isVisible()) {
     await gate.click()
-    await Promise.race([
-      result.waitFor({ state: 'visible', timeout: 120_000 }),
-      error.waitFor({ state: 'visible', timeout: 120_000 }),
-    ])
-    if (await error.isVisible().catch(() => false)) {
-      throw new Error(await error.innerText())
-    }
   }
+  await expect(result.or(error).first()).toBeVisible({ timeout: 30_000 })
+  if (await error.isVisible()) throw new Error(await error.innerText())
 }
 
 /** Mock WingDex geocoding routes to return a canned normalized location. */
@@ -89,122 +73,15 @@ function mockGeocoding(page: Page, locationName: string) {
   })
 }
 
-/** Mock Wikipedia/Wikimedia image requests so they don't fail. */
-function mockWikimedia(page: Page) {
-  return page.route('**/en.wikipedia.org/**', (route: Route) => {
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"query":{"pages":{}}}' })
-  })
-}
-
-/** Navigate to Settings page. */
-async function goToSettings(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 5_000 })
-}
-
 // ── Tests ────────────────────────────────────────────────────────
 
 test.describe('CSV import + photo upload integration', () => {
 
-  test('CSV import creates outings with correct timezone-converted times', async ({ page }) => {
-    await loadApp(page)
-    await goToSettings(page)
-
-    // Profile timezone defaults to America/Los_Angeles (Pacific), no need to change it
-
-    const importResponsePromise = page.waitForResponse(
-      response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
-    )
-
-    await page.getByRole('button', { name: 'Import from eBird CSV' }).click()
-    await expect(page.getByRole('heading', { name: 'Import from eBird CSV' })).toBeVisible({ timeout: 5_000 })
-
-    const fileChooserPromise = page.waitForEvent('filechooser')
-    await page.getByRole('button', { name: 'Choose CSV File' }).click()
-    const fileChooser = await fileChooserPromise
-    await fileChooser.setFiles(path.resolve('e2e/fixtures/ebird-import.csv'))
-
-    const importResponse = await importResponsePromise
-    expect(importResponse.status()).toBe(200)
-
-    await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
-
-    // Navigate to Outings page
-    await page.getByRole('tab', { name: 'Outings' }).first().click()
-    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
-
-    // Should have 2 outings (2 submission IDs in our CSV)
-    // Haleakala outing
-    await expect(
-      page.locator('p:visible', { hasText: 'Haleakala' }).first()
-    ).toBeVisible({ timeout: 5_000 })
-
-    // Discovery Park outing
-    await expect(
-      page.locator('p:visible', { hasText: 'Discovery Park' }).first()
-    ).toBeVisible()
-
-    // Navigate to WingDex to verify species
-    await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
-    const wingdexSearch = page.getByPlaceholder('Search species...')
-
-    // All 4 species from the CSV should be in the dex
-    for (const species of ['Chukar', 'Hawaiian Goose', "Steller's Jay", 'Dark-eyed Junco']) {
-      await wingdexSearch.fill(species)
-      await expect(
-        page.locator('p:visible', { hasText: species }).first()
-      ).toBeVisible()
-    }
-  })
-
-  test('CSV import handles variant realistic eBird rows via UI flow', async ({ page }) => {
-    await loadApp(page)
-    await goToSettings(page)
-
-    const importResponsePromise = page.waitForResponse(
-      response => response.url().includes('/api/import/ebird-csv') && response.request().method() === 'POST'
-    )
-
-    await page.getByRole('button', { name: 'Import from eBird CSV' }).click()
-    await expect(page.getByRole('heading', { name: 'Import from eBird CSV' })).toBeVisible({ timeout: 5_000 })
-
-    const fileChooserPromise = page.waitForEvent('filechooser')
-    await page.getByRole('button', { name: 'Choose CSV File' }).click()
-    const fileChooser = await fileChooserPromise
-    await fileChooser.setFiles(path.resolve('e2e/fixtures/ebird-import-variant.csv'))
-
-    const importResponse = await importResponsePromise
-    expect(importResponse.status()).toBe(200)
-
-    await expect(page.getByText(/Failed to import eBird data/i)).not.toBeVisible()
-
-    await page.getByRole('tab', { name: 'Outings' }).first().click()
-    await expect(page.getByText('Your Outings')).toBeVisible({ timeout: 5_000 })
-    await expect(
-      page.locator('p:visible', { hasText: 'Point Reyes National Seashore' }).first()
-    ).toBeVisible({ timeout: 5_000 })
-
-    await page.getByRole('tab', { name: 'WingDex' }).first().click()
-    await expect(page.locator('p:visible', { hasText: 'species observed' }).first()).toBeVisible({ timeout: 5_000 })
-    const wingdexSearch = page.getByPlaceholder('Search species...')
-
-    for (const species of ['Rock Pigeon', 'Northern Cardinal', 'Chukar']) {
-      await wingdexSearch.fill(species)
-      await expect(
-        page.locator('p:visible', { hasText: species }).first()
-      ).toBeVisible({ timeout: 5_000 })
-    }
-  })
-
   test('full photo upload flow: upload → AI identify → confirm → saved to WingDex', async ({ page }) => {
-    // This is the only test in CI that downloads the 62 MiB model and runs
-    // inference. The default budget is 15s on CI and 30s here, which the
-    // download alone can exceed, and the waits below ask for far more than
-    // that, so without this they are unreachable and the test dies mid-gate.
+    // A fresh browser context downloads model assets and initializes ONNX.
+    // Keep that explicit budget separate from ordinary navigation tests.
     test.slow()
     await mockGeocoding(page, 'Haleakala National Park, Maui')
-    await mockWikimedia(page)
 
     await loadApp(page, { promote: false })
 
@@ -299,41 +176,11 @@ test.describe('CSV import + photo upload integration', () => {
     ).toBeVisible({ timeout: 5_000 })
   })
 
-  test('location search waits for explicit submission and uses the WingDex route', async ({ page }) => {
-    await mockGeocoding(page, 'Discovery Park, Seattle')
-    await loadApp(page, { promote: false })
-
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
-    const dialog = page.getByRole('dialog')
-    await dialog.locator('input[type="file"]').setInputFiles(
-      path.resolve('src/assets/images/Chukar_partridge_near_Haleakala_summit_Maui.jpg')
-    )
-    await expect(dialog.getByText('Review Outing')).toBeVisible({ timeout: 10_000 })
-
-    await dialog.getByText('Discovery Park, Seattle').click()
-    const input = dialog.getByPlaceholder('Search for a place...')
-    let searchRequestCount = 0
-    page.on('request', request => {
-      if (new URL(request.url()).pathname === '/api/geocoding/search') searchRequestCount += 1
-    })
-
-    await input.fill('Discovery Park')
-    await page.waitForTimeout(600)
-    expect(searchRequestCount).toBe(0)
-
-    await dialog.getByRole('button', { name: 'Search locations' }).click()
-    await expect(dialog.getByText('Discovery Park, Seattle')).toBeVisible()
-    expect(searchRequestCount).toBe(1)
-    await expect(dialog.getByRole('link', { name: 'Geoapify' })).toBeVisible()
-    await expect(dialog.getByRole('link', { name: 'OpenStreetMap' })).toBeVisible()
-  })
-
   test('current location for a photo without GPS persists through sighting confirmation', async ({ page, context }) => {
     test.slow()
     await context.grantPermissions(['geolocation'])
     await context.setGeolocation({ latitude: 47.612345, longitude: -122.312345, accuracy: 5000 })
     await mockGeocoding(page, 'Current location park')
-    await mockWikimedia(page)
     await loadApp(page, { promote: false })
     const image = await sharp('src/assets/images/Chukar_partridge_near_Haleakala_summit_Maui.jpg').jpeg().toBuffer()
     await page.getByRole('button', { name: 'Upload & Identify' }).click()
@@ -415,7 +262,6 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Now upload a Chukar photo, the same species should converge
     await mockGeocoding(page, 'Haleakala National Park, Maui')
-    await mockWikimedia(page)
 
     // Navigate home and open upload wizard
     await page.getByRole('button', { name: 'Home' }).click()
@@ -470,7 +316,6 @@ test.describe('CSV import + photo upload integration', () => {
   test('@live multi-photo clustering: photos from different locations create separate outings', async ({ page }) => {
     test.slow()
     await mockGeocoding(page, 'Discovery Park, Seattle')
-    await mockWikimedia(page)
 
     await loadApp(page, { promote: false })
 

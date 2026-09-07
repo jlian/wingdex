@@ -90,7 +90,7 @@ export async function loadApp(page: Page, { promote = true } = {}) {
  * Promote the anonymous session to a real user so auth-gated features
  * (Settings, imports, uploads) are accessible.
  *
- * Registration upgrades the anonymous session in place, then reloads.
+ * Registration upgrades the anonymous session in place.
  */
 export async function promoteAnonymousUser(page: Page) {
   await expect(
@@ -125,8 +125,6 @@ export async function promoteAnonymousUser(page: Page) {
 
   const sessionAfter = await getSessionState(page)
   if (sessionAfter.hasUser && !sessionAfter.isAnonymous) {
-    await page.reload()
-    await expect(page.locator('header')).toBeVisible({ timeout: 5_000 })
     return
   }
 
@@ -136,9 +134,7 @@ export async function promoteAnonymousUser(page: Page) {
 /**
  * Seed the app with data from the eBird CSV fixture via the import API.
  *
- * Navigates to Settings, uploads the CSV through the hidden file input
- * (which triggers preview → auto-confirm), waits for the success toast,
- * then navigates back to the Home tab.
+ * Imports through the real API, then reloads to fetch the saved data.
  */
 export async function seedViaCSVImport(page: Page) {
   await loadApp(page)
