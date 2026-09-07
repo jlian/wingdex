@@ -53,6 +53,16 @@ final class AddPhotosViewModelTests: XCTestCase {
         try CameraCapture.make(image: image, metadata: [:], latitude: nil, longitude: nil)
     }
 
+    private func cameraCapture(data: Data) -> CameraCapture {
+        CameraCapture(
+            id: UUID(),
+            data: data,
+            captureTime: PhotoCaptureTime(date: .now, timeZone: .current),
+            latitude: nil,
+            longitude: nil
+        )
+    }
+
     func testFailedPickerItemsAreCountedAndCanBeRetried() async throws {
         let (viewModel, _) = try await configuredModel()
         viewModel.selectedItems = [
@@ -102,7 +112,7 @@ final class AddPhotosViewModelTests: XCTestCase {
                 fileHash: PhotoService.fileHash(for: data), fileName: "existing.jpg"
             ))
             viewModel.selectedItems = [PhotosPickerItem(itemIdentifier: "unavailable-photo")]
-            viewModel.addCameraPhoto(try cameraCapture(image))
+            viewModel.addCameraPhoto(cameraCapture(data: data))
 
             await viewModel.processSelectedPhotos()
 
