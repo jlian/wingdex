@@ -19,7 +19,7 @@ permissions:
 jobs:
   release:
     name: Release & Deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref_name }}
       url: ${{ github.ref == 'refs/heads/main' && 'https://wingdex.app' || format('https://{0}.wingdex.app', github.ref_name) }}
@@ -149,8 +149,21 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
+      - uses: ./.github/actions/dependency-versions
         if: steps.changes.outputs.should_deploy == 'true'
+        id: versions
+
+      # Populate the default-branch cache that future pull requests can restore.
+      - name: Cache node_modules
+        if: steps.changes.outputs.should_deploy == 'true'
+        id: node-modules-cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
+
+      - name: Install dependencies
+        if: steps.changes.outputs.should_deploy == 'true' && steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Pre-release typecheck

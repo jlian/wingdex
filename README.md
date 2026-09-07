@@ -137,6 +137,10 @@ uses one tested build only after every lane passes. Locally,
 `npm run check` runs lint/typechecking alongside unit tests;
 `npm run check:all` then builds and runs every browser journey.
 `npm run test:e2e -- --shard=1/5` reproduces a specific browser shard.
+Dependency caches ignore only the root application's release version, and
+Chromium is keyed by Playwright's version rather than unrelated lockfile changes.
+Releases populate the same dependency cache on the default branch so new pull
+requests can restore it, rather than starting with a PR-scoped cache miss.
 Web CI stays on Linux and iOS on macOS. Independent, self-contained suites
 avoid waiting for a deployed backend or coupling web feedback to simulator
 startup, while retaining the cheaper Linux runner for web work. The runtime

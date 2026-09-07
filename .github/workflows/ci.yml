@@ -15,7 +15,7 @@ concurrency:
 jobs:
   checks:
     name: Lint & types
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -27,12 +27,15 @@ jobs:
           node-version: 24
           cache: npm
 
+      - uses: ./.github/actions/dependency-versions
+        id: versions
+
       - name: Cache node_modules
         id: node-modules-cache
         uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
@@ -42,7 +45,7 @@ jobs:
 
   unit:
     name: Unit & component tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -54,12 +57,15 @@ jobs:
           node-version: 24
           cache: npm
 
+      - uses: ./.github/actions/dependency-versions
+        id: versions
+
       - name: Cache node_modules
         id: node-modules-cache
         uses: actions/cache@v5
         with:
           path: node_modules
-          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
@@ -85,12 +91,15 @@ jobs:
           node-version: 24
           cache: npm
 
+      - uses: ./.github/actions/dependency-versions
+        id: versions
+
       - name: Cache node_modules
         id: node-modules-cache
         uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
@@ -100,7 +109,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.playwright }}
           restore-keys: |
             playwright-${{ runner.os }}-${{ runner.arch }}-
 
@@ -137,7 +146,7 @@ jobs:
     name: Verify & Deploy Preview
     needs: [checks, unit, browser]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: read
@@ -169,12 +178,18 @@ jobs:
         with:
           # Root manifests/config plus migrations; deploy the tested artifact,
           # not another checkout of the model assets or application sources.
-          sparse-checkout: migrations
+          sparse-checkout: |
+            migrations
+            .github/actions/dependency-versions
 
       - uses: actions/setup-node@v6
         if: steps.cloudflare.outputs.available == 'true'
         with:
           node-version: 24
+
+      - uses: ./.github/actions/dependency-versions
+        if: steps.cloudflare.outputs.available == 'true'
+        id: versions
 
       - name: Cache node_modules
         if: steps.cloudflare.outputs.available == 'true'
@@ -182,7 +197,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
 
       - name: Install dependencies
         if: steps.cloudflare.outputs.available == 'true' && steps.node-modules-cache.outputs.cache-hit != 'true'
