@@ -1,3 +1,12 @@
+import { embeddedJpegPreviews, tiffByteOrder } from '@/lib/raw-preview'
+
+export class PhotoDecodeError extends Error {
+  constructor() {
+    super('This browser could not decode the photo or an embedded JPEG preview. Export a JPEG copy and try again.')
+    this.name = 'PhotoDecodeError'
+  }
+}
+
 export async function extractEXIF(file: File): Promise<{
   timestamp?: string
   gps?: { lat: number; lon: number }
@@ -24,57 +33,61 @@ export function parseEXIF(view: DataView): {
   timestamp?: string
   gps?: { lat: number; lon: number }
 } {
-  if (view.getUint16(0) !== 0xffd8) return {}
-  
-  let offset = 2
   const result: { timestamp?: string; gps?: { lat: number; lon: number } } = {}
-  
-  while (offset < view.byteLength) {
+  if (view.byteLength < 8) return result
+  let tiffOffset = 0
+  let offset = 2
+  while (view.getUint16(0) === 0xffd8 && offset + 4 <= view.byteLength) {
     const marker = view.getUint16(offset)
-    if (marker === 0xffe1) {
-      const size = view.getUint16(offset + 2)
-      const exifStart = offset + 4
-      
-      if (view.getUint32(exifStart) === 0x45786966) {
-        const tiffOffset = exifStart + 6
-        const littleEndian = view.getUint16(tiffOffset) === 0x4949
-        
-        try {
-          const ifdOffset = view.getUint32(tiffOffset + 4, littleEndian)
-          const numEntries = view.getUint16(tiffOffset + ifdOffset, littleEndian)
-          
-          for (let i = 0; i < numEntries; i++) {
-            const entryOffset = tiffOffset + ifdOffset + 2 + i * 12
-            const tag = view.getUint16(entryOffset, littleEndian)
-            
-            if (tag === 0x0132 || tag === 0x9003) {
-              const valueOffset = view.getUint32(entryOffset + 8, littleEndian)
-              let dateStr = ''
-              for (let j = 0; j < 19; j++) {
-                const char = view.getUint8(tiffOffset + valueOffset + j)
-                if (char === 0) break
-                dateStr += String.fromCharCode(char)
-              }
-              if (dateStr) {
-                result.timestamp = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
-              }
-            }
-            
-            if (tag === 0x8825) {
-              const gpsIfdOffset = view.getUint32(entryOffset + 8, littleEndian)
-              const gps = parseGPS(view, tiffOffset, gpsIfdOffset, littleEndian)
-              if (gps) result.gps = gps
-            }
-          }
-        } catch {
-          
-        }
-      }
+    if (marker === 0xffda || marker === 0xffd9) break
+    const size = view.getUint16(offset + 2)
+    if (size < 2 || offset + 2 + size > view.byteLength) break
+    if (marker === 0xffe1 && size >= 16
+      && view.getUint32(offset + 4) === 0x45786966
+      && view.getUint16(offset + 8) === 0) {
+      tiffOffset = offset + 10
       break
     }
-    offset += 2 + view.getUint16(offset + 2)
+    offset += 2 + size
   }
-  
+
+  const littleEndian = tiffByteOrder(view, tiffOffset)
+  if (littleEndian === undefined) return result
+  const pending = [view.getUint32(tiffOffset + 4, littleEndian)]
+  const visited = new Set<number>()
+  while (pending.length && visited.size < 64) {
+    const ifdOffset = pending.shift()!
+    if (!ifdOffset || visited.has(ifdOffset)) continue
+    visited.add(ifdOffset)
+    try {
+      const numEntries = view.getUint16(tiffOffset + ifdOffset, littleEndian)
+      if (numEntries > 4096) continue
+      for (let i = 0; i < numEntries; i++) {
+        const entryOffset = tiffOffset + ifdOffset + 2 + i * 12
+        const tag = view.getUint16(entryOffset, littleEndian)
+        const type = view.getUint16(entryOffset + 2, littleEndian)
+        const count = view.getUint32(entryOffset + 4, littleEndian)
+        const valueOffset = view.getUint32(entryOffset + 8, littleEndian)
+        if ((tag === 0x0132 || tag === 0x9003) && type === 2 && count >= 19
+          && (tag === 0x9003 || !result.timestamp)) {
+          let dateStr = ''
+          for (let j = 0; j < 19; j++) {
+            const char = view.getUint8(tiffOffset + valueOffset + j)
+            if (char === 0) break
+            dateStr += String.fromCharCode(char)
+          }
+          if (dateStr) result.timestamp = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
+        }
+        if (tag === 0x8769 && type === 4 && count === 1) pending.push(valueOffset)
+        if (tag === 0x8825 && type === 4 && count === 1) {
+          const gps = parseGPS(view, tiffOffset, valueOffset, littleEndian)
+          if (gps) result.gps = gps
+        }
+      }
+    } catch {
+      // Truncated optional metadata must not prevent importing the image.
+    }
+  }
   return result
 }
 
@@ -131,35 +144,59 @@ function parseGPS(
   return null
 }
 
-export async function generateThumbnail(file: File, maxWidth = 400): Promise<string> {
+export async function generateThumbnail(file: Blob, maxWidth = 400): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
     
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Canvas not supported'))
-        return
+      try {
+        if (!img.width || !img.height) throw new PhotoDecodeError()
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('Canvas not supported')
+        }
+
+        const scale = Math.min(maxWidth / img.width, 1)
+        canvas.width = img.width * scale
+        canvas.height = img.height * scale
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      } catch (error) {
+        reject(error)
+      } finally {
+        URL.revokeObjectURL(url)
       }
-      
-      const scale = Math.min(maxWidth / img.width, 1)
-      canvas.width = img.width * scale
-      canvas.height = img.height * scale
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.8))
     }
-    
+
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('Failed to load image'))
+      reject(new PhotoDecodeError())
     }
     
     img.src = url
   })
+}
+
+export async function preparePhotoImage(file: File): Promise<{ image: Blob; thumbnail: string }> {
+  try {
+    return { image: file, thumbnail: await generateThumbnail(file) }
+  } catch (error) {
+    if (!(error instanceof PhotoDecodeError)) throw error
+    // Keep browser/Photos conversion first. The fallback checks the container,
+    // not its extension; unrelated or unsupported layouts yield no previews.
+    for await (const image of embeddedJpegPreviews(file)) {
+      try {
+        return { image, thumbnail: await generateThumbnail(image) }
+      } catch (error) {
+        if (!(error instanceof PhotoDecodeError)) throw error
+        // A damaged preview must not hide another decodable camera render.
+      }
+    }
+    throw new PhotoDecodeError()
+  }
 }
 
 /**

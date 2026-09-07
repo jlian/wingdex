@@ -22,6 +22,10 @@ struct PreparedPhotoData: Sendable {
 /// - Tight time threshold: 30 minutes (for matching existing outings with relaxed distance)
 /// - Relaxed distance: 50 km (when time match is tight)
 enum PhotoService {
+    enum ProcessingError: Error {
+        case unreadableImage
+    }
+
     /// Covers the largest 180-point photo review surface at 3x display scale.
     static let displayThumbnailDimension: CGFloat = 600
 
@@ -129,6 +133,41 @@ enum PhotoService {
     }
 
     // MARK: - Image Compression
+
+    /// Keep the file's type information until RAW pixels have been rendered.
+    static func processingData(at fileURL: URL) throws -> Data {
+        // Preserve file-access errors so a missing or unavailable file can be retried.
+        let file = try FileHandle(forReadingFrom: fileURL)
+        defer { try? file.close() }
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+              let identifier = CGImageSourceGetType(source),
+              let type = UTType(identifier as String)
+        else { throw ProcessingError.unreadableImage }
+
+        guard type.conforms(to: .rawImage) else {
+            return try Data(contentsOf: fileURL, options: .mappedIfSafe)
+        }
+
+        // ARW bytes alone can be mistaken for TIFF. Render from the URL so both
+        // identification and UIKit cropping receive a self-describing image.
+        // The staged original still supplies EXIF, byte count, and deduplication.
+        guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw ProcessingError.unreadableImage
+        }
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output, UTType.jpeg.identifier as CFString, 1, nil
+        ) else { throw ProcessingError.unreadableImage }
+        CGImageDestinationAddImage(destination, image, [
+            kCGImageDestinationLossyCompressionQuality: 0.95,
+            kCGImagePropertyOrientation: properties?[kCGImagePropertyOrientation] ?? 1,
+        ] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            throw ProcessingError.unreadableImage
+        }
+        return output as Data
+    }
 
     /// Compress a UIImage to JPEG at the given quality (0.0-1.0).
     static func compressImage(_ image: UIImage, quality: CGFloat = 0.7) -> Data? {

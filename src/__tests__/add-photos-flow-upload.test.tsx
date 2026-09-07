@@ -1,18 +1,29 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
 import AddPhotosFlow from '@/components/flows/AddPhotosFlow'
 import type { WingDexDataStore } from '@/hooks/use-wingdex-data'
+import { computeFileHash, extractEXIF, preparePhotoImage, PhotoDecodeError } from '@/lib/photo-utils'
+import type { Photo } from '@/lib/types'
+import * as timezone from '@/lib/timezone'
 
-vi.mock('@/lib/photo-utils', () => ({
+const reviewPhotos = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/photo-utils', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/photo-utils')>(),
   extractEXIF: vi.fn(async () => ({})),
-  generateThumbnail: vi.fn(async () => 'data:image/jpeg;base64,fixture'),
+  preparePhotoImage: vi.fn(async (file: File) => ({
+    image: file,
+    thumbnail: 'data:image/jpeg;base64,fixture',
+  })),
   computeFileHash: vi.fn(async (file: File) => `hash-${file.name}`),
 }))
 
 vi.mock('@/components/flows/OutingReview', () => ({
-  default: ({ cluster }: { cluster: { photos: unknown[] } }) => (
-    <div>Photos ({cluster.photos.length})</div>
-  ),
+  default: ({ cluster }: { cluster: { photos: Photo[] } }) => {
+    reviewPhotos(cluster.photos)
+    return <div>Photos ({cluster.photos.length})</div>
+  },
 }))
 
 function createDataStore(): WingDexDataStore {
@@ -59,6 +70,7 @@ function createFileList(count: number): FileList {
 describe('AddPhotosFlow upload', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('carries a 200-photo FileList into outing review without truncation', async () => {
@@ -80,5 +92,119 @@ describe('AddPhotosFlow upload', () => {
     await waitFor(() => {
       expect(screen.getByText('Photos (200)')).toBeInTheDocument()
     })
+  })
+
+  it('uses the prepared JPEG for display/ID while retaining RAW metadata and hash', async () => {
+    const raw = new File(['raw sensor bytes'], 'camera.ARW')
+    const preview = new Blob(['rendered pixels'], { type: 'image/jpeg' })
+    vi.mocked(preparePhotoImage).mockResolvedValueOnce({ image: preview, thumbnail: 'thumbnail' })
+    vi.mocked(extractEXIF).mockResolvedValueOnce({ timestamp: '2026-08-01 12:00:00' })
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:rendered-preview')
+    render(
+      <AddPhotosFlow data={createDataStore()} onClose={vi.fn()}
+        ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+    )
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [raw] } })
+    await waitFor(() => expect(screen.getByText('Photos (1)')).toBeInTheDocument())
+    expect(createUrl).toHaveBeenCalledWith(preview)
+    expect(extractEXIF).toHaveBeenCalledWith(raw)
+    expect(computeFileHash).toHaveBeenCalledWith(raw)
+    expect(reviewPhotos).toHaveBeenLastCalledWith([expect.objectContaining({
+      fileName: 'camera.ARW',
+      fileHash: 'hash-camera.ARW',
+      exifTime: '2026-08-01 12:00:00',
+      dataUrl: 'blob:rendered-preview',
+      thumbnail: 'thumbnail',
+    })])
+  })
+
+  it('still detects an imported RAW after substituting its rendered image', async () => {
+    const raw = new File(['raw sensor bytes'], 'camera.ARW')
+    vi.mocked(preparePhotoImage).mockResolvedValueOnce({
+      image: new Blob(['rendered pixels'], { type: 'image/jpeg' }),
+      thumbnail: 'thumbnail',
+    })
+    vi.mocked(extractEXIF).mockResolvedValueOnce({ timestamp: '2026-08-01 12:00:00' })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:rendered-preview')
+    const data = createDataStore()
+    data.photos = [{
+      fileHash: 'hash-camera.ARW',
+      exifTime: '2026-08-01 12:00:00',
+    } as Photo]
+    render(
+      <AddPhotosFlow data={data} onClose={vi.fn()}
+        ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+    )
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [raw] } })
+    await waitFor(() => expect(screen.getByText('Duplicate photos found')).toBeInTheDocument())
+    expect(computeFileHash).toHaveBeenCalledWith(raw)
+  })
+
+  it('reports an unsupported photo and continues importing the readable photos', async () => {
+    const error = new PhotoDecodeError()
+    vi.mocked(preparePhotoImage).mockRejectedValueOnce(error)
+    const notify = vi.spyOn(toast, 'error').mockReturnValue('error-toast')
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:readable-photo')
+    const onClose = vi.fn()
+    render(
+      <AddPhotosFlow data={createDataStore()} onClose={onClose}
+        ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+    )
+    const bad = new File(['unsupported'], 'unsupported.raw')
+    const good = new File(['jpeg'], 'readable.jpg', { type: 'image/jpeg' })
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [bad, good] } })
+    await waitFor(() => expect(screen.getByText('Photos (1)')).toBeInTheDocument())
+    expect(notify).toHaveBeenCalledWith(`unsupported.raw: ${error.message}`)
+    expect(vi.mocked(computeFileHash).mock.calls.some(([file]) => file === bad)).toBe(false)
+    expect(reviewPhotos).toHaveBeenLastCalledWith([expect.objectContaining({ fileName: 'readable.jpg' })])
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it.each([new PhotoDecodeError(), new Error('File read failed')])(
+    'keeps the picker usable after a failed batch (%s)', async error => {
+      vi.mocked(preparePhotoImage).mockRejectedValueOnce(error)
+      const notify = vi.spyOn(toast, 'error').mockReturnValue('error-toast')
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:retry-photo')
+      const onClose = vi.fn()
+      render(
+        <AddPhotosFlow data={createDataStore()} onClose={onClose}
+          ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+      )
+      fireEvent.change(document.querySelector('input[type="file"]')!, {
+        target: { files: [new File(['bad'], 'unreadable.raw')] },
+      })
+      await waitFor(() => expect(notify).toHaveBeenCalledTimes(1))
+      expect(notify).toHaveBeenCalledWith(error instanceof PhotoDecodeError
+        ? `unreadable.raw: ${error.message}`
+        : 'unreadable.raw: Could not read or process this photo. Try again.')
+      await waitFor(() => expect(document.querySelector('input[type="file"]')).not.toBeNull())
+      expect(onClose).not.toHaveBeenCalled()
+      fireEvent.change(document.querySelector('input[type="file"]')!, {
+        target: { files: [new File(['jpeg'], 'retry.jpg', { type: 'image/jpeg' })] },
+      })
+      await waitFor(() => expect(screen.getByText('Photos (1)')).toBeInTheDocument())
+    },
+  )
+
+  it('releases a prepared image when later metadata processing fails', async () => {
+    vi.mocked(extractEXIF).mockResolvedValueOnce({
+      timestamp: 'invalid date', gps: { lat: 47.61, lon: -122.33 },
+    })
+    vi.spyOn(timezone, 'toLocalISOWithOffset').mockImplementation(() => {
+      throw new RangeError('Invalid metadata date')
+    })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:failed-photo')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const notify = vi.spyOn(toast, 'error').mockReturnValue('error-toast')
+    render(
+      <AddPhotosFlow data={createDataStore()} onClose={vi.fn()}
+        ensureSessionReady={vi.fn(async () => true)} userId="user-1" />,
+    )
+    fireEvent.change(document.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['image'], 'bad-metadata.raw')] },
+    })
+    await waitFor(() => expect(notify).toHaveBeenCalledTimes(1))
+    expect(revoke).toHaveBeenCalledWith('blob:failed-photo')
+    await waitFor(() => expect(document.querySelector('input[type="file"]')).not.toBeNull())
   })
 })
