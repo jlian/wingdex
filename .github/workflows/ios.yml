@@ -88,9 +88,12 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             ios/build/DerivedData
-          key: ios-tests-v3-${{ runner.os }}-${{ runner.arch }}-${{ matrix.lane }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('ios/WingDex.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios/project.yml') }}
+          key: ios-tests-v4-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('ios/WingDex.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios/project.yml') }}-${{ matrix.lane }}
           restore-keys: |
+            ios-tests-v4-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('ios/WingDex.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios/project.yml') }}-
+            ios-tests-v4-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
             ios-tests-v3-${{ runner.os }}-${{ runner.arch }}-${{ matrix.lane }}-${{ steps.xcode.outputs.version }}-
+            ios-tests-v3-${{ runner.os }}-${{ runner.arch }}-accessibility-${{ steps.xcode.outputs.version }}-
       - name: Cache XcodeGen
         uses: actions/cache@v5
         with:

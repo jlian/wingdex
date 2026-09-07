@@ -27,9 +27,14 @@ run_id=$(uuidgen)
 output="build/test-results/$lane-$run_id"
 mkdir -p "$output"
 simulator=""
+boot_pid=""
 cleanup() {
   status=$?
   trap - EXIT INT TERM
+  if [[ -n "$boot_pid" ]]; then
+    kill "$boot_pid" 2>/dev/null || true
+    wait "$boot_pid" 2>/dev/null || true
+  fi
   if [[ -n "$simulator" ]]; then
     xcrun simctl shutdown "$simulator" >> "$output/simulator.log" 2>&1 || true
     if ! xcrun simctl delete "$simulator" >> "$output/simulator.log" 2>&1; then
@@ -66,21 +71,31 @@ print(max(r, key=lambda r: tuple(map(int, r["version"].split("."))))["identifier
 device_type=${IOS_TEST_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
 simulator=$(xcrun simctl create "WingDex tests $run_id" "$device_type" "$runtime")
 echo "Simulator: $simulator ($runtime)" | tee "$output/simulator.log"
-xcrun simctl boot "$simulator" >> "$output/simulator.log" 2>&1
-# Boot and compilation are independent. bootstatus below verifies readiness.
+# A cold `simctl boot` can itself block for a minute on hosted runners.
+xcrun simctl boot "$simulator" >> "$output/simulator.log" 2>&1 &
+boot_pid=$!
 WINGDEX_SKIP_APP_ICON=1 xcodegen generate 2>&1 | tee "$output/generate.log"
 common=(-project WingDex.xcodeproj -scheme WingDex
-  -destination "platform=iOS Simulator,id=$simulator"
   -derivedDataPath build/DerivedData
   -parallel-testing-enabled NO
   CODE_SIGNING_ALLOWED=NO)
 phase=$SECONDS
+# A generic build destination avoids waiting for the booting device. Limit
+# architectures to this host instead of building an unused universal simulator.
 NSUnbufferedIO=YES xcodebuild build-for-testing "${common[@]}" "${targets[@]}" \
+  -destination "generic/platform=iOS Simulator" ARCHS="$(uname -m)" \
   -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
   ASSETCATALOG_COMPILER_APPICON_NAME="" ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS=NO \
   2>&1 | tee "$output/build.log"
 echo "Build: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
 phase=$SECONDS
+if wait "$boot_pid"; then
+  boot_pid=""
+else
+  boot_pid=""
+  echo "Could not boot test simulator $simulator; see ios/$output/simulator.log" >&2
+  exit 1
+fi
 xcrun simctl bootstatus "$simulator" -b 2>&1 | tee -a "$output/simulator.log"
 echo "Remaining boot wait: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
 xcrun simctl ui "$simulator" appearance light
@@ -89,6 +104,7 @@ phase=$SECONDS
 set +e
 NSUnbufferedIO=YES TEST_RUNNER_WINGDEX_DEEP_AUDITS="$([[ "$lane" == accessibility-deep ]] && echo 1 || echo 0)" \
   xcodebuild test-without-building "${common[@]}" "${targets[@]}" \
+  -destination "platform=iOS Simulator,id=$simulator" \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \
   -collect-test-diagnostics never \
