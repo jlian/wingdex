@@ -181,9 +181,8 @@ test.describe('API smoke (request context)', () => {
     expect(remainingBlueJay?.wikiTitle).toBeTruthy()
     expect(remainingBlueJay?.thumbnailUrl).toMatch(/^https:\/\//)
 
-    const token = signIn.headers()['set-auth-token']
-    expect(token).toBeTruthy()
-    // A separate context prevents cookies from masking the native bearer contract.
+    const token = signInJson.token
+    // A separate context prevents cookies from masking the native raw-bearer contract.
     const bearer = await request.newContext({
       baseURL: API_BASE,
       extraHTTPHeaders: { Authorization: `Bearer ${token}` },
