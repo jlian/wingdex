@@ -14,7 +14,34 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, types & unit tests
+    name: Lint & types
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: node_modules
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - run: npm run check:static
+
+  unit:
+    name: Unit & component tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -38,7 +65,7 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - run: npm run check
+      - run: npm test
 
   browser:
     name: Browser journeys (${{ matrix.shard }}/5)
@@ -60,7 +87,7 @@ jobs:
 
       - name: Cache node_modules
         id: node-modules-cache
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
@@ -108,7 +135,7 @@ jobs:
 
   build-and-test:
     name: Verify & Deploy Preview
-    needs: [checks, browser]
+    needs: [checks, unit, browser]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -120,8 +147,9 @@ jobs:
       - name: Require every verification lane
         env:
           CHECKS_RESULT: ${{ needs.checks.result }}
+          UNIT_RESULT: ${{ needs.unit.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
-        run: test "$CHECKS_RESULT" = success && test "$BROWSER_RESULT" = success
+        run: test "$CHECKS_RESULT" = success && test "$UNIT_RESULT" = success && test "$BROWSER_RESULT" = success
 
       - name: Detect Cloudflare credentials
         id: cloudflare
@@ -151,7 +179,7 @@ jobs:
       - name: Cache node_modules
         if: steps.cloudflare.outputs.available == 'true'
         id: node-modules-cache
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}

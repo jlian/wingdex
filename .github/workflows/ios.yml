@@ -44,8 +44,8 @@ permissions:
   contents: read
   pull-requests: read
 
-# Keep the iOS 26 SDK and use standard 14 GB Intel runners rather than the
-# 7 GB ARM VMs. Do not disable system services to mask simulator overhead.
+# Keep the iOS 26 SDK on Sequoia. Standard Intel runners were slower despite
+# extra RAM; use isolated ARM lanes rather than disabling system services.
 env:
   DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
@@ -79,8 +79,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [core, accessibility]
-    runs-on: macos-15-intel
+        include:
+          - lane: unit
+            suite: core
+            tests: -only-testing:WingDexTests
+          - lane: ui-photos
+            suite: core
+            tests: -only-testing:WingDexUITests/BirdIdFlowUITests -only-testing:WingDexUITests/CameraSettingsUITests
+          - lane: ui-outings
+            suite: core
+            tests: -only-testing:WingDexUITests -skip-testing:WingDexUITests/BirdIdFlowUITests -skip-testing:WingDexUITests/CameraSettingsUITests
+          - lane: accessibility
+            suite: accessibility
+            tests: ''
+    runs-on: macos-15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -114,7 +126,7 @@ jobs:
       - name: Install XcodeGen
         run: ios/scripts/install-xcodegen.sh
       - name: Run tests
-        run: make -C ios "${{ matrix.lane }}"
+        run: make -C ios "${{ matrix.suite }}" TESTS="${{ matrix.tests }}"
       - name: Upload lane diagnostics
         if: always()
         uses: actions/upload-artifact@v6
@@ -126,7 +138,7 @@ jobs:
   deep-accessibility:
     name: Deep accessibility (advisory)
     if: github.event_name == 'schedule' || inputs.deep_audits
-    runs-on: macos-15-intel
+    runs-on: macos-15
     timeout-minutes: 15
     # Simulator screenshot/contrast and font-resizing audits are useful reports,
     # not a reliable merge gate. Real issues and infrastructure errors stay in
