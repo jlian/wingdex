@@ -277,7 +277,7 @@ schemes:
     archive:
       config: Dev Release
 
-  Dev CI:
+  WingDex:
     build:
       targets:
         WingDex: all
@@ -287,7 +287,6 @@ schemes:
         "--auto-sign-in": false
     test:
       config: Dev Debug
-      debugEnabled: false
       targets:
         - name: WingDexTests
           parallelizable: false

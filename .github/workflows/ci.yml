@@ -16,9 +16,7 @@ jobs:
   build-and-test:
     name: Verify & Deploy Preview
     runs-on: ubuntu-latest
-    # Chromium + OS deps pre-installed; update tag when @playwright/test is bumped.
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    timeout-minutes: 5
     permissions:
       contents: read
       deployments: write
@@ -50,82 +48,42 @@ jobs:
         uses: actions/cache@v5
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
-        # Skipped on a cache hit. The cache key is the OS plus the lockfile hash, so
-        # a hit means node_modules matches package-lock.json. It does NOT track the
-        # Node version, so bumping node-version can restore modules built against
-        # the previous runtime; change the key if that ever matters.
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --no-audit --no-fund
 
-      - name: Lint
-        run: npm run lint
+      - name: Cache Chromium
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps --only-shell chromium
 
-      - name: Unit tests
-        run: npm test
-
-      - name: Build
-        run: CLOUDFLARE_ENV=preview npm run build
-
-      - name: Migrate local D1
-        # `--env preview` to match the Playwright server, which now runs with
-        # that environment so its R2 binding is the isolated preview bucket
-        # rather than production. The preview environment binds a different D1
-        # name (wingdex-db-dev), so migrating `wingdex-db` here would leave the
-        # server pointed at an unmigrated local database. Still --local: this
-        # is a disposable file, not the remote dev database.
-        run: printf 'y\n' | npx wrangler d1 migrations apply wingdex-db-dev --local --env preview --persist-to "$HOME/.cache/wingdex/wrangler-state"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Write .dev.vars for local e2e
+      - name: Check, build and test
+        # Identical on forks and locally: built Worker, fresh local D1, no
+        # repository secrets or remote bindings. Live checks are explicit.
         run: |
-          umask 077
-          printf 'BETTER_AUTH_SECRET=%s\nGEOAPIFY_KEY=%s\nGITHUB_CLIENT_ID=ci-test-client\nGITHUB_CLIENT_SECRET=ci-test-secret\n' \
-            "$BETTER_AUTH_SECRET" "$GEOAPIFY_KEY" > .dev.vars
-        env:
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          GEOAPIFY_KEY: ${{ secrets.GEOAPIFY_KEY }}
-
-      - name: E2E tests
-        # D1 remains local and disposable. PLACES uses Wrangler mixed mode so
-        # this existing suite also verifies the real PMTiles archive in R2.
-        #
-        # GitHub withholds secrets from FORK pull requests, so those runs cannot
-        # reach the R2 archive. Two things are needed there, not one:
-        #
-        # 1. playwright.config.ts disables Vite plugin remote bindings when the
-        #    Cloudflare credentials are incomplete. Without that the plugin
-        #    cannot open the remote proxy session for the `remote = true`
-        #    PLACES binding and the server never boots, so the step times out
-        #    before a single test runs.
-        # 2. `@remote-r2` is excluded here, because that test asserts against the
-        #    real archive and a local bucket is empty.
-        #
-        # Gate on the same both-credentials output the detector step computed, so
-        # a half-configured environment takes the local path instead of failing
-        # at server start.
-        #
-        # Everything else stays self-contained and still runs. The remote D1
-        # migration and the preview deployment below are skipped entirely on a
-        # fork, so the run ends green after this step.
-        run: |
-          if [ "$CLOUDFLARE_AVAILABLE" = 'true' ]; then
-            npx playwright test --grep-invert @live
-          else
-            echo "No Cloudflare credentials (likely a fork PR); running E2E fully local and skipping @remote-r2"
-            npx playwright test --grep-invert "@live|@remote-r2"
+          started_at=$(date +%s)
+          npm run check:all
+          elapsed=$(( $(date +%s) - started_at ))
+          echo "Web verification: ${elapsed}s (target: under 120s including job setup)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$elapsed" -ge 120 ]; then
+            echo "::warning::Web verification exceeded the 120s target before setup/deployment overhead."
           fi
-        env:
-          CLOUDFLARE_AVAILABLE: ${{ steps.cloudflare.outputs.available }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Upload browser failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-results
+          path: test-results/
+          retention-days: 7
 
       - name: Apply D1 migrations to preview DB
         if: >-

@@ -62,13 +62,13 @@
 		45FB5159966831E62ADFF866 /* OutingRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51F1D9AC356CD3E6D17ADC5 /* OutingRenameSheet.swift */; };
 		48572F12742996B68226EECF /* FunNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D47136847CF32C6251A4BD /* FunNames.swift */; };
 		4BF3798F0ADD7B34948B1C65 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494CD419AD323D541E04D2AB /* AuthService.swift */; };
+		4C76BC8DA866C34DB10F1C78 /* UITestURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F7CC1576004E8E9F0843FF /* UITestURLProtocol.swift */; };
 		4D2754D2E24874B1AB391719 /* collage19.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 1758F97178B6D85D64F1363D /* collage19.jpg */; };
 		4DE92EF687F50832C97545B4 /* SpeciesCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA5EA8D67100F9A23FFBA36 /* SpeciesCarousel.swift */; };
 		4F4AEE471B77C7087B5DB09F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F34071627BDA774005F033 /* SettingsView.swift */; };
 		50F4BCC128CEB199FEE961AB /* GeocodingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E6BAB4FEED37A66EB25CDB0 /* GeocodingServiceTests.swift */; };
 		5660BC7BFC7DF7AD837AEADA /* ImageSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE51FF79B0CDBB3C4CADC3ED /* ImageSharingService.swift */; };
 		568BF8581C5C6F1B87D505E8 /* RarityMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 022DDFEBF5F74019F17C2726 /* RarityMark.swift */; };
-		58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */; };
 		59F01BFA523390B1E022749B /* collage8.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 8820687DF86D539EF3275711 /* collage8.jpg */; };
 		5C8E32D0411E6668710AA918 /* SharePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF3A7E2A8436A0BBA6ACC7F4 /* SharePayload.swift */; };
 		5DFC6E12EF3A1828C9C02575 /* CLIPPreprocessParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE75D7E8CDCF0136F2200827 /* CLIPPreprocessParityTests.swift */; };
@@ -92,6 +92,7 @@
 		76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */ = {isa = PBXBuildFile; fileRef = B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */; };
 		77C0537BBAA06C8486AF5187 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24F441305A1DDF6C5A89BA5 /* SafariView.swift */; };
 		78A345C5C3608103CBE304D2 /* AuthenticatedRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */; };
+		7B240C3F5A605935F0A0CBF6 /* AuthTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C33B7F050CB562FFC405FE /* AuthTransportTests.swift */; };
 		7D8B718A1CCBEBD903238420 /* PhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873328D24830AA514049E5C /* PhotoService.swift */; };
 		7E3212765B74C8A522921370 /* collage6.jpg in Resources */ = {isa = PBXBuildFile; fileRef = D695C5A3092D731C50F4DDB0 /* collage6.jpg */; };
 		7FF4AB0E40E668062F651F9E /* collage18.jpg in Resources */ = {isa = PBXBuildFile; fileRef = D695216CCB35E38C87F3A7E3 /* collage18.jpg */; };
@@ -273,7 +274,6 @@
 		3E730B46D8999CB6E7A42EC4 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3F672879223E1EC7DCBDEAA5 /* NavigationIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationIntents.swift; sourceTree = "<group>"; };
 		408C966FB74B7D159C8426D8 /* BirdIdEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirdIdEngine.swift; sourceTree = "<group>"; };
-		40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthIntegrationTests.swift; sourceTree = "<group>"; };
 		41813CF0AC9DC3E311F21DD1 /* WikimediaURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WikimediaURL.swift; sourceTree = "<group>"; };
 		424A71F14D412EECDDFC67EE /* collage3.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage3.jpg; sourceTree = "<group>"; };
 		452C55049EB9AB7E09E62CA9 /* FunNamesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunNamesTests.swift; sourceTree = "<group>"; };
@@ -346,6 +346,7 @@
 		AF3B45E45E5114E6BFDE87C6 /* RarityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RarityTests.swift; sourceTree = "<group>"; };
 		AFB4D1BB4367DDC5F16A9D39 /* DateFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateFormatting.swift; sourceTree = "<group>"; };
 		B24F441305A1DDF6C5A89BA5 /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
+		B4F7CC1576004E8E9F0843FF /* UITestURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestURLProtocol.swift; sourceTree = "<group>"; };
 		B51F1D9AC356CD3E6D17ADC5 /* OutingRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingRenameSheet.swift; sourceTree = "<group>"; };
 		B55E48905A381B4AAD9D6D13 /* AuthenticatedRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedRequest.swift; sourceTree = "<group>"; };
 		B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */ = {isa = PBXFileReference; path = wingdex.bird.fill.svg; sourceTree = "<group>"; };
@@ -393,6 +394,7 @@
 		EF21BBCB16EBA9E91DA51DF1 /* CurrentLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentLocationService.swift; sourceTree = "<group>"; };
 		EF5196BB0E920CD88E769065 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F3CD25A2A858FDFA411FC160 /* CLIPPreprocess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPPreprocess.swift; sourceTree = "<group>"; };
+		F5C33B7F050CB562FFC405FE /* AuthTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTransportTests.swift; sourceTree = "<group>"; };
 		F8A2D6F7B943CA14A50324B8 /* RarityPrior.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RarityPrior.swift; sourceTree = "<group>"; };
 		F930B7A16F2B5C40B971D674 /* taxonomy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taxonomy.json; sourceTree = "<group>"; };
 		FF3A7E2A8436A0BBA6ACC7F4 /* SharePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePayload.swift; sourceTree = "<group>"; };
@@ -460,6 +462,7 @@
 				5873328D24830AA514049E5C /* PhotoService.swift */,
 				FF3A7E2A8436A0BBA6ACC7F4 /* SharePayload.swift */,
 				97E34C211C55A7B7DE60BEAA /* UITestDataService.swift */,
+				B4F7CC1576004E8E9F0843FF /* UITestURLProtocol.swift */,
 				E42AF4AA7FDB4EAD3A01C1AB /* WikimediaCreditService.swift */,
 				D6877EE18EA97611E0CCE459 /* WikiSummaryService.swift */,
 				8E9125024749D57C45089591 /* BirdID */,
@@ -621,8 +624,8 @@
 			children = (
 				2563AE60F5FF5A8525BC8C2F /* AccountDataCacheTests.swift */,
 				1C4A90C4448A54945B2C8605 /* AddPhotosViewModelTests.swift */,
-				40E4A1B21654CC24CA891696 /* AuthIntegrationTests.swift */,
 				DE1613DCCF3480F9644D0D29 /* AuthServiceTests.swift */,
+				F5C33B7F050CB562FFC405FE /* AuthTransportTests.swift */,
 				192D6374270D66C9101106D4 /* BirdIdAccuracyTests.swift */,
 				B82E9D5F7FBA577647C406C8 /* BirdIdEngineTests.swift */,
 				2B505419B0FFD0BDB41AB49F /* BirdIDParityTests.swift */,
@@ -1096,6 +1099,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				E930BD246F277B974C057547 /* SpeciesPeekSheet.swift in Sources */,
 				BFEEDFE99B8E9AE03FC3304F /* Theme.swift in Sources */,
 				868EBB023417EFE3D0DD52F2 /* UITestDataService.swift in Sources */,
+				4C76BC8DA866C34DB10F1C78 /* UITestURLProtocol.swift in Sources */,
 				65EC6CA0935BC6F5DE44D392 /* WikiSummaryService.swift in Sources */,
 				A2AE0D7C40C4F54BE9773F7C /* WikimediaCreditService.swift in Sources */,
 				1F40A38FB19DEF16444A4343 /* WikimediaURL.swift in Sources */,
@@ -1143,8 +1147,8 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 			files = (
 				E5181C3C4BD39CFB8DC4DF26 /* AccountDataCacheTests.swift in Sources */,
 				BB25F529B0735086EB32BBBD /* AddPhotosViewModelTests.swift in Sources */,
-				58B69A80EFAF3294811D2CE3 /* AuthIntegrationTests.swift in Sources */,
 				8EE17A4E87495C877151768B /* AuthServiceTests.swift in Sources */,
+				7B240C3F5A605935F0A0CBF6 /* AuthTransportTests.swift in Sources */,
 				089E7B8C00D6451F6959B419 /* BirdIDParityTests.swift in Sources */,
 				AF5B1B87BC332436FC620C83 /* BirdIdAccuracyTests.swift in Sources */,
 				88D903DB0E1F56DAA22183CF /* BirdIdEngineTests.swift in Sources */,

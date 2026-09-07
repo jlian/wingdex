@@ -11,12 +11,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import { MODEL_ASSET_URLS, MODEL_VERSION } from '../lib/bird-id-local-adapter'
 
-// Sizes are illustrative; only the call COUNTS are asserted. The URLs come from
-// the adapter rather than being retyped, so this cannot silently drift from what
+// Small, multi-chunk payloads exercise streaming without allocating model-sized
+// buffers. URLs come from the adapter, so this cannot silently drift from what
 // actually ships. It had already drifted once: the list still named
 // occurrence-v3.bin.gz after that file was renamed to a content hash, and the
 // test passed regardless because it only ever talked to its own fixtures.
-const SIZES = [14386199, 25165824, 8620924, 16478112]
+const SIZES = [4097, 8192, 3073, 6144]
 const FILES: Record<string, number> = Object.fromEntries(
   MODEL_ASSET_URLS.map((u, i) => [u, SIZES[i] ?? 1024]),
 )
@@ -39,7 +39,7 @@ function fakeResponse(bytes: number, status = 200, headers: Record<string, strin
       getReader: () => ({
         read: async () => {
           if (sent >= bytes) return { done: true, value: undefined }
-          const n = Math.min(1 << 20, bytes - sent)
+          const n = Math.min(1024, bytes - sent)
           sent += n
           return { done: false, value: new Uint8Array(n) }
         },
@@ -53,6 +53,7 @@ beforeEach(() => {
   store = new Map()
   networkCalls = 0
   cacheWrites = 0
+  vi.stubGlobal('location', new URL('https://wingdex.app/'))
   vi.stubGlobal('caches', {
     open: async () => ({
       match: async (url: string) => {
@@ -85,6 +86,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.resetModules()
 })
@@ -112,20 +114,31 @@ describe('shipped asset URLs', () => {
 })
 
 describe('model asset cache', () => {
-  it('reports nothing cached before the first load', async () => {
-    const { assetsCached } = await import('@/lib/model-cache')
+  it('downloads once, reuses the warm cache, and downloads again after clearing it', async () => {
+    const { assetsCached, preloadAssets, clearAssetCache } = await import('@/lib/model-cache')
     expect(await assetsCached(URLS)).toBe(false)
-  })
 
-  it('fetches every asset once on a cold load', async () => {
-    const { preloadAssets } = await import('@/lib/model-cache')
     const out = await preloadAssets(URLS)
     expect(out.size).toBe(4)
     expect(networkCalls).toBe(4)
     expect(cacheWrites).toBe(4)
+    expect(await assetsCached(URLS)).toBe(true)
+
+    networkCalls = 0
+    const warm = await preloadAssets(URLS)
+    expect(warm.size).toBe(4)
+    expect(networkCalls).toBe(0)
+    expect(cacheWrites).toBe(4)
+
+    await clearAssetCache()
+    expect(await assetsCached(URLS)).toBe(false)
+    await preloadAssets(URLS)
+    expect(networkCalls).toBe(4)
+    expect(cacheWrites).toBe(8)
   })
 
   it('retries a transient network failure and caches the successful response once', async () => {
+    vi.useFakeTimers()
     let attempts = 0
     vi.stubGlobal('fetch', async (url: string) => {
       networkCalls++
@@ -135,7 +148,11 @@ describe('model asset cache', () => {
     })
 
     const { preloadAssets } = await import('@/lib/model-cache')
-    await preloadAssets([URLS[0]])
+    const loading = preloadAssets([URLS[0]])
+    await vi.advanceTimersByTimeAsync(249)
+    expect(networkCalls).toBe(1)
+    await vi.advanceTimersByTimeAsync(1)
+    await loading
 
     expect(networkCalls).toBe(2)
     expect(cacheWrites).toBe(1)
@@ -172,6 +189,7 @@ describe('model asset cache', () => {
   })
 
   it('keeps progress monotonic when a streamed attempt fails and retries', async () => {
+    vi.useFakeTimers()
     let attempts = 0
     vi.stubGlobal('fetch', async (url: string) => {
       networkCalls++
@@ -196,23 +214,15 @@ describe('model asset cache', () => {
 
     const { preloadAssets } = await import('@/lib/model-cache')
     const seen: number[] = []
-    await preloadAssets([URLS[0]], progress => seen.push(progress.loaded))
+    const loading = preloadAssets([URLS[0]], progress => seen.push(progress.loaded))
+    await vi.runAllTimersAsync()
+    await loading
 
     expect(networkCalls).toBe(2)
     for (let index = 1; index < seen.length; index++) {
       expect(seen[index]).toBeGreaterThanOrEqual(seen[index - 1])
     }
     expect(seen.at(-1)).toBe(FILES[URLS[0]])
-  })
-
-  it('makes ZERO network calls on a warm load', async () => {
-    const { preloadAssets } = await import('@/lib/model-cache')
-    await preloadAssets(URLS)
-    networkCalls = 0
-    const out = await preloadAssets(URLS)
-    expect(out.size).toBe(4)
-    // The assertion the whole feature exists for.
-    expect(networkCalls).toBe(0)
   })
 
   it('reports progress that only moves forward and ends at the total', async () => {
@@ -265,15 +275,5 @@ describe('model asset cache', () => {
     const { preloadAssets } = await import('@/lib/model-cache')
     const out = await preloadAssets(URLS, undefined, TOTAL)
     expect(out.size).toBe(4)
-  })
-
-  it('re-downloads after the cache is cleared', async () => {
-    const { preloadAssets, clearAssetCache, assetsCached } = await import('@/lib/model-cache')
-    await preloadAssets(URLS)
-    await clearAssetCache()
-    expect(await assetsCached(URLS)).toBe(false)
-    networkCalls = 0
-    await preloadAssets(URLS)
-    expect(networkCalls).toBe(4)
   })
 })

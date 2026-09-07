@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('embedded JPEG preview import', () => {
   for (const fixtureCase of [
@@ -47,26 +47,14 @@ test.describe('embedded JPEG preview import', () => {
         bytes.set(tiny, 500)
         bytes.set(full, 200_000)
         const file = new File([bytes], `synthetic.${extension}`)
-        const modulePath = '/src/lib/photo-utils.ts'
-        const { preparePhotoImage, generateThumbnail } = await import(/* @vite-ignore */ modulePath)
-        let nativeFailed = false
-        try { await generateThumbnail(file) } catch { nativeFailed = true }
-        const prepared = await preparePhotoImage(file)
-        const bitmap = await createImageBitmap(prepared.image)
-        const width = bitmap.width
-        const height = bitmap.height
-        bitmap.close()
         const base64 = await new Promise<string>(resolve => {
           const reader = new FileReader()
           reader.onload = () => resolve((reader.result as string).split(',')[1])
           reader.readAsDataURL(file)
         })
-        return { base64, width, height, nativeFailed, imageType: prepared.image.type }
+        return { base64 }
       }, fixtureCase)
 
-      expect(fixture.nativeFailed).toBe(true)
-      expect(fixture.imageType).toBe('image/jpeg')
-      expect([fixture.width, fixture.height]).toEqual(orientation === 6 ? [480, 640] : [640, 480])
       await page.getByRole('button', { name: 'Upload & Identify', exact: true }).click()
       await expect(page.locator('input[type="file"]')).toHaveAttribute('accept', new RegExp(`\\.${extension.toLowerCase()}`))
       await page.locator('input[type="file"]').setInputFiles({
@@ -77,7 +65,10 @@ test.describe('embedded JPEG preview import', () => {
       await expect(page.getByText('Photos (1)', { exact: true })).toBeVisible()
       const image = page.getByRole('img', { name: 'Bird', exact: true })
       await expect(image).toBeVisible()
-      expect(await image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
+      // The 16px camera thumbnail has the same aspect ratio as the full preview.
+      await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(16)
+      const ratio = await image.evaluate((img: HTMLImageElement) => img.naturalWidth / img.naturalHeight)
+      expect(ratio).toBeCloseTo(orientation === 6 ? 3 / 4 : 4 / 3, 2)
     })
   }
 

@@ -1,8 +1,8 @@
 import XCTest
 
-/// Render-only audits use local deterministic data. Functional UI tests retain
-/// preview-backend coverage in BirdIdFlowUITests. Main screens share a launch,
-/// while named activities preserve screen-specific diagnostics.
+/// All audits use local fixtures. The default structural checks do not resize
+/// text or sample screenshots; the explicit deep lane adds those OS-sensitive
+/// checks. Named activities retain screen-specific diagnostics.
 @MainActor
 final class PopulatedAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testMainScreensPassAccessibilityAudit() {
@@ -55,7 +55,7 @@ final class PopulatedAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
     private func launchPopulatedApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-populated"]
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         return app
@@ -109,7 +109,7 @@ final class EmptyAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
     private func launchEmptyApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-empty"]
+        app.launchArguments += ["--ui-test-fixture-empty", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         return app
@@ -122,9 +122,15 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         let app = launchSettingsApp()
         try runAccessibilityAudit(
             in: app,
-            for: .all.subtracting(.contrast),
+            for: .all,
             handlingKnownIssue: isKnownSettingsAuditIssue
         )
+        if deepAudits {
+            XCTAssertTrue(scrollUntilVisible(app.staticTexts["Legal"], in: app))
+            try runAccessibilityAudit(
+                in: app, for: .contrast, handlingKnownIssue: isKnownSettingsAuditIssue
+            )
+        }
 
         let deleteData = app.buttons["Delete Data..."]
         XCTAssertTrue(scrollUntilVisible(deleteData, in: app, maximumSwipes: 6))
@@ -137,33 +143,9 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         try runAccessibilityAudit(in: app, for: .all.subtracting(.dynamicType))
     }
 
-    func testSettingsPassesContrastAudit() throws {
-        let app = application()
-        app.launchArguments = [
-            "--ui-test-fixture-populated",
-            "--ui-test-open-settings",
-        ]
-        app.launch()
-        waitForDataSetup(in: app)
-        XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
-
-        try runAccessibilityAudit(
-            in: app,
-            for: .contrast,
-            handlingKnownIssue: isKnownSettingsAuditIssue
-        )
-        let legalHeader = app.staticTexts["Legal"]
-        XCTAssertTrue(scrollUntilVisible(legalHeader, in: app))
-        try runAccessibilityAudit(
-            in: app,
-            for: .contrast,
-            handlingKnownIssue: isKnownSettingsAuditIssue
-        )
-    }
-
     private func launchSettingsApp() -> XCUIApplication {
         let app = application()
-        app.launchArguments = ["--ui-test-fixture-populated", "--ui-test-open-settings"]
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-open-settings", "--ui-test-ignore-shares"]
         app.launch()
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
@@ -176,7 +158,7 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
 final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testSignInPassesAccessibilityAudit() throws {
         let app = application()
-        app.launchArguments = [
+        app.launchArguments += [
             "--ui-test-sign-out",
             "--ui-test-share-store",
             "--ui-test-reset-share-store",

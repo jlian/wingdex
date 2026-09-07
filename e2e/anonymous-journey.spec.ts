@@ -5,7 +5,8 @@
  * opposite of what this work changed. Each one is a thing a person does, not a
  * feature in isolation.
  */
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { loadApp, promoteAnonymousUser } from './helpers'
 
 const BADGE = 'These sightings are only on this device'
@@ -74,13 +75,27 @@ async function readSession(page: Page) {
 
 test('the convert: signing up keeps the data and opens Settings', async ({ page }) => {
   await loadApp(page, { promote: false })
+  const login = page.getByRole('button', { name: 'Log in' })
+  await expect(login.locator('img')).toHaveCount(0)
+  await expect(page.getByLabel(BADGE)).toBeHidden()
   await startAnonymousSession(page)
+  await page.reload()
+  await expect(login.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml/)
+  await expect(page.getByLabel(BADGE)).toBeHidden()
   await addSighting(page, 'Convert Patch')
 
   const before = await readSession(page)
   expect(before?.isAnonymous).toBe(true)
+  expect(before?.name).toMatch(/^[a-z]+-[a-z]+-[a-z]+$/)
   await expect(page.getByLabel(BADGE)).toBeVisible()
 
+  await login.click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('button', { name: 'Sign up' })).toBeVisible()
+  for (const name of ['Export sightings as CSV', 'Continue to log in', 'Back']) {
+    await expect(dialog.getByRole('button', { name, exact: true })).toBeHidden()
+  }
+  await page.keyboard.press('Escape')
   await promoteAnonymousUser(page)
 
   const after = await readSession(page)

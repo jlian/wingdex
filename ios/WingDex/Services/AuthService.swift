@@ -114,10 +114,16 @@ final class AuthService: @unchecked Sendable {
 
     /// Ephemeral session that never sends or stores cookies.
     /// Prevents stale cookies from conflicting with Bearer token auth.
-    private static let bearerSession: URLSession = {
+    private let bearerSession: URLSession
+    private static let defaultBearerSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieAcceptPolicy = .never
         config.httpShouldSetCookies = false
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1" {
+            config.protocolClasses = [UITestURLProtocol.self]
+        }
+        #endif
         return URLSession(configuration: config)
     }()
 
@@ -146,8 +152,9 @@ final class AuthService: @unchecked Sendable {
         return AuthenticatedRequest.referenceSuffix(traceID: traceID)
     }
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, session: URLSession? = nil) {
         self.defaults = defaults
+        bearerSession = session ?? Self.defaultBearerSession
         restoreSession()
         if hasPendingAccountMergeForCurrentAccount {
             accountMergeState = .pending
@@ -219,7 +226,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
         do {
             let (data, response) = try await AuthenticatedRequest.data(
-                for: request, session: Self.bearerSession,
+                for: request, session: bearerSession,
                 context: "Validate session", logger: log
             )
             if let http = response as? HTTPURLResponse,
@@ -363,7 +370,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
 
         let (data, response) = try await AuthenticatedRequest.data(
-            for: request, session: Self.bearerSession,
+            for: request, session: bearerSession,
             context: "Apple sign-in", logger: log
         )
 
@@ -441,7 +448,7 @@ final class AuthService: @unchecked Sendable {
         )
         let (_, response) = try await AuthenticatedRequest.data(
             for: request,
-            session: Self.bearerSession,
+            session: bearerSession,
             context: "Capture Apple deletion credential",
             logger: log
         )
@@ -474,7 +481,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
 
         let (data, response) = try await AuthenticatedRequest.data(
-            for: request, session: Self.bearerSession,
+            for: request, session: bearerSession,
             context: "Anonymous sign-in", logger: log
         )
 
@@ -602,7 +609,7 @@ final class AuthService: @unchecked Sendable {
         do {
             let (data, response) = try await AuthenticatedRequest.data(
                 for: request,
-                session: Self.bearerSession,
+                session: bearerSession,
                 context: "Sign out",
                 logger: log
             )
@@ -724,7 +731,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
 
         let (_, response) = try await AuthenticatedRequest.data(
-            for: request, session: Self.bearerSession,
+            for: request, session: bearerSession,
             context: "Update profile", logger: log
         )
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -763,7 +770,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
 
         let (data, response) = try await AuthenticatedRequest.data(
-            for: request, session: Self.bearerSession,
+            for: request, session: bearerSession,
             context: "Delete account", logger: log
         )
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -963,7 +970,7 @@ final class AuthService: @unchecked Sendable {
         AuthenticatedRequest.instrument(&request)
 
         let (data, response) = try await AuthenticatedRequest.data(
-            for: request, session: Self.bearerSession,
+            for: request, session: bearerSession,
             context: "Fetch user info", logger: log
         )
 
@@ -1035,7 +1042,7 @@ final class AuthService: @unchecked Sendable {
         )
         let (data, response) = try await AuthenticatedRequest.data(
             for: request,
-            session: Self.bearerSession,
+            session: bearerSession,
             context: "Prepare account merge",
             logger: log
         )
@@ -1110,7 +1117,7 @@ final class AuthService: @unchecked Sendable {
             )
             let (data, response) = try await AuthenticatedRequest.data(
                 for: request,
-                session: Self.bearerSession,
+                session: bearerSession,
                 context: "Finalize account merge",
                 logger: log
             )

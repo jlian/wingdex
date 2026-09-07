@@ -1,11 +1,12 @@
-import { test, expect, request } from '@playwright/test'
+import { request } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { testBaseURL } from './test-server'
 import { loadApp } from './helpers'
 
 const API_BASE = testBaseURL
-const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://localhost.wingdex.app'
+const PREVIEW_BASE = process.env.PREVIEW_BASE_URL || 'https://dev.wingdex.app'
 
 function buildCookieHeader(setCookieHeaders: string[]) {
   return setCookieHeaders
@@ -14,25 +15,7 @@ function buildCookieHeader(setCookieHeaders: string[]) {
     .join('; ')
 }
 
-async function waitForServerReady(baseURL: string, timeoutMs: number) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`${baseURL}/api/auth/get-session`)
-      if (response.ok) return
-    } catch {
-      // keep polling
-    }
-    await new Promise(resolve => setTimeout(resolve, 500))
-  }
-  throw new Error(`Timed out waiting for Wrangler server at ${baseURL}`)
-}
-
 test.describe('API smoke (request context)', () => {
-  test.beforeAll(async () => {
-    await waitForServerReady(API_BASE, 10_000)
-  })
-
   test('import is closed to anonymous sessions', async () => {
     const api = await request.newContext({ baseURL: API_BASE })
 

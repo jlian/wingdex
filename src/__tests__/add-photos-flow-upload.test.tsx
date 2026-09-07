@@ -70,7 +70,7 @@ function createFileList(count: number): FileList {
 describe('AddPhotosFlow upload', () => {
   afterEach(() => {
     vi.restoreAllMocks()
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it('carries a 200-photo FileList into outing review without truncation', async () => {

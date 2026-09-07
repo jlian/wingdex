@@ -1,62 +1,33 @@
-import { defineConfig } from '@playwright/test';
-import { testBaseURL, testServerPort } from './e2e/test-server';
+import { defineConfig } from '@playwright/test'
+import { testBaseURL } from './e2e/test-server'
 
-const isCI = !!process.env.CI;
-const isARM = process.arch === 'arm64';
-// Fork pull requests get no repository secrets, so there is no Cloudflare
-// credential to authenticate a remote binding with. `env.PLACES` is
-// `remote = true`, and wrangler refuses to start the remote proxy session
-// without one, so the server never boots and the whole E2E step times out
-// before a single test runs. Excluding the `@remote-r2` test alone cannot help,
-// because the failure happens at server start. Disabling remote bindings keeps
-// the rest of the suite meaningful on forks.
-//
-// Both values are required, not just the token: the token authenticates and the
-// account id selects the account the remote bucket lives in. A half-configured
-// environment cannot open the remote session either, so it takes the same local
-// fallback. This matches the credential check in .github/workflows/ci.yml.
-const hasCloudflareCredentials =
-  !!process.env.CLOUDFLARE_API_TOKEN && !!process.env.CLOUDFLARE_ACCOUNT_ID;
+const isCI = !!process.env.CI
+const live = process.env.PLAYWRIGHT_LIVE === 'true'
 
 export default defineConfig({
   testDir: './e2e',
-  globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
-  timeout: isCI ? 15_000 : isARM ? 30_000 : 10_000,
-  retries: isCI ? 1 : 0,
-  // The tests share one development server and local D1 database. A single
-  // worker avoids contention and is faster in CI as well as deterministic
-  // locally.
+  timeout: 15_000,
+  retries: 0,
+  // This has repeatedly reverted from two to one: concurrent browsers contend
+  // with the shared Worker/D1. Keep one worker; serve built assets instead of
+  // paying Vite's module graph and HMR cost on every navigation.
   workers: 1,
   reporter: isCI ? 'line' : 'list',
+  grep: live ? /@live|@remote-r2/ : undefined,
+  grepInvert: live ? undefined : /@live|@remote-r2/,
   use: {
     baseURL: testBaseURL,
     headless: true,
     screenshot: 'only-on-failure',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   webServer: {
-    // The preview environment is load-bearing on CI, not cosmetic. Without it the
-    // server gets the TOP-LEVEL bindings, which include the production R2
-    // bucket, and an R2 binding grants `put` and `delete` at runtime whatever
-    // the TypeScript type says. Since this server runs pull-request code, that
-    // is the same production-mutation risk the deployed preview avoids by
-    // binding `wingdex-places-preview`. D1 stays local and disposable either
-    // way, so the flag only changes which R2 bucket is reachable.
-    //
-    // Remote bindings are disabled when the credentials are incomplete, see
-    // hasCloudflareCredentials.
-    command: isCI
-      ? `CLOUDFLARE_ENV=preview CLOUDFLARE_REMOTE_BINDINGS=${hasCloudflareCredentials ? 'true' : 'false'} VITE_SERVER_HOST=true VITE_PORT=${testServerPort} npm run dev`
-      : `npm run db:migrate && VITE_PORT=${testServerPort} npm run dev`,
+    command: 'node e2e/start-server.mjs',
     url: `${testBaseURL}/api/health`,
-    reuseExistingServer: true,
-    timeout: 60_000,
+    reuseExistingServer: false,
+    timeout: 30_000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { browserName: 'chromium' },
-    },
-  ],
-});
+  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+})

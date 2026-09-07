@@ -85,8 +85,10 @@ jobs:
               echo "is_current=true" >> "$GITHUB_OUTPUT"
             fi
           fi
+          # Match ios.yml's native coverage paths. Backend-only commits have
+          # web coverage, not a new iOS check, and do not change the native binary.
           CHECK_SHA=$(git log -1 --format=%H "$SOURCE_SHA" -- \
-            ios openapi.yaml functions migrations \
+            ios openapi.yaml \
             public/models/text_classifier_int8.bin public/priors \
             src/lib/bird-id-local-adapter.ts src/lib/rarity.ts src/lib/taxonomy.json \
             .github/workflows/ios.yml .github/workflows/ios-release.yml \
@@ -251,7 +253,7 @@ jobs:
           if [ "$TESTED_SHA" != "$SOURCE_SHA" ] && [ -n "$PR" ]; then
             git fetch --no-tags --quiet origin "refs/pull/$PR/head"
             if ! git diff --quiet FETCH_HEAD "$SOURCE_SHA" -- \
-              ios openapi.yaml functions migrations \
+              ios openapi.yaml \
               public/models/text_classifier_int8.bin public/priors \
               src/lib/bird-id-local-adapter.ts src/lib/rarity.ts src/lib/taxonomy.json \
               .github/workflows/ios.yml .github/workflows/ios-release.yml \

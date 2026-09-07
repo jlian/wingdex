@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert/strict'
 import { describe, it, expect } from 'vitest'
 import { preprocess, resizeShorterSide, centerCrop, CLIP_MEAN, CLIP_STD, CLIP_RESIZE, CLIP_CROP } from '@/lib/clip-preprocess'
 
@@ -139,11 +140,8 @@ describe('RGBA input', () => {
     const { rgba, rgb } = pair(w, h, w + h)
     const packed = preprocess({ data: rgb, width: w, height: h })
     const direct = preprocess({ data: rgba, width: w, height: h, channels: 4 })
-    expect(direct.length).toBe(packed.length)
-    for (let i = 0; i < packed.length; i++) {
-      // Bit-identical, not approximately equal. Only R/G/B are read.
-      expect(direct[i]).toBe(packed[i])
-    }
+    // Native typed-array comparison checks every value without 150,528 matchers.
+    deepStrictEqual(direct, packed)
   })
 
   it('ignores the alpha channel entirely', () => {
@@ -154,10 +152,8 @@ describe('RGBA input', () => {
     for (let i = 3; i < rgba.length; i += 4) rgba[i] = (i * 7) % 256
     const scribbled = preprocess({ data: rgba, width: w, height: h, channels: 4 })
     const packed = preprocess({ data: rgb, width: w, height: h })
-    for (let i = 0; i < packed.length; i++) {
-      expect(scribbled[i]).toBe(opaque[i])
-      expect(scribbled[i]).toBe(packed[i])
-    }
+    deepStrictEqual(scribbled, opaque)
+    deepStrictEqual(scribbled, packed)
   })
 })
 

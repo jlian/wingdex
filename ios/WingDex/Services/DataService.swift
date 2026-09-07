@@ -38,16 +38,23 @@ final class DataService: DataStoreService, Sendable {
 
     /// Ephemeral session that never sends or stores cookies.
     /// Prevents stale cookies from conflicting with Bearer token auth.
-    private static let bearerSession: URLSession = {
+    private let bearerSession: URLSession
+    private static let defaultBearerSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieAcceptPolicy = .never
         config.httpShouldSetCookies = false
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1" {
+            config.protocolClasses = [UITestURLProtocol.self]
+        }
+        #endif
         return URLSession(configuration: config)
     }()
 
-    init(auth: AuthService, expectedAccountID: String? = nil) {
+    init(auth: AuthService, expectedAccountID: String? = nil, session: URLSession? = nil) {
         self.auth = auth
         self.expectedAccountID = expectedAccountID
+        bearerSession = session ?? Self.defaultBearerSession
     }
 
     // MARK: - Bulk Fetch
@@ -123,7 +130,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: data, rejectedToken: token, path: "api/species/search", method: "GET",
       start: start, byteCount: data.count)
@@ -283,7 +290,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (responseData, response) = try await Self.bearerSession.data(for: request)
+        let (responseData, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: responseData, rejectedToken: token, path: "api/import/ebird-csv",
       method: "POST", start: start, byteCount: responseData.count)
@@ -310,7 +317,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: data, rejectedToken: token, path: path, method: "GET", start: start,
       byteCount: data.count)
@@ -327,7 +334,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (responseData, response) = try await Self.bearerSession.data(for: request)
+        let (responseData, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: responseData, rejectedToken: token, path: path, method: "POST", start: start,
       byteCount: responseData.count)
@@ -344,7 +351,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (responseData, response) = try await Self.bearerSession.data(for: request)
+        let (responseData, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: responseData, rejectedToken: token, path: path, method: "PATCH", start: start,
       byteCount: responseData.count)
@@ -359,7 +366,7 @@ final class DataService: DataStoreService, Sendable {
         let token = try await attachAuth(&request)
 
         let start = Date()
-        let (data, response) = try await Self.bearerSession.data(for: request)
+        let (data, response) = try await bearerSession.data(for: request)
     try await validate(
       response, data: data, rejectedToken: token, path: path, method: "DELETE", start: start,
       byteCount: data.count)
