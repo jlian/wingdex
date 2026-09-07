@@ -2,6 +2,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import UIKit
 import UniformTypeIdentifiers
 import XCTest
 
@@ -9,6 +10,7 @@ final class PhotoServiceTests: XCTestCase {
     private func makeImageData(
         width: Int,
         height: Int,
+        type: UTType = .jpeg,
         properties: [CFString: Any] = [:]
     ) throws -> Data {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -28,7 +30,7 @@ final class PhotoServiceTests: XCTestCase {
         let output = NSMutableData()
         let destination = try XCTUnwrap(CGImageDestinationCreateWithData(
             output,
-            UTType.jpeg.identifier as CFString,
+            type.identifier as CFString,
             1,
             nil
         ))
@@ -161,5 +163,102 @@ final class PhotoServiceTests: XCTestCase {
 
     func testPreparationRejectsInvalidImageData() {
         XCTAssertNil(PhotoService.preparePhoto(from: Data("not an image".utf8)))
+    }
+
+    func testProcessingPreservesJPEGAndHEIFWithoutTranscoding() throws {
+        for type in [UTType.jpeg, .heic] {
+            let original = try makeImageData(
+                width: 400, height: 200, type: type,
+                properties: [kCGImagePropertyOrientation: 6]
+            )
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(UUID().uuidString).\(try XCTUnwrap(type.preferredFilenameExtension))")
+            try original.write(to: fileURL)
+            defer { try? FileManager.default.removeItem(at: fileURL) }
+
+            let imported = try PhotoFlowStore.importFile(fileURL)
+            defer { PhotoFlowStore.remove([imported]) }
+            let prepared = try XCTUnwrap(PhotoService.preparePhoto(at: imported))
+            let processing = try PhotoService.processingData(at: imported)
+
+            XCTAssertEqual(processing, original)
+            XCTAssertEqual(prepared.fileHash, PhotoService.fileHash(for: original))
+            XCTAssertEqual(prepared.byteCount, original.count)
+            let decoded = try XCTUnwrap(PhotoDecoder.decode(processing))
+            XCTAssertEqual(decoded.width, 200)
+            XCTAssertEqual(decoded.height, 400)
+            XCTAssertNotNil(UIImage(data: processing)?.cgImage)
+        }
+    }
+
+    func testProcessingRejectsUnreadableImage() throws {
+        let fileURL = try PhotoFlowStore.writeCameraData(Data("not an image".utf8))
+        defer { PhotoFlowStore.remove([fileURL]) }
+        XCTAssertThrowsError(try PhotoService.processingData(at: fileURL)) { error in
+            guard case PhotoService.ProcessingError.unreadableImage = error else {
+                return XCTFail("Expected a decoding error, got \(error)")
+            }
+        }
+        XCTAssertThrowsError(try PhotoService.processingData(
+            at: fileURL.appendingPathExtension("missing")
+        )) { error in
+            XCTAssertFalse(error is PhotoService.ProcessingError)
+            XCTAssertEqual((error as NSError).domain, NSCocoaErrorDomain)
+        }
+    }
+
+    @MainActor
+    func testRAWNormalizationFeedsIdentificationAndCropRetry() async throws {
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/synthetic-bayer.dng")
+        let imported = try PhotoFlowStore.importFile(source)
+        defer { PhotoFlowStore.remove([imported]) }
+        XCTAssertEqual(imported.pathExtension, "dng")
+        let rawSource = try XCTUnwrap(CGImageSourceCreateWithURL(imported as CFURL, nil))
+        let rawType = try XCTUnwrap(CGImageSourceGetType(rawSource))
+        XCTAssertTrue(try XCTUnwrap(UTType(rawType as String)).conforms(to: .rawImage))
+        let original = try Data(contentsOf: imported)
+        let prepared = try XCTUnwrap(PhotoService.preparePhoto(at: imported))
+        let processing = try PhotoService.processingData(at: imported)
+        let renderedSource = try XCTUnwrap(CGImageSourceCreateWithData(processing as CFData, nil))
+        XCTAssertEqual(CGImageSourceGetType(renderedSource), UTType.jpeg.identifier as CFString)
+        let decoded = try XCTUnwrap(PhotoDecoder.decode(processing))
+        XCTAssertEqual(decoded.width, 375)
+        XCTAssertEqual(decoded.height, 500)
+        XCTAssertGreaterThan(Set(decoded.data).count, 16)
+        XCTAssertEqual(try XCTUnwrap(UIImage(data: processing)).imageOrientation, .right)
+        XCTAssertEqual(try imageDimensions(processing), CGSize(width: 512, height: 384))
+        XCTAssertEqual(prepared.byteCount, original.count)
+        XCTAssertEqual(prepared.fileHash, PhotoService.fileHash(for: original))
+        XCTAssertEqual(try Data(contentsOf: imported), original)
+
+        let auth = AuthService()
+        auth.installUITestAnonymousIdentity()
+        let store = DataStore(service: UITestDataService(mode: .populated))
+        store.activate(accountID: try XCTUnwrap(auth.userId))
+        await store.loadAll()
+        let viewModel = AddPhotosViewModel()
+        viewModel.configure(auth: auth, dataStore: store)
+        let photo = ProcessedPhoto(
+            id: "raw", originalURL: imported, cleanupOriginal: false,
+            thumbnail: prepared.thumbnail, exifTime: nil, gpsLat: nil, gpsLon: nil,
+            fileHash: prepared.fileHash, fileName: "synthetic-bayer.dng", byteCount: prepared.byteCount
+        )
+        viewModel.clusters = [PhotoCluster(
+            photos: [photo], startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        await viewModel.runSpeciesId(photoIndex: 0)
+        XCTAssertNil(viewModel.error)
+        let activeData = try XCTUnwrap(viewModel.activeImageData)
+        let image = try XCTUnwrap(UIImage(data: activeData)?.cgImage)
+        let cropped = try XCTUnwrap(image.cropping(to: CGRect(
+            x: 0, y: 0, width: image.width / 2, height: image.height / 2
+        )))
+        let croppedData = try XCTUnwrap(UIImage(cgImage: cropped).jpegData(compressionQuality: 0.7))
+        await viewModel.runSpeciesId(photoIndex: 0, croppedImageData: croppedData)
+        XCTAssertNil(viewModel.error)
+        XCTAssertEqual(viewModel.activeImageData, activeData)
+        await viewModel.cancelSession()
     }
 }

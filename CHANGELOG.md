@@ -1,3 +1,13 @@
+## [1.31.1](https://github.com/jlian/wingdex/compare/v1.31.0...v1.31.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* **Photos:** bound EXIF date string reads and rethrow I/O errors ([99a4682](https://github.com/jlian/wingdex/commit/99a468235b6a50e72cd2c8e3755e0d10010c6eea))
+* **Photos:** rank previews by area, orient scaled decoder, and clear file input on retry ([b125ed3](https://github.com/jlian/wingdex/commit/b125ed3ae77e999bb99190f1a1eb95c58d5406e3))
+* **Photos:** support RAW imports and embedded JPEG previews ([446ac97](https://github.com/jlian/wingdex/commit/446ac9739939087f50ba43a1f2ee04fdf8440c80))
+* **Photos:** walk JPEG markers incrementally and read full RAW EXIF ranges ([bae4aa6](https://github.com/jlian/wingdex/commit/bae4aa67dfa804d850c2c370cd3fa2a292ece067))
+
 # [1.31.0](https://github.com/jlian/wingdex/compare/v1.30.0...v1.31.0) (2026-09-06)
 
 

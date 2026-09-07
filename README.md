@@ -36,6 +36,16 @@ Drop a whole day's photos at once and the batch wizard clusters them into outing
 
 The first identification downloads about 53 MB of model files, once. After that everything is local and works offline.
 
+The web app tries browser-supported images first, then offers **embedded JPEG
+preview support** for classic TIFF-based files, independent of camera brand or
+extension. It reads JPEG references and self-contained RGB/YCbCr JPEG preview
+strips, not RAW sensor data. Previews stay local and supply display, cropping,
+and identification; metadata and duplicate detection use the received file.
+This is not universal RAW support: unsupported containers (such as CR3 or RAF),
+vendor-specific preview layouts, and files without a decodable preview require
+a JPEG export. Failed photos are reported individually without blocking other
+photos or another selection. The iOS app uses the operating system's RAW decoder.
+
 ### Identification
 
 [WingCLIP-0.3](https://huggingface.co/johnlian/WingCLIP-0.3) is a 39M-parameter image encoder distilled from [BioCLIP-2](https://huggingface.co/imageomics/bioclip-2) via [WingCLIP-0.1](https://huggingface.co/johnlian/WingCLIP-0.1). Small enough to download once and run on a phone.

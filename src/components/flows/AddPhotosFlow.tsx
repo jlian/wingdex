@@ -15,7 +15,7 @@ import {
   Crop, ArrowRight, ArrowLeft, SkipForward, CaretRight, Info
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { extractEXIF, generateThumbnail, computeFileHash } from '@/lib/photo-utils'
+import { extractEXIF, preparePhotoImage, computeFileHash, PhotoDecodeError } from '@/lib/photo-utils'
 import { clusterPhotosIntoOutings } from '@/lib/clustering'
 import { identifyBirdLocally, MODEL_ASSETS, modelReady } from '@/lib/bird-id-local-adapter'
 import { ModelDownloadGate } from '@/components/ModelDownloadGate'
@@ -412,13 +412,14 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
+      let dataUrl: string | undefined
       try {
         const exif = await extractEXIF(file)
         debug('photo-import', 'Extracted photo metadata', {
           hasTimestamp: !!exif.timestamp,
           hasGps: !!exif.gps,
         })
-        const thumbnail = await generateThumbnail(file)
+        const { image, thumbnail } = await preparePhotoImage(file)
         const hash = await computeFileHash(file)
 
         // An object URL, NOT readAsDataURL. Base64 inflates the file by 4/3 and
@@ -426,7 +427,7 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
         // the whole flow. This is a handle to the existing blob instead, costing
         // nothing. Both consumers are <img src> and the identifier's decoder,
         // which accept either form. Revoked when the flow unmounts.
-        const dataUrl = URL.createObjectURL(file)
+        dataUrl = URL.createObjectURL(image)
         objectUrls.current.push(dataUrl)
 
         const photo: PhotoWithCrop = {
@@ -456,15 +457,22 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
           newPhotos.push(photo)
         }
       } catch (error) {
+        if (dataUrl) {
+          URL.revokeObjectURL(dataUrl)
+          objectUrls.current = objectUrls.current.filter(url => url !== dataUrl)
+        }
         debug('photo-import', 'Failed to process a selected file')
-        toast.error(`Failed to process ${file.name}`)
+        const message = error instanceof PhotoDecodeError
+          ? error.message
+          : 'Could not read or process this photo. Try again.'
+        toast.error(`${file.name}: ${message}`)
       }
       setProgress(((i + 1) / files.length) * 100)
     }
 
     if (newPhotos.length === 0 && duplicatePhotos.length === 0) {
-      toast.error('No photos to process')
-      onClose()
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setStep('upload')
       return
     }
 
@@ -480,7 +488,9 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    await handleSelectedFiles(Array.from(e.target.files || []))
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    await handleSelectedFiles(files)
   }
 
   const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
@@ -708,7 +718,7 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.arw,.cr2,.dng,.nef,.nrw,.pef,.srw,.raw"
                 multiple
                 className="hidden"
                 onChange={handleFileSelect}

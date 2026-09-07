@@ -87,6 +87,43 @@ these arguments.
 | `Resources/` | App icon, assets |
 | `scripts/` | Build helpers (version bump, icon fix, git info generation) |
 
+## Photo import formats
+
+Photos controls which resource a RAW+JPEG or JPEG+RAW asset exports. Its
+automatic and most-compatible settings are preferences, not guarantees that
+the app receives JPEG. WingDex keeps the received file unchanged for metadata
+and duplicate detection. For RAW formats supported by the OS, it renders the
+active photo from its file URL before identification and cropping; dropping the
+filename first can make ImageIO mistake Sony ARW data for ordinary TIFF.
+JPEG and HEIF exports pass through without another conversion.
+
+This follows Apple's [file representation guidance](https://developer.apple.com/documentation/coretransferable/filerepresentation):
+copy the temporary received file during the importing closure and process it
+on demand. The received file is not necessarily the untouched camera original;
+Photos can convert it or remove metadata according to the person's choices.
+Apple describes [compatible encoding](https://developer.apple.com/documentation/photosui/phpickerconfiguration-swift.struct/assetrepresentationmode/compatible)
+as best-effort, and [ImageIO image creation](https://developer.apple.com/documentation/imageio/cgimagesourcecreateimageatindex(_:_:_:))
+can fail even when the container is recognized. Native RAW support therefore
+depends on the camera variant and OS decoder, not just the extension. WingDex
+does not scan native RAW sensor data or silently substitute a small embedded
+thumbnail for the full image; undecodable photos need a JPEG/HEIF export.
+Import failures are counted without discarding readable photos, including after
+duplicate resolution. Unavailable files remain retryable; decoding failures
+offer export or skip rather than repeatedly decoding the same unsupported file.
+
+`PhotoServiceTests` exercises RAW normalization, orientation, identification,
+and crop retry with a generated Bayer DNG, plus real JPEG/HEIF decoding.
+Regenerate the non-photographic fixture with
+`swift ios/WingDexTests/Fixtures/generate-synthetic-dng.swift` from the repo root.
+The DNG covers RAW rendering, not Sony's filename-dependent type detection.
+
+When checking picker behavior on a new iOS release, import standalone RAW,
+RAW+JPEG with RAW as the selected original, JPEG+RAW with JPEG selected, and
+HEIF through both automatic and most-compatible export. Confirm that each
+selection produces one photo, retains its date/location, identifies, and can
+be cropped and re-identified. This requires real Photos assets, not JPEG files
+renamed with RAW extensions. Compare stable and beta OS versions separately.
+
 ## Build scripts
 
 | Script | Purpose |
