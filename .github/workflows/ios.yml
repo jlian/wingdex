@@ -88,7 +88,10 @@ jobs:
             tests: -only-testing:WingDexUITests/BirdIdFlowUITests -only-testing:WingDexUITests/CameraSettingsUITests
           - lane: ui-outings
             suite: core
-            tests: -only-testing:WingDexUITests -skip-testing:WingDexUITests/BirdIdFlowUITests -skip-testing:WingDexUITests/CameraSettingsUITests
+            tests: -only-testing:WingDexUITests -skip-testing:WingDexUITests/BirdIdFlowUITests -skip-testing:WingDexUITests/CameraSettingsUITests -skip-testing:WingDexUITests/OutingLocationVisualUITests
+          - lane: ui-gestures
+            suite: core
+            tests: -only-testing:WingDexUITests/OutingLocationVisualUITests
           - lane: accessibility
             suite: accessibility
             tests: ''

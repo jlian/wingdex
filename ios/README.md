@@ -100,9 +100,10 @@ ID assets and the pinned XcodeGen executable are cached separately. These caches
 reuse build inputs/products, never simulator state or test results; tests still
 run on a fresh device.
 The runner disables Xcode's optional **verbose system diagnostics**. Failed
-assertions, explicitly attached screenshots/hierarchies, raw stderr and result
-bundles remain; automatic failure attachments are not guaranteed. On the local
-beta, one failed assertion otherwise spawned
+assertions, screenshots, UI hierarchies, raw stderr and result bundles remain.
+Export attachments without `--only-failures`: Xcode can mark a failed test's
+attachments as not directly associated with its assertion. On the local beta,
+one failed assertion otherwise spawned
 `simctl diagnose --timeout=600` after all tests had already finished, adding
 minutes with no test progress. This is the documented
 `xcodebuild -collect-test-diagnostics never` option, not a log filter.
@@ -167,8 +168,9 @@ check their current value first. No private XCTest polling or quiescence setting
 are used; Apple does not guarantee the waiter's polling interval.
 
 Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
-Unit, photo/camera UI, outing UI, and structural accessibility run on separate
-macOS 15 ARM machines with Xcode 26.3, using the same fresh iPhone 17 Pro default
+Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
+accessibility run on separate macOS 15 ARM machines with Xcode 26.3, using the
+same fresh iPhone 17 Pro default
 as local runs. Smaller SE displays did not improve hosted runtime consistently
 and introduced tight-viewport scrolling failures, so CI does not override the
 device type.
