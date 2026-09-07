@@ -44,8 +44,8 @@ permissions:
   contents: read
   pull-requests: read
 
-# Keep the iOS 26 SDK while avoiding macOS 26's costly cold-simulator startup
-# on standard 7 GB runners. Do not disable system services to mask the overhead.
+# Keep the iOS 26 SDK and use standard 14 GB Intel runners rather than the
+# 7 GB ARM VMs. Do not disable system services to mask simulator overhead.
 env:
   DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
@@ -80,7 +80,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: [core, accessibility]
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -126,7 +126,7 @@ jobs:
   deep-accessibility:
     name: Deep accessibility (advisory)
     if: github.event_name == 'schedule' || inputs.deep_audits
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 15
     # Simulator screenshot/contrast and font-resizing audits are useful reports,
     # not a reliable merge gate. Real issues and infrastructure errors stay in
