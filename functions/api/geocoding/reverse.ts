@@ -3,6 +3,7 @@ import { PLACES_ATTRIBUTION } from '../../lib/osm-places'
 import { parseCoordinate } from '../../lib/geocoding'
 import { createRouteResponder } from '../../lib/log'
 import { rateLimitKey } from '../../lib/rate-limit'
+import { coordinateTimeZone } from '../../lib/outing-time'
 
 /**
  * Reverse geocode a coordinate from the local OSM archive.
@@ -85,7 +86,7 @@ export const onRequestPost: ApiHandler = async context => {
         // ODbL 1.4.1 asks for the notice to travel with the produced work, so
         // the response carries it rather than relying on the client to hold a
         // hard-coded string that can drift from the archive it describes.
-        { ...payload, attribution: PLACES_ATTRIBUTION },
+        { ...payload, timeZone: coordinateTimeZone(latitude, longitude), attribution: PLACES_ATTRIBUTION },
         { headers: { 'Cache-Control': 'private, no-store' } },
       ),
       payload.result

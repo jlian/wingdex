@@ -12,7 +12,6 @@ struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var committedSpeciesEntry: DexEntry?
     @State private var actionDestination: OutingActionDestination?
-    @State private var outingPendingDeletion: Outing?
 
     var body: some View {
         NavigationStack {
@@ -71,10 +70,7 @@ struct HomeView: View {
                     OutingDetailView(outingId: outing.id)
                 }
                 .navigationDestination(item: $actionDestination) { destination in
-                    OutingDetailView(
-                        outingId: destination.outing.id,
-                        beginsLocationEditing: destination.beginsLocationEditing
-                    )
+                    OutingDetailView(outingId: destination.outing.id)
                 }
                 .navigationDestination(item: $committedSpeciesEntry) { entry in
                     SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
@@ -254,18 +250,8 @@ struct HomeView: View {
                         }
                         .outingRowActions(
                             outing: outing,
-                            pendingDeletion: $outingPendingDeletion,
                             onView: {
-                                actionDestination = OutingActionDestination(
-                                    outing: outing,
-                                    beginsLocationEditing: false
-                                )
-                            },
-                            onEditLocation: {
-                                actionDestination = OutingActionDestination(
-                                    outing: outing,
-                                    beginsLocationEditing: true
-                                )
+                                actionDestination = OutingActionDestination(outing: outing)
                             }
                         )
                     }
@@ -275,7 +261,6 @@ struct HomeView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .listSectionSeparator(.hidden, edges: .top)
-        .outingDeletionConfirmation($outingPendingDeletion)
     }
 
     private func speciesContextMenu(for entry: DexEntry) -> UIMenu {

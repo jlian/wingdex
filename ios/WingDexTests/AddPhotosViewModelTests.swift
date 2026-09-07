@@ -1,10 +1,36 @@
 @testable import WingDex
+import ImageIO
 import PhotosUI
 import SwiftUI
 import XCTest
 
 @MainActor
 final class AddPhotosViewModelTests: XCTestCase {
+    func testClusterTimeZoneResolutionUpdatesPhotosAndBounds() throws {
+        let fallbackTimeZone = TimeZone(secondsFromGMT: 0)!
+        let rawTime = try XCTUnwrap(PhotoCaptureTime.fromEXIF([
+            kCGImagePropertyExifDateTimeOriginal: "2026:08:18 07:13:00",
+        ], fallbackTimeZone: fallbackTimeZone))
+        let photo = ProcessedPhoto(
+            id: "naive", originalURL: URL(fileURLWithPath: #filePath), cleanupOriginal: false,
+            thumbnail: Data(), exifTime: rawTime.date, gpsLat: 15.23, gpsLon: -90.23,
+            fileHash: "naive", fileName: "naive.jpg", byteCount: 0, captureTime: rawTime
+        )
+        let viewModel = AddPhotosViewModel()
+        viewModel.processedPhotos = [photo]
+        viewModel.clusters = [PhotoCluster(
+            photos: [photo], startTime: rawTime.date, endTime: rawTime.date, centerLat: 15.23, centerLon: -90.23
+        )]
+        viewModel.resolveCurrentClusterTimeZone(TimeZone(identifier: "America/Guatemala")!)
+        let expected = DateFormatting.sortDate("2026-08-18T13:13:00Z")
+        XCTAssertEqual(viewModel.clusters[0].startTime, expected)
+        XCTAssertEqual(viewModel.clusters[0].endTime, expected)
+        XCTAssertEqual(viewModel.currentPhoto?.exifTime, expected)
+        XCTAssertEqual(viewModel.processedPhotos[0].captureTime?.storedValue, "2026-08-18T07:13:00-06:00")
+        viewModel.resolveCurrentClusterTimeZone(fallbackTimeZone)
+        XCTAssertEqual(viewModel.currentPhoto?.exifTime, rawTime.date)
+    }
+
     private func configuredModel() async throws -> (AddPhotosViewModel, DataStore) {
         let auth = AuthService()
         auth.installUITestAnonymousIdentity()
@@ -21,6 +47,20 @@ final class AddPhotosViewModelTests: XCTestCase {
             UIColor.blue.setFill()
             context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
         }
+    }
+
+    private func cameraCapture(_ image: UIImage) throws -> CameraCapture {
+        try CameraCapture.make(image: image, metadata: [:], latitude: nil, longitude: nil)
+    }
+
+    private func cameraCapture(data: Data) -> CameraCapture {
+        CameraCapture(
+            id: UUID(),
+            data: data,
+            captureTime: PhotoCaptureTime(date: .now, timeZone: .current),
+            latitude: nil,
+            longitude: nil
+        )
     }
 
     func testFailedPickerItemsAreCountedAndCanBeRetried() async throws {
@@ -46,7 +86,7 @@ final class AddPhotosViewModelTests: XCTestCase {
     func testFailedPickerItemDoesNotDiscardGoodPhoto() async throws {
         let (viewModel, _) = try await configuredModel()
         viewModel.selectedItems = [PhotosPickerItem(itemIdentifier: "unavailable-photo")]
-        viewModel.addCameraPhoto(cameraImage(), lat: nil, lon: nil)
+        viewModel.addCameraPhoto(try cameraCapture(cameraImage()))
 
         await viewModel.processSelectedPhotos()
 
@@ -72,7 +112,7 @@ final class AddPhotosViewModelTests: XCTestCase {
                 fileHash: PhotoService.fileHash(for: data), fileName: "existing.jpg"
             ))
             viewModel.selectedItems = [PhotosPickerItem(itemIdentifier: "unavailable-photo")]
-            viewModel.addCameraPhoto(image, lat: nil, lon: nil)
+            viewModel.addCameraPhoto(cameraCapture(data: data))
 
             await viewModel.processSelectedPhotos()
 

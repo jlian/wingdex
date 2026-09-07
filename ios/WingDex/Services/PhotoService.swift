@@ -12,6 +12,7 @@ struct PreparedPhotoData: Sendable {
     let gpsLon: Double?
     let fileHash: String
     let byteCount: Int
+    var captureTime: PhotoCaptureTime? = nil
 }
 
 /// Handles EXIF extraction, image compression, and outing clustering.
@@ -64,7 +65,8 @@ enum PhotoService {
             gpsLat: exif.lat,
             gpsLon: exif.lon,
             fileHash: fileHash(for: imageData),
-            byteCount: imageData.count
+            byteCount: imageData.count,
+            captureTime: exif.captureTime
         )
     }
 
@@ -87,7 +89,8 @@ enum PhotoService {
             gpsLat: exif.lat,
             gpsLon: exif.lon,
             fileHash: fileHash,
-            byteCount: byteCount
+            byteCount: byteCount,
+            captureTime: exif.captureTime
         )
     }
 
@@ -96,22 +99,17 @@ enum PhotoService {
         guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         else { return (nil, nil, nil) }
-        return extractEXIF(from: properties)
+        let metadata = extractEXIF(from: properties)
+        return (metadata.date, metadata.lat, metadata.lon)
     }
 
     private static func extractEXIF(
         from properties: [CFString: Any]
-    ) -> (date: Date?, lat: Double?, lon: Double?) {
+    ) -> (date: Date?, lat: Double?, lon: Double?, captureTime: PhotoCaptureTime?) {
 
         // Date
-        var date: Date?
-        if let exifDict = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
-           let dateString = exifDict[kCGImagePropertyExifDateTimeOriginal] as? String
-        {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-            date = formatter.date(from: dateString)
-        }
+        let captureTime = (properties[kCGImagePropertyExifDictionary] as? [CFString: Any])
+            .flatMap { PhotoCaptureTime.fromEXIF($0) }
 
         // GPS
         var lat: Double?
@@ -129,7 +127,7 @@ enum PhotoService {
             }
         }
 
-        return (date, lat, lon)
+        return (captureTime?.date, lat, lon, captureTime)
     }
 
     // MARK: - Image Compression

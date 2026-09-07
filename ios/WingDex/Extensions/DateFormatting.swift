@@ -10,6 +10,32 @@ enum DateFormatting {
     private static let internetDateFormat = Date.ISO8601FormatStyle()
     private static let fractionalDateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
+    static func storageString(_ date: Date, timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssxxx"
+        return formatter.string(from: date)
+    }
+
+    static func offsetTimeZone(_ offset: String) -> TimeZone? {
+        if offset == "Z" { return TimeZone(secondsFromGMT: 0) }
+        guard offset.range(of: #"^[+-]\d{2}:\d{2}$"#, options: .regularExpression) != nil else {
+            return nil
+        }
+        let parts = offset.dropFirst().split(separator: ":")
+        guard let hours = Int(parts[0]), let minutes = Int(parts[1]),
+              hours <= 14, minutes < 60, hours < 14 || minutes == 0 else { return nil }
+        let seconds = (hours * 60 + minutes) * 60
+        return TimeZone(secondsFromGMT: offset.hasPrefix("-") ? -seconds : seconds)
+    }
+
+    static func storedTimeZone(_ time: String) -> TimeZone? {
+        if time.hasSuffix("Z") { return offsetTimeZone("Z") }
+        return offsetTimeZone(String(time.suffix(6)))
+    }
+
 
     // MARK: - Date Only
 
@@ -32,8 +58,12 @@ enum DateFormatting {
         let utcDate = comps.asUTCDate
 
         let now = Date.now
-        let calendar = Calendar.current
-        let todayStart = calendar.startOfDay(for: now)
+        var localCalendar = Calendar(identifier: .gregorian)
+        localCalendar.timeZone = storedTimeZone(timeStr) ?? .current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let today = localCalendar.dateComponents([.year, .month, .day], from: now)
+        let todayStart = calendar.date(from: today) ?? now
         let eventDay = calendar.startOfDay(for: utcDate)
 
         // Compare using the UTC date components (the "local" day in the original timezone)
@@ -65,12 +95,9 @@ enum DateFormatting {
 
     /// Compute a human-readable duration between two stored date strings.
     static func duration(from startStr: String, to endStr: String) -> String? {
-        guard let start = parseLocalComponents(startStr),
-              let end = parseLocalComponents(endStr)
-        else { return nil }
-
-        let startDate = start.asUTCDate
-        let endDate = end.asUTCDate
+        let startDate = sortDate(startStr)
+        let endDate = sortDate(endStr)
+        guard startDate != .distantPast, endDate != .distantPast else { return nil }
         let seconds = endDate.timeIntervalSince(startDate)
         guard seconds > 0 else { return nil }
 
@@ -121,7 +148,7 @@ enum DateFormatting {
             comps.minute = minute
             comps.second = second
             comps.timeZone = TimeZone(identifier: "UTC")
-            return Calendar.current.date(from: comps) ?? .distantPast
+            return Calendar(identifier: .gregorian).date(from: comps) ?? .distantPast
         }
     }
 

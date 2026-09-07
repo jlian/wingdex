@@ -108,10 +108,7 @@ final class AddPhotosViewModel {
     var selectedItems: [PhotosPickerItem] = []
     var processedPhotos: [ProcessedPhoto] = []
 
-    /// Photos captured via the camera (UIImage + capture-time location, not from
-    /// PhotosPicker). The in-app camera returns bare pixels with no EXIF GPS, so
-    /// we carry the device location captured alongside each shot.
-    var cameraPhotos: [(image: UIImage, lat: Double?, lon: Double?)] = []
+    var cameraPhotos: [CameraCapture] = []
     private var incomingSharedPhotos: [IncomingSharedPhoto] = []
     private var incomingShareID: String?
 
@@ -271,8 +268,8 @@ final class AddPhotosViewModel {
 
     /// Add a photo captured from the camera, with the device location at capture
     /// time (nil if location was unavailable or permission was denied).
-    func addCameraPhoto(_ image: UIImage, lat: Double?, lon: Double?) {
-        cameraPhotos.append((image: image, lat: lat, lon: lon))
+    func addCameraPhoto(_ capture: CameraCapture) {
+        cameraPhotos.append(capture)
     }
 
     func importIncomingShareIfAvailable() async -> IncomingShareImportResult {
@@ -445,15 +442,11 @@ final class AddPhotosViewModel {
             return
         }
 
-        // Process camera-captured photos (no EXIF GPS; use the device location
-        // captured at shot time, and the processing time as the timestamp).
         var totalPreparedBytes = candidatePhotos.reduce(0) { $0 + $1.byteCount }
         for camera in cameraPhotos {
-            let uiImage = camera.image
-            let id = UUID().uuidString
-            let compressed = PhotoService.compressImage(uiImage, quality: 0.7) ?? Data()
+            let id = camera.id.uuidString
             do {
-                let fileURL = try PhotoFlowStore.writeCameraData(compressed)
+                let fileURL = try PhotoFlowStore.writeCameraData(camera.data)
                 guard let prepared = PhotoService.preparePhoto(at: fileURL) else {
                     PhotoFlowStore.remove([fileURL])
                     rejectedPhotoCount += 1
@@ -465,12 +458,13 @@ final class AddPhotosViewModel {
                     originalURL: fileURL,
                     cleanupOriginal: true,
                     thumbnail: prepared.thumbnail,
-                    exifTime: Date(),
-                    gpsLat: camera.lat,
-                    gpsLon: camera.lon,
+                    exifTime: camera.captureTime.date,
+                    gpsLat: camera.latitude,
+                    gpsLon: camera.longitude,
                     fileHash: prepared.fileHash,
                     fileName: "camera_\(id).jpg",
-                    byteCount: prepared.byteCount
+                    byteCount: prepared.byteCount,
+                    captureTime: camera.captureTime
                 ))
                 guard prepared.byteCount <= IncomingShareStore.maximumTotalBytes - totalPreparedBytes else {
                     PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))
@@ -712,7 +706,8 @@ final class AddPhotosViewModel {
             gpsLon: prepared.gpsLon,
             fileHash: prepared.fileHash,
             fileName: fileName ?? fileURL.lastPathComponent,
-            byteCount: prepared.byteCount
+            byteCount: prepared.byteCount,
+            captureTime: prepared.captureTime
         )
     }
 
@@ -821,13 +816,35 @@ final class AddPhotosViewModel {
         Task { await runSpeciesId(photoIndex: 0) }
     }
 
-  private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
-        let formatter = ISO8601DateFormatter()
-    return clusterPhotos.map { photo in
+    func resolveCurrentClusterTimeZone(_ timeZone: TimeZone) {
+        guard clusters.indices.contains(currentClusterIndex) else { return }
+        let resolved = clusters[currentClusterIndex].photos.map { photo in
+            var photo = photo
+            if let captureTime = photo.captureTime?.resolved(in: timeZone) {
+                photo.captureTime = captureTime
+                photo.exifTime = captureTime.date
+            }
+            return photo
+        }.sorted { ($0.exifTime ?? .distantPast) < ($1.exifTime ?? .distantPast) }
+        clusters[currentClusterIndex].photos = resolved
+        let dates = resolved.compactMap(\.exifTime)
+        if let start = dates.min(), let end = dates.max() {
+            clusters[currentClusterIndex].startTime = start
+            clusters[currentClusterIndex].endTime = end
+        }
+        let photosByID = Dictionary(uniqueKeysWithValues: resolved.map { ($0.id, $0) })
+        processedPhotos = processedPhotos.map { photosByID[$0.id] ?? $0 }
+    }
+
+    private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
+        let fallbackTimeZone = pendingOuting.flatMap { DateFormatting.storedTimeZone($0.startTime) } ?? .current
+        return clusterPhotos.map { photo in
             DataService.PhotoPayload(
                 id: photo.id,
                 outingId: outingId,
-                exifTime: photo.exifTime.map { formatter.string(from: $0) },
+                exifTime: photo.captureTime?.storedValue ?? photo.exifTime.map {
+                    DateFormatting.storageString($0, timeZone: fallbackTimeZone)
+                },
                 gps: (photo.gpsLat != nil && photo.gpsLon != nil)
                     ? DataService.PhotoPayload.PhotoGPS(lat: photo.gpsLat!, lon: photo.gpsLon!)
                     : nil,
@@ -1464,7 +1481,7 @@ struct ProcessedPhoto: Identifiable, Sendable {
     let originalURL: URL
     let cleanupOriginal: Bool
     var thumbnail: Data    // Small thumbnail for display
-    let exifTime: Date?
+    var exifTime: Date?
     let gpsLat: Double?
     let gpsLon: Double?
     let fileHash: String
@@ -1472,6 +1489,7 @@ struct ProcessedPhoto: Identifiable, Sendable {
     let byteCount: Int
     /// User-confirmed cropped image used for re-analysis and preview, matching web croppedDataUrl.
     var croppedImage: Data? = nil
+    var captureTime: PhotoCaptureTime? = nil
 }
 
 /// A group of photos clustered into a single outing by time and GPS proximity.

@@ -68,7 +68,10 @@ struct WingDexApp: App {
             serviceFactory: { accountID in
                 #if DEBUG
                 if let uiTestDataMode {
-                    return UITestDataService(mode: uiTestDataMode)
+                    return UITestDataService(
+                        mode: uiTestDataMode,
+                        allowsOutingUpdates: ProcessInfo.processInfo.arguments.contains("--ui-test-allow-outing-updates")
+                    )
                 }
                 #endif
                 return DataService(auth: auth, expectedAccountID: accountID)
@@ -696,6 +699,7 @@ struct MainTabView: View {
                     onReverseGeocodingCancellationAcknowledged: acknowledgeReverseGeocodingCancellation
                 )
             }
+            .toastPresenter(toasts.notice)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
@@ -1040,7 +1044,22 @@ struct MainTabView: View {
             addPhotosVM.lastLocationName = name
         }
         addPhotosVM.useGeoContext = !args.contains("--ui-test-disable-geo-context")
-        addPhotosVM.addCameraPhoto(image, lat: latitude, lon: longitude)
+        guard let capture = try? CameraCapture.make(
+            image: image, metadata: [:], latitude: latitude, longitude: longitude
+        ) else { return }
+        addPhotosVM.addCameraPhoto(capture)
+        for index in args.indices where args[index] == "--ui-test-photo" && index != flag {
+            guard args.index(after: index) < args.endIndex,
+                  let additionalImage = UIImage(contentsOfFile: args[args.index(after: index)]),
+                  let additionalCapture = try? CameraCapture.make(
+                      image: additionalImage, metadata: [:], latitude: latitude, longitude: longitude
+                  )
+            else {
+                appLog.error("Could not prepare additional UI test photo")
+                return
+            }
+            addPhotosVM.addCameraPhoto(additionalCapture)
+        }
         await addPhotosVM.processSelectedPhotos()
         if args.contains("--ui-test-match-outing"), let outing = store.outings.first,
            !addPhotosVM.clusters.isEmpty {

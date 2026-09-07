@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 /// Local profile state that is decoupled from the global AuthService observable.
 /// This prevents mutations here from triggering MainTabView re-renders (which
@@ -60,6 +61,10 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ToastCenter.self) private var toasts
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
+    @AppStorage(CameraPhotoSaver.preferenceKey) private var saveCameraPhotos = true
+    @State private var photoSaveAuthorization = PHPhotoLibrary.authorizationStatus(for: .addOnly)
 
     @State private var editor: ProfileEditor?
 
@@ -92,8 +97,14 @@ struct SettingsView: View {
             }
         }
         .onAppear {
+            photoSaveAuthorization = PHPhotoLibrary.authorizationStatus(for: .addOnly)
             if editor == nil {
                 editor = ProfileEditor(auth: auth)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                photoSaveAuthorization = PHPhotoLibrary.authorizationStatus(for: .addOnly)
             }
         }
         .onDisappear {
@@ -135,6 +146,7 @@ struct SettingsView: View {
             importExportSection
             securitySection
             birdIdSection
+            cameraSection
             privacySection
             dataManagementSection
 
@@ -395,6 +407,31 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.birdIdFooter")
         }
             .headerProminence(.increased)
+    }
+
+    private var cameraSection: some View {
+        Section {
+            Toggle("Save Camera Photos", isOn: $saveCameraPhotos)
+                .accessibilityIdentifier("settings.saveCameraPhotos")
+            if saveCameraPhotos, photoSaveAuthorization == .denied {
+                Text("Photos access is off. Identification still works, but camera photos won't be saved to Photos.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.mutedText)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            } else if saveCameraPhotos, photoSaveAuthorization == .restricted {
+                Text("Saving to Photos is restricted on this device. You can still identify your photos.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.mutedText)
+            }
+        } header: {
+            Text("Camera")
+        } footer: {
+            Text("Automatically saves photos you take in WingDex to Photos, even if you cancel identification. Photos chosen from your library aren't copied.")
+                .foregroundStyle(Color.mutedText)
+        }
+        .headerProminence(.increased)
     }
 
     // MARK: - Legal

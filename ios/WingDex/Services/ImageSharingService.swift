@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 import Photos
 import UIKit
 
@@ -27,7 +28,7 @@ enum ImageSharingService {
         return ExportFileItem(url: url, cleanupDirectory: shareDirectory)
     }
 
-    static func saveToPhotos(data: Data) async throws {
+    static func saveToPhotos(data: Data, creationDate: Date? = nil, location: CLLocation? = nil) async throws {
         guard UIImage(data: data) != nil else {
             throw ImageSharingError.invalidImage
         }
@@ -39,6 +40,8 @@ enum ImageSharingService {
 
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
+            request.creationDate = creationDate
+            request.location = location
             request.addResource(with: .photo, data: data, options: nil)
         }
     }

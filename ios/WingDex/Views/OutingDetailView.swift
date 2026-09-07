@@ -12,18 +12,17 @@ struct SpeciesRoute: Hashable {
 
 struct OutingDetailView: View {
     let outingId: String
-    var beginsLocationEditing = false
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
     @State private var editingNotes = false
     @State private var notesText = ""
     @State private var savingNotes = false
     @FocusState private var notesFocused: Bool
     @State private var contextMenuSpecies: SpeciesRoute?
-    @State private var editingLocation = false
-    @State private var locationText = ""
+    @State private var outingToRename: Outing?
     @State private var showingAddSpecies = false
     @State private var speciesQuery = ""
     @State private var selectedSpecies: DataService.SpeciesSearchResult?
@@ -59,9 +58,38 @@ struct OutingDetailView: View {
         .toolbar {
             if let outing {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ShareLink(item: SharePayload.outing(outing, observations: confirmed, dex: store.dex)) {
-                        Label("Share Outing", systemImage: "square.and.arrow.up")
+                    Menu {
+                        Button {
+                            outingToRename = outing
+                        } label: {
+                            Label("Rename Outing", systemImage: "pencil")
+                        }
+                        .disabled(!store.hasLoadedAll || isDeleting)
+                        .accessibilityIdentifier("outing.rename")
+                        ShareLink(item: SharePayload.outing(outing, observations: confirmed, dex: store.dex)) {
+                            Label("Share Summary", systemImage: "square.and.arrow.up")
+                        }
+                        if auth.isRegisteredAccount {
+                            Button {
+                                Task { await exportOuting(outing) }
+                            } label: {
+                                Label(isExporting ? "Exporting…" : "Export eBird CSV", systemImage: "document")
+                            }
+                            .disabled(confirmed.isEmpty || isExporting || isDeleting)
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete Outing", systemImage: "trash")
+                        }
+                        .disabled(!store.hasLoadedAll || isDeleting)
+                        .accessibilityIdentifier("outing.delete")
+                    } label: {
+                        Image(systemName: "ellipsis")
                     }
+                    .accessibilityLabel("Outing actions")
+                    .accessibilityIdentifier("outing.actions")
                 }
             }
         }
@@ -71,7 +99,10 @@ struct OutingDetailView: View {
         .alert("Delete this outing?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete Outing", role: .destructive) {
+                guard !isDeleting else { return }
+                isDeleting = true
                 Task {
+                    defer { isDeleting = false }
                     do {
                         deletedOuting = outing
                         try await store.deleteOuting(id: outingId)
@@ -89,6 +120,9 @@ struct OutingDetailView: View {
         .sheet(item: $exportItem) { item in
             ActivityView(item: item)
         }
+        .sheet(item: $outingToRename) { outing in
+            OutingRenameSheet(outing: outing)
+        }
         .alert("Could Not Complete Action", isPresented: operationErrorBinding) {
             Button("OK", role: .cancel) { operationError = nil }
         } message: {
@@ -96,11 +130,6 @@ struct OutingDetailView: View {
         }
         .onDisappear {
             speciesSearchTask?.cancel()
-        }
-        .onChange(of: outing?.id, initial: true) {
-            guard beginsLocationEditing, let outing, !editingLocation else { return }
-            locationText = outing.locationName
-            editingLocation = true
         }
     }
 
@@ -131,33 +160,6 @@ struct OutingDetailView: View {
             }
             .listRowSeparator(.hidden)
 
-            // Actions
-            Section {
-                if auth.isRegisteredAccount {
-                    Button {
-                        Task { await exportOuting(outing) }
-                    } label: {
-                        if isExporting {
-                            HStack {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                Text("Exporting...")
-                            }
-                        } else {
-                            Label("Export eBird CSV", systemImage: "square.and.arrow.up")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    .disabled(confirmed.isEmpty || isExporting)
-                }
-
-                Button(role: .destructive) {
-                    showDeleteConfirm = true
-                } label: {
-                    Label("Delete Outing", systemImage: "trash")
-                        .foregroundStyle(.red)
-                }
-            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -173,51 +175,9 @@ struct OutingDetailView: View {
 
     private func headerSection(_ outing: Outing) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            if editingLocation {
-                TextField("Location name", text: $locationText)
-                    .textFieldStyle(.roundedBorder)
-
-                if !locationSuggestions.isEmpty {
-                    ForEach(locationSuggestions, id: \.self) { suggestion in
-                        Button {
-                            locationText = suggestion
-                        } label: {
-                            Text(suggestion)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                        }
-                        .tint(.primary)
-                    }
-                }
-
-                HStack {
-                    Button("Cancel") {
-                        editingLocation = false
-                        locationText = outing.locationName
-                    }
-                    Spacer()
-                    Button("Save") {
-                        Task { await saveLocation(outing) }
-                    }
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
-                        .font(.system(.title2, design: .serif, weight: .bold))
-                        .foregroundStyle(Color.foregroundText)
-
-                    Button {
-                        locationText = outing.locationName
-                        editingLocation = true
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .accessibilityLabel("Edit location name")
-                }
-            }
+            Text(outing.locationName.isEmpty ? "Outing" : outing.locationName)
+                .font(.system(.title2, design: .serif, weight: .bold))
+                .foregroundStyle(Color.foregroundText)
 
             HStack(spacing: 4) {
                 Image(systemName: "calendar")
@@ -627,41 +587,6 @@ struct OutingDetailView: View {
             .disabled(speciesQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingSpecies)
         }
         .padding(.vertical, 6)
-    }
-
-    private var locationSuggestions: [String] {
-        let query = locationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return [] }
-
-        var seen = Set<String>()
-        return store.outings
-            .map { $0.locationName.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
-            .filter { $0.localizedCaseInsensitiveContains(query) && $0.caseInsensitiveCompare(locationText) != .orderedSame }
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-            .prefix(8)
-            .map { $0 }
-    }
-
-    private func saveLocation(_ outing: Outing) async {
-        let trimmed = locationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let currentName = outing.locationName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resetName = outing.defaultLocationName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let newName = trimmed.isEmpty
-            ? (resetName.isEmpty ? (currentName.isEmpty ? "Unknown Location" : currentName) : resetName)
-            : trimmed
-        let defaultName = outing.defaultLocationName ?? (currentName.isEmpty ? nil : currentName)
-
-        do {
-            try await store.updateOuting(
-                id: outingId,
-                fields: OutingUpdate(locationName: newName, defaultLocationName: defaultName)
-            )
-            editingLocation = false
-            toasts.show(trimmed.isEmpty ? "Outing name reset" : "Outing name saved")
-        } catch {
-            showError(error, fallback: "Could not save outing name. Try again.")
-        }
     }
 
     private func scheduleSpeciesSearch(_ query: String) {

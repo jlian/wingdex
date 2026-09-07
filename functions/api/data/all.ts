@@ -1,6 +1,7 @@
 import { computeDex, enrichDexEntries } from '../../lib/dex-query'
 import { hasObservationColumn } from '../../lib/schema'
 import { createRouteResponder } from '../../lib/log'
+import { localizeOutingTimes } from '../../lib/outing-time'
 
 type OutingRow = {
   id: string
@@ -95,7 +96,7 @@ export const onRequestGet: ApiHandler = async context => {
 
     stage = 'account data response assembly'
     const outings = outingsResult.results.map(outing => ({
-      ...outing,
+      ...localizeOutingTimes(outing),
       defaultLocationName: outing.defaultLocationName || undefined,
       lat: outing.lat ?? undefined,
       lon: outing.lon ?? undefined,

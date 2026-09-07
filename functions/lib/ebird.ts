@@ -87,6 +87,7 @@ import {
   getTimezoneFromCoords,
 } from '../../src/lib/timezone'
 import { getTaxonMetadata } from './taxonomy'
+import { localizeOutingTimes } from './outing-time'
 import Papa from 'papaparse'
 
 type ObservationForExport = {
@@ -501,6 +502,7 @@ export function exportOutingToEBirdCSV(
   observations: ObservationForExport[],
   includeHeader = true
 ): string {
+  outing = localizeOutingTimes(outing)
   const localMatch = outing.startTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
 
   // eBird Record CSV uses MM/DD/YYYY. Prefer the stored wall-clock components:

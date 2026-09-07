@@ -14,6 +14,9 @@ struct AddPhotosFlow: View {
     var onReverseGeocodingCancellationAcknowledged: () -> Void = {}
     @State private var showCloseConfirm = false
     @State private var celebration: LiferCelebration?
+    @State private var locationReview: OutingLocationReviewModel?
+    @State private var locationSearch: OutingLocationSearchModel?
+    @State private var outingDestination: OutingReviewDestination?
 
     /// Whether the current step needs a close confirmation (user has unsaved progress).
     private var needsCloseConfirmation: Bool {
@@ -35,10 +38,12 @@ struct AddPhotosFlow: View {
                 case .extracting:
                     extractingView
                 case .outingReview:
-                    OutingReviewView(
-                        viewModel: viewModel,
-                        onReverseGeocodingCancellationAcknowledged: onReverseGeocodingCancellationAcknowledged
-                    )
+                    if let locationReview, let locationSearch {
+                        OutingReviewView(
+                            viewModel: viewModel, locationModel: locationReview,
+                            searchModel: locationSearch, destination: $outingDestination
+                        )
+                    }
                 case .photoProcessing:
                     photoProcessingView
                 case .perPhotoConfirm:
@@ -59,18 +64,20 @@ struct AddPhotosFlow: View {
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button {
-                    if needsCloseConfirmation {
-                        showCloseConfirm = true
-                    } else {
-                        dismissWizard(stopShareQueue: viewModel.currentStep != .done)
+            if outingDestination == nil {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        if needsCloseConfirmation {
+                            showCloseConfirm = true
+                        } else {
+                            dismissWizard(stopShareQueue: viewModel.currentStep != .done)
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
                     }
-                } label: {
-                    Image(systemName: "xmark")
+                    .disabled(viewModel.currentStep == .extracting)
+                    .accessibilityLabel("Close")
                 }
-                .disabled(viewModel.currentStep == .extracting)
-                .accessibilityLabel("Close")
             }
         }
         .alert("Discard progress?", isPresented: $showCloseConfirm) {
@@ -113,6 +120,9 @@ struct AddPhotosFlow: View {
             Text(viewModel.error?.message ?? "Something went wrong. Try again.")
         }
         .onChange(of: viewModel.currentStep) { _, step in
+            if step != .outingReview {
+                cancelLocationReview()
+            }
             if step == .done, !viewModel.newSpeciesNames.isEmpty {
                 celebration = LiferCelebration(
                     newSpeciesCount: viewModel.newSpeciesNames.count,
@@ -132,8 +142,27 @@ struct AddPhotosFlow: View {
             dismiss()
         }
         .onChange(of: viewModel.flowDismissalRequestID) { _, _ in
+            cancelLocationReview()
             dismiss()
         }
+        .onAppear {
+            if locationReview == nil {
+                locationReview = OutingLocationReviewModel(
+                    geocodingLookup: GeocodingService(auth: auth),
+                    onReverseGeocodingCancellationAcknowledged: onReverseGeocodingCancellationAcknowledged
+                )
+                locationSearch = OutingLocationSearchModel(placeSearcher: DefaultPlaceSearcher(auth: auth))
+            }
+        }
+        .onDisappear {
+            cancelLocationReview()
+        }
+    }
+
+    private func cancelLocationReview() {
+        locationReview?.cancelAllWork()
+        locationSearch?.endEditing()
+        outingDestination = nil
     }
 
     /// A return to `.selectPhotos` with nothing staged means the flow is over.
@@ -158,6 +187,7 @@ struct AddPhotosFlow: View {
     /// Dismiss the wizard full-screen cover. The onDismiss handler in
     /// MainTabView resets the view model and returns to the photo selection tab.
     private func dismissWizard(stopShareQueue: Bool) {
+        cancelLocationReview()
         if stopShareQueue {
             viewModel.stopShareQueueAfterDismissal()
             Task {

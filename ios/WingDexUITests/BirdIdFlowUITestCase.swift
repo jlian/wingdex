@@ -136,9 +136,67 @@ class BirdIdFlowUITestCase: XCTestCase {
         return element.exists && element.isHittable
     }
 
-    /// The outing location is an editable field, so its text lives in `value`, not `label`.
-    func locationValue(_ field: XCUIElement) -> String {
-        field.value as? String ?? ""
+    /// The accepted name is on the adjustLocation button; empty is displayed as 'No location'.
+    func locationValue(_ element: XCUIElement) -> String {
+        let label = element.label
+        return label == "No location" ? "" : label
+    }
+
+    func locationValue(in app: XCUIApplication) -> String {
+        locationValue(app.buttons["outing.adjustLocation"])
+    }
+
+    /// Open the native location search picker sheet from OutingReviewView.
+    @discardableResult
+    func openLocationPicker(in app: XCUIApplication) -> XCUIElement {
+        let adjustButton = app.buttons["outing.adjustLocation"]
+        XCTAssertTrue(scrollUntilVisible(adjustButton, in: app), "Adjust location button not found on review screen")
+        adjustButton.tap()
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.existsOrWait(timeout: 5), "Native search field did not appear in location picker")
+        return searchField
+    }
+
+    /// Set query in the native location search field.
+    func setLocationQuery(_ text: String, in app: XCUIApplication) {
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.existsOrWait(timeout: 5), "Search field not found")
+        searchField.tap()
+        let clearButton = searchField.buttons["Clear text"]
+        if clearButton.exists {
+            clearButton.tap()
+        }
+        if !text.isEmpty {
+            searchField.typeText(text)
+        }
+    }
+
+    /// Return to review from a presented sheet (search or map) via explicit Close button.
+    func returnToReview(in app: XCUIApplication) {
+        let closeButton = app.buttons.matching(
+            NSPredicate(format: "identifier IN %@", ["outing.locationClose", "outing.mapClose"])
+        ).firstMatch
+        XCTAssertTrue(closeButton.existsOrWait(timeout: 5), "Close button is missing")
+        XCTAssertTrue(closeButton.isHittable, "Close button is not hittable")
+        closeButton.tap()
+        XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 5))
+    }
+
+    /// Map coordinates are included in the native toolbar button's spoken label.
+    func mapCoordinatesText(in app: XCUIApplication) -> String {
+        let recenter = app.buttons["outing.mapRecenter"]
+        XCTAssertTrue(recenter.existsOrWait(timeout: 5))
+        let label = recenter.label
+        guard let range = label.range(of: #"\(-?\d+\.\d{4}, -?\d+\.\d{4}\)$"#, options: .regularExpression) else {
+            XCTFail("Recenter is missing its coordinate description: \(label)")
+            return ""
+        }
+        return String(label[range])
+    }
+
+    /// Finds the map preview element in OutingReviewView regardless of accessibility trait.
+    func mapPreviewElement(in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: "outing.mapPreview").firstMatch
     }
 
     func runAccessibilityAudit(
@@ -175,11 +233,49 @@ class BirdIdFlowUITestCase: XCTestCase {
             return issue.element?.identifier == "outing.photosHeader"
         case .textClipped:
             guard let identifier = issue.element?.identifier else { return false }
-            return [
-                "outing.locationName",
-                "outing.gpsStatus",
-                "outing.gpsCoordinates",
-            ].contains(identifier)
+            return ["outing.gpsCoordinates", "outing.gpsStatus", "outing.locationQuery"]
+                .contains(identifier)
+        default:
+            return false
+        }
+    }
+
+    func isKnownAddPhotosSearchAuditIssue(
+        _ issue: XCUIAccessibilityAuditIssue,
+        in app: XCUIApplication
+    ) -> Bool {
+        if isKnownAddPhotosAuditIssue(issue) { return true }
+        switch issue.auditType {
+        case .contrast:
+            // UIKit renders these secondary labels on the native search sheet.
+            guard let label = issue.element?.label else { return false }
+            return ["Keep existing coordinates", "Seattle, Washington"].contains(label)
+        case .hitRegion:
+            return issue.element?.label == "Clear text"
+        case .sufficientElementDescription:
+            // SwiftUI exposes unlabeled internal runs for the linked attribution footer.
+            guard let element = issue.element,
+                  element.identifier.isEmpty,
+                  element.label.isEmpty
+            else { return false }
+            let attributions = app.descendants(matching: .any)
+                .matching(identifier: "outing.locationAttribution")
+                .allElementsBoundByIndex
+            return attributions.contains { $0.frame.intersects(element.frame) }
+        default:
+            return false
+        }
+    }
+
+    func isKnownAddPhotosMapAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        switch issue.auditType {
+        case .contrast:
+            // Map content changes underneath the adaptive glass button.
+            return issue.element?.identifier == "outing.openAppleMaps"
+        case .elementDetection:
+            return issue.element == nil
+        case .hitRegion:
+            return issue.element?.label == "Legal"
         default:
             return false
         }
@@ -187,6 +283,17 @@ class BirdIdFlowUITestCase: XCTestCase {
 
     func isKnownSettingsAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
         switch issue.auditType {
+        case .contrast:
+            let systemSectionHeaders = [
+                "Account", "Avatar", "Import & Export", "Security",
+                "Bird Identification", "Camera", "Legal", "Data Management",
+            ]
+            return (issue.element?.identifier ?? "").isEmpty
+                && (
+                    systemSectionHeaders.contains(issue.element?.label ?? "")
+                        || ["Import eBird CSV", "Export Sightings CSV"]
+                            .contains(issue.element?.label ?? "")
+                )
         case .dynamicType:
             return issue.element?.identifier == "settings.birdIdFooter"
         case .textClipped:

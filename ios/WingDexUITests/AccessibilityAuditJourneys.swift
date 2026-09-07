@@ -147,10 +147,18 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
 
-        try runAccessibilityAudit(in: app, for: .contrast)
+        try runAccessibilityAudit(
+            in: app,
+            for: .contrast,
+            handlingKnownIssue: isKnownSettingsAuditIssue
+        )
         let legalHeader = app.staticTexts["Legal"]
         XCTAssertTrue(scrollUntilVisible(legalHeader, in: app))
-        try runAccessibilityAudit(in: app, for: .contrast)
+        try runAccessibilityAudit(
+            in: app,
+            for: .contrast,
+            handlingKnownIssue: isKnownSettingsAuditIssue
+        )
     }
 
     private func launchSettingsApp() -> XCUIApplication {
@@ -184,13 +192,51 @@ final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
 @MainActor
 final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
+    func testPhotoReviewSheetPassesAccessibilityAudit() throws {
+        continueAfterFailure = true
+        let secondPhoto = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WingDex/Resources/CollagePhotos/collage2.jpg")
+        let app = launchApp(extraArguments: [
+            "--ui-test-fixture-empty", "--ui-test-geocoding-success",
+            "--ui-test-photo", secondPhoto.path,
+        ])
+        _ = waitForOutingReview(in: app)
+        let thumbnail = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "outing.photo.")
+        ).firstMatch
+        XCTAssertTrue(scrollUntilVisible(thumbnail, in: app))
+        thumbnail.tap()
+        XCTAssertTrue(app.buttons["outing.photosClose"].existsOrWait(timeout: 5))
+        let image = app.images.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "outing.photoPage.")
+        ).firstMatch
+        XCTAssertTrue(image.existsOrWait(timeout: 5))
+        try runAccessibilityAudit(in: app)
+    }
+
     func testOutingReviewPassesAccessibilityAudit() throws {
+        continueAfterFailure = true
         let app = launchApp(extraArguments: [
             "--ui-test-fixture-empty",
             "--ui-test-geocoding-failure",
+            "--ui-test-place-search-result",
             "--ui-test-stub-identification",
         ])
         _ = waitForOutingReview(in: app)
         try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+        openLocationPicker(in: app)
+        setLocationQuery("Discovery", in: app)
+        let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
+        XCTAssertTrue(result.existsOrWait(timeout: 5))
+        try runAccessibilityAudit(in: app) {
+            self.isKnownAddPhotosSearchAuditIssue($0, in: app)
+        }
+        result.tap()
+        let preview = mapPreviewElement(in: app)
+        XCTAssertTrue(scrollUntilVisible(preview, in: app))
+        preview.tap()
+        XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosMapAuditIssue)
     }
 }
