@@ -11,7 +11,8 @@ export default defineConfig({
   retries: 0,
   // This has repeatedly reverted from two to one: concurrent browsers contend
   // with the shared Worker/D1. Keep one worker; serve built assets instead of
-  // paying Vite's module graph and HMR cost on every navigation.
+  // paying Vite's module graph and HMR cost on every navigation. CI shards
+  // instead use separate VMs, each with its own Worker and database.
   workers: 1,
   reporter: isCI ? 'line' : 'list',
   grep: live ? /@live|@remote-r2/ : undefined,

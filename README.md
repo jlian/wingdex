@@ -131,6 +131,11 @@ Vitest runs pure logic/assets in Node and only component/browser-global tests
 in jsdom. Pixel parity uses whole typed-array equality rather than hundreds of
 thousands of individual matchers, preserving every pixel comparison.
 
+Web CI runs lint/types/unit tests alongside two isolated browser shards on
+Linux. Each shard builds the app and owns its Worker/D1; preview deployment
+uses one tested build only after every lane passes. Locally,
+`npm run check:all` runs the same checks sequentially, and
+`npm run test:e2e -- --shard=1/2` reproduces a specific browser shard.
 Web CI stays on Linux and iOS on macOS. Independent, self-contained suites
 avoid waiting for a deployed backend or coupling web feedback to simulator
 startup, while retaining the cheaper Linux runner for web work. The runtime
@@ -139,7 +144,11 @@ cold dependency/runtime caches and hosted-runner overhead must be included
 when comparing CI runs, not just the test runner's reported duration.
 For reference, a local Node 24 run on 2026-09-07 completed `npm run check:all`
 in 95 seconds, including all 1,122 unit/component and 42 browser tests. This
-does not establish the hosted-runner budget; compare the next CI run separately.
+does not establish the hosted-runner budget. The first unsharded hosted run
+took 3m47s including cold setup and deployment (2m32s for verification), down
+from roughly nine minutes. CI now overlaps the independent verification lanes
+and avoids reinstalling browser libraries already present in the runner image;
+compare its end-to-end timing rather than just the browser runner's duration.
 
 | Path | Purpose |
 |------|---------|
