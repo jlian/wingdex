@@ -4,6 +4,7 @@ import SwiftUI
 enum OutingReviewDestination: String, Identifiable {
     case search
     case map
+    case photos
 
     var id: String { rawValue }
 }
@@ -19,6 +20,7 @@ struct OutingReviewView: View {
     @State private var useExistingOuting = false
     @State private var overriddenStartTime: Date?
     @State private var needsInitialLookup = false
+    @State private var selectedPhotoID = ""
 
     private var cluster: PhotoCluster? {
         guard viewModel.clusters.indices.contains(viewModel.currentClusterIndex) else { return nil }
@@ -106,7 +108,10 @@ struct OutingReviewView: View {
             }
 
             Section {
-                PhotoReviewCarousel(photos: cluster?.photos ?? [], onRemove: removePhoto)
+                PhotoReviewCarousel(photos: cluster?.photos ?? [], onOpen: { photo in
+                    selectedPhotoID = photo.id
+                    destination = .photos
+                }, onRemove: removePhoto)
                     .frame(height: 150)
             } header: {
                 Text("Photos (\(cluster?.photos.count ?? 0))")
@@ -145,13 +150,17 @@ struct OutingReviewView: View {
                     if let mapLocation {
                         OutingLocationMapView(location: mapLocation)
                     }
+                case .photos:
+                    PhotoReviewSheet(photos: cluster?.photos ?? [], selectedPhotoID: selectedPhotoID)
                 }
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
             .onDisappear {
-                searchModel.endEditing()
-                locationModel.cancelAllWork()
+                if route != .photos {
+                    searchModel.endEditing()
+                    locationModel.cancelAllWork()
+                }
             }
         }
         .onAppear { initializeCluster() }

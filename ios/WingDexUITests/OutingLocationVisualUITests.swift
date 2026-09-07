@@ -14,6 +14,96 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         try inspectJourney(appearance: "Dark", largeText: true)
     }
 
+    func testPhotoSheetStartsAtTappedPhotoSwipesAndPreservesReview() throws {
+        let app = launchPhotoReview(count: 3, delayedLocation: true)
+        defer { app.terminate() }
+        let location = app.buttons["outing.adjustLocation"]
+        XCTAssertTrue(location.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["outing.continue"].isEnabled)
+        let second = thumbnail(2, of: 3, in: app)
+        let secondID = second.identifier.replacingOccurrences(of: "outing.photo.", with: "")
+        revealAndTap(second, in: app)
+        let secondPage = app.images["outing.photoPage.\(secondID)"]
+        XCTAssertTrue(app.navigationBars["Photo 2 of 3"].waitForExistence(timeout: 5))
+        XCTAssertTrue(secondPage.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["outing.continue"].exists)
+        capture(app, "Photo-sheet-selected-second")
+        secondPage.swipeLeft()
+        XCTAssertTrue(app.navigationBars["Photo 3 of 3"].waitForExistence(timeout: 5))
+        capture(app, "Photo-sheet-swiped-third")
+        app.swipeRight()
+        XCTAssertTrue(app.navigationBars["Photo 2 of 3"].waitForExistence(timeout: 5))
+        app.buttons["outing.photosClose"].tap()
+        XCTAssertTrue(location.waitForExistence(timeout: 5))
+        let resolved = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == 'Carkeek Park'"), object: location
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [resolved], timeout: 15), .completed, "Photo viewing must not cancel GPS lookup")
+        XCTAssertEqual(app.staticTexts["outing.photosHeader"].label, "Photos (3)")
+
+        let first = thumbnail(1, of: 3, in: app)
+        revealAndTap(first, in: app)
+        XCTAssertTrue(app.navigationBars["Photo 1 of 3"].waitForExistence(timeout: 5))
+        dismissSheetByDraggingHeader(app, title: "Photo 1 of 3")
+        XCTAssertTrue(location.waitForExistence(timeout: 5))
+        XCTAssertEqual(location.label, "Carkeek Park")
+        XCTAssertEqual(app.staticTexts["outing.photosHeader"].label, "Photos (3)")
+
+        first.press(forDuration: 1)
+        let remove = app.buttons["Remove Photo"]
+        XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        remove.tap()
+        let remaining = thumbnail(1, of: 2, in: app)
+        XCTAssertTrue(remaining.waitForExistence(timeout: 5))
+        XCTAssertEqual(remaining.identifier, "outing.photo.\(secondID)")
+        revealAndTap(remaining, in: app)
+        XCTAssertTrue(app.navigationBars["Photo 1 of 2"].waitForExistence(timeout: 5))
+        XCTAssertTrue(secondPage.waitForExistence(timeout: 5))
+        app.buttons["outing.photosClose"].tap()
+        XCTAssertTrue(app.buttons["outing.continue"].waitForExistence(timeout: 5))
+    }
+
+    func testSinglePhotoSheetDismissesWithoutChangingPhotos() throws {
+        let app = launchPhotoReview(count: 1)
+        defer { app.terminate() }
+        let photo = thumbnail(1, of: 1, in: app)
+        XCTAssertTrue(photo.waitForExistence(timeout: 15))
+        let photoID = photo.identifier.replacingOccurrences(of: "outing.photo.", with: "")
+        revealAndTap(photo, in: app)
+        XCTAssertTrue(app.navigationBars["Photo 1 of 1"].waitForExistence(timeout: 5))
+        let page = app.images["outing.photoPage.\(photoID)"]
+        XCTAssertTrue(page.waitForExistence(timeout: 5))
+        page.swipeLeft()
+        XCTAssertTrue(app.navigationBars["Photo 1 of 1"].exists)
+        dismissSheetByDraggingHeader(app, title: "Photo 1 of 1")
+        XCTAssertTrue(app.buttons["outing.continue"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["outing.photosHeader"].label, "Photos (1)")
+    }
+
+    private func launchPhotoReview(count: Int, delayedLocation: Bool = false) -> XCUIApplication {
+        let folder = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WingDex/Resources/CollagePhotos")
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--ui-test-fixture-empty", "--ui-test-ignore-shares",
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+            "--ui-test-lat", "47.7115", "--ui-test-lon", "-122.3717",
+        ]
+        if delayedLocation { app.launchArguments.append("--ui-test-geocoding-delay") }
+        for index in 1...count {
+            app.launchArguments += ["--ui-test-photo", folder.appendingPathComponent("collage\(index).jpg").path]
+        }
+        app.launch()
+        return app
+    }
+
+    private func thumbnail(_ index: Int, of count: Int, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier BEGINSWITH %@ AND label == %@", "outing.photo.", "Photo \(index) of \(count)"
+        )).firstMatch
+    }
+
     func testLocationBarDoesNotShiftDuringLookupOrRetry() throws {
         let photo = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()

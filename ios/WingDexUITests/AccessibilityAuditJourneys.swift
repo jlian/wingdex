@@ -184,6 +184,29 @@ final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
 @MainActor
 final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
+    func testPhotoReviewSheetPassesAccessibilityAudit() throws {
+        continueAfterFailure = true
+        let secondPhoto = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WingDex/Resources/CollagePhotos/collage2.jpg")
+        let app = launchApp(extraArguments: [
+            "--ui-test-fixture-empty", "--ui-test-geocoding-success",
+            "--ui-test-photo", secondPhoto.path,
+        ])
+        _ = waitForOutingReview(in: app)
+        let thumbnail = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "outing.photo.")
+        ).firstMatch
+        XCTAssertTrue(scrollUntilVisible(thumbnail, in: app))
+        thumbnail.tap()
+        XCTAssertTrue(app.buttons["outing.photosClose"].existsOrWait(timeout: 5))
+        let image = app.images.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "outing.photoPage.")
+        ).firstMatch
+        XCTAssertTrue(image.existsOrWait(timeout: 5))
+        try runAccessibilityAudit(in: app)
+    }
+
     func testOutingReviewPassesAccessibilityAudit() throws {
         continueAfterFailure = true
         let app = launchApp(extraArguments: [

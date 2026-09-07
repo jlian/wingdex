@@ -1048,6 +1048,18 @@ struct MainTabView: View {
             image: image, metadata: [:], latitude: latitude, longitude: longitude
         ) else { return }
         addPhotosVM.addCameraPhoto(capture)
+        for index in args.indices where args[index] == "--ui-test-photo" && index != flag {
+            guard args.index(after: index) < args.endIndex,
+                  let additionalImage = UIImage(contentsOfFile: args[args.index(after: index)]),
+                  let additionalCapture = try? CameraCapture.make(
+                      image: additionalImage, metadata: [:], latitude: latitude, longitude: longitude
+                  )
+            else {
+                appLog.error("Could not prepare additional UI test photo")
+                return
+            }
+            addPhotosVM.addCameraPhoto(additionalCapture)
+        }
         await addPhotosVM.processSelectedPhotos()
         if args.contains("--ui-test-match-outing"), let outing = store.outings.first,
            !addPhotosVM.clusters.isEmpty {
