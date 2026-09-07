@@ -40,7 +40,11 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let manual = app.buttons["outing.useEnteredName"]
         XCTAssertTrue(scrollUntilVisible(manual, in: app))
         manual.tap()
-        XCTAssertEqual(locationValue(in: app), "Manual Park")
+        XCTAssertTrue(app.searchFields.firstMatch.disappearsOrWait(timeout: 5))
+        let location = app.buttons["outing.adjustLocation"]
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
+        XCTAssertTrue(location.labelOrWait("Manual Park", timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(next, in: app))
         next.tap()
         XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
     }
@@ -121,7 +125,16 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         ]
         app.launch()
         let alert = app.alerts["Could Not Continue"]
-        XCTAssertTrue(alert.existsOrWait(timeout: 15))
+        let presented = alert.existsOrWait(timeout: 15)
+        if !presented {
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+        }
+        XCTAssertTrue(presented)
         XCTAssertTrue(alert.buttons["Retry"].exists)
         alert.buttons["Close Upload"].tap()
         XCTAssertTrue(alert.disappearsOrWait(timeout: 5))

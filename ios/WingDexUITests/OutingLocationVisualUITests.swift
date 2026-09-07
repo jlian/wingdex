@@ -50,6 +50,7 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         _ = waitForOutingReview(in: app)
         let location = app.buttons["outing.adjustLocation"]
         let preview = mapPreviewElement(in: app)
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertEqual(preview.frame.maxY, location.frame.minY, accuracy: 1)
         let rowHeight = location.frame.height
 
@@ -58,7 +59,7 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         XCTAssertLessThan(search.frame.minY, app.frame.height * 0.35)
         setLocationQuery("Unselected place", in: app)
         dismissSheet(app, title: "Adjust Location")
-        XCTAssertTrue(location.existsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertEqual(location.label, "Carkeek Park")
         openLocationPicker(in: app)
         XCTAssertEqual(search.value as? String, "Carkeek Park")
@@ -66,7 +67,8 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
         XCTAssertTrue(result.existsOrWait(timeout: 5))
         result.tap()
-        XCTAssertTrue(location.existsOrWait(timeout: 5))
+        XCTAssertTrue(search.disappearsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertEqual(location.label, "Discovery Park")
 
         openLocationPicker(in: app)
@@ -74,7 +76,8 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         let manual = app.buttons["outing.useEnteredName"]
         XCTAssertTrue(scrollUntilVisible(manual, in: app))
         manual.tap()
-        XCTAssertTrue(location.existsOrWait(timeout: 5))
+        XCTAssertTrue(search.disappearsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertEqual(location.frame.height, rowHeight, accuracy: 1)
         let name = location.label
         XCTAssertTrue(scrollUntilVisible(preview, in: app))
@@ -98,6 +101,7 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         }
         XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
         returnToReview(in: app)
+        XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertEqual(location.label, name)
     }
 
