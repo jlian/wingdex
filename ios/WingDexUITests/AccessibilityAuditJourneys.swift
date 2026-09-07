@@ -185,12 +185,25 @@ final class SignInAccessibilityAuditUITests: BirdIdFlowUITestCase {
 @MainActor
 final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testOutingReviewPassesAccessibilityAudit() throws {
+        continueAfterFailure = true
         let app = launchApp(extraArguments: [
             "--ui-test-fixture-empty",
             "--ui-test-geocoding-failure",
+            "--ui-test-place-search-result",
             "--ui-test-stub-identification",
         ])
         _ = waitForOutingReview(in: app)
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+        openLocationPicker(in: app)
+        setLocationQuery("Discovery", in: app)
+        let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
+        XCTAssertTrue(result.existsOrWait(timeout: 5))
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+        result.tap()
+        let preview = mapPreviewElement(in: app)
+        XCTAssertTrue(scrollUntilVisible(preview, in: app))
+        preview.tap()
+        XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
         try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
     }
 }

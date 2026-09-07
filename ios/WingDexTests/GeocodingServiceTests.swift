@@ -50,10 +50,29 @@ final class GeocodingServiceTests: XCTestCase {
             traceID: "0123456789abcdef0123456789abcdef"
         )
 
-        guard case .server(let statusCode, let traceID) = error else {
+        guard case .server(let statusCode, let traceID, let retryAfter) = error else {
             return XCTFail("Expected server error")
         }
         XCTAssertEqual(statusCode, 503)
         XCTAssertEqual(traceID, "0123456789abcdef0123456789abcdef")
+        XCTAssertNil(retryAfter)
+    }
+
+    func testServerErrorDecodesRetryAfterHeaderAndTraceID() throws {
+        for (header, expected) in [("45", 45.0), ("0.5", 0.5), ("invalid", nil), (nil, nil)] {
+            var headers = ["X-Trace-Id": "0123456789ABCDEF0123456789abcdef"]
+            headers["Retry-After"] = header
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: URL(string: "https://example.com/api/geocoding/search")!,
+                statusCode: 429, httpVersion: nil, headerFields: headers
+            ))
+            guard case .server(let statusCode, let traceID, let retryAfter) =
+                GeocodingServiceError.serverResponse(response) else {
+                return XCTFail("Expected server error")
+            }
+            XCTAssertEqual(statusCode, 429)
+            XCTAssertEqual(traceID, "0123456789abcdef0123456789abcdef")
+            XCTAssertEqual(retryAfter, expected)
+        }
     }
 }

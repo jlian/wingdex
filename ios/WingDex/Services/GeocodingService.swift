@@ -27,7 +27,15 @@ struct GeocodingResult: Codable, Identifiable, Sendable {
 enum GeocodingServiceError: Error {
     case invalidURL
     case invalidResponse
-    case server(statusCode: Int, traceID: String?)
+    case server(statusCode: Int, traceID: String?, retryAfter: TimeInterval? = nil)
+
+    static func serverResponse(_ response: HTTPURLResponse) -> Self {
+        .server(
+            statusCode: response.statusCode,
+            traceID: AuthenticatedRequest.traceID(from: response),
+            retryAfter: response.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+        )
+    }
 }
 
 @MainActor
@@ -45,7 +53,7 @@ final class GeocodingService {
     /// land often has a valid code and no name, and the eBird export still
     /// wants the code. Optional so an older server that omits the field decodes
     /// rather than throwing.
-    struct RegionCodes: Codable {
+    struct RegionCodes: Codable, Sendable {
         let stateProvince: String?
         let countryCode: String?
     }
@@ -107,7 +115,7 @@ final class GeocodingService {
             } else {
                 log.error("Geocoding failed: HTTP \(http.statusCode)\(reference, privacy: .public)")
             }
-            throw GeocodingServiceError.server(statusCode: http.statusCode, traceID: traceID)
+            throw GeocodingServiceError.serverResponse(http)
         }
         do {
             return try JSONDecoder().decode(Response.self, from: data)

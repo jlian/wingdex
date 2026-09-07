@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import UIKit
+import os
 
 // MARK: - System Share Sheet
 
@@ -368,10 +369,27 @@ struct SpeciesCard: View {
 
 /// Open an outing's location in Apple Maps.
 func openInMaps(outing: Outing, lat: Double, lon: Double) {
-    let location = CLLocation(latitude: lat, longitude: lon)
+    openInMaps(
+        locationName: outing.locationName,
+        coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    )
+}
+
+@discardableResult
+func openInMaps(locationName: String, coordinate: CLLocationCoordinate2D) -> Bool {
+    let log = Logger(subsystem: Config.bundleID, category: "Maps")
+    guard CLLocationCoordinate2DIsValid(coordinate) else {
+        log.error("Cannot open Apple Maps: invalid outing coordinate")
+        return false
+    }
+    let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
     let mapItem = MKMapItem(location: location, address: nil)
-    mapItem.name = outing.locationName.isEmpty ? "Outing" : outing.locationName
-    mapItem.openInMaps()
+    mapItem.name = locationName.isEmpty ? "Outing" : locationName
+    let opened = mapItem.openInMaps()
+    if !opened {
+        log.error("Could not open outing location in Apple Maps")
+    }
+    return opened
 }
 
 // MARK: - Outing Row
