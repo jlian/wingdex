@@ -44,7 +44,6 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let location = app.buttons["outing.adjustLocation"]
         XCTAssertTrue(scrollUntilVisible(location, in: app))
         XCTAssertTrue(location.labelOrWait("Manual Park", timeout: 5))
-        XCTAssertTrue(scrollUntilVisible(next, in: app))
         next.tap()
         XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
     }

@@ -243,6 +243,7 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testLocationMapPassesAccessibilityAudit() throws {
         let app = launchReview()
         showPlaceSearch(in: app).tap()
+        XCTAssertTrue(app.searchFields.firstMatch.disappearsOrWait(timeout: 5))
         let preview = mapPreviewElement(in: app)
         XCTAssertTrue(scrollUntilVisible(preview, in: app))
         preview.tap()

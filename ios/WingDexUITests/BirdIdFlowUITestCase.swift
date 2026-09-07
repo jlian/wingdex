@@ -48,15 +48,11 @@ class BirdIdFlowUITestCase: XCTestCase {
         in app: XCUIApplication,
         maximumSwipes: Int = 5
     ) -> Bool {
-        if element.exists && element.isHittable { return true }
-
         let container = app.collectionViews.firstMatch.exists
             ? app.collectionViews.firstMatch
             : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
 
-        for _ in 0..<maximumSwipes {
-            if element.exists && element.isHittable { return true }
-
+        for swipe in 0...maximumSwipes {
             let keyboard = app.keyboards.firstMatch
             let topNav = app.navigationBars.firstMatch
 
@@ -65,6 +61,15 @@ class BirdIdFlowUITestCase: XCTestCase {
                 ? keyboard.frame.minY
                 : container.frame.maxY
             let visibleHeight = visibleBottom - visibleTop
+
+            // A clipped control can be hittable while its tap center is behind
+            // the navigation bar or keyboard, especially after sheet dismissal.
+            if element.exists && element.isHittable,
+                element.frame.midY > visibleTop + 10,
+                element.frame.midY < visibleBottom - 10 {
+                return true
+            }
+            if swipe == maximumSwipes { break }
 
             guard visibleHeight > 60 else {
                 app.swipeUp()
@@ -102,7 +107,7 @@ class BirdIdFlowUITestCase: XCTestCase {
 
             startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
         }
-        return element.exists && element.isHittable
+        return false
     }
 
     /// The accepted name is on the adjustLocation button; empty is displayed as 'No location'.
@@ -154,7 +159,7 @@ class BirdIdFlowUITestCase: XCTestCase {
     /// Map coordinates are included in the native toolbar button's spoken label.
     func mapCoordinatesText(in app: XCUIApplication) -> String {
         let recenter = app.buttons["outing.mapRecenter"]
-        XCTAssertTrue(recenter.existsOrWait(timeout: 5))
+        XCTAssertTrue(recenter.existsOrWait(timeout: 5), app.debugDescription)
         let label = recenter.label
         guard let range = label.range(of: #"\(-?\d+\.\d{4}, -?\d+\.\d{4}\)$"#, options: .regularExpression) else {
             XCTFail("Recenter is missing its coordinate description: \(label)")
