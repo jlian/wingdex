@@ -158,6 +158,44 @@ describe('RAW TIFF metadata and rendered previews', () => {
     expect(exif.gps).toEqual({ lat: -30, lon: -60 })
   })
 
+  it('bounds large declared string count to only the required bytes', async () => {
+    const bytes = new Uint8Array(200_100)
+    const view = new DataView(bytes.buffer)
+    view.setUint16(0, 0x4949)
+    view.setUint16(2, 42, true)
+    view.setUint32(4, 8, true)
+    view.setUint16(8, 1, true)
+    // tag 0x9003, type 2, count 1,000,000, valueOffset 1000
+    view.setUint16(10, 0x9003, true); view.setUint16(12, 2, true); view.setUint32(14, 1_000_000, true); view.setUint32(18, 1000, true)
+    view.setUint32(22, 0, true)
+    bytes.set(new TextEncoder().encode('2026:08:01 12:34:56\0'), 1000)
+
+    const file = fileFrom(bytes)
+    const exif = await extractEXIF(file)
+    expect(exif.timestamp).toBe('2026-08-01 12:34:56')
+  })
+
+  it('propagates mid-file read rejections during async EXIF extraction', async () => {
+    const bytes = new Uint8Array(200_100)
+    const view = new DataView(bytes.buffer)
+    view.setUint16(0, 0x4949)
+    view.setUint16(2, 42, true)
+    view.setUint32(4, 8, true)
+    view.setUint16(8, 1, true)
+    view.setUint16(10, 0x8825, true); view.setUint16(12, 4, true); view.setUint32(14, 1, true); view.setUint32(18, 1000, true)
+    view.setUint32(22, 0, true)
+
+    const file = fileFrom(bytes)
+    let call = 0
+    vi.spyOn(file, 'slice').mockImplementation((start, end) => {
+      call++
+      if (call > 2) throw new Error('Simulated I/O failure reading GPS')
+      return new Blob([bytes.slice(start, end)])
+    })
+
+    await expect(extractEXIF(file)).rejects.toThrow('Simulated I/O failure reading GPS')
+  })
+
   it('discovers JPEG SOF placed beyond 64 KiB of metadata segments', async () => {
     const totalSize = 2 + 2 + 65_002 + 2 + 17 + 2
     const bytes = new Uint8Array(totalSize)

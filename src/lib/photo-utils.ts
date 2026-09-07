@@ -84,7 +84,7 @@ async function parseExifAsync(
           && (tag === 0x9003 || !result.timestamp)) {
           const strView = count <= 4
             ? new DataView(dirView.buffer, dirView.byteOffset + entryOffset + 8, count)
-            : await read(tiffOffset + valueOffset, count)
+            : await read(tiffOffset + valueOffset, Math.min(count, 19))
           if (strView) {
             let dateStr = ''
             for (let j = 0; j < 19; j++) {
@@ -101,7 +101,10 @@ async function parseExifAsync(
           if (gps) result.gps = gps
         }
       }
-    } catch {
+    } catch (error) {
+      if (!(error instanceof RangeError) && !(error instanceof TypeError)) {
+        throw error
+      }
       // Truncated optional metadata must not prevent importing the image.
     }
   }
@@ -161,7 +164,10 @@ async function parseGPSAsync(
         lon: lonRef === 'W' ? -lon : lon,
       }
     }
-  } catch {
+  } catch (error) {
+    if (!(error instanceof RangeError) && !(error instanceof TypeError)) {
+      throw error
+    }
   }
   return null
 }
@@ -243,7 +249,7 @@ function parseExifSync(
           && (tag === 0x9003 || !result.timestamp)) {
           const strView = count <= 4
             ? new DataView(dirView.buffer, dirView.byteOffset + entryOffset + 8, count)
-            : read(tiffOffset + valueOffset, count)
+            : read(tiffOffset + valueOffset, Math.min(count, 19))
           if (strView) {
             let dateStr = ''
             for (let j = 0; j < 19; j++) {
@@ -260,7 +266,10 @@ function parseExifSync(
           if (gps) result.gps = gps
         }
       }
-    } catch {
+    } catch (error) {
+      if (!(error instanceof RangeError) && !(error instanceof TypeError)) {
+        throw error
+      }
       // Truncated optional metadata must not prevent importing the image.
     }
   }
@@ -320,7 +329,10 @@ function parseGPSSync(
         lon: lonRef === 'W' ? -lon : lon,
       }
     }
-  } catch {
+  } catch (error) {
+    if (!(error instanceof RangeError) && !(error instanceof TypeError)) {
+      throw error
+    }
   }
   return null
 }
