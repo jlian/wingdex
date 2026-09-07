@@ -2,6 +2,19 @@ import SwiftUI
 import UIKit
 import os
 
+enum PhotoReviewImageLoader {
+    static func loadData(at url: URL) -> Data? {
+        loadData(at: url, using: PhotoService.generateThumbnail)
+    }
+
+    static func loadData(
+        at url: URL,
+        using generateThumbnail: (URL, CGFloat) -> Data?
+    ) -> Data? {
+        generateThumbnail(url, 2_048)
+    }
+}
+
 struct PhotoReviewCarousel: UIViewRepresentable {
     let photos: [ProcessedPhoto]
     let onOpen: (ProcessedPhoto) -> Void
@@ -252,9 +265,7 @@ private struct PhotoReviewPage: View {
                 // Bound decoded memory for large originals, including adjacent swipe pages.
                 let load = Task.detached(priority: .userInitiated) {
                     try Task.checkCancellation()
-                    let original = try Data(contentsOf: url, options: .mappedIfSafe)
-                    try Task.checkCancellation()
-                    return PhotoService.generateThumbnail(from: original, maxDimension: 2048)
+                    return PhotoReviewImageLoader.loadData(at: url)
                 }
                 let data = try await withTaskCancellationHandler {
                     try await load.value

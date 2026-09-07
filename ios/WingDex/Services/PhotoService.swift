@@ -181,6 +181,14 @@ enum PhotoService {
         return generateThumbnail(from: source, maxDimension: maxDimension)
     }
 
+    static func generateThumbnail(
+        at fileURL: URL,
+        maxDimension: CGFloat = displayThumbnailDimension
+    ) -> Data? {
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else { return nil }
+        return generateThumbnail(from: source, maxDimension: maxDimension)
+    }
+
     private static func generateThumbnail(
         from source: CGImageSource,
         maxDimension: CGFloat

@@ -36,4 +36,11 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+        run: |
+          while read -r commit; do
+            if git diff-tree --quiet "$commit^" "$commit"; then
+              echo "Skipping empty commit $commit"
+              continue
+            fi
+            git log -1 --format=%B "$commit" | npx commitlint --verbose
+          done < <(git rev-list --reverse "$BASE_SHA..$HEAD_SHA")

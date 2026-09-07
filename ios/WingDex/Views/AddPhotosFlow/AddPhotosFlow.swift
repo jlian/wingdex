@@ -171,10 +171,24 @@ struct AddPhotosFlow: View {
     private func shouldDismissAfterReturningToSelectPhotos(
         _ step: AddPhotosViewModel.Step
     ) -> Bool {
+        Self.shouldDismissAfterReturningToSelectPhotos(
+            step,
+            hasClusters: !viewModel.clusters.isEmpty,
+            showDuplicateConfirm: viewModel.showDuplicateConfirm,
+            hasError: viewModel.error != nil
+        )
+    }
+
+    static func shouldDismissAfterReturningToSelectPhotos(
+        _ step: AddPhotosViewModel.Step,
+        hasClusters: Bool,
+        showDuplicateConfirm: Bool,
+        hasError: Bool
+    ) -> Bool {
         step == .selectPhotos
-            && viewModel.clusters.isEmpty
-            && !viewModel.showDuplicateConfirm
-            && viewModel.error == nil
+            && !hasClusters
+            && !showDuplicateConfirm
+            && !hasError
     }
 
     private var addPhotosErrorBinding: Binding<Bool> {
