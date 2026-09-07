@@ -64,7 +64,7 @@ test.describe('API smoke (request context)', () => {
     await api.dispose()
   })
 
-  test('anonymous auth + protected data CRUD', async () => {
+  test('anonymous auth + protected data CRUD + session revocation', async () => {
     const api = await request.newContext({ baseURL: API_BASE })
 
     const unauthSession = await api.get('/api/auth/get-session')
@@ -180,6 +180,22 @@ test.describe('API smoke (request context)', () => {
     )
     expect(remainingBlueJay?.wikiTitle).toBeTruthy()
     expect(remainingBlueJay?.thumbnailUrl).toMatch(/^https:\/\//)
+
+    const token = signIn.headers()['set-auth-token']
+    expect(token).toBeTruthy()
+    // A separate context prevents cookies from masking the native bearer contract.
+    const bearer = await request.newContext({
+      baseURL: API_BASE,
+      extraHTTPHeaders: { Authorization: `Bearer ${token}` },
+    })
+    try {
+      expect((await bearer.get('/api/data/all')).status()).toBe(200)
+      expect((await bearer.post('/api/auth/sign-out', { data: {} })).status()).toBe(200)
+      expect((await bearer.get('/api/data/all')).status()).toBe(401)
+      expect((await api.get('/api/data/all', { headers: { cookie: authCookie } })).status()).toBe(401)
+    } finally {
+      await bearer.dispose()
+    }
 
     await api.dispose()
   })
