@@ -33,7 +33,7 @@
 
 import { BirdIdEngine, type EngineAssets, type IdentifyResult } from './bird-id-local'
 import { assetsCached, type AssetProgress } from './model-cache'
-import { parseJpegHeader } from './raw-preview'
+import { readJpegHeader } from './raw-preview'
 import { TAXONOMY_SHA16 } from './taxonomy-hash'
 import taxonomy from './taxonomy.json'
 
@@ -336,9 +336,11 @@ export function getEngine(
  * JPEG, which the caller treats as "decode normally".
  */
 export async function readJpegSize(blob: Blob): Promise<{ width: number; height: number } | null> {
-  // 64 KiB covers EXIF, ICC profiles and thumbnails ahead of the frame header.
-  const head = new DataView(await blob.slice(0, 65536).arrayBuffer())
-  const parsed = parseJpegHeader(head)
+  const read = async (offset: number, length: number) => {
+    if (offset < 0 || length < 0 || offset + length > blob.size) return undefined
+    return new DataView(await blob.slice(offset, offset + length).arrayBuffer())
+  }
+  const parsed = await readJpegHeader(read, 0, blob.size)
   if (!parsed) return null
   // When an image has EXIF rotation (orientations 5, 6, 7, 8), browsers swap
   // width and height during display/createImageBitmap. Match the oriented aspect

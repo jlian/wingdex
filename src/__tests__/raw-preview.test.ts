@@ -1,7 +1,7 @@
 import { File as NodeFile } from 'node:buffer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { embeddedJpegPreviews } from '@/lib/raw-preview'
-import { generateThumbnail, parseEXIF, preparePhotoImage, PhotoDecodeError } from '@/lib/photo-utils'
+import { embeddedJpegPreviews, readJpegHeader } from '@/lib/raw-preview'
+import { extractEXIF, generateThumbnail, parseEXIF, preparePhotoImage, PhotoDecodeError } from '@/lib/photo-utils'
 
 function rawFixture(littleEndian = true) {
   const bytes = new Uint8Array(200_100)
@@ -123,6 +123,63 @@ describe('RAW TIFF metadata and rendered previews', () => {
       }
     }
     expect(parseEXIF(new DataView(bytes.buffer)).gps).toEqual({ lat: -30, lon: -60 })
+  })
+
+  it('extracts RAW GPS and timestamp located beyond the 128 KiB prefix', async () => {
+    const bytes = new Uint8Array(300_000)
+    const view = new DataView(bytes.buffer)
+    view.setUint16(0, 0x4949)
+    view.setUint16(2, 42, true)
+    view.setUint32(4, 8, true)
+    view.setUint16(8, 2, true)
+    view.setUint16(10, 0x8769, true); view.setUint16(12, 4, true); view.setUint32(14, 1, true); view.setUint32(18, 200_000, true)
+    view.setUint16(22, 0x8825, true); view.setUint16(24, 4, true); view.setUint32(26, 1, true); view.setUint32(30, 250_000, true)
+    view.setUint32(34, 0, true)
+
+    view.setUint16(200_000, 1, true)
+    view.setUint16(200_002, 0x9003, true); view.setUint16(200_004, 2, true); view.setUint32(200_006, 20, true); view.setUint32(200_010, 210_000, true)
+    bytes.set(new TextEncoder().encode('2026:08:01 12:34:56\0'), 210_000)
+
+    view.setUint16(250_000, 4, true)
+    view.setUint16(250_002, 1, true); view.setUint16(250_004, 2, true); view.setUint32(250_006, 2, true); view.setUint8(250_010, 83)
+    view.setUint16(250_014, 2, true); view.setUint16(250_016, 5, true); view.setUint32(250_018, 3, true); view.setUint32(250_022, 260_000, true)
+    view.setUint16(250_026, 3, true); view.setUint16(250_028, 2, true); view.setUint32(250_030, 2, true); view.setUint8(250_034, 87)
+    view.setUint16(250_038, 4, true); view.setUint16(250_040, 5, true); view.setUint32(250_042, 3, true); view.setUint32(250_046, 260_024, true)
+    view.setUint32(260_000, 30, true); view.setUint32(260_004, 1, true)
+    view.setUint32(260_008, 0, true); view.setUint32(260_012, 1, true)
+    view.setUint32(260_016, 0, true); view.setUint32(260_020, 1, true)
+    view.setUint32(260_024, 60, true); view.setUint32(260_028, 1, true)
+    view.setUint32(260_032, 0, true); view.setUint32(260_036, 1, true)
+    view.setUint32(260_040, 0, true); view.setUint32(260_044, 1, true)
+
+    const file = fileFrom(bytes)
+    const exif = await extractEXIF(file)
+    expect(exif.timestamp).toBe('2026-08-01 12:34:56')
+    expect(exif.gps).toEqual({ lat: -30, lon: -60 })
+  })
+
+  it('discovers JPEG SOF placed beyond 64 KiB of metadata segments', async () => {
+    const totalSize = 2 + 2 + 65_002 + 2 + 17 + 2
+    const bytes = new Uint8Array(totalSize)
+    const view = new DataView(bytes.buffer)
+    view.setUint16(0, 0xffd8)
+    view.setUint8(2, 0xff)
+    view.setUint8(3, 0xe2)
+    view.setUint16(4, 65_002)
+    const sofOffset = 2 + 2 + 65_002
+    view.setUint8(sofOffset, 0xff)
+    view.setUint8(sofOffset + 1, 0xc0)
+    view.setUint16(sofOffset + 2, 17)
+    view.setUint8(sofOffset + 4, 8)
+    view.setUint16(sofOffset + 5, 1200)
+    view.setUint16(sofOffset + 7, 1600)
+    view.setUint8(sofOffset + 9, 3)
+    const read = async (offset: number, length: number) => {
+      if (offset < 0 || length < 0 || offset + length > bytes.byteLength) return undefined
+      return new DataView(bytes.buffer, offset, length)
+    }
+    const header = await readJpegHeader(read, 0, bytes.byteLength)
+    expect(header).toEqual({ width: 1600, height: 1200, orientation: undefined })
   })
 
   it('rejects out-of-file JPEG ranges and non-JPEG sensor data', async () => {

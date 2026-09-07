@@ -102,9 +102,9 @@ export async function* embeddedJpegPreviews(file: Blob): AsyncGenerator<Blob> {
     const key = `${offset}:${length}`
     if (emitted.has(key)) continue
     emitted.add(key)
-    const head = await read(offset, Math.min(length, 65536))
-    if (!head || head.byteLength < 4 || head.getUint16(0) !== 0xffd8) continue
-    const parsed = parseJpegHeader(head)
+    const soi = await read(offset, 2)
+    if (!soi || soi.getUint16(0) !== 0xffd8) continue
+    const parsed = await readJpegHeader(read, offset, length)
     const area = parsed ? parsed.width * parsed.height : 0
     candidates.push({
       offset,
@@ -119,6 +119,75 @@ export async function* embeddedJpegPreviews(file: Blob): AsyncGenerator<Blob> {
   for (const { offset, length, orientation } of candidates) {
     yield await orientPreview(file.slice(offset, offset + length, 'image/jpeg'), orientation ?? originalOrientation)
   }
+}
+
+/**
+ * Incrementally walk JPEG marker segments using a reader so SOF discovery does
+ * not depend on headers fitting into a single fixed-size prefix.
+ */
+export async function readJpegHeader(
+  read: (offset: number, length: number) => Promise<DataView | undefined>,
+  offset = 0,
+  maxLength = Infinity
+): Promise<{ width: number; height: number; orientation?: number } | undefined> {
+  const soi = await read(offset, 2)
+  if (!soi || soi.getUint16(0) !== 0xffd8) return undefined
+
+  let pos = 2
+  let orientation: number | undefined
+  const maxSegments = 128
+  let segments = 0
+
+  while (pos + 4 <= maxLength && segments < maxSegments) {
+    segments++
+    const segHeader = await read(offset + pos, 4)
+    if (!segHeader || segHeader.getUint8(0) !== 0xff) break
+    const marker = segHeader.getUint8(1)
+    if (marker === 0xd9 || marker === 0xda) break
+    const size = segHeader.getUint16(2)
+    if (size < 2 || pos + 2 + size > maxLength) break
+
+    if (marker === 0xe1 && size >= 16) {
+      const app1 = await read(offset + pos + 4, Math.min(size - 2, 4096))
+      if (app1 && app1.byteLength >= 12
+        && app1.getUint32(0) === 0x45786966
+        && app1.getUint16(4) === 0) {
+        const tiff = 6
+        const little = tiffByteOrder(app1, tiff)
+        if (little !== undefined && tiff + 8 <= app1.byteLength) {
+          const ifd = tiff + app1.getUint32(tiff + 4, little)
+          if (ifd + 2 <= app1.byteLength) {
+            const count = app1.getUint16(ifd, little)
+            for (let i = 0; i < count && ifd + 2 + (i + 1) * 12 <= app1.byteLength; i++) {
+              const entry = ifd + 2 + i * 12
+              if (app1.getUint16(entry, little) === 0x0112) {
+                const val = app1.getUint16(entry + 8, little)
+                if (val >= 1 && val <= 8) orientation = val
+                break
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const isSof =
+      marker >= 0xc0 && marker <= 0xcf &&
+      marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+    if (isSof) {
+      const sof = await read(offset + pos + 4, 5)
+      if (sof && sof.byteLength >= 5) {
+        const height = sof.getUint16(1)
+        const width = sof.getUint16(3)
+        return { width, height, orientation }
+      }
+      break
+    }
+
+    pos += 2 + size
+  }
+
+  return undefined
 }
 
 /**
@@ -137,8 +206,11 @@ export function parseJpegHeader(view: DataView, offset = 0, length = view.byteLe
   let orientation: number | undefined
   let width: number | undefined
   let height: number | undefined
+  const maxSegments = 128
+  let segments = 0
 
-  while (pos + 4 <= end) {
+  while (pos + 4 <= end && segments < maxSegments) {
+    segments++
     if (view.getUint8(pos) !== 0xff) break
     const marker = view.getUint8(pos + 1)
     if (marker === 0xd9 || marker === 0xda) break
