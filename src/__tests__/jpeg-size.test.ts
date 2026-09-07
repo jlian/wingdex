@@ -62,4 +62,24 @@ describe('readJpegSize', () => {
     const trunc = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])])
     expect(await readJpegSize(trunc)).toBeNull()
   })
+
+  it.each([
+    [6, { width: 3000, height: 4000 }],
+    [8, { width: 3000, height: 4000 }],
+    [1, { width: 4000, height: 3000 }],
+    [3, { width: 4000, height: 3000 }],
+  ])('swaps dimensions for 90/270 deg EXIF orientation %s', async (orientation, expected) => {
+    const exif = {
+      marker: 0xe1,
+      body: [
+        0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+        0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00,
+        0x01, 0x00,
+        0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+      ],
+    }
+    const r = await readJpegSize(jpeg([exif], { marker: 0xc0, width: 4000, height: 3000 }))
+    expect(r).toEqual(expected)
+  })
 })

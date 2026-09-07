@@ -1,8 +1,155 @@
 @testable import WingDex
+import PhotosUI
+import SwiftUI
 import XCTest
 
 @MainActor
 final class AddPhotosViewModelTests: XCTestCase {
+    private func configuredModel() async throws -> (AddPhotosViewModel, DataStore) {
+        let auth = AuthService()
+        auth.installUITestAnonymousIdentity()
+        let store = DataStore(service: UITestDataService(mode: .populated))
+        store.activate(accountID: try XCTUnwrap(auth.userId))
+        await store.loadAll()
+        let viewModel = AddPhotosViewModel()
+        viewModel.configure(auth: auth, dataStore: store)
+        return (viewModel, store)
+    }
+
+    private func cameraImage() -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+    }
+
+    func testFailedPickerItemsAreCountedAndCanBeRetried() async throws {
+        let (viewModel, _) = try await configuredModel()
+        viewModel.selectedItems = [
+            PhotosPickerItem(itemIdentifier: "unavailable-photo-1"),
+            PhotosPickerItem(itemIdentifier: "unavailable-photo-2"),
+        ]
+
+        await viewModel.processSelectedPhotos()
+
+        XCTAssertEqual(viewModel.currentStep, .selectPhotos)
+        XCTAssertFalse(viewModel.isProcessing)
+        XCTAssertTrue(viewModel.processedPhotos.isEmpty)
+        XCTAssertEqual(viewModel.processedCount, 2)
+        XCTAssertEqual(viewModel.error?.message,
+            "2 photos could not be prepared. Select or share them again, or export JPEG or HEIF copies and try again.")
+        XCTAssertTrue(viewModel.canRetryError)
+        XCTAssertEqual(viewModel.selectedItems.count, 2)
+        await viewModel.cancelSession()
+    }
+
+    func testFailedPickerItemDoesNotDiscardGoodPhoto() async throws {
+        let (viewModel, _) = try await configuredModel()
+        viewModel.selectedItems = [PhotosPickerItem(itemIdentifier: "unavailable-photo")]
+        viewModel.addCameraPhoto(cameraImage(), lat: nil, lon: nil)
+
+        await viewModel.processSelectedPhotos()
+
+        XCTAssertEqual(viewModel.currentStep, .outingReview)
+        XCTAssertEqual(viewModel.processedPhotos.count, 1)
+        XCTAssertEqual(viewModel.processedCount, 2)
+        XCTAssertEqual(viewModel.error?.message,
+            "One photo could not be prepared. Select or share it again, or export a JPEG or HEIF copy and try again.")
+        XCTAssertFalse(viewModel.canRetryError)
+        let originalURL = try XCTUnwrap(viewModel.processedPhotos.first?.originalURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: originalURL.path))
+        await viewModel.cancelSession()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: originalURL.path))
+    }
+
+    func testRejectedPhotoWarningSurvivesBothDuplicateChoices() async throws {
+        for reimport in [false, true] {
+            let (viewModel, store) = try await configuredModel()
+            let image = cameraImage()
+            let data = try XCTUnwrap(PhotoService.compressImage(image, quality: 0.7))
+            store.photos.append(Photo(
+                id: "duplicate", outingId: "existing", dataUrl: "", thumbnail: "",
+                fileHash: PhotoService.fileHash(for: data), fileName: "existing.jpg"
+            ))
+            viewModel.selectedItems = [PhotosPickerItem(itemIdentifier: "unavailable-photo")]
+            viewModel.addCameraPhoto(image, lat: nil, lon: nil)
+
+            await viewModel.processSelectedPhotos()
+
+            XCTAssertTrue(viewModel.showDuplicateConfirm)
+            XCTAssertNil(viewModel.error)
+            let originalURL = try XCTUnwrap(viewModel.pendingDuplicatePhotos.first?.originalURL)
+            await viewModel.handleDuplicateChoice(reimport: reimport)
+
+            XCTAssertFalse(viewModel.showDuplicateConfirm)
+            XCTAssertEqual(viewModel.currentStep, reimport ? .outingReview : .selectPhotos)
+            XCTAssertEqual(viewModel.processedPhotos.count, reimport ? 1 : 0)
+            XCTAssertEqual(viewModel.error?.message,
+                "One photo could not be prepared. Select or share it again, or export a JPEG or HEIF copy and try again.")
+            XCTAssertEqual(FileManager.default.fileExists(atPath: originalURL.path), reimport)
+            await viewModel.cancelSession()
+            XCTAssertFalse(FileManager.default.fileExists(atPath: originalURL.path))
+        }
+    }
+
+    func testUndecodablePhotoOffersExportOrSkipWithoutRetry() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let fileURL = try PhotoFlowStore.writeCameraData(Data("not an image".utf8))
+        defer { PhotoFlowStore.remove([fileURL]) }
+        viewModel.clusters = [PhotoCluster(
+            photos: [ProcessedPhoto(
+                id: "invalid", originalURL: fileURL, cleanupOriginal: false,
+                thumbnail: Data(), exifTime: nil, gpsLat: nil, gpsLon: nil,
+                fileHash: "invalid", fileName: "invalid.dng", byteCount: 12
+            )],
+            startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        await viewModel.runSpeciesId(photoIndex: 0)
+
+        XCTAssertEqual(viewModel.error?.message,
+            "This photo could not be decoded on this device. Export a JPEG or HEIF copy and try again, or skip it.")
+        XCTAssertEqual(viewModel.currentStep, .perPhotoConfirm)
+        XCTAssertFalse(viewModel.canRetryError)
+        XCTAssertTrue(viewModel.currentCandidates.isEmpty)
+        XCTAssertNil(viewModel.activeImageData)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+        await viewModel.cancelSession()
+    }
+
+    func testMissingPhotoCanRetryAfterFileIsRestored() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let data = try XCTUnwrap(PhotoService.compressImage(cameraImage()))
+        let fileURL = try PhotoFlowStore.writeCameraData(data)
+        defer { PhotoFlowStore.remove([fileURL]) }
+        PhotoFlowStore.remove([fileURL])
+        viewModel.clusters = [PhotoCluster(
+            photos: [ProcessedPhoto(
+                id: "retry", originalURL: fileURL, cleanupOriginal: false,
+                thumbnail: data, exifTime: nil, gpsLat: nil, gpsLon: nil,
+                fileHash: "retry", fileName: "retry.jpg", byteCount: data.count
+            )],
+            startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        await viewModel.runSpeciesId(photoIndex: 0)
+
+        XCTAssertEqual(viewModel.error?.message, "Could not read this photo. Try again or skip it.")
+        XCTAssertEqual(viewModel.currentStep, .perPhotoConfirm)
+        XCTAssertTrue(viewModel.canRetryError)
+        XCTAssertNil(viewModel.activeImageData)
+
+        try data.write(to: fileURL)
+        viewModel.retryCurrentError()
+        for _ in 0..<1_000 {
+            if viewModel.activeImageData != nil && viewModel.currentStep != .photoProcessing { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNil(viewModel.error)
+        XCTAssertEqual(viewModel.activeImageData, data)
+        XCTAssertFalse(viewModel.canRetryError)
+        XCTAssertNotEqual(viewModel.currentStep, .photoProcessing)
+        await viewModel.cancelSession()
+    }
+
     func testHistoricalNameIsNotPrefilledAndConfirmedDeviceCoordinatesFeedInference() async throws {
         let previousGeoContext = UserDefaults.standard.object(forKey: "useGeoContext")
         defer { UserDefaults.standard.set(previousGeoContext, forKey: "useGeoContext") }

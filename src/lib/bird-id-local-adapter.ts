@@ -33,6 +33,7 @@
 
 import { BirdIdEngine, type EngineAssets, type IdentifyResult } from './bird-id-local'
 import { assetsCached, type AssetProgress } from './model-cache'
+import { readJpegHeader } from './raw-preview'
 import { TAXONOMY_SHA16 } from './taxonomy-hash'
 import taxonomy from './taxonomy.json'
 
@@ -335,24 +336,19 @@ export function getEngine(
  * JPEG, which the caller treats as "decode normally".
  */
 export async function readJpegSize(blob: Blob): Promise<{ width: number; height: number } | null> {
-  // 64 KiB covers EXIF, ICC profiles and thumbnails ahead of the frame header.
-  const head = new DataView(await blob.slice(0, 65536).arrayBuffer())
-  if (head.byteLength < 4 || head.getUint16(0) !== 0xffd8) return null
-  let off = 2
-  while (off + 9 < head.byteLength) {
-    if (head.getUint8(off) !== 0xff) return null
-    const marker = head.getUint8(off + 1)
-    const size = head.getUint16(off + 2)
-    if (size < 2) return null
-    const isSof =
-      marker >= 0xc0 && marker <= 0xcf &&
-      marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
-    if (isSof) {
-      return { height: head.getUint16(off + 5), width: head.getUint16(off + 7) }
-    }
-    off += 2 + size
+  const read = async (offset: number, length: number) => {
+    if (offset < 0 || length < 0 || offset + length > blob.size) return undefined
+    return new DataView(await blob.slice(offset, offset + length).arrayBuffer())
   }
-  return null
+  const parsed = await readJpegHeader(read, 0, blob.size)
+  if (!parsed) return null
+  // When an image has EXIF rotation (orientations 5, 6, 7, 8), browsers swap
+  // width and height during display/createImageBitmap. Match the oriented aspect
+  // ratio so scaled decode doesn't stretch the image into the unrotated shape.
+  if (parsed.orientation && parsed.orientation >= 5 && parsed.orientation <= 8) {
+    return { width: parsed.height, height: parsed.width }
+  }
+  return { width: parsed.width, height: parsed.height }
 }
 /**
  * Decode to an ImageBitmap, capped at DECODE_CAP on the long side.

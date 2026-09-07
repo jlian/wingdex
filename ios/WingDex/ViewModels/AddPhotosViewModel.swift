@@ -14,7 +14,6 @@ private enum PhotoPreparationInput: Sendable {
 private struct PhotoPreparationOutcome: Sendable {
     let index: Int
     let photo: ProcessedPhoto?
-    let rejectedSharedFileName: String?
 }
 
 private final class PhotoPreparationBatch: @unchecked Sendable {
@@ -192,7 +191,7 @@ final class AddPhotosViewModel {
 
     var pendingNewPhotos: [ProcessedPhoto] = []
     var pendingDuplicatePhotos: [ProcessedPhoto] = []
-    private var pendingRejectedSharedPhotoCount = 0
+    private var pendingRejectedPhotoCount = 0
     var showDuplicateConfirm = false
 
     // MARK: - Results After Save
@@ -346,6 +345,7 @@ final class AddPhotosViewModel {
         guard !isProcessing else { return }
         isProcessing = true
         error = nil
+        errorRecovery = nil
         currentStep = .extracting
         totalCount = selectedItems.count + cameraPhotos.count + incomingSharedPhotos.count
         processedCount = 0
@@ -361,7 +361,7 @@ final class AddPhotosViewModel {
         var candidatePhotos: [ProcessedPhoto] = []
         var newPhotos: [ProcessedPhoto] = []
         var duplicatePhotos: [ProcessedPhoto] = []
-        var rejectedSharedFileNames: [String] = []
+        var rejectedPhotoCount = 0
 
     let preparationInputs =
       selectedItems.map(PhotoPreparationInput.picker)
@@ -390,8 +390,8 @@ final class AddPhotosViewModel {
             if let photo = outcome.photo {
                 candidatePhotos.append(photo)
             }
-            if let fileName = outcome.rejectedSharedFileName {
-                rejectedSharedFileNames.append(fileName)
+            if outcome.photo == nil {
+                rejectedPhotoCount += 1
             }
         }
 
@@ -427,14 +427,10 @@ final class AddPhotosViewModel {
             return
         }
         if incomingShareID != nil, candidatePhotos.isEmpty {
-            // Every photo in the batch failed to decode. The staged files are
-            // immutable, so a retry reads the same bytes and fails again, and
-            // leaving the batch pending blocks every newer batch behind it in
-            // the FIFO queue. Accept it to drop it from the queue, and ask for
-            // a fresh share instead of offering a retry that cannot succeed.
+            // Release an unreadable batch so it does not block the FIFO queue.
+            // A fresh share can retry file delivery or supply a decoded copy.
             await releaseIncomingShare()
-      error = .message(
-        "No shared photos could be read. Share them again in a supported image format.")
+            error = .message(Self.rejectedPhotosMessage(count: rejectedPhotoCount))
             errorRecovery = nil
             isProcessing = false
             // Close is disabled while the step is `.extracting`, so return to a
@@ -460,6 +456,7 @@ final class AddPhotosViewModel {
                 let fileURL = try PhotoFlowStore.writeCameraData(compressed)
                 guard let prepared = PhotoService.preparePhoto(at: fileURL) else {
                     PhotoFlowStore.remove([fileURL])
+                    rejectedPhotoCount += 1
                     continue
                 }
         candidatePhotos.append(
@@ -522,7 +519,8 @@ final class AddPhotosViewModel {
         }
 
         if newPhotos.isEmpty && duplicatePhotos.isEmpty {
-            error = .message("No photos to process.")
+            error = .message(Self.rejectedPhotosMessage(count: rejectedPhotoCount))
+            errorRecovery = selectedItems.isEmpty ? nil : .sessionPreparation
             currentStep = .selectPhotos
             isProcessing = false
             return
@@ -532,7 +530,7 @@ final class AddPhotosViewModel {
         if !duplicatePhotos.isEmpty {
             pendingNewPhotos = newPhotos
             pendingDuplicatePhotos = duplicatePhotos
-            pendingRejectedSharedPhotoCount = rejectedSharedFileNames.count
+            pendingRejectedPhotoCount = rejectedPhotoCount
             currentStep = .selectPhotos
             isProcessing = false
             showDuplicateConfirm = true
@@ -540,14 +538,15 @@ final class AddPhotosViewModel {
         }
 
         finishExtraction(photos: newPhotos)
-        if !rejectedSharedFileNames.isEmpty {
-            let count = rejectedSharedFileNames.count
-            error = .message(
-                count == 1
-                    ? "One shared photo could not be read. Share it again in a supported image format."
-                    : "\(count) shared photos could not be read. Share them again in a supported image format."
-            )
+        if rejectedPhotoCount > 0 {
+            error = .message(Self.rejectedPhotosMessage(count: rejectedPhotoCount))
         }
+    }
+
+    private static func rejectedPhotosMessage(count: Int) -> String {
+        count == 1
+            ? "One photo could not be prepared. Select or share it again, or export a JPEG or HEIF copy and try again."
+            : "\(count) photos could not be prepared. Select or share them again, or export JPEG or HEIF copies and try again."
     }
 
   private func preparePhotos(_ inputs: [PhotoPreparationInput]) async throws
@@ -607,7 +606,7 @@ final class AddPhotosViewModel {
             var importedURL: URL?
             do {
                 guard let imported = try await item.loadTransferable(type: ImportedPhotoFile.self) else {
-                    return PhotoPreparationOutcome(index: index, photo: nil, rejectedSharedFileName: nil)
+                    return PhotoPreparationOutcome(index: index, photo: nil)
                 }
                 importedURL = imported.url
                 batch.registerOwned(imported.url)
@@ -621,15 +620,14 @@ final class AddPhotosViewModel {
         else {
                     PhotoFlowStore.remove([imported.url])
                     batch.unregisterOwned(imported.url)
-                    return PhotoPreparationOutcome(index: index, photo: nil, rejectedSharedFileName: nil)
+                    return PhotoPreparationOutcome(index: index, photo: nil)
                 }
                 guard batch.reserve(photo.byteCount) else {
                     throw IncomingShareError.shareTooLarge
                 }
                 return PhotoPreparationOutcome(
                     index: index,
-                    photo: photo,
-                    rejectedSharedFileName: nil
+                    photo: photo
                 )
             } catch is CancellationError {
                 if let importedURL {
@@ -647,7 +645,7 @@ final class AddPhotosViewModel {
                     batch.unregisterOwned(importedURL)
                 }
                 log.error("Failed to load a selected photo")
-                return PhotoPreparationOutcome(index: index, photo: nil, rejectedSharedFileName: nil)
+                return PhotoPreparationOutcome(index: index, photo: nil)
             }
     case .shared(let sharedPhoto):
             do {
@@ -664,14 +662,13 @@ final class AddPhotosViewModel {
           )
                     return PhotoPreparationOutcome(
                         index: index,
-                        photo: nil,
-                        rejectedSharedFileName: sharedPhoto.fileName
+                        photo: nil
                     )
                 }
                 guard batch.reserve(photo.byteCount) else {
                     throw IncomingShareError.shareTooLarge
                 }
-                return PhotoPreparationOutcome(index: index, photo: photo, rejectedSharedFileName: nil)
+                return PhotoPreparationOutcome(index: index, photo: photo)
             } catch is CancellationError {
                 throw CancellationError()
             } catch IncomingShareError.shareTooLarge {
@@ -682,8 +679,7 @@ final class AddPhotosViewModel {
         )
                 return PhotoPreparationOutcome(
                     index: index,
-                    photo: nil,
-                    rejectedSharedFileName: sharedPhoto.fileName
+                    photo: nil
                 )
             }
         }
@@ -745,19 +741,15 @@ final class AddPhotosViewModel {
             : pendingNewPhotos
         pendingNewPhotos = []
         pendingDuplicatePhotos = []
-        let rejectedSharedPhotoCount = pendingRejectedSharedPhotoCount
-        pendingRejectedSharedPhotoCount = 0
+        let rejectedPhotoCount = pendingRejectedPhotoCount
+        pendingRejectedPhotoCount = 0
 
         if finalPhotos.isEmpty {
             selectedItems = []
             await finalizeDiscardedShare()
             currentStep = .selectPhotos
-            if rejectedSharedPhotoCount > 0 {
-                error = .message(
-                    rejectedSharedPhotoCount == 1
-                        ? "One shared photo could not be read. Share it again in a supported image format."
-                        : "\(rejectedSharedPhotoCount) shared photos could not be read. Share them again in a supported image format."
-                )
+            if rejectedPhotoCount > 0 {
+                error = .message(Self.rejectedPhotosMessage(count: rejectedPhotoCount))
             } else {
                 flowDismissalRequestID = UUID()
             }
@@ -766,12 +758,8 @@ final class AddPhotosViewModel {
 
         currentStep = .extracting
         finishExtraction(photos: finalPhotos)
-        if rejectedSharedPhotoCount > 0 {
-            error = .message(
-                rejectedSharedPhotoCount == 1
-                    ? "One shared photo could not be read. Share it again in a supported image format."
-                    : "\(rejectedSharedPhotoCount) shared photos could not be read. Share them again in a supported image format."
-            )
+        if rejectedPhotoCount > 0 {
+            error = .message(Self.rejectedPhotosMessage(count: rejectedPhotoCount))
         }
     }
 
@@ -875,31 +863,37 @@ final class AddPhotosViewModel {
         let isCropped = croppedImageData != nil || photo.croppedImage != nil
         processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Identifying species..."
 
-        let originalImageData: Data
+        let processingImageData: Data
         do {
             if activeImagePhotoID == photo.id, let activeImageData {
-                originalImageData = activeImageData
+                processingImageData = activeImageData
             } else {
-                originalImageData = try await Task.detached(priority: .userInitiated) {
-                    try Data(contentsOf: photo.originalURL, options: .mappedIfSafe)
+                processingImageData = try await Task.detached(priority: .userInitiated) {
+                    try PhotoService.processingData(at: photo.originalURL)
                 }.value
                 guard isCurrentSession(sessionID), currentPhotoIndex == photoIndex else { return }
-                activeImageData = originalImageData
+                activeImageData = processingImageData
                 activeImagePhotoID = photo.id
             }
         } catch is CancellationError {
             return
         } catch {
             guard isCurrentSession(sessionID), currentPhotoIndex == photoIndex else { return }
-            self.error = .message("Could not read this photo. Try again or skip it.")
-      errorRecovery = .speciesIdentification(
-        photoIndex: photoIndex, croppedImageData: croppedImageData)
+            if error is PhotoService.ProcessingError {
+                self.error = .message(
+                    "This photo could not be decoded on this device. Export a JPEG or HEIF copy and try again, or skip it."
+                )
+            } else {
+                self.error = .message("Could not read this photo. Try again or skip it.")
+                errorRecovery = .speciesIdentification(
+                    photoIndex: photoIndex, croppedImageData: croppedImageData)
+            }
             currentCandidates = []
             rangeAdjusted = false
             currentStep = .perPhotoConfirm
             return
         }
-        let imageToSend = croppedImageData ?? photo.croppedImage ?? originalImageData
+        let imageToSend = croppedImageData ?? photo.croppedImage ?? processingImageData
 
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -1404,7 +1398,7 @@ final class AddPhotosViewModel {
     preparedUpload = nil
         pendingNewPhotos = []
         pendingDuplicatePhotos = []
-        pendingRejectedSharedPhotoCount = 0
+        pendingRejectedPhotoCount = 0
         showDuplicateConfirm = false
         isProcessing = false
         processingMessage = ""
