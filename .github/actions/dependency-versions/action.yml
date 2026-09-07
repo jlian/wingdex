@@ -3,7 +3,7 @@ description: Keep application releases from invalidating unchanged dependencies
 outputs:
   dependencies:
     value: ${{ steps.versions.outputs.dependencies }}
-    description: Lockfile digest excluding only the root application version
+    description: Manifest and lockfile digest excluding the root application version
   playwright:
     value: ${{ steps.versions.outputs.playwright }}
     description: Installed Playwright Core version from the lockfile
@@ -16,11 +16,13 @@ runs:
         node --input-type=module <<'NODE' >> "$GITHUB_OUTPUT"
         import { readFileSync } from 'node:fs'
         import { createHash } from 'node:crypto'
+        const manifest = JSON.parse(readFileSync('package.json', 'utf8'))
         const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
         const playwright = lock.packages['node_modules/playwright-core'].version
+        delete manifest.version
         delete lock.version
         delete lock.packages[''].version
-        const dependencies = createHash('sha256').update(JSON.stringify(lock)).digest('hex')
+        const dependencies = createHash('sha256').update(JSON.stringify({ manifest, lock })).digest('hex')
         console.log(`dependencies=${dependencies}`)
         console.log(`playwright=${playwright}`)
         NODE
