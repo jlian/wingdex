@@ -683,6 +683,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             "--ui-test-fixture-empty",
             "--ui-test-geocoding-failure",
             "--ui-test-clear-last-location",
+            "--ui-test-place-search-result",
         ])
         _ = waitForOutingReview(in: app)
 
@@ -698,9 +699,13 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
 
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
+        XCTAssertTrue(
+            app.buttons.matching(identifier: "outing.locationResult").firstMatch.existsOrWait(timeout: 5),
+            "Place search did not settle before selecting the manual name"
+        )
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
-        manualButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
+        manualButton.tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(
                 format: "label == %@",
@@ -729,6 +734,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let app = launchApp(extraArguments: [
             "--ui-test-fixture-empty",
             "--ui-test-geocoding-empty",
+            "--ui-test-place-search-result",
         ])
         _ = waitForOutingReview(in: app)
 
@@ -743,9 +749,13 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
 
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
+        XCTAssertTrue(
+            app.buttons.matching(identifier: "outing.locationResult").firstMatch.existsOrWait(timeout: 5),
+            "Place search did not settle before selecting the manual name"
+        )
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
-        manualButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
+        manualButton.tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(
                 format: "label == %@",
