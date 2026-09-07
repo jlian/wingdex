@@ -60,4 +60,16 @@ final class PhotoReviewCarouselTests: XCTestCase {
         XCTAssertTrue(removed.isEmpty)
         XCTAssertEqual(coordinator.photos.map(\.id), ["first", "second"])
     }
+
+    func testReviewImageLoaderDecodesRAWFromFileURL() throws {
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/synthetic-bayer.dng")
+
+        let data = try XCTUnwrap(PhotoReviewImageLoader.loadData(at: source))
+        let image = try XCTUnwrap(UIImage(data: data))
+
+        XCTAssertEqual(max(image.size.width, image.size.height), 512)
+        XCTAssertEqual(min(image.size.width, image.size.height), 384)
+    }
 }
