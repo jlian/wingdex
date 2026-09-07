@@ -27,14 +27,9 @@ run_id=$(uuidgen)
 output="build/test-results/$lane-$run_id"
 mkdir -p "$output"
 simulator=""
-boot_pid=""
 cleanup() {
   status=$?
   trap - EXIT INT TERM
-  if [[ -n "$boot_pid" ]]; then
-    kill "$boot_pid" 2>/dev/null || true
-    wait "$boot_pid" 2>/dev/null || true
-  fi
   if [[ -n "$simulator" ]]; then
     xcrun simctl shutdown "$simulator" >> "$output/simulator.log" 2>&1 || true
     if ! xcrun simctl delete "$simulator" >> "$output/simulator.log" 2>&1; then
@@ -59,7 +54,23 @@ trap 'exit 143' TERM
 
 xcodebuild -version | tee "$output/toolchain.log"
 xcrun --find lldb >> "$output/toolchain.log"
-xcrun lldb --version >> "$output/toolchain.log"
+sysctl hw.memsize hw.ncpu >> "$output/toolchain.log"
+WINGDEX_SKIP_APP_ICON=1 xcodegen generate 2>&1 | tee "$output/generate.log"
+common=(-project WingDex.xcodeproj -scheme WingDex
+  -derivedDataPath build/DerivedData
+  -parallel-testing-enabled NO
+  CODE_SIGNING_ALLOWED=NO)
+phase=$SECONDS
+# Build before booting: overlapping the two caused severe disk/memory
+# contention on GitHub's 7 GB macOS VMs, even with a restored build cache.
+# A generic destination still builds the same host-architecture test products.
+NSUnbufferedIO=YES xcodebuild build-for-testing "${common[@]}" "${targets[@]}" \
+  -destination "generic/platform=iOS Simulator" ARCHS="$(uname -m)" \
+  -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
+  ASSETCATALOG_COMPILER_APPICON_NAME="" ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS=NO \
+  2>&1 | tee "$output/build.log"
+echo "Build: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
+phase=$SECONDS
 # Select an installed iPhone runtime, not a user's existing device.
 runtime=$(xcrun simctl list runtimes -j | python3 -c '
 import json, sys
@@ -71,33 +82,9 @@ print(max(r, key=lambda r: tuple(map(int, r["version"].split("."))))["identifier
 device_type=${IOS_TEST_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
 simulator=$(xcrun simctl create "WingDex tests $run_id" "$device_type" "$runtime")
 echo "Simulator: $simulator ($runtime)" | tee "$output/simulator.log"
-# A cold `simctl boot` can itself block for a minute on hosted runners.
-xcrun simctl boot "$simulator" >> "$output/simulator.log" 2>&1 &
-boot_pid=$!
-WINGDEX_SKIP_APP_ICON=1 xcodegen generate 2>&1 | tee "$output/generate.log"
-common=(-project WingDex.xcodeproj -scheme WingDex
-  -derivedDataPath build/DerivedData
-  -parallel-testing-enabled NO
-  CODE_SIGNING_ALLOWED=NO)
-phase=$SECONDS
-# A generic build destination avoids waiting for the booting device. Limit
-# architectures to this host instead of building an unused universal simulator.
-NSUnbufferedIO=YES xcodebuild build-for-testing "${common[@]}" "${targets[@]}" \
-  -destination "generic/platform=iOS Simulator" ARCHS="$(uname -m)" \
-  -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
-  ASSETCATALOG_COMPILER_APPICON_NAME="" ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS=NO \
-  2>&1 | tee "$output/build.log"
-echo "Build: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
-phase=$SECONDS
-if wait "$boot_pid"; then
-  boot_pid=""
-else
-  boot_pid=""
-  echo "Could not boot test simulator $simulator; see ios/$output/simulator.log" >&2
-  exit 1
-fi
+xcrun simctl boot "$simulator" >> "$output/simulator.log" 2>&1
 xcrun simctl bootstatus "$simulator" -b 2>&1 | tee -a "$output/simulator.log"
-echo "Remaining boot wait: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
+echo "Simulator setup: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
 xcrun simctl ui "$simulator" appearance light
 
 phase=$SECONDS
