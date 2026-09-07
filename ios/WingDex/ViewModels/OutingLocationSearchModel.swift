@@ -374,7 +374,7 @@ final class OutingLocationSearchModel {
         do {
             let results = try await task.value
 
-            if activeSearchTask == task {
+            if currentGeneration == generation {
                 activeSearchTask = nil
                 activeSearchQuery = nil
             }
@@ -392,13 +392,13 @@ final class OutingLocationSearchModel {
             }
             isSearching = false
         } catch is CancellationError {
-            if activeSearchTask == task {
+            if currentGeneration == generation {
                 activeSearchTask = nil
                 activeSearchQuery = nil
             }
             return
         } catch let error as GeocodingServiceError {
-            if activeSearchTask == task {
+            if currentGeneration == generation {
                 activeSearchTask = nil
                 activeSearchQuery = nil
             }
@@ -413,7 +413,7 @@ final class OutingLocationSearchModel {
             }
             isSearching = false
         } catch {
-            if activeSearchTask == task {
+            if currentGeneration == generation {
                 activeSearchTask = nil
                 activeSearchQuery = nil
             }

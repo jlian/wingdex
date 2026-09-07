@@ -240,7 +240,10 @@ class BirdIdFlowUITestCase: XCTestCase {
         }
     }
 
-    func isKnownAddPhotosSearchAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+    func isKnownAddPhotosSearchAuditIssue(
+        _ issue: XCUIAccessibilityAuditIssue,
+        in app: XCUIApplication
+    ) -> Bool {
         if isKnownAddPhotosAuditIssue(issue) { return true }
         switch issue.auditType {
         case .contrast:
@@ -251,8 +254,14 @@ class BirdIdFlowUITestCase: XCTestCase {
             return issue.element?.label == "Clear text"
         case .sufficientElementDescription:
             // SwiftUI exposes unlabeled internal runs for the linked attribution footer.
-            return (issue.element?.identifier ?? "").isEmpty
-                && (issue.element?.label ?? "").isEmpty
+            guard let element = issue.element,
+                  element.identifier.isEmpty,
+                  element.label.isEmpty
+            else { return false }
+            let attributions = app.descendants(matching: .any)
+                .matching(identifier: "outing.locationAttribution")
+                .allElementsBoundByIndex
+            return attributions.contains { $0.frame.intersects(element.frame) }
         default:
             return false
         }

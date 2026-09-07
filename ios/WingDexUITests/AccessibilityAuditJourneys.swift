@@ -229,7 +229,9 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
         setLocationQuery("Discovery", in: app)
         let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
         XCTAssertTrue(result.existsOrWait(timeout: 5))
-        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosSearchAuditIssue)
+        try runAccessibilityAudit(in: app) {
+            self.isKnownAddPhotosSearchAuditIssue($0, in: app)
+        }
         result.tap()
         let preview = mapPreviewElement(in: app)
         XCTAssertTrue(scrollUntilVisible(preview, in: app))
