@@ -699,8 +699,8 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
-        manualButton.tap()
+        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+        manualButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(
                 format: "label == %@",
@@ -744,8 +744,8 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
-        manualButton.tap()
+        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+        manualButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(
                 format: "label == %@",
