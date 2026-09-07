@@ -245,6 +245,12 @@ class BirdIdFlowUITestCase: XCTestCase {
     func isKnownSettingsAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
         switch issue.auditType {
         case .contrast:
+            // iOS 27 flags this decorative glyph even at measured 10.30:1 contrast
+            // and with accessibilityHidden(true). Keep links and all other text audited.
+            if issue.element?.identifier == "settings.footerSeparator",
+                issue.element?.label == "·" {
+                return true
+            }
             let systemSectionHeaders = [
                 "Account", "Avatar", "Import & Export", "Security",
                 "Bird Identification", "Camera", "Legal", "Data Management",
