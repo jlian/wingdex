@@ -65,10 +65,15 @@ final class PhotoReviewCarouselTests: XCTestCase {
         let source = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("Fixtures/synthetic-bayer.dng")
+        var receivedURL: URL?
 
-        let data = try XCTUnwrap(PhotoReviewImageLoader.loadData(at: source))
+        let data = try XCTUnwrap(PhotoReviewImageLoader.loadData(at: source) { url, maxDimension in
+            receivedURL = url
+            return PhotoService.generateThumbnail(at: url, maxDimension: maxDimension)
+        })
         let image = try XCTUnwrap(UIImage(data: data))
 
+        XCTAssertEqual(receivedURL, source)
         XCTAssertEqual(max(image.size.width, image.size.height), 512)
         XCTAssertEqual(min(image.size.width, image.size.height), 384)
     }

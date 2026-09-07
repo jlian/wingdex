@@ -4,7 +4,14 @@ import os
 
 enum PhotoReviewImageLoader {
     static func loadData(at url: URL) -> Data? {
-        PhotoService.generateThumbnail(at: url, maxDimension: 2_048)
+        loadData(at: url, using: PhotoService.generateThumbnail)
+    }
+
+    static func loadData(
+        at url: URL,
+        using generateThumbnail: (URL, CGFloat) -> Data?
+    ) -> Data? {
+        generateThumbnail(url, 2_048)
     }
 }
 
