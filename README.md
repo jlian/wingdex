@@ -131,12 +131,12 @@ Vitest runs pure logic/assets in Node and only component/browser-global tests
 in jsdom. Pixel parity uses whole typed-array equality rather than hundreds of
 thousands of individual matchers, preserving every pixel comparison.
 
-Web CI runs lint/types/unit tests alongside four isolated browser shards on
+Web CI runs lint/types/unit tests alongside five isolated browser shards on
 Linux. Each shard builds the app and owns its Worker/D1; preview deployment
 uses one tested build only after every lane passes. Locally,
-`npm run check` runs lint, typechecking, and unit tests concurrently;
+`npm run check` runs lint/typechecking alongside unit tests;
 `npm run check:all` then builds and runs every browser journey.
-`npm run test:e2e -- --shard=1/4` reproduces a specific browser shard.
+`npm run test:e2e -- --shard=1/5` reproduces a specific browser shard.
 Web CI stays on Linux and iOS on macOS. Independent, self-contained suites
 avoid waiting for a deployed backend or coupling web feedback to simulator
 startup, while retaining the cheaper Linux runner for web work. The runtime
