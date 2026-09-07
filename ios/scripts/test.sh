@@ -60,16 +60,23 @@ common=(-project WingDex.xcodeproj -scheme WingDex
   -derivedDataPath build/DerivedData
   -parallel-testing-enabled NO
   CODE_SIGNING_ALLOWED=NO)
+architecture=$(uname -m)
+sdk_version=$(xcrun --sdk iphonesimulator --show-sdk-version)
+test_run="build/DerivedData/Build/Products/WingDex_iphonesimulator${sdk_version}-${architecture}.xctestrun"
 phase=$SECONDS
 # Build before booting: overlapping the two caused severe disk/memory
 # contention on GitHub's 7 GB macOS VMs, even with a restored build cache.
 # A generic destination still builds the same host-architecture test products.
 NSUnbufferedIO=YES xcodebuild build-for-testing "${common[@]}" "${targets[@]}" \
-  -destination "generic/platform=iOS Simulator" ARCHS="$(uname -m)" \
+  -destination "generic/platform=iOS Simulator" ARCHS="$architecture" \
   -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
   ASSETCATALOG_COMPILER_APPICON_NAME="" ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS=NO \
   2>&1 | tee "$output/build.log"
 echo "Build: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
+if [[ ! -f "$test_run" ]]; then
+  echo "Build did not produce the expected test manifest: ios/$test_run" >&2
+  exit 1
+fi
 phase=$SECONDS
 # Select an installed iPhone runtime, not a user's existing device.
 runtime=$(xcrun simctl list runtimes -j | python3 -c '
@@ -89,8 +96,10 @@ xcrun simctl ui "$simulator" appearance light
 
 phase=$SECONDS
 set +e
+# Use the compiled manifest, not another project/package-resolution pass.
 NSUnbufferedIO=YES TEST_RUNNER_WINGDEX_DEEP_AUDITS="$([[ "$lane" == accessibility-deep ]] && echo 1 || echo 0)" \
-  xcodebuild test-without-building "${common[@]}" "${targets[@]}" \
+  xcodebuild test-without-building -xctestrun "$test_run" "${targets[@]}" \
+  -parallel-testing-enabled NO \
   -destination "platform=iOS Simulator,id=$simulator" \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \

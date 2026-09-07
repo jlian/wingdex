@@ -74,18 +74,35 @@ the project first. It uses the selected Xcode (`DEVELOPER_DIR` is respected) and
 the newest installed iOS 26+ runtime. `IOS_TEST_DEVICE_TYPE` optionally overrides
 the default `com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro`.
 
-The runner creates a uniquely named simulator, boots it while compiling, waits
-for `simctl bootstatus`, runs tests serially, and shuts down/deletes only the UDID
-it created, including on ordinary failure or interruption. It never erases or
-deletes a developer's simulator. A force-killed process or powered-off Mac cannot
+The runner first builds for `generic/platform=iOS Simulator` with the host
+architecture, without waiting for a particular simulator to become ready. It then
+creates a uniquely named simulator, boots it, waits for `simctl bootstatus`, and
+runs tests serially on that UDID. Build and boot are intentionally separate to
+avoid compiler/simulator memory and disk contention on smaller hosted machines.
+`test-without-building` reads the generated SDK/architecture-specific `.xctestrun`
+directly, avoiding a second project/package-resolution pass. This split is
+documented in Apple's [command-line testing guide](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
+and the installed `xcodebuild` man page.
+
+Cleanup shuts down/deletes only the UDID the runner created, including on ordinary
+failure or interruption. It never erases or deletes a developer's simulator.
+A force-killed process or powered-off Mac cannot
 run cleanup; the recorded `Simulator:` UDID identifies that run's device if manual
 cleanup is needed. Builds reuse `ios/build/DerivedData`; simulator state never
 does. Raw logs, toolchain versions, elapsed times, JSON summary, and `.xcresult`
 remain in `ios/build/test-results/<lane>-<uuid>/`. Xcode's exit status is retained.
 Run one iOS lane at a time on a local Mac because the build cache/project is shared.
-The runner disables Xcode's optional **verbose system diagnostics**, not test
-diagnostics: failed assertions, screenshots, attachments, raw stderr and result
-bundles remain. On the local beta, one failed assertion otherwise spawned
+
+CI's compiled-cache fallback can reuse another lane's SwiftPM/DerivedData cache
+when Xcode, OS and architecture match, rather than cold-building core after an
+accessibility lane already built the same targets. Content-keyed generated Bird
+ID assets and the pinned XcodeGen executable are cached separately. These caches
+reuse build inputs/products, never simulator state or test results; tests still
+run on a fresh device.
+The runner disables Xcode's optional **verbose system diagnostics**. Failed
+assertions, explicitly attached screenshots/hierarchies, raw stderr and result
+bundles remain; automatic failure attachments are not guaranteed. On the local
+beta, one failed assertion otherwise spawned
 `simctl diagnose --timeout=600` after all tests had already finished, adding
 minutes with no test progress. This is the documented
 `xcodebuild -collect-test-diagnostics never` option, not a log filter.
@@ -150,6 +167,11 @@ check their current value first. No private XCTest polling or quiescence setting
 are used; Apple does not guarantee the waiter's polling interval.
 
 Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
+Unit, photo/camera UI, outing UI, and structural accessibility run on separate
+macOS 15 ARM machines with Xcode 26.3, using the same fresh iPhone 17 Pro default
+as local runs. Smaller SE displays did not improve hosted runtime consistently
+and introduced tight-viewport scrolling failures, so CI does not override the
+device type.
 The 15-minute infrastructure ceiling still leaves failure diagnostics time to
 finish. CI calls these exact repo commands; it does not deploy/select a backend
 or manage a second simulator lifecycle. Backend-only changes no longer trigger
@@ -160,26 +182,74 @@ they are not converted to passes/skips or swallowed with a generic issue filter.
 The default structural checks remain required. Full audits supplement, not
 replace, manual VoiceOver, contrast, dark appearance and Dynamic Type checks.
 
-Local verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone 17 Pro, fresh
-simulators and a warm build cache:
+Local verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone 17 Pro,
+fresh simulators and a warm build cache:
 
-| Command | Build | Remaining boot wait | Test command | Total | Result |
-|---------|-------|---------------------|--------------|-------|--------|
-| `test.sh all` | 24s | 4s | 335s | **6m 9s** | 445 passed, 0 skipped |
-| `test.sh core` | 13s | 7s | 277s | **5m 3s** | 439 passed, 0 skipped |
-| `test.sh accessibility` | 15s | 5s | 112s | **2m 19s** | 6 passed, 0 skipped |
-| `test.sh accessibility-deep` | 13s | 4s | 262s | **4m 46s** | 4 passed, 2 failed, 0 skipped |
+| Command | Total, including build and simulator | Result |
+|---------|--------------------------------------|--------|
+| `make -C ios` | **6m 24s** | 447 passed, 0 skipped |
+| `make -C ios accessibility-deep` | **3m 22s** | 8 passed, 0 skipped |
 
-Within the all-target run, unit tests took 42s, core UI 196s, and structural
-audits 64s. The first post-change build took 106s, with no remaining boot wait.
-These are local measurements, not a claim about hosted Xcode 26.3 performance.
+These runs used the generic build and direct `.xctestrun` lifecycle; deep-audit
+mode remained active without another package-resolution pass. Three targeted
+large-text/share regressions also passed on an SE simulator in 2m 37s.
+These are local measurements, not a claim about hosted Xcode performance.
 The pre-change hosted run `34140285029` took about 22 minutes for core and
-12 minutes for accessibility; the next hosted run should verify the lane targets.
-The opt-in deep run retained two failures: the outing-review full audit exceeded
-XCTest's two-minute per-test allowance, and Settings reported "Contrast nearly
-passed". Both remain visible in the result bundle and return exit 65. No new
-exception was added to hide them. These beta-OS full-audit findings are precisely
-why that lane is advisory, while the same journeys' structural audits stay required.
+12 minutes for accessibility. Hosted runs must include cache restore, simulator
+setup, diagnostics and job cleanup when evaluating the lane budget.
+
+The initial deep run failed in two places; both are fixed without dropping audit
+categories or increasing timeouts:
+
+- The search-screen audit completed around 30s, but the following result/map taps
+  each waited 60s for an app-animation completion notification that never arrived.
+  It was not the map audit taking too long: that audit was never reached. Outing
+  review, search and map now have independent launches and terminal audits,
+  following Apple's [per-screen audit guidance](https://developer.apple.com/videos/play/wwdc2023/10035/).
+  The same real search/map navigation remains covered by the separate UI flow.
+  No missing-animation waits appeared in the passing full run.
+- Settings' "Contrast nearly passed" attachment identified **Log Out**, whose
+  destructive red text measured about 3.20:1 against white. Ordinary logout is
+  reversible and the web button is non-destructive; the native button now uses
+  its standard role and existing app tint. The genuinely destructive pending-upload
+  discard confirmation keeps its destructive role. This follows Apple's
+  [destructive-role guidance](https://developer.apple.com/documentation/swiftui/buttonrole/destructive)
+  and [4.5:1 requirement for normal-size text](https://developer.apple.com/design/human-interface-guidelines/accessibility).
+  Simulator screenshots measured approximately 5.82:1 in light appearance and
+  5.21:1 in dark appearance.
+- Auditing the complete Settings footer also exposed low-contrast version text
+  and the manually red **Delete Data...** navigation label. Footer text now uses
+  the existing foreground palette. `DestructiveText` preserves the web's red hue,
+  with a lighter dark variant for elevated native Form surfaces. Actual deletion
+  and discard buttons retain their native destructive roles. The navigation label
+  measured 4.69:1 in light appearance and 5.99:1 in dark appearance.
+
+The full Settings audit passed in light (27.7s) and dark (26.2s) appearance.
+The footer is audited at the end of the Form, with Log Out and the version
+link asserted hittable, before a fresh launch audits the other Settings screens.
+Two precisely bounded iOS 27 audit artifacts remain documented in the handlers:
+
+- The decorative footer separator is reported as "Contrast failed" even with
+  `accessibilityHidden(true)` and measured 10.30:1 foreground/background contrast.
+  Only `.contrast` for identifier `settings.footerSeparator` and label `·` is
+  excluded. It conveys no information and is also exempt under
+  [WCAG's decorative-text rule](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+  Neither footer link nor any other text is excluded.
+- At the bottom of the Form, XCTest reads **Use Location and Time** through the
+  glass navigation bar: its label spans y=113.5...133.8, while the bar spans
+  y=78...132. The footer-only handler requires that exact static-text label,
+  `.contrast`, and its center inside the Settings navigation bar. Its unobscured
+  contrast is still audited in the initial Settings view. Screen-coordinate
+  comparison follows the documented
+  [`XCUIElementAttributes.frame`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/frame)
+  contract, also verified in the installed SDK.
+
+Simulator MCP observations also confirmed the button remains readable and
+unclipped at the largest accessibility text size in both appearances. This
+installation lacks SimulatorKit's HID support, so a temporary native XCTest
+helper performed the scrolling before MCP captured the screenshots; that helper
+is not part of the suite. No Xcode MCP/preview renderer was available, so the
+affected preview could not be rendered separately from the installed app.
 
 ### Xcode debugger-version diagnostic
 
@@ -194,8 +264,8 @@ launch snapshot, **not** a missing LLDB installation. Apple has not published a
 root-cause/fix for the older `StoreError error 0` message; do not infer corrupted
 DerivedData, an app crash, or a backend problem from those two lines alone.
 
-Check `xcodebuild -version`, `xcrun --find lldb`, and `xcrun lldb --version` (saved
-by the script); ensure `DEVELOPER_DIR`/`xcode-select` select the intended complete
+The script records `xcodebuild -version` and `xcrun --find lldb`; additionally
+check `xcrun lldb --version`. Ensure `DEVELOPER_DIR`/`xcode-select` select the intended complete
 Xcode installation. If those fail, repair/select Xcode before testing. If they
 succeed, inspect the actual test exit status and `.xcresult`, and report a
 reproducing launch log to Apple if needed. Do not delete simulators/preferences,

@@ -148,14 +148,13 @@ budgets are under two minutes for web CI and under ten minutes per iOS lane;
 cold dependency/runtime caches and hosted-runner overhead must be included
 when comparing CI runs, not just the test runner's reported duration.
 For reference, a local Node 24 run on 2026-09-07 completed `npm run check:all`
-in 95 seconds, including all 1,122 unit/component and 42 browser tests. This
-does not establish the hosted-runner budget. The first unsharded hosted run
-took 3m47s including cold setup and deployment (2m32s for verification), down
-from roughly nine minutes. The three-shard hosted run completed in 1m46s
-including setup and preview deployment with dependency/browser caches restored.
-CI overlaps the independent verification lanes and avoids reinstalling browser
-libraries already present in the runner image; compare its end-to-end timing
-rather than just the browser runner's duration.
+in 95 seconds, including all 1,122 unit/component and 42 browser tests. The
+five-shard hosted workflow completed in 1m50s, then 1m55s after clearing its
+`node_modules` and Chromium caches, including setup and preview deployment.
+The previous workflow took roughly nine minutes. npm's download cache was
+not cleared for this comparison. CI overlaps the independent verification
+lanes and avoids reinstalling browser libraries already present in the runner
+image; compare its end-to-end timing rather than just the runner's duration.
 
 | Path | Purpose |
 |------|---------|

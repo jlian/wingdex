@@ -48,9 +48,6 @@ permissions:
 # extra RAM; use isolated ARM lanes rather than disabling system services.
 env:
   DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
-  # The compact 2x display reduces software rendering and exercises tight
-  # layouts. Local runs still default to the larger iPhone 17 Pro.
-  IOS_TEST_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation
 
 jobs:
   plan:
