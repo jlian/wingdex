@@ -347,7 +347,7 @@ class BirdIdFlowUITestCase: XCTestCase {
             "UI test data setup did not finish"
         )
         XCTAssertTrue(complete.exists || failed.exists, "UI test data setup reported an unknown outcome")
-        XCTAssertFalse(failed.exists, "UI test data setup failed")
+        XCTAssertFalse(failed.exists, "UI test data setup failed: \(failed.value as? String ?? "unknown error")")
     }
 
     func waitForOutingReview(

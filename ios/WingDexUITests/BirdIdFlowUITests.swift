@@ -95,6 +95,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             "--ui-test-reset-share-store", "--ui-test-stage-share",
         ]
         app.launch()
+        waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
         app.terminate()
         app.launchArguments = [
@@ -112,6 +113,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             "--ui-test-reset-share-store", "--ui-test-stage-share-after-launch",
         ]
         app.launch()
+        waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Home"].existsOrWait(timeout: 15))
         XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
     }
@@ -123,17 +125,9 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             "--ui-test-reset-share-store", "--ui-test-stage-share",
         ]
         app.launch()
+        waitForDataSetup(in: app)
         let alert = app.alerts["Could Not Continue"]
-        let presented = alert.existsOrWait(timeout: 15)
-        if !presented {
-            let screenshot = XCTAttachment(screenshot: app.screenshot())
-            screenshot.lifetime = .keepAlways
-            add(screenshot)
-            let hierarchy = XCTAttachment(string: app.debugDescription)
-            hierarchy.lifetime = .keepAlways
-            add(hierarchy)
-        }
-        XCTAssertTrue(presented)
+        XCTAssertTrue(alert.existsOrWait(timeout: 15), app.debugDescription)
         XCTAssertTrue(alert.buttons["Retry"].exists)
         alert.buttons["Close Upload"].tap()
         XCTAssertTrue(alert.disappearsOrWait(timeout: 5))

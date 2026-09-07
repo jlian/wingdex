@@ -597,6 +597,7 @@ struct MainTabView: View {
     private let uiTestObservesShareQueue = ProcessInfo.processInfo.arguments.contains(
       "--ui-test-observe-share-queue")
     @State private var uiTestDataSetupIdentifier = "ui-test.dataSetupPending"
+    @State private var uiTestDataSetupError = ""
     @State private var uiTestGeocodingCancellationAcknowledged = false
     #else
     private let uiTestForcesSettings = false
@@ -647,7 +648,7 @@ struct MainTabView: View {
         .accessibilityValue(
             uiTestGeocodingCancellationAcknowledged
                 ? "geocodingCancellationAcknowledged"
-                : ""
+                : uiTestDataSetupError
         )
         #endif
         .onChange(of: addPhotosVM.currentStep) {
@@ -746,6 +747,8 @@ struct MainTabView: View {
                 }
                 uiTestDataSetupIdentifier = "ui-test.dataSetupComplete"
             } catch {
+                uiTestDataSetupError = error.localizedDescription
+                appLog.error("UI test fixture setup failed: \(error.localizedDescription, privacy: .public)")
                 uiTestDataSetupIdentifier = "ui-test.dataSetupFailed"
             }
             #endif
@@ -973,6 +976,12 @@ struct MainTabView: View {
 
     private func scheduleIncomingShareImport() {
         #if DEBUG
+        // Launch/identity events must not inspect the queue while test fixtures
+        // are resetting or staging it. The setup task schedules import afterward.
+        if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1",
+            ["ui-test.dataSetupPending", "ui-test.dataSetupFailed"].contains(uiTestDataSetupIdentifier) {
+            return
+        }
         if uiTestObservesShareQueue {
             uiTestDataSetupIdentifier = "ui-test.shareQueuePending"
         }
