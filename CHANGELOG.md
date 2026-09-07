@@ -1,3 +1,10 @@
+## [1.31.2](https://github.com/jlian/wingdex/compare/v1.31.1...v1.31.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* **Outings:** preserve outing-local capture times ([f4f5481](https://github.com/jlian/wingdex/commit/f4f54815452ab2165924f2e840823ce1c9a91e8c)), closes [#404](https://github.com/jlian/wingdex/issues/404)
+
 ## [1.31.1](https://github.com/jlian/wingdex/compare/v1.31.0...v1.31.1) (2026-09-07)
 
 
