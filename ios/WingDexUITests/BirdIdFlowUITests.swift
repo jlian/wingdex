@@ -81,7 +81,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let searchField = app.searchFields.firstMatch
         searchField.typeText("Manual Park")
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
         manualButton.tap()
         let adjustLocation = app.buttons["outing.adjustLocation"]
         XCTAssertEqual(locationValue(adjustLocation), "Manual Park")
@@ -151,7 +151,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         openLocationPicker(in: app)
         setLocationQuery("My Birding Spot", in: app)
         let manual = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manual.existsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(manual, in: app))
         manual.tap()
         XCTAssertEqual(locationValue(adjustLocation), "My Birding Spot")
         let manualMapPreview = mapPreviewElement(in: app)
@@ -213,7 +213,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             XCTAssertTrue(app.buttons["outing.currentLocationCancel"].existsOrWait(timeout: 5))
             setLocationQuery("Manual Park", in: app)
             let manualButton = app.buttons["outing.useEnteredName"]
-            XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+            XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
             manualButton.tap()
             let adjustLocation = app.buttons["outing.adjustLocation"]
             XCTAssertEqual(locationValue(adjustLocation), "Manual Park")
@@ -699,7 +699,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
         manualButton.tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(
@@ -744,7 +744,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         openLocationPicker(in: app)
         setLocationQuery("Manual Test Location", in: app)
         let manualButton = app.buttons["outing.useEnteredName"]
-        XCTAssertTrue(manualButton.existsOrWait(timeout: 5))
+        XCTAssertTrue(scrollUntilVisible(manualButton, in: app))
         manualButton.tap()
         let manualLocation = app.buttons.matching(identifier: "outing.adjustLocation").matching(
             NSPredicate(

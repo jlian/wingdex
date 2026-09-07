@@ -31,7 +31,9 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         secondPage.swipeLeft()
         XCTAssertTrue(app.navigationBars["Photo 3 of 3"].waitForExistence(timeout: 5))
         capture(app, "Photo-sheet-swiped-third")
-        app.swipeRight()
+        app.images.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "outing.photoPage.")
+        ).firstMatch.swipeRight()
         XCTAssertTrue(app.navigationBars["Photo 2 of 3"].waitForExistence(timeout: 5))
         app.buttons["outing.photosClose"].tap()
         XCTAssertTrue(location.waitForExistence(timeout: 5))

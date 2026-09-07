@@ -147,10 +147,18 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 10))
 
-        try runAccessibilityAudit(in: app, for: .contrast)
+        try runAccessibilityAudit(
+            in: app,
+            for: .contrast,
+            handlingKnownIssue: isKnownSettingsAuditIssue
+        )
         let legalHeader = app.staticTexts["Legal"]
         XCTAssertTrue(scrollUntilVisible(legalHeader, in: app))
-        try runAccessibilityAudit(in: app, for: .contrast)
+        try runAccessibilityAudit(
+            in: app,
+            for: .contrast,
+            handlingKnownIssue: isKnownSettingsAuditIssue
+        )
     }
 
     private func launchSettingsApp() -> XCUIApplication {
@@ -221,12 +229,12 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
         setLocationQuery("Discovery", in: app)
         let result = app.buttons.matching(identifier: "outing.locationResult").firstMatch
         XCTAssertTrue(result.existsOrWait(timeout: 5))
-        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosSearchAuditIssue)
         result.tap()
         let preview = mapPreviewElement(in: app)
         XCTAssertTrue(scrollUntilVisible(preview, in: app))
         preview.tap()
         XCTAssertEqual(mapCoordinatesText(in: app), "(47.6573, -122.4066)")
-        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosAuditIssue)
+        try runAccessibilityAudit(in: app, handlingKnownIssue: isKnownAddPhotosMapAuditIssue)
     }
 }

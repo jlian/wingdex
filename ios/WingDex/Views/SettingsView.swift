@@ -429,6 +429,7 @@ struct SettingsView: View {
             Text("Camera")
         } footer: {
             Text("Automatically saves photos you take in WingDex to Photos, even if you cancel identification. Photos chosen from your library aren't copied.")
+                .foregroundStyle(Color.mutedText)
         }
         .headerProminence(.increased)
     }

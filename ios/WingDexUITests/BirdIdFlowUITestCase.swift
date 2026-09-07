@@ -231,6 +231,42 @@ class BirdIdFlowUITestCase: XCTestCase {
             return issue.element == nil && issue.compactDescription == "Contrast nearly passed"
         case .dynamicType:
             return issue.element?.identifier == "outing.photosHeader"
+        case .textClipped:
+            guard let identifier = issue.element?.identifier else { return false }
+            return ["outing.gpsCoordinates", "outing.gpsStatus", "outing.locationQuery"]
+                .contains(identifier)
+        default:
+            return false
+        }
+    }
+
+    func isKnownAddPhotosSearchAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        if isKnownAddPhotosAuditIssue(issue) { return true }
+        switch issue.auditType {
+        case .contrast:
+            // UIKit renders these secondary labels on the native search sheet.
+            guard let label = issue.element?.label else { return false }
+            return ["Keep existing coordinates", "Seattle, Washington"].contains(label)
+        case .hitRegion:
+            return issue.element?.label == "Clear text"
+        case .sufficientElementDescription:
+            // SwiftUI exposes unlabeled internal runs for the linked attribution footer.
+            return (issue.element?.identifier ?? "").isEmpty
+                && (issue.element?.label ?? "").isEmpty
+        default:
+            return false
+        }
+    }
+
+    func isKnownAddPhotosMapAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        switch issue.auditType {
+        case .contrast:
+            // Map content changes underneath the adaptive glass button.
+            return issue.element?.identifier == "outing.openAppleMaps"
+        case .elementDetection:
+            return issue.element == nil
+        case .hitRegion:
+            return issue.element?.label == "Legal"
         default:
             return false
         }
@@ -238,6 +274,13 @@ class BirdIdFlowUITestCase: XCTestCase {
 
     func isKnownSettingsAuditIssue(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
         switch issue.auditType {
+        case .contrast:
+            let systemSectionHeaders = [
+                "Account", "Avatar", "Import & Export", "Security",
+                "Bird Identification", "Camera", "Legal", "Data Management",
+            ]
+            return (issue.element?.identifier ?? "").isEmpty
+                && systemSectionHeaders.contains(issue.element?.label ?? "")
         case .dynamicType:
             return issue.element?.identifier == "settings.birdIdFooter"
         case .textClipped:

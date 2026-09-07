@@ -101,6 +101,7 @@ struct OutingReviewView: View {
                     .listRowSeparator(.hidden)
             } header: {
                 Text("Location")
+                    .foregroundStyle(Color.foregroundText)
                     .accessibilityIdentifier("outing.locationHeader")
             } footer: {
                 Text("Powered by [Geoapify](https://www.geoapify.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright)")
@@ -115,6 +116,7 @@ struct OutingReviewView: View {
                     .frame(height: 150)
             } header: {
                 Text("Photos (\(cluster?.photos.count ?? 0))")
+                    .foregroundStyle(Color.foregroundText)
                     .accessibilityIdentifier("outing.photosHeader")
             }
         }

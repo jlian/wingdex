@@ -114,6 +114,7 @@ struct OutingLocationSearchView: View {
                 .accessibilityIdentifier("outing.currentSelectionRow")
             } header: {
                 Text("Current Selection")
+                    .foregroundStyle(Color.foregroundText)
             }
         }
 
@@ -201,6 +202,7 @@ struct OutingLocationSearchView: View {
                     Text(reviewModel.sourceSuggestion?.source == .currentLocation
                          ? "Near your current location"
                          : "Near your photos")
+                        .foregroundStyle(Color.foregroundText)
                 }
             }
         }
@@ -300,6 +302,7 @@ struct OutingLocationSearchView: View {
                 }
             } header: {
                 Text("Search Results")
+                    .foregroundStyle(Color.foregroundText)
             }
 
         case .empty(let query):

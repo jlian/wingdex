@@ -199,8 +199,11 @@ struct PhotoReviewSheet: View {
 
     var body: some View {
         TabView(selection: $selectedPhotoID) {
-            ForEach(photos) { photo in
-                PhotoReviewPage(photo: photo)
+            ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
+                PhotoReviewPage(
+                    photo: photo,
+                    accessibilityLabel: "Photo \(index + 1) of \(photos.count)"
+                )
                     .padding(.bottom, photos.count > 1 ? 36 : 0)
                     .tag(photo.id)
             }
@@ -222,6 +225,7 @@ struct PhotoReviewSheet: View {
 
 private struct PhotoReviewPage: View {
     let photo: ProcessedPhoto
+    let accessibilityLabel: String
     @State private var image: UIImage?
     @State private var failed = false
     private let log = Logger(subsystem: Config.bundleID, category: "PhotoReview")
@@ -232,7 +236,7 @@ private struct PhotoReviewPage: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .accessibilityLabel(photo.fileName)
+                    .accessibilityLabel(accessibilityLabel)
                     .accessibilityIdentifier("outing.photoPage.\(photo.id)")
             } else if failed {
                 ContentUnavailableView("Could Not Open Photo", systemImage: "photo", description: Text("The original photo could not be read."))
