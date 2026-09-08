@@ -473,4 +473,31 @@ final class AddPhotosViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.currentOutingStartTime, "2026-02-01T23:00:00-10:00")
         await viewModel.cancelSession()
     }
+
+    func testSkippedPhotosAreExcludedFromPhotoMetadataPayload() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos = ["p0", "p1"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [PhotoCluster(
+            photos: photos, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "outing-skip-test", locationName: "Test Park",
+            lat: nil, lon: nil, outingOverridesPhotoGPS: false
+        )
+        // Confirm first photo
+        viewModel.confirmCurrentPhoto(species: "Robin", confidence: 0.9, status: .confirmed, count: 1)
+        // Skip second photo
+        viewModel.skipCurrentPhoto()
+
+        let payloads = viewModel.photoMetadata(outingId: "outing-skip-test")
+        XCTAssertEqual(payloads.map(\.id), ["p0"])
+
+        await viewModel.cancelSession()
+    }
 }

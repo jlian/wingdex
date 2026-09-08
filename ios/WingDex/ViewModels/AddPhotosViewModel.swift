@@ -843,9 +843,12 @@ final class AddPhotosViewModel {
         }
     }
 
-    private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
+    func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
         let fallbackTimeZone = pendingOuting.flatMap { DateFormatting.storedTimeZone($0.startTime) } ?? .current
-        return clusterPhotos.map { photo in
+        let activePhotos = clusterPhotos.filter { photo in
+            !photoResults.contains { $0.photoId == photo.id && $0.status == .rejected }
+        }
+        return activePhotos.map { photo in
             DataService.PhotoPayload(
                 id: photo.id,
                 outingId: outingId,
