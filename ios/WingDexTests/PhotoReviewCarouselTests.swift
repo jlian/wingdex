@@ -77,4 +77,29 @@ final class PhotoReviewCarouselTests: XCTestCase {
         XCTAssertEqual(max(image.size.width, image.size.height), 512)
         XCTAssertEqual(min(image.size.width, image.size.height), 384)
     }
+
+    func testPhotoReviewSheetImageCacheStoresAndEvictsByDecodedByteCost() {
+        let cache = PhotoReviewSheetImageCache(totalCostLimit: 2_000, countLimit: 10)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 20), format: format)
+        let image1 = renderer.image { ctx in
+            ctx.cgContext.setFillColor(UIColor.red.cgColor)
+            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        }
+        let image2 = renderer.image { ctx in
+            ctx.cgContext.setFillColor(UIColor.blue.cgColor)
+            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        }
+
+        let url1 = URL(fileURLWithPath: "/test/1.jpg")
+        let url2 = URL(fileURLWithPath: "/test/2.jpg")
+
+        cache.setImage(image1, for: url1)
+        XCTAssertNotNil(cache.image(for: url1))
+
+        cache.setImage(image2, for: url2)
+        XCTAssertNotNil(cache.image(for: url2))
+        XCTAssertNil(cache.image(for: url1))
+    }
 }
