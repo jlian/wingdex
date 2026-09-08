@@ -213,9 +213,8 @@ final class IncomingShareStoreTests: XCTestCase {
             in: fixture.container
         )
 
-        let snapshot = try XCTUnwrap(
-            try await IncomingShareStore.oldestPendingShare(in: fixture.container)
-        )
+        let pending = try await IncomingShareStore.oldestPendingShare(in: fixture.container)
+        let snapshot = try XCTUnwrap(pending)
         XCTAssertEqual(snapshot.id, id)
         XCTAssertEqual(snapshot.photos.count, 11)
     }
