@@ -16,8 +16,7 @@ final class PhotoReviewSheetImageCache: @unchecked Sendable {
     }
 
     func setImage(_ image: UIImage, for url: URL) {
-        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 1
-        cache.setObject(image, forKey: url as NSURL, cost: cost)
+        cache.setObject(image, forKey: url as NSURL, cost: image.decodedByteCost)
     }
 }
 
@@ -46,8 +45,9 @@ final class PhotoReviewThumbnailCache: @unchecked Sendable {
     static let shared = PhotoReviewThumbnailCache()
     private let cache = NSCache<NSData, UIImage>()
 
-    private init() {
-        cache.countLimit = 100
+    init(totalCostLimit: Int = 32 * 1_024 * 1_024, countLimit: Int = 100) {
+        cache.totalCostLimit = totalCostLimit
+        cache.countLimit = countLimit
     }
 
     func image(for data: Data) -> UIImage? {
@@ -55,7 +55,7 @@ final class PhotoReviewThumbnailCache: @unchecked Sendable {
     }
 
     func setImage(_ image: UIImage, for data: Data) {
-        cache.setObject(image, forKey: data as NSData)
+        cache.setObject(image, forKey: data as NSData, cost: image.decodedByteCost)
     }
 }
 

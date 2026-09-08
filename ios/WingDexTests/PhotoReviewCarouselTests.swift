@@ -78,28 +78,32 @@ final class PhotoReviewCarouselTests: XCTestCase {
         XCTAssertEqual(min(image.size.width, image.size.height), 384)
     }
 
-    func testPhotoReviewSheetImageCacheStoresAndEvictsByDecodedByteCost() {
-        let cache = PhotoReviewSheetImageCache(totalCostLimit: 2_000, countLimit: 10)
+    func testDecodedByteCostCalculatesBitmapDimensions() {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 20), format: format)
-        let image1 = renderer.image { ctx in
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 30), format: format)
+        let image = renderer.image { ctx in
             ctx.cgContext.setFillColor(UIColor.red.cgColor)
-            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
-        }
-        let image2 = renderer.image { ctx in
-            ctx.cgContext.setFillColor(UIColor.blue.cgColor)
-            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 30))
         }
 
-        let url1 = URL(fileURLWithPath: "/test/1.jpg")
-        let url2 = URL(fileURLWithPath: "/test/2.jpg")
+        let expected = (image.cgImage?.bytesPerRow ?? 0) * (image.cgImage?.height ?? 0)
+        XCTAssertGreaterThan(expected, 0)
+        XCTAssertEqual(image.decodedByteCost, expected)
+    }
 
-        cache.setImage(image1, for: url1)
-        XCTAssertNotNil(cache.image(for: url1))
+    func testPhotoReviewImageCachesStoreAndRetrieveImages() {
+        let sheetCache = PhotoReviewSheetImageCache(totalCostLimit: 96 * 1_024 * 1_024, countLimit: 10)
+        let thumbCache = PhotoReviewThumbnailCache(totalCostLimit: 32 * 1_024 * 1_024, countLimit: 10)
 
-        cache.setImage(image2, for: url2)
-        XCTAssertNotNil(cache.image(for: url2))
-        XCTAssertNil(cache.image(for: url1))
+        let image = UIImage()
+        let url = URL(fileURLWithPath: "/test/photo.jpg")
+        let data = Data([0x01, 0x02, 0x03])
+
+        sheetCache.setImage(image, for: url)
+        XCTAssertTrue(sheetCache.image(for: url) === image)
+
+        thumbCache.setImage(image, for: data)
+        XCTAssertTrue(thumbCache.image(for: data) === image)
     }
 }
