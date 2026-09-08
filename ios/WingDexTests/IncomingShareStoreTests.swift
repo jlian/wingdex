@@ -200,6 +200,25 @@ final class IncomingShareStoreTests: XCTestCase {
         XCTAssertEqual(snapshot.photos.count, 500)
     }
 
+    func testStagesPhotosWhoseCombinedSizeExceeds512MB() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let photo = try fixture.sparseSource(
+            name: "photo.jpg",
+            byteCount: IncomingShareStore.maximumPhotoBytes
+        )
+
+        let id = try await IncomingShareStore.stage(
+            fileURLs: Array(repeating: photo, count: 11),
+            in: fixture.container
+        )
+
+        let pending = try await IncomingShareStore.oldestPendingShare(in: fixture.container)
+        let snapshot = try XCTUnwrap(pending)
+        XCTAssertEqual(snapshot.id, id)
+        XCTAssertEqual(snapshot.photos.count, 11)
+    }
+
     func testCancelledStageDoesNotPublishBatch() async throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
@@ -309,6 +328,15 @@ private struct Fixture {
     func source(name: String, data: Data) throws -> URL {
         let url = sources.appendingPathComponent(name)
         try data.write(to: url)
+        return url
+    }
+
+    func sparseSource(name: String, byteCount: Int) throws -> URL {
+        let url = sources.appendingPathComponent(name)
+        XCTAssertTrue(FileManager.default.createFile(atPath: url.path, contents: nil))
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(byteCount))
+        try handle.close()
         return url
     }
 

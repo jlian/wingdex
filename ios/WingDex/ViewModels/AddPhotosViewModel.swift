@@ -19,7 +19,6 @@ private struct PhotoPreparationOutcome: Sendable {
 private final class PhotoPreparationBatch: @unchecked Sendable {
     private let lock = NSLock()
     private var ownedURLs: Set<URL> = []
-    private var preparedBytes = 0
 
     func registerOwned(_ url: URL) {
         _ = lock.withLock { ownedURLs.insert(url) }
@@ -27,16 +26,6 @@ private final class PhotoPreparationBatch: @unchecked Sendable {
 
     func unregisterOwned(_ url: URL) {
         _ = lock.withLock { ownedURLs.remove(url) }
-    }
-
-    func reserve(_ byteCount: Int) -> Bool {
-        lock.withLock {
-            guard byteCount <= IncomingShareStore.maximumTotalBytes - preparedBytes else {
-                return false
-            }
-            preparedBytes += byteCount
-            return true
-        }
     }
 
     func cleanupOwnedFiles() {
@@ -392,16 +381,6 @@ final class AddPhotosViewModel {
             }
         }
 
-        let preparedBytes = candidatePhotos.reduce(0) { $0 + $1.byteCount }
-        guard preparedBytes <= IncomingShareStore.maximumTotalBytes else {
-            PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))
-            await releaseIncomingShare()
-            self.error = .message(IncomingShareError.shareTooLarge.localizedDescription)
-            currentStep = .selectPhotos
-            isProcessing = false
-            return
-        }
-
         processingMessage = "Preparing your WingDex..."
         let sessionID: UUID
         do {
@@ -442,7 +421,6 @@ final class AddPhotosViewModel {
             return
         }
 
-        var totalPreparedBytes = candidatePhotos.reduce(0) { $0 + $1.byteCount }
         for camera in cameraPhotos {
             let id = camera.id.uuidString
             do {
@@ -466,16 +444,6 @@ final class AddPhotosViewModel {
                     byteCount: prepared.byteCount,
                     captureTime: camera.captureTime
                 ))
-                guard prepared.byteCount <= IncomingShareStore.maximumTotalBytes - totalPreparedBytes else {
-                    PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))
-                    await releaseIncomingShare()
-                    cameraPhotos = []
-                    error = .message(IncomingShareError.shareTooLarge.localizedDescription)
-                    currentStep = .selectPhotos
-                    isProcessing = false
-                    return
-                }
-                totalPreparedBytes += prepared.byteCount
             } catch {
                 PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))
                 await releaseIncomingShare()
@@ -500,14 +468,6 @@ final class AddPhotosViewModel {
             return
         }
 
-        guard totalPreparedBytes <= IncomingShareStore.maximumTotalBytes else {
-            PhotoFlowStore.remove(candidatePhotos.filter(\.cleanupOriginal).map(\.originalURL))
-            await releaseIncomingShare()
-            error = .message(IncomingShareError.shareTooLarge.localizedDescription)
-            currentStep = .selectPhotos
-            isProcessing = false
-            return
-        }
         for photo in candidatePhotos {
             appendByDuplicateStatus(photo, newPhotos: &newPhotos, duplicatePhotos: &duplicatePhotos)
         }
@@ -616,9 +576,6 @@ final class AddPhotosViewModel {
                     batch.unregisterOwned(imported.url)
                     return PhotoPreparationOutcome(index: index, photo: nil)
                 }
-                guard batch.reserve(photo.byteCount) else {
-                    throw IncomingShareError.shareTooLarge
-                }
                 return PhotoPreparationOutcome(
                     index: index,
                     photo: photo
@@ -629,8 +586,6 @@ final class AddPhotosViewModel {
                     batch.unregisterOwned(importedURL)
                 }
                 throw CancellationError()
-            } catch IncomingShareError.shareTooLarge {
-                throw IncomingShareError.shareTooLarge
             } catch let error as IncomingShareError {
                 throw error
             } catch {
@@ -659,14 +614,9 @@ final class AddPhotosViewModel {
                         photo: nil
                     )
                 }
-                guard batch.reserve(photo.byteCount) else {
-                    throw IncomingShareError.shareTooLarge
-                }
                 return PhotoPreparationOutcome(index: index, photo: photo)
             } catch is CancellationError {
                 throw CancellationError()
-            } catch IncomingShareError.shareTooLarge {
-                throw IncomingShareError.shareTooLarge
             } catch {
         log.error(
           "Shared photo read failed after retry: \(sharedPhoto.fileName, privacy: .private(mask: .hash))"

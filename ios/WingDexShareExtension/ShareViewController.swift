@@ -81,15 +81,10 @@ final class ShareViewController: UIViewController {
                 }
             }
 
-            var totalBytes = 0
             for (index, provider) in providers.enumerated() {
                 try Task.checkCancellation()
-                let copy = try await copyTemporaryFile(
-                    from: provider,
-                    remainingBytes: IncomingShareStore.maximumTotalBytes - totalBytes
-                )
-                temporaryFiles.append(copy.url)
-                totalBytes += copy.size
+                let copy = try await copyTemporaryFile(from: provider)
+                temporaryFiles.append(copy)
                 progressView.progress = Float(index + 1) / Float(providers.count)
                 statusLabel.text = "Preparing photo \(index + 1) of \(providers.count)..."
             }
@@ -158,9 +153,8 @@ final class ShareViewController: UIViewController {
     }
 
     private func copyTemporaryFile(
-        from provider: NSItemProvider,
-        remainingBytes: Int
-    ) async throws -> (url: URL, size: Int) {
+        from provider: NSItemProvider
+    ) async throws -> URL {
         let loadState = FileRepresentationLoadState()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -177,9 +171,6 @@ final class ShareViewController: UIViewController {
                         guard sourceBytes <= IncomingShareStore.maximumPhotoBytes else {
                             throw IncomingShareError.photoTooLarge
                         }
-                        guard sourceBytes <= remainingBytes else {
-                            throw IncomingShareError.shareTooLarge
-                        }
                         let fileExtension = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
                         let destination = FileManager.default.temporaryDirectory
                             .appendingPathComponent("wingdex-share-\(UUID().uuidString).\(fileExtension)")
@@ -191,10 +182,7 @@ final class ShareViewController: UIViewController {
                             guard copiedBytes <= IncomingShareStore.maximumPhotoBytes else {
                                 throw IncomingShareError.photoTooLarge
                             }
-                            guard copiedBytes <= remainingBytes else {
-                                throw IncomingShareError.shareTooLarge
-                            }
-                            if !loadState.complete(.success((destination, copiedBytes))) {
+                            if !loadState.complete(.success(destination)) {
                                 try? FileManager.default.removeItem(at: destination)
                             }
                         } catch {
@@ -241,7 +229,7 @@ final class ShareViewController: UIViewController {
 }
 
 private final class FileRepresentationLoadState: @unchecked Sendable {
-    typealias Output = (url: URL, size: Int)
+    typealias Output = URL
 
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Output, Error>?

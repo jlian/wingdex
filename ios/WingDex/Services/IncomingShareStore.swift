@@ -13,7 +13,6 @@ struct IncomingShareSnapshot: Equatable, Sendable {
 
 enum IncomingShareStore {
     static let appGroupIdentifier = "group.app.wingdex"
-    static let maximumTotalBytes = 512 * 1_024 * 1_024
     static let maximumPhotoBytes = 50 * 1_024 * 1_024
 
     private static let queueDirectoryName = "incoming-shares-v2"
@@ -235,7 +234,6 @@ enum IncomingShareStore {
             else { throw IncomingShareError.stagingFailed }
             guard bytes <= maximumPhotoBytes else { throw IncomingShareError.photoTooLarge }
             totalBytes += bytes
-            guard totalBytes <= maximumTotalBytes else { throw IncomingShareError.shareTooLarge }
             return bytes
         }
 
@@ -657,7 +655,6 @@ enum IncomingShareError: LocalizedError, Equatable {
     case containerUnavailable
     case noPhotos
     case photoTooLarge
-    case shareTooLarge
     case insufficientStorage
     case stagingFailed
     case noLongerPending
@@ -670,8 +667,6 @@ enum IncomingShareError: LocalizedError, Equatable {
             "No photos were included in this share."
         case .photoTooLarge:
             "Each shared photo must be smaller than 50 MB."
-        case .shareTooLarge:
-            "The selected photos total more than 512 MB. Share a smaller batch."
         case .insufficientStorage:
             "There is not enough free storage to prepare these photos."
         case .stagingFailed:

@@ -132,28 +132,6 @@ final class AddPhotosViewModelTests: XCTestCase {
         }
     }
 
-    func testShareSizeErrorKeepsFlowPresentedUntilAcknowledged() {
-        let viewModel = AddPhotosViewModel()
-        viewModel.currentStep = .selectPhotos
-        viewModel.error = .message(IncomingShareError.shareTooLarge.localizedDescription)
-
-        XCTAssertFalse(AddPhotosFlow.shouldDismissAfterReturningToSelectPhotos(
-            viewModel.currentStep,
-            hasClusters: !viewModel.clusters.isEmpty,
-            showDuplicateConfirm: viewModel.showDuplicateConfirm,
-            hasError: viewModel.error != nil
-        ))
-
-        viewModel.error = nil
-
-        XCTAssertTrue(AddPhotosFlow.shouldDismissAfterReturningToSelectPhotos(
-            viewModel.currentStep,
-            hasClusters: !viewModel.clusters.isEmpty,
-            showDuplicateConfirm: viewModel.showDuplicateConfirm,
-            hasError: viewModel.error != nil
-        ))
-    }
-
     func testUndecodablePhotoOffersExportOrSkipWithoutRetry() async throws {
         let (viewModel, _) = try await configuredModel()
         let fileURL = try PhotoFlowStore.writeCameraData(Data("not an image".utf8))
