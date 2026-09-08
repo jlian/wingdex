@@ -64,7 +64,7 @@ struct AddPhotosFlow: View {
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if outingDestination == nil {
+            if outingDestination == nil && viewModel.currentStep != .manualCrop {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         if needsCloseConfirmation {
@@ -77,6 +77,7 @@ struct AddPhotosFlow: View {
                     }
                     .disabled(viewModel.currentStep == .extracting)
                     .accessibilityLabel("Close")
+                    .accessibilityIdentifier(viewModel.currentStep == .perPhotoConfirm ? "confirm.close" : "flow.close")
                 }
             }
         }
@@ -232,7 +233,7 @@ struct AddPhotosFlow: View {
       return
         "Identifying photo \(viewModel.currentPhotoIndex + 1) of \(viewModel.clusterPhotos.count)..."
         case .perPhotoConfirm:
-            return "Photo \(viewModel.currentPhotoIndex + 1) of \(viewModel.clusterPhotos.count)"
+            return ""
         case .manualCrop:
             return "Crop Photo \(viewModel.currentPhotoIndex + 1)"
         case .saving:
@@ -307,7 +308,6 @@ struct AddPhotosFlow: View {
     // MARK: - Manual Crop Destination
 
     /// Shows the CropView for the current photo, passing the AI crop box if available.
-    /// Displays a context-specific reason (multi-bird, no detection, or manual re-crop).
     @ViewBuilder
     private var manualCropDestination: some View {
         if viewModel.currentPhoto != nil,
@@ -318,12 +318,8 @@ struct AddPhotosFlow: View {
                 // Nil seeds CropView's centred default. The local classifier
                 // localises nothing, so there is never a suggestion to seed it.
                 initialCropBox: nil,
-                reason: viewModel.cropPromptContext.reasonText,
                 onBack: {
                     viewModel.cancelCrop()
-                },
-                onSkip: {
-                    viewModel.skipCurrentPhoto()
                 },
                 onApply: { cropResult in
                     // Generate cropped image data from the crop box

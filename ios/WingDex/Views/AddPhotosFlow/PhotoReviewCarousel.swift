@@ -2,7 +2,32 @@ import SwiftUI
 import UIKit
 import os
 
+final class PhotoReviewSheetImageCache: @unchecked Sendable {
+    static let shared = PhotoReviewSheetImageCache()
+    private let cache = NSCache<NSURL, UIImage>()
+
+    private init() {
+        cache.countLimit = 30
+    }
+
+    func image(for url: URL) -> UIImage? {
+        cache.object(forKey: url as NSURL)
+    }
+
+    func setImage(_ image: UIImage, for url: URL) {
+        cache.setObject(image, forKey: url as NSURL)
+    }
+}
+
 enum PhotoReviewImageLoader {
+    static func cachedImage(for url: URL) -> UIImage? {
+        PhotoReviewSheetImageCache.shared.image(for: url)
+    }
+
+    static func setCachedImage(_ image: UIImage, for url: URL) {
+        PhotoReviewSheetImageCache.shared.setImage(image, for: url)
+    }
+
     static func loadData(at url: URL) -> Data? {
         loadData(at: url, using: PhotoService.generateThumbnail)
     }
@@ -12,6 +37,23 @@ enum PhotoReviewImageLoader {
         using generateThumbnail: (URL, CGFloat) -> Data?
     ) -> Data? {
         generateThumbnail(url, 2_048)
+    }
+}
+
+final class PhotoReviewThumbnailCache: @unchecked Sendable {
+    static let shared = PhotoReviewThumbnailCache()
+    private let cache = NSCache<NSData, UIImage>()
+
+    private init() {
+        cache.countLimit = 100
+    }
+
+    func image(for data: Data) -> UIImage? {
+        cache.object(forKey: data as NSData)
+    }
+
+    func setImage(_ image: UIImage, for data: Data) {
+        cache.setObject(image, forKey: data as NSData)
     }
 }
 
@@ -75,12 +117,7 @@ struct PhotoReviewCarousel: UIViewRepresentable {
                 preconditionFailure("Unexpected photo review cell type")
             }
             let photo = photos[indexPath.item]
-            cell.contentConfiguration = UIHostingConfiguration {
-                PhotoReviewThumbnail(data: photo.thumbnail)
-            }
-            .margins(.all, 0)
-            cell.backgroundColor = .clear
-            cell.contentView.backgroundColor = .clear
+            cell.configure(with: photo.thumbnail)
             cell.isAccessibilityElement = true
             cell.accessibilityLabel = "Photo \(indexPath.item + 1) of \(photos.count)"
             cell.accessibilityIdentifier = "outing.photo.\(photo.id)"
@@ -181,6 +218,78 @@ struct PhotoReviewCarousel: UIViewRepresentable {
 @MainActor
 final class PhotoReviewCell: UICollectionViewCell {
     var onAccessibilityActivate: (() -> Void)?
+    private let imageView = UIImageView()
+    private let placeholderView = UIView()
+    private let placeholderIcon = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupViews()
+    }
+
+    private func setupViews() {
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
+
+        placeholderView.backgroundColor = UIColor.secondaryLabel.withAlphaComponent(0.1)
+        placeholderView.layer.cornerRadius = 8
+        placeholderView.layer.cornerCurve = .continuous
+        placeholderView.clipsToBounds = true
+        placeholderView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(placeholderView)
+
+        placeholderIcon.image = UIImage(systemName: "photo")
+        placeholderIcon.tintColor = .tertiaryLabel
+        placeholderIcon.contentMode = .scaleAspectFit
+        placeholderIcon.translatesAutoresizingMaskIntoConstraints = false
+        placeholderView.addSubview(placeholderIcon)
+
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 8
+        imageView.layer.cornerCurve = .continuous
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(imageView)
+
+        NSLayoutConstraint.activate([
+            placeholderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            placeholderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            placeholderView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            placeholderView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+
+            placeholderIcon.centerXAnchor.constraint(equalTo: placeholderView.centerXAnchor),
+            placeholderIcon.centerYAnchor.constraint(equalTo: placeholderView.centerYAnchor),
+            placeholderIcon.widthAnchor.constraint(equalToConstant: 32),
+            placeholderIcon.heightAnchor.constraint(equalToConstant: 32),
+
+            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+    }
+
+    func configure(with thumbnailData: Data) {
+        if let cached = PhotoReviewThumbnailCache.shared.image(for: thumbnailData) {
+            imageView.image = cached
+            imageView.isHidden = false
+            placeholderView.isHidden = true
+        } else if let image = UIImage(data: thumbnailData) {
+            PhotoReviewThumbnailCache.shared.setImage(image, for: thumbnailData)
+            imageView.image = image
+            imageView.isHidden = false
+            placeholderView.isHidden = true
+        } else {
+            imageView.image = nil
+            imageView.isHidden = true
+            placeholderView.isHidden = false
+        }
+    }
 
     override func accessibilityActivate() -> Bool {
         guard let onAccessibilityActivate else { return false }
@@ -192,6 +301,7 @@ final class PhotoReviewCell: UICollectionViewCell {
         super.prepareForReuse()
         onAccessibilityActivate = nil
         accessibilityCustomActions = nil
+        imageView.image = nil
     }
 }
 
@@ -211,17 +321,7 @@ struct PhotoReviewSheet: View {
     }
 
     var body: some View {
-        TabView(selection: $selectedPhotoID) {
-            ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                PhotoReviewPage(
-                    photo: photo,
-                    accessibilityLabel: "Photo \(index + 1) of \(photos.count)"
-                )
-                    .padding(.bottom, photos.count > 1 ? 36 : 0)
-                    .tag(photo.id)
-            }
-        }
-        .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
+        PhotoReviewPager(photos: photos, selectedPhotoID: $selectedPhotoID)
         .background(.black)
         .preferredColorScheme(.dark)
         .navigationTitle(title)
@@ -236,6 +336,87 @@ struct PhotoReviewSheet: View {
     }
 }
 
+private struct PhotoReviewPager: UIViewControllerRepresentable {
+    let photos: [ProcessedPhoto]
+    @Binding var selectedPhotoID: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIViewController(context: Context) -> UIPageViewController {
+        let controller = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
+        controller.view.backgroundColor = .black
+        controller.dataSource = context.coordinator
+        controller.delegate = context.coordinator
+        let index = photos.firstIndex { $0.id == selectedPhotoID } ?? 0
+        if let page = context.coordinator.page(at: index) {
+            controller.setViewControllers([page], direction: .forward, animated: false)
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ controller: UIPageViewController, context: Context) {
+        // UIKit owns the in-flight gesture. Updating the title must not reset its page controllers.
+        context.coordinator.parent = self
+    }
+
+    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+        var parent: PhotoReviewPager
+
+        init(parent: PhotoReviewPager) {
+            self.parent = parent
+        }
+
+        func page(at index: Int) -> UIViewController? {
+            guard parent.photos.indices.contains(index) else { return nil }
+            let page = UIHostingController(rootView: PhotoReviewPage(
+                photo: parent.photos[index],
+                accessibilityLabel: "Photo \(index + 1) of \(parent.photos.count)"
+            ))
+            page.view.backgroundColor = .black
+            page.view.clipsToBounds = true
+            return page
+        }
+
+        private func index(of controller: UIViewController) -> Int? {
+            guard let page = controller as? UIHostingController<PhotoReviewPage> else { return nil }
+            return parent.photos.firstIndex { $0.id == page.rootView.photo.id }
+        }
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController
+        ) -> UIViewController? {
+            guard let index = index(of: viewController) else { return nil }
+            return page(at: index - 1)
+        }
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController
+        ) -> UIViewController? {
+            guard let index = index(of: viewController) else { return nil }
+            return page(at: index + 1)
+        }
+
+        func presentationCount(for pageViewController: UIPageViewController) -> Int {
+            parent.photos.count > 1 ? parent.photos.count : 0
+        }
+
+        func presentationIndex(for pageViewController: UIPageViewController) -> Int {
+            parent.photos.firstIndex { $0.id == parent.selectedPhotoID } ?? 0
+        }
+
+        func pageViewController(
+            _ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
+            previousViewControllers: [UIViewController], transitionCompleted completed: Bool
+        ) {
+            guard completed, let page = pageViewController.viewControllers?.first,
+                  let index = index(of: page) else { return }
+            parent.selectedPhotoID = parent.photos[index].id
+        }
+    }
+}
+
 private struct PhotoReviewPage: View {
     let photo: ProcessedPhoto
     let accessibilityLabel: String
@@ -244,7 +425,7 @@ private struct PhotoReviewPage: View {
     private let log = Logger(subsystem: Config.bundleID, category: "PhotoReview")
 
     var body: some View {
-        Group {
+        ZStack {
             if let image {
                 Image(uiImage: image)
                     .resizable()
@@ -259,6 +440,10 @@ private struct PhotoReviewPage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: photo.id) {
+            if let cached = PhotoReviewImageLoader.cachedImage(for: photo.originalURL) {
+                image = cached
+                return
+            }
             failed = false
             let url = photo.originalURL
             do {
@@ -274,6 +459,7 @@ private struct PhotoReviewPage: View {
                 }
                 try Task.checkCancellation()
                 if let data, let decoded = UIImage(data: data) {
+                    PhotoReviewImageLoader.setCachedImage(decoded, for: url)
                     image = decoded
                 } else {
                     failed = true
@@ -286,29 +472,5 @@ private struct PhotoReviewPage: View {
                 log.error("Could not load photo for review: \(error.localizedDescription)")
             }
         }
-        .onDisappear { image = nil }
-    }
-}
-
-private struct PhotoReviewThumbnail: View {
-    let data: Data
-
-    var body: some View {
-        Group {
-            if let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.secondary.opacity(0.1))
-                    .overlay {
-                        Image(systemName: "photo")
-                            .foregroundStyle(.tertiary)
-                    }
-            }
-        }
-        .frame(width: 150, height: 150)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

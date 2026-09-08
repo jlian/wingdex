@@ -7,30 +7,22 @@ import UIKit
 struct CropView: View {
     let imageData: Data
     let initialCropBox: CropBoxResult?
-    var reason: String = "Crop to one bird."
     let onBack: () -> Void
-    let onSkip: () -> Void
     let onApply: (CropBoxResult) -> Void
 
     @State private var paddedInitialCrop: CropBoxResult
     @State private var currentCrop: CropBoxResult
-    @State private var zoomRatio: CGFloat = 1
-    @State private var viewportController = CropViewportController()
     @State private var cachedImage: UIImage?
 
     init(
         imageData: Data,
         initialCropBox: CropBoxResult?,
-        reason: String = "Crop to one bird.",
         onBack: @escaping () -> Void,
-        onSkip: @escaping () -> Void,
         onApply: @escaping (CropBoxResult) -> Void
     ) {
         self.imageData = imageData
         self.initialCropBox = initialCropBox
-        self.reason = reason
         self.onBack = onBack
-        self.onSkip = onSkip
         self.onApply = onApply
 
         let defaultCrop = CropBoxResult(x: 25, y: 25, width: 50, height: 50)
@@ -67,7 +59,6 @@ struct CropView: View {
                 // Total height including safe area (since we ignoresSafeArea)
                 let totalHeight = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
                 let cropCenterY = totalHeight / 2
-                let cropTop = cropCenterY - squareSide / 2
 
                 ZStack {
                     Color.pageBg
@@ -75,9 +66,7 @@ struct CropView: View {
                     CropScrollView(
                         image: uiImage,
                         initialCrop: paddedInitialCrop,
-                        cropResult: $currentCrop,
-                        zoomRatio: $zoomRatio,
-                        controller: viewportController
+                        cropResult: $currentCrop
                     )
                         .frame(width: squareSide, height: squareSide)
                         .position(x: geo.size.width / 2, y: cropCenterY)
@@ -88,8 +77,8 @@ struct CropView: View {
                             .frame(width: squareSide / 3, height: squareSide / 3)
                             .contentShape(Rectangle())
                             .position(
-                                x: geo.size.width / 2 - squareSide / 3,
-                                y: cropCenterY - squareSide / 3
+                                x: geo.size.width / 2 - squareSide / 6,
+                                y: cropCenterY - squareSide / 6
                             )
                             .allowsHitTesting(false)
                             .accessibilityElement()
@@ -122,21 +111,6 @@ struct CropView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
-                .overlay(alignment: .top) {
-                    ViewThatFits(in: .vertical) {
-                        Text(reason)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 60)
-                            .padding(.bottom, 16)
-                            .allowsHitTesting(false)
-
-                        Color.clear
-                    }
-                    .frame(height: max(cropTop, 0), alignment: .top)
-                }
             } else {
                 Color.pageBg
                     .overlay {
@@ -150,18 +124,16 @@ struct CropView: View {
             cachedImage = normalizedImage(from: imageData)
         }
         .background(Color.clear)
-        .navigationTitle("Crop Bird Photo")
+        .navigationTitle("Crop to One Bird")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar, .bottomBar)
         .toolbarBackground(.visible, for: .navigationBar, .bottomBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
+                Button("Done") {
                     onApply(currentCrop)
-                } label: {
-                    Image(systemName: "checkmark")
                 }
-                .buttonStyle(.borderedProminent)
+                .tint(.primary)
+                .accessibilityIdentifier("crop.done")
                 .disabled(cachedImage == nil)
             }
             ToolbarItemGroup(placement: .bottomBar) {
@@ -170,44 +142,10 @@ struct CropView: View {
                 } label: {
                     Image(systemName: "chevron.left")
                 }
+                .accessibilityLabel("Back")
                 .accessibilityIdentifier("crop.back")
 
                 Spacer()
-
-                Button {
-                    viewportController.zoom(by: 0.8)
-                } label: {
-                    Image(systemName: "minus.magnifyingglass")
-                }
-                .disabled(zoomRatio <= 1.001)
-                .accessibilityLabel("Zoom out")
-                .accessibilityIdentifier("crop.zoomOut")
-
-                Button {
-                    viewportController.zoom(by: 1.25)
-                } label: {
-                    Image(systemName: "plus.magnifyingglass")
-                }
-                .disabled(zoomRatio >= 5.999)
-                .accessibilityLabel("Zoom in")
-                .accessibilityIdentifier("crop.zoomIn")
-
-                Spacer()
-
-                Menu {
-                    Button {
-                        viewportController.reset()
-                    } label: {
-                        Label("Reset Crop", systemImage: "arrow.counterclockwise")
-                    }
-                    Button(role: .destructive) {
-                        onSkip()
-                    } label: {
-                        Label("Skip Photo", systemImage: "forward")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
             }
         }
     }
@@ -222,20 +160,6 @@ struct CropView: View {
         }
     }
 
-}
-
-@MainActor
-private final class CropViewportController {
-    var zoomHandler: ((CGFloat) -> Void)?
-    var resetHandler: (() -> Void)?
-
-    func zoom(by factor: CGFloat) {
-        zoomHandler?(factor)
-    }
-
-    func reset() {
-        resetHandler?()
-    }
 }
 
 struct CropViewportGeometry {
@@ -323,8 +247,6 @@ private struct CropScrollView: UIViewRepresentable {
     let image: UIImage
     let initialCrop: CropBoxResult
     @Binding var cropResult: CropBoxResult
-    @Binding var zoomRatio: CGFloat
-    let controller: CropViewportController
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -348,14 +270,6 @@ private struct CropScrollView: UIViewRepresentable {
             guard let coordinator, let scrollView else { return }
             coordinator.layout(scrollView)
         }
-        controller.zoomHandler = { [weak coordinator = context.coordinator, weak scrollView] factor in
-            guard let coordinator, let scrollView else { return }
-            coordinator.zoom(by: factor, in: scrollView)
-        }
-        controller.resetHandler = { [weak coordinator = context.coordinator, weak scrollView] in
-            guard let coordinator, let scrollView else { return }
-            coordinator.reset(scrollView)
-        }
         return scrollView
     }
 
@@ -371,8 +285,6 @@ private struct CropScrollView: UIViewRepresentable {
     static func dismantleUIView(_ scrollView: CropUIScrollView, coordinator: Coordinator) {
         scrollView.onLayout = nil
         scrollView.delegate = nil
-        coordinator.parent.controller.zoomHandler = nil
-        coordinator.parent.controller.resetHandler = nil
     }
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
@@ -442,41 +354,6 @@ private struct CropScrollView: UIViewRepresentable {
             scrollView.setContentOffset(viewport.contentOffset, animated: false)
         }
 
-        func reset(_ scrollView: UIScrollView) {
-            guard isConfigured else { return }
-            isApplyingViewport = true
-            apply(parent.initialCrop, to: scrollView)
-            isApplyingViewport = false
-            publishViewport(scrollView)
-        }
-
-        func zoom(by factor: CGFloat, in scrollView: UIScrollView) {
-            guard isConfigured else { return }
-            let side = min(scrollView.bounds.width, scrollView.bounds.height)
-            let targetScale = min(
-                max(scrollView.zoomScale * factor, scrollView.minimumZoomScale),
-                scrollView.maximumZoomScale
-            )
-            let center = CGPoint(
-                x: (scrollView.contentOffset.x + side / 2) / scrollView.zoomScale,
-                y: (scrollView.contentOffset.y + side / 2) / scrollView.zoomScale
-            )
-            let targetOffset = CropViewportGeometry.clampedOffset(
-                CGPoint(
-                    x: center.x * targetScale - side / 2,
-                    y: center.y * targetScale - side / 2
-                ),
-                imageSize: parent.image.size,
-                viewportSide: side,
-                zoomScale: targetScale
-            )
-            isApplyingViewport = true
-            scrollView.setZoomScale(targetScale, animated: false)
-            scrollView.setContentOffset(targetOffset, animated: false)
-            isApplyingViewport = false
-            publishViewport(scrollView)
-        }
-
         private func publishViewport(_ scrollView: UIScrollView) {
             guard isConfigured, !isApplyingViewport else { return }
             let side = min(scrollView.bounds.width, scrollView.bounds.height)
@@ -487,8 +364,9 @@ private struct CropScrollView: UIViewRepresentable {
                 zoomScale: scrollView.zoomScale,
                 contentOffset: scrollView.contentOffset
             )
-            parent.zoomRatio = scrollView.zoomScale / scrollView.minimumZoomScale
-            scrollView.accessibilityValue = String(format: "%.3f", parent.zoomRatio)
+            scrollView.accessibilityValue = String(
+                format: "%.3f", scrollView.zoomScale / scrollView.minimumZoomScale
+            )
         }
     }
 }
@@ -516,8 +394,7 @@ extension View {
         CropView(
             imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400),
             initialCropBox: nil,
-            onBack: {},
-            onSkip: {}
+            onBack: {}
         ) { _ in }
     }
 }
@@ -527,9 +404,7 @@ extension View {
         CropView(
             imageData: PreviewData.placeholderImageData(systemName: "bird.fill", size: 400),
             initialCropBox: CropBoxResult(x: 20, y: 30, width: 40, height: 40),
-            reason: "Crop to one bird.",
-            onBack: {},
-            onSkip: {}
+            onBack: {}
         ) { _ in }
     }
 }

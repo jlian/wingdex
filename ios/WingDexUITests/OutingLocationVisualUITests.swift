@@ -12,6 +12,7 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
             "--ui-test-photo", folder.appendingPathComponent("collage2.jpg").path,
         ])
         _ = waitForOutingReview(in: app)
+        XCTAssertFalse(app.staticTexts["outing.locationHeader"].exists)
         let second = thumbnail(2, of: 3, in: app)
         let secondID = second.identifier.replacingOccurrences(of: "outing.photo.", with: "")
         XCTAssertTrue(scrollUntilVisible(second, in: app))
@@ -19,8 +20,29 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         let secondPage = app.images["outing.photoPage.\(secondID)"]
         XCTAssertTrue(app.navigationBars["Photo 2 of 3"].existsOrWait(timeout: 5))
         XCTAssertTrue(secondPage.existsOrWait(timeout: 5))
-        secondPage.swipeLeft()
-        XCTAssertTrue(app.navigationBars["Photo 3 of 3"].existsOrWait(timeout: 5))
+        let pager = app
+        let thirdPage = app.images.matching(NSPredicate(format: "label == %@", "Photo 3 of 3")).firstMatch
+        assertCentered(secondPage, in: pager)
+        for _ in 0..<3 {
+            pager.swipeLeft()
+            XCTAssertTrue(app.navigationBars["Photo 3 of 3"].existsOrWait(timeout: 5))
+            assertCentered(thirdPage, in: pager)
+            pager.swipeRight()
+            XCTAssertTrue(app.navigationBars["Photo 2 of 3"].existsOrWait(timeout: 5))
+            assertCentered(secondPage, in: pager)
+        }
+        pager.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
+            .press(
+                forDuration: 0.05,
+                thenDragTo: pager.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                withVelocity: .slow,
+                thenHoldForDuration: 0.2
+            )
+        assertCentered(secondPage, in: pager)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Photo_Pager"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         app.buttons["outing.photosClose"].tap()
         XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 5))
         XCTAssertEqual(locationValue(in: app), "Carkeek Park")
@@ -132,6 +154,21 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         app.descendants(matching: .any).matching(NSPredicate(
             format: "identifier BEGINSWITH %@ AND label == %@", "outing.photo.", "Photo \(index) of \(count)"
         )).firstMatch
+    }
+
+    private func assertCentered(_ page: XCUIElement, in pager: XCUIElement) {
+        let centered = NSPredicate { _, _ in
+            page.exists && page.frame.width > 0 && abs(page.frame.midX - pager.frame.midX) < 1
+        }
+        let expectation = XCTNSPredicateExpectation(predicate: centered, object: nil)
+        let result = XCTWaiter.wait(for: [expectation], timeout: 5)
+        if result != .completed {
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = "Unsettled_Photo_Page"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        XCTAssertEqual(result, .completed, "Photo: \(page.frame), viewer: \(pager.frame)")
     }
 
     private func dismissSheet(_ app: XCUIApplication, title: String) {
