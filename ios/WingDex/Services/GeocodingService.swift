@@ -39,7 +39,7 @@ enum GeocodingServiceError: Error {
 }
 
 @MainActor
-final class GeocodingService {
+final class GeocodingService: LocationReverseGeocodingLookup {
     private struct ReverseResponse: Codable {
         let result: GeocodingResult?
         let nearby: [GeocodingResult]?
