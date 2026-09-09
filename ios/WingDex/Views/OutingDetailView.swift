@@ -117,9 +117,7 @@ struct OutingDetailView: View {
         } message: {
             Text("This will permanently delete this outing and all its observations.")
         }
-        .sheet(item: $exportItem) { item in
-            ActivityView(item: item)
-        }
+        .exportActivitySheet(item: $exportItem)
         .sheet(item: $outingToRename) { outing in
             OutingRenameSheet(outing: outing)
         }

@@ -206,9 +206,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .sheet(item: $exportItem) { item in
-            ActivityView(item: item)
-        }
+        .exportActivitySheet(item: $exportItem)
     }
 
     // MARK: - Account

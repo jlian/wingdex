@@ -21,18 +21,6 @@ struct ExportFileItem: Identifiable {
     }
 }
 
-struct ActivityView: UIViewControllerRepresentable {
-    let item: ExportFileItem
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: [item.url], applicationActivities: nil)
-        controller.completionWithItemsHandler = { _, _, _, _ in item.cleanup() }
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
 struct OutingActionDestination: Identifiable, Hashable {
     let outing: Outing
     var id: String { outing.id }
