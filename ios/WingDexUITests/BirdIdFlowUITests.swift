@@ -180,4 +180,36 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ui-test.shareQueueChecked"].existsOrWait(timeout: 15))
         XCTAssertFalse(app.buttons["outing.continue"].exists)
     }
+
+    func testDiscardingIdentificationImmediatelyStartsQueuedShare() {
+        let app = application()
+        app.launchArguments += [
+            "--ui-test-fixture-empty", "--ui-test-share-store",
+            "--ui-test-reset-share-store", "--ui-test-observe-share-queue",
+            "--ui-test-stage-share-during-identification",
+            "--ui-test-photo", Self.photoPath,
+            "--ui-test-lat", "47.7115", "--ui-test-lon", "-122.3717",
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+        ]
+        app.launch()
+        let continueButton = app.buttons["outing.continue"]
+        XCTAssertTrue(continueButton.existsOrWait(timeout: 15))
+        XCTAssertTrue(continueButton.isEnabledOrWait(timeout: 15))
+        continueButton.tap()
+        XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "ui-test.shareQueueDeferred").firstMatch.existsOrWait(timeout: 10))
+
+        app.buttons["confirm.close"].tap()
+        app.alerts["Discard progress?"].buttons["Discard"].tap()
+
+        XCTAssertTrue(continueButton.existsOrWait(timeout: 15))
+        XCTAssertEqual(locationValue(in: app), "")
+        XCTAssertEqual(app.staticTexts["outing.photosHeader"].label, "Photos (1)")
+        app.buttons["flow.close"].tap()
+        app.alerts["Discard progress?"].buttons["Discard"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "ui-test.shareQueueChecked").firstMatch.existsOrWait(timeout: 15))
+        XCTAssertFalse(continueButton.exists)
+    }
 }

@@ -256,11 +256,6 @@ final class AddPhotosViewModel {
         lastLocationName = ""
     }
 
-    func stopShareQueueAfterDismissal() {
-        continuesShareQueueAfterDismissal = false
-        stoppedShareQueueAfterDismissal = true
-    }
-
     func discardSession() async {
         await finalizeDiscardedShare()
         error = nil
