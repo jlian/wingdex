@@ -215,9 +215,7 @@ struct SpeciesDetailView: View {
         .navigationDestination(item: $contextMenuOuting) { outing in
             OutingDetailView(outingId: outing.id)
         }
-        .sheet(item: $imageShareItem) { item in
-            ActivityView(item: item)
-        }
+        .exportActivitySheet(item: $imageShareItem)
         .alert("Could Not Complete Action", isPresented: imageOperationErrorBinding) {
             Button("OK", role: .cancel) { imageOperationError = nil }
         } message: {
