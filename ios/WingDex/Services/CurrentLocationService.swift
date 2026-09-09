@@ -26,7 +26,7 @@ enum CurrentLocationError: LocalizedError, Equatable {
 
 /// A foreground, tap-only request, separate from camera geotagging.
 @MainActor
-final class CurrentLocationService: NSObject, @preconcurrency CLLocationManagerDelegate {
+final class CurrentLocationService: NSObject, CurrentLocationRequesting, @preconcurrency CLLocationManagerDelegate {
     private let makeManager: () -> CLLocationManager
     private let servicesEnabled: () -> Bool
     private let timeout: Duration

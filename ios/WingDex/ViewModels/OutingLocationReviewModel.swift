@@ -21,9 +21,6 @@ protocol CurrentLocationRequesting: Sendable {
     func cancel()
 }
 
-extension GeocodingService: LocationReverseGeocodingLookup {}
-extension CurrentLocationService: CurrentLocationRequesting {}
-
 /// Default adapter for current location requests supporting debug UI test flags.
 @MainActor
 struct DefaultCurrentLocationRequester: CurrentLocationRequesting {
