@@ -15,10 +15,11 @@ Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same
 
 - **Camera saving:** Settings → Camera → Save Camera Photos defaults to On. Accepting a camera capture saves its full-resolution JPEG and capture metadata to Photos independently of identification, even if identification is later canceled. Retakes, canceled captures, and library selections do not create copies. Saving requests add-only Photos access; turning the preference off skips both saving and authorization. Denied access or a save failure never blocks identification, and Settings provides a recovery link when access is denied.
 - **Outing-local time:** EXIF `OffsetTimeOriginal` takes precedence. Photos with only a local EXIF clock use the outing timezone once reverse geocoding or location search resolves it; otherwise they retain the EXIF/device fallback. The review date picker and outgoing timestamps use the resolved timezone. API responses and eBird CSV exports localize legacy UTC (`Z`) outing timestamps with valid coordinates without rewriting historical data or moving their instants. Explicit offsets and records without reliable coordinates remain unchanged.
-- **Outing actions:** Rename, Share Summary, eBird CSV export (registered accounts), and Delete live in the detail toolbar menu. Rename uses a native sheet with explicit Save/Cancel; failed saves retain the draft. Outing rows only open/preview details and have no swipe actions. Species-row actions are unchanged.
-- **Review location:** The row under Date & Time shows a green location icon, source label, and four-decimal coordinates, or an orange no-GPS label when coordinates are missing. Loading/cancel and retry controls stay in that row. The Location section has a compact, single-line name and Edit control directly below the map, without a status icon. Tap the name or Edit to open a swipe-dismissible sheet. Full names and source/lookup status remain available to VoiceOver. Native search stays at the top, below the title and Close button. Selecting a place or using an entered name applies it and dismisses the sheet; Close or swipe-down discards unselected text. Manual names retain existing coordinates. Current location is offered only when coordinates are missing and requests permission only after a tap. Live place search uses the existing provider with debounce, cancellation, and rate-limit recovery; manual entry remains available offline.
+- **Outing actions:** Rename, Share Summary, eBird CSV export (registered accounts), and Delete live in the detail toolbar menu. Rename uses a native sheet with explicit Save/Cancel; failed saves retain the draft. Outing rows only open/preview details and have no swipe actions. Species-row actions are unchanged. File exports present the system activity controller directly rather than inside another SwiftUI sheet, keeping nested activities such as Messages in UIKit's presentation lifecycle. Completion, cancellation, and presenter removal clean up the temporary export.
+- **Review location:** The row under Date & Time shows a green location icon, source label, and four-decimal coordinates, or an orange no-GPS label when coordinates are missing. Cancel and retry controls stay in that row. The Location section has a compact, single-line name and Edit control directly below the map. During reverse geocoding, a small spinner and "Looking up location..." replace the fallback name in that location row. Tap the name or Edit to open a swipe-dismissible sheet. Full names and source/lookup status remain available to VoiceOver. Native search stays at the top, below the title and Close button. Selecting a place or using an entered name applies it and dismisses the sheet; Close or swipe-down discards unselected text. Manual names retain existing coordinates. Current location is offered only when coordinates are missing and requests permission only after a tap. Live place search uses the existing provider with debounce, cancellation, and rate-limit recovery; manual entry remains available offline.
 - **Review map:** A full-width map within the location card previews the accepted location, or the inherited location when adding to an existing outing. Tap to inspect a map-only overlay sheet with pan, zoom, and Recenter without changing the outing's coordinates. A floating Liquid Glass button opens Apple Maps; there is no bottom information panel. The name, coordinates, and source remain available through Recenter's accessibility description. Map tiles and location lookups never make a location mandatory.
 - **Review photos:** Tap a carousel thumbnail to open a swipe-dismissible photo sheet at that photo, then swipe horizontally to browse the outing's photos. The viewer loads screen-sized previews from the originals without changing the photos or interrupting location lookup. Close or swipe down to return; long-press removal remains in the carousel. The top-right chevron continues the review and is announced as "Continue" by VoiceOver.
+- **Queued shares:** Photos shared while an ID session is open wait for that session to finish. Confirming or discarding the current session starts the next queued share after dismissal and cleanup, without requiring another app activation. Discard only applies to the current session; account changes still stop automatic queue continuation.
 - **Identification controls:** The bottom toolbar groups outing details, crop, possible, and skip. Possible and Skip ask for confirmation. The map button opens a read-only sheet with the outing's location and local date/time. Back revisits the previous photo, or outing review from the first photo.
 - **Manual crop:** Drag and pinch beneath the fixed square, then tap Done to apply. Back cancels the crop. The crop screen has no upload-close, reset, skip, or separate zoom controls.
 
@@ -52,6 +53,28 @@ npm run dev
 The `Localhost` app scheme uses `https://localhost.wingdex.app`, through the LAN
 reverse proxy described in the root README. This is only for interactive backend
 development; **none of the iOS tests require that host or a running backend**.
+
+## Builds
+
+```bash
+make -C ios build                       # unsigned simulator app, no tests or simulator boot
+make -C ios build SCHEME=Localhost      # local backend configuration
+make -C ios build SCHEME=Production     # production configuration
+```
+
+The build target generates the Xcode project and runs `xcodebuild build`, including
+the app icon and share extension. It defaults to the `WingDex` scheme and
+`generic/platform=iOS Simulator`, reusing `ios/build/DerivedData`.
+Override `DESTINATION` and `DERIVED_DATA_PATH` when needed. `XCODEBUILD_ARGS`
+defaults to `CODE_SIGNING_ALLOWED=NO`; for a signed device build, replace it:
+
+```bash
+make -C ios build SCHEME=Localhost DESTINATION='generic/platform=iOS' XCODEBUILD_ARGS=''
+```
+
+Device builds require the normal signing setup. Plain `make -C ios` still runs
+tests. Run builds and tests serially because they share the generated project and
+build cache.
 
 ## Tests
 
