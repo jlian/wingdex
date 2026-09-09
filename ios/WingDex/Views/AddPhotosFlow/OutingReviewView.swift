@@ -194,6 +194,11 @@ struct OutingReviewView: View {
                     destination = .search
                 } label: {
                     HStack(spacing: 12) {
+                        if locationModel.isLoadingLocation {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .controlSize(.small)
+                        }
                         Text(locationName)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,7 +221,8 @@ struct OutingReviewView: View {
     }
 
     private var locationName: String {
-        locationModel.acceptedSelection.name.isEmpty ? "No location" : locationModel.acceptedSelection.name
+        if locationModel.isLoadingLocation { return "Looking up location..." }
+        return locationModel.acceptedSelection.name.isEmpty ? "No location" : locationModel.acceptedSelection.name
     }
 
     private var locationStatusDescription: String {
@@ -269,8 +275,7 @@ struct OutingReviewView: View {
     private var locationLookupControl: some View {
         if !useExistingOuting && locationModel.isLoadingLocation {
             Button(action: locationModel.cancelAllWork) {
-                ProgressView()
-                    .controlSize(.small)
+                Image(systemName: "xmark")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }

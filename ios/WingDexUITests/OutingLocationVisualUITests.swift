@@ -135,18 +135,46 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         let cancel = app.buttons["outing.locationCancel"]
         XCTAssertTrue(cancel.existsOrWait(timeout: 5))
         let row = app.buttons["outing.adjustLocation"]
+        XCTAssertEqual(row.label, "Looking up location...")
+        XCTAssertTrue(app.descendants(matching: .any)["outing.gpsCoordinates"].exists)
         let photos = app.staticTexts["outing.photosHeader"]
         let rowFrame = row.frame
         let photosFrame = photos.frame
         XCTAssertGreaterThanOrEqual(rowFrame.height, 44)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Reverse_Geocoding_Loading"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         XCTAssertTrue(cancel.disappearsOrWait(timeout: 15))
+        XCTAssertEqual(row.label, "47.712\u{00B0}, -122.372\u{00B0}")
         XCTAssertEqual(row.frame, rowFrame)
         XCTAssertEqual(photos.frame.minY, photosFrame.minY, accuracy: 1)
         app.buttons["outing.locationRetry"].tap()
         XCTAssertTrue(cancel.existsOrWait(timeout: 5))
+        XCTAssertEqual(row.label, "Looking up location...")
         XCTAssertEqual(row.frame, rowFrame)
         cancel.tap()
         XCTAssertTrue(app.buttons["outing.locationRetry"].existsOrWait(timeout: 5))
+        XCTAssertEqual(row.label, "47.712\u{00B0}, -122.372\u{00B0}")
+        XCTAssertEqual(row.frame, rowFrame)
+    }
+
+    func testLocationLoadingResolvesToPlaceNameAtLargeTextSize() {
+        let app = launchApp(extraArguments: [
+            "--ui-test-geocoding-delay", "--ui-test-geocoding-success",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
+        ])
+        let continueButton = waitForOutingReview(in: app, requireEnabled: false)
+        let row = app.buttons["outing.adjustLocation"]
+        XCTAssertEqual(row.label, "Looking up location...")
+        XCTAssertTrue(scrollUntilVisible(row, in: app))
+        let rowFrame = row.frame
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Reverse_Geocoding_Loading_Large_Text"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertTrue(row.labelOrWait("Carkeek Park", timeout: 15))
+        XCTAssertTrue(continueButton.isEnabled)
         XCTAssertEqual(row.frame, rowFrame)
     }
 
