@@ -599,6 +599,7 @@ struct MainTabView: View {
     @State private var uiTestDataSetupIdentifier = "ui-test.dataSetupPending"
     @State private var uiTestDataSetupError = ""
     @State private var uiTestGeocodingCancellationAcknowledged = false
+    @State private var uiTestStagedShareDuringIdentification = false
     #else
     private let uiTestForcesSettings = false
     private let uiTestIgnoresPendingShare = false
@@ -655,6 +656,23 @@ struct MainTabView: View {
             if addPhotosVM.currentStep != .selectPhotos {
                 showingWizard = true
             }
+            #if DEBUG
+            if addPhotosVM.currentStep == .perPhotoConfirm,
+                !uiTestStagedShareDuringIdentification,
+                ProcessInfo.processInfo.arguments.contains("--ui-test-stage-share-during-identification") {
+                uiTestStagedShareDuringIdentification = true
+                Task {
+                    do {
+                        try await stageUITestSharePhoto()
+                        navigation.handleIncomingShare()
+                    } catch {
+                        uiTestDataSetupError = error.localizedDescription
+                        uiTestDataSetupIdentifier = "ui-test.dataSetupFailed"
+                        appLog.error("UI test share staging failed: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+            }
+            #endif
         }
     .fullScreenCover(
       isPresented: $showingWizard,
@@ -701,6 +719,9 @@ struct MainTabView: View {
                 )
             }
             .toastPresenter(toasts.notice)
+            #if DEBUG
+            .accessibilityIdentifier(uiTestObservesShareQueue ? uiTestDataSetupIdentifier : "")
+            #endif
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
@@ -969,6 +990,11 @@ struct MainTabView: View {
                 showingWizard = true
             } else if result == .busy {
                 incomingShareImportDeferred = true
+                #if DEBUG
+                if uiTestObservesShareQueue {
+                    uiTestDataSetupIdentifier = "ui-test.shareQueueDeferred"
+                }
+                #endif
             }
         } while incomingShareImportRequested
         return queueRemainedEmpty

@@ -70,7 +70,7 @@ struct AddPhotosFlow: View {
                         if needsCloseConfirmation {
                             showCloseConfirm = true
                         } else {
-                            dismissWizard(stopShareQueue: viewModel.currentStep != .done)
+                            dismissWizard(discardProgress: viewModel.currentStep != .done)
                         }
                     } label: {
                         Image(systemName: "xmark")
@@ -82,7 +82,7 @@ struct AddPhotosFlow: View {
             }
         }
         .alert("Discard progress?", isPresented: $showCloseConfirm) {
-            Button("Discard", role: .destructive) { dismissWizard(stopShareQueue: true) }
+            Button("Discard", role: .destructive) { dismissWizard(discardProgress: true) }
             Button("Continue Uploading", role: .cancel) {}
         } message: {
             Text("Your upload is still in progress. If you close now, any unsaved changes will be lost.")
@@ -113,7 +113,7 @@ struct AddPhotosFlow: View {
         .alert("Could Not Continue", isPresented: addPhotosErrorBinding) {
             if viewModel.canRetryError {
                 Button("Retry") { viewModel.retryCurrentError() }
-                Button("Close Upload", role: .destructive) { dismissWizard(stopShareQueue: true) }
+                Button("Close Upload", role: .destructive) { dismissWizard(discardProgress: true) }
             } else {
                 Button("OK", role: .cancel) { viewModel.error = nil }
             }
@@ -201,10 +201,10 @@ struct AddPhotosFlow: View {
 
     /// Dismiss the wizard full-screen cover. The onDismiss handler in
     /// MainTabView resets the view model and returns to the photo selection tab.
-    private func dismissWizard(stopShareQueue: Bool) {
+    private func dismissWizard(discardProgress: Bool) {
         cancelLocationReview()
-        if stopShareQueue {
-            viewModel.stopShareQueueAfterDismissal()
+        if discardProgress {
+            // Discard only this session; onDismiss can start a separately queued share.
             Task {
                 await viewModel.discardSession()
                 dismiss()
@@ -428,7 +428,7 @@ struct AddPhotosFlow: View {
 
             // Done button
             Button {
-                dismissWizard(stopShareQueue: false)
+                dismissWizard(discardProgress: false)
             } label: {
                 Text("Done")
                     .font(.system(size: 16, weight: .medium))
