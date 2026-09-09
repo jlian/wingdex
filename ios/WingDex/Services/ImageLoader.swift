@@ -100,7 +100,7 @@ final class ImageLoader {
     }
 }
 
-private extension UIImage {
+extension UIImage {
     var decodedByteCost: Int {
         guard let cgImage else { return 1 }
         return cgImage.bytesPerRow * cgImage.height

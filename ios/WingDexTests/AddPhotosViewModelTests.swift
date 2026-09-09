@@ -271,4 +271,233 @@ final class AddPhotosViewModelTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
         await viewModel.cancelSession()
     }
+
+    func testGoBackToPreviousPhotoPreservesConfirmedResultWhenPreviousSkipped() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos = ["p0", "p1", "p2"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [PhotoCluster(
+            photos: photos, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        viewModel.currentPhotoIndex = 0
+
+        // Photo 0 confirmed
+        viewModel.confirmCurrentPhoto(
+            species: "Song Sparrow (Melospiza melodia)",
+            confidence: 0.95,
+            status: .confirmed,
+            count: 1
+        )
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+        XCTAssertEqual(viewModel.photoResults[0].photoId, "p0")
+        XCTAssertEqual(viewModel.photoResults[0].status, .confirmed)
+
+        // Photo 1 skipped
+        viewModel.skipCurrentPhoto()
+        XCTAssertEqual(viewModel.photoResults.count, 2)
+        XCTAssertEqual(viewModel.photoResults[1].photoId, "p1")
+        XCTAssertEqual(viewModel.photoResults[1].status, .rejected)
+
+        // Now on Photo 2, go back to Photo 1
+        viewModel.goBackToPreviousPhoto()
+        // Photo 1's decision is removed for re-decision, Photo 0's confirmed result is preserved!
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+        XCTAssertEqual(viewModel.photoResults[0].photoId, "p0")
+        XCTAssertEqual(viewModel.photoResults[0].status, .confirmed)
+
+        await viewModel.cancelSession()
+    }
+
+    func testReturnToOutingReviewPreservesPositionAndDecisions() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos = ["p0", "p1"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [PhotoCluster(
+            photos: photos, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "outing-test-1", locationName: "First Park",
+            lat: 47.7, lon: -122.3, outingOverridesPhotoGPS: false
+        )
+        // Confirm first photo
+        viewModel.confirmCurrentPhoto(
+            species: "Bald Eagle (Haliaeetus leucocephalus)",
+            confidence: 0.9,
+            status: .confirmed,
+            count: 1
+        )
+        XCTAssertEqual(viewModel.currentPhotoIndex, 1)
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+
+        // Return to outing review
+        viewModel.returnToOutingReview()
+        XCTAssertEqual(viewModel.currentStep, .outingReview)
+
+        // Outing edited and re-confirmed for same cluster
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "outing-test-1", locationName: "Updated Park",
+            lat: 48.0, lon: -122.5, outingOverridesPhotoGPS: true
+        )
+        // Position and earlier results are preserved
+        XCTAssertEqual(viewModel.currentPhotoIndex, 1)
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+        XCTAssertEqual(viewModel.photoResults[0].photoId, "p0")
+        XCTAssertEqual(viewModel.photoResults[0].status, .confirmed)
+        XCTAssertEqual(viewModel.lastLocationName, "Updated Park")
+        XCTAssertEqual(viewModel.currentInferenceLocation?.lat, 48.0)
+
+        await viewModel.cancelSession()
+    }
+
+    func testCurrentOutingStartTimeFallsBackToCluster() {
+        let viewModel = AddPhotosViewModel()
+        let now = Date(timeIntervalSince1970: 1770000000)
+        let cluster = PhotoCluster(
+            photos: [], startTime: now, endTime: now, centerLat: nil, centerLon: nil
+        )
+        viewModel.clusters = [cluster]
+        XCTAssertEqual(viewModel.currentOutingStartTime.map(DateFormatting.sortDate), now)
+    }
+
+    func testSuccessiveClustersSharingSameOutingDoNotResumePreviousCluster() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos1 = ["c1_p0"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        let photos2 = ["c2_p0", "c2_p1"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [
+            PhotoCluster(photos: photos1, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil),
+            PhotoCluster(photos: photos2, startTime: .now.addingTimeInterval(86400), endTime: .now.addingTimeInterval(86400), centerLat: nil, centerLon: nil)
+        ]
+
+        // Cluster 0 confirmed into existing outing
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "shared-existing-outing", locationName: "Shared Park",
+            lat: 47.7, lon: -122.3, outingOverridesPhotoGPS: false, useExistingOuting: true
+        )
+        viewModel.confirmCurrentPhoto(species: "Song Sparrow", confidence: 0.9, status: .confirmed, count: 1)
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+
+        // Advance to cluster 1
+        viewModel.currentClusterIndex = 1
+        viewModel.currentPhotoIndex = 0
+
+        // Cluster 1 also merges into same existing outing "shared-existing-outing"
+        // But because confirmedClusterID != cluster2.id, it must NOT resume cluster 0!
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "shared-existing-outing", locationName: "Shared Park",
+            lat: 47.7, lon: -122.3, outingOverridesPhotoGPS: false, useExistingOuting: true
+        )
+
+        // Cluster 1 must be clean and not treat itself as resuming cluster 0
+        XCTAssertEqual(viewModel.currentPhotoIndex, 0)
+        XCTAssertEqual(viewModel.photoResults.count, 0)
+
+        await viewModel.cancelSession()
+    }
+
+    func testPhotoRemovalPreservesPhotoIdentityAndOtherResults() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos = ["p0", "p1", "p2"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [PhotoCluster(
+            photos: photos, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "test-outing", locationName: "Test Park",
+            lat: nil, lon: nil, outingOverridesPhotoGPS: false
+        )
+        // Confirm p0, now on p1 (index 1)
+        viewModel.confirmCurrentPhoto(species: "Robin", confidence: 0.9, status: .confirmed, count: 1)
+        XCTAssertEqual(viewModel.currentPhotoIndex, 1)
+        XCTAssertEqual(viewModel.currentPhoto?.id, "p1")
+        XCTAssertEqual(viewModel.photoResults.count, 1)
+
+        // Remove p0 from cluster
+        await viewModel.removePhotoFromCurrentCluster(id: "p0")
+
+        // p1 should still be current photo, now at index 0
+        XCTAssertEqual(viewModel.clusterPhotos.count, 2)
+        XCTAssertEqual(viewModel.currentPhoto?.id, "p1")
+        XCTAssertEqual(viewModel.currentPhotoIndex, 0)
+        // p0's result was removed
+        XCTAssertEqual(viewModel.photoResults.count, 0)
+
+        await viewModel.cancelSession()
+    }
+
+    func testCurrentOutingStartTimePreservesPendingOutingTimezone() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let now = Date(timeIntervalSince1970: 1770000000)
+        let cluster = PhotoCluster(
+            photos: [], startTime: now, endTime: now, centerLat: nil, centerLon: nil
+        )
+        viewModel.clusters = [cluster]
+        let hawaiiOuting = Outing(
+            id: "out-hi", userId: "u1",
+            startTime: "2026-02-01T23:00:00-10:00",
+            endTime: "2026-02-02T01:00:00-10:00",
+            locationName: "Kapiolani Park", defaultLocationName: "Kapiolani Park",
+            lat: 21.27, lon: -157.82, stateProvince: "HI", countryCode: "US",
+            notes: "", createdAt: "2026-02-01T23:00:00Z"
+        )
+        viewModel.outingConfirmed(
+            outing: hawaiiOuting, outingId: hawaiiOuting.id, locationName: hawaiiOuting.locationName,
+            lat: hawaiiOuting.lat, lon: hawaiiOuting.lon, outingOverridesPhotoGPS: false
+        )
+        XCTAssertEqual(viewModel.currentOutingStartTime, "2026-02-01T23:00:00-10:00")
+        await viewModel.cancelSession()
+    }
+
+    func testSkippedPhotosAreExcludedFromPhotoMetadataPayload() async throws {
+        let (viewModel, _) = try await configuredModel()
+        let photos = ["p0", "p1"].map { id in
+            ProcessedPhoto(
+                id: id, originalURL: URL(fileURLWithPath: "/unused/\(id).jpg"),
+                cleanupOriginal: false, thumbnail: Data(), exifTime: nil,
+                gpsLat: nil, gpsLon: nil, fileHash: id, fileName: "\(id).jpg", byteCount: 0
+            )
+        }
+        viewModel.clusters = [PhotoCluster(
+            photos: photos, startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+        viewModel.outingConfirmed(
+            outing: nil, outingId: "outing-skip-test", locationName: "Test Park",
+            lat: nil, lon: nil, outingOverridesPhotoGPS: false
+        )
+        // Confirm first photo
+        viewModel.confirmCurrentPhoto(species: "Robin", confidence: 0.9, status: .confirmed, count: 1)
+        // Skip second photo
+        viewModel.skipCurrentPhoto()
+
+        let payloads = viewModel.photoMetadata(outingId: "outing-skip-test")
+        XCTAssertEqual(payloads.map(\.id), ["p0"])
+
+        await viewModel.cancelSession()
+    }
 }

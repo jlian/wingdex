@@ -77,4 +77,33 @@ final class PhotoReviewCarouselTests: XCTestCase {
         XCTAssertEqual(max(image.size.width, image.size.height), 512)
         XCTAssertEqual(min(image.size.width, image.size.height), 384)
     }
+
+    func testDecodedByteCostCalculatesBitmapDimensions() {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 30), format: format)
+        let image = renderer.image { ctx in
+            ctx.cgContext.setFillColor(UIColor.red.cgColor)
+            ctx.cgContext.fill(CGRect(x: 0, y: 0, width: 20, height: 30))
+        }
+
+        let expected = (image.cgImage?.bytesPerRow ?? 0) * (image.cgImage?.height ?? 0)
+        XCTAssertGreaterThan(expected, 0)
+        XCTAssertEqual(image.decodedByteCost, expected)
+    }
+
+    func testPhotoReviewImageCachesStoreAndRetrieveImages() {
+        let sheetCache = PhotoReviewSheetImageCache(totalCostLimit: 96 * 1_024 * 1_024, countLimit: 10)
+        let thumbCache = PhotoReviewThumbnailCache(totalCostLimit: 32 * 1_024 * 1_024, countLimit: 10)
+
+        let image = UIImage()
+        let url = URL(fileURLWithPath: "/test/photo.jpg")
+        let data = Data([0x01, 0x02, 0x03])
+
+        sheetCache.setImage(image, for: url)
+        XCTAssertTrue(sheetCache.image(for: url) === image)
+
+        thumbCache.setImage(image, for: data)
+        XCTAssertTrue(thumbCache.image(for: data) === image)
+    }
 }

@@ -60,6 +60,40 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertEqual(species.label, Self.expectedSpecies)
         XCTAssertTrue(app.staticTexts["confirm.confidence"].label.hasSuffix("%"))
         XCTAssertTrue(app.buttons["confirm.accept"].isEnabled)
+
+        let idAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        idAttachment.name = "ID_Screen"
+        idAttachment.lifetime = .keepAlways
+        add(idAttachment)
+
+        let possible = app.buttons["confirm.possible"]
+        XCTAssertTrue(possible.existsOrWait(timeout: 5))
+        possible.tap()
+
+        let alert = app.alerts["Mark as Possible?"]
+        XCTAssertTrue(alert.existsOrWait(timeout: 5))
+
+        let possibleAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        possibleAttachment.name = "Possible_Confirmation"
+        possibleAttachment.lifetime = .keepAlways
+        add(possibleAttachment)
+
+        alert.buttons["Cancel"].tap()
+        XCTAssertTrue(alert.disappearsOrWait(timeout: 5))
+
+        app.buttons["confirm.outingDetails"].tap()
+        XCTAssertTrue(app.navigationBars["Outing Details"].existsOrWait(timeout: 5))
+        let detailsAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        detailsAttachment.name = "Outing_Details"
+        detailsAttachment.lifetime = .keepAlways
+        add(detailsAttachment)
+        let outingLocation = app.descendants(matching: .any)["confirm.outingLocation"]
+        XCTAssertTrue(outingLocation.label.contains("Carkeek Park"), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["confirm.outingDateTime"].exists)
+        XCTAssertFalse(app.buttons["confirm.editOuting"].exists)
+        app.buttons["confirm.outingDetailsDone"].tap()
+        XCTAssertTrue(species.existsOrWait(timeout: 5))
+        XCTAssertFalse(app.buttons["outing.continue"].exists)
     }
 
     func testLowConfidenceIdentificationOffersInteractiveCropZoom() {
@@ -76,12 +110,19 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         target.pinch(withScale: 1.5, velocity: 1)
         XCTAssertGreaterThan(zoom(viewport), initial)
         XCTAssertNotEqual(target.value as? String, initialCenter)
-        let beforeZoomIn = zoom(viewport)
-        app.buttons["crop.zoomIn"].tap()
-        XCTAssertGreaterThan(zoom(viewport), beforeZoomIn)
-        let beforeZoomOut = zoom(viewport)
-        app.buttons["crop.zoomOut"].tap()
-        XCTAssertLessThan(zoom(viewport), beforeZoomOut)
+        XCTAssertTrue(app.navigationBars["Crop to One Bird"].exists)
+        XCTAssertTrue(app.navigationBars["Crop to One Bird"].buttons["crop.done"].exists)
+        XCTAssertFalse(app.buttons["flow.close"].exists)
+        XCTAssertFalse(app.buttons["crop.zoomIn"].exists)
+        XCTAssertFalse(app.buttons["crop.zoomOut"].exists)
+        XCTAssertFalse(app.buttons["Reset Crop"].exists)
+        XCTAssertFalse(app.staticTexts["Crop to one bird."].exists)
+        let cropAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        cropAttachment.name = "Crop_Screen"
+        cropAttachment.lifetime = .keepAlways
+        add(cropAttachment)
+        app.buttons["crop.done"].tap()
+        XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
     }
 
     private func zoom(_ viewport: XCUIElement) -> Double {

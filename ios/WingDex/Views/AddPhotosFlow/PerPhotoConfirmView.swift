@@ -1,12 +1,8 @@
+import MapKit
 import SwiftUI
 
 /// Per-photo species confirmation view.
 ///
-/// Toolbar layout:
-/// - Top left: X (cancel wizard with confirmation)
-/// - Top right: primary action icon (checkmark or forward)
-/// - Bottom left: back chevron (if not first photo)
-/// - Bottom right: secondary tools (crop, possible, skip)
 struct PerPhotoConfirmView: View {
     @Bindable var viewModel: AddPhotosViewModel
 
@@ -26,6 +22,9 @@ struct PerPhotoConfirmView: View {
     @State private var isAcknowledging = false
     /// Carries the candidate the peek opens on.
     @State private var peek: PeekRequest?
+    @State private var showPossibleConfirm = false
+    @State private var showSkipConfirm = false
+    @State private var showOutingDetails = false
 
     /// `.sheet(item:)` needs an Identifiable, and the payload here is just an index.
     private struct PeekRequest: Identifiable { let id: Int }
@@ -97,7 +96,12 @@ struct PerPhotoConfirmView: View {
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Confirm action top-right (tinted green)
+            ToolbarItem(placement: .principal) {
+                Text("Photo \(photoIndex + 1) of \(totalPhotos)")
+                    .font(.headline)
+                    .accessibilityIdentifier("confirm.photoCounter")
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 if hasCandidates {
                     Button {
@@ -106,64 +110,81 @@ struct PerPhotoConfirmView: View {
                         Image(systemName: "checkmark")
                     }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityLabel("Confirm")
                     .accessibilityIdentifier("confirm.accept")
                     .disabled(selectedSpecies.isEmpty || isAcknowledging)
-                } else {
-                    Button("Skip", role: .destructive) {
-                        viewModel.skipCurrentPhoto()
-                    }
                 }
             }
-            // Bottom bar: back (left) + overflow menu (right)
+
             ToolbarItemGroup(placement: .bottomBar) {
-                if photoIndex > 0 {
-                    Button {
+                Button {
+                    if photoIndex > 0 {
                         viewModel.goBackToPreviousPhoto()
-                    } label: {
-                        Image(systemName: "chevron.left")
+                    } else {
+                        viewModel.returnToOutingReview()
                     }
-                    .disabled(isAcknowledging)
+                } label: {
+                    Image(systemName: "chevron.left")
                 }
+                .accessibilityLabel(photoIndex > 0 ? "Previous Photo" : "Review Outing")
+                .accessibilityIdentifier("confirm.back")
+                .disabled(isAcknowledging)
 
                 Spacer()
 
-                if hasCandidates {
-                    Menu {
-                        Button {
-                            viewModel.reidentifyCurrentPhoto()
-                        } label: {
-                            Label("Re-identify", systemImage: "sparkles")
-                        }
-                        Button {
-                            confirmWith(status: .possible)
-                        } label: {
-                            Label("Mark as Possible", systemImage: "questionmark")
-                        }
-                        .disabled(selectedSpecies.isEmpty)
-                        Button {
-                            viewModel.requestManualCrop()
-                        } label: {
-                            Label("Re-crop", systemImage: "crop")
-                        }
-                        Button(role: .destructive) {
-                            viewModel.skipCurrentPhoto()
-                        } label: {
-                            Label("Skip Photo", systemImage: "forward")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                    .disabled(isAcknowledging)
-                } else {
-                    Button("Re-crop") {
-                        viewModel.requestManualCrop()
-                    }
+                Button("Outing Details", systemImage: "map") {
+                    showOutingDetails = true
                 }
+                .accessibilityIdentifier("confirm.outingDetails")
+                .disabled(isAcknowledging)
+
+                Button {
+                    viewModel.requestManualCrop()
+                } label: {
+                    Label("Crop", systemImage: "crop")
+                }
+                .accessibilityIdentifier("confirm.crop")
+                .disabled(isAcknowledging)
+
+                if hasCandidates {
+                    Button("Possible", systemImage: "questionmark") {
+                        showPossibleConfirm = true
+                    }
+                    .accessibilityIdentifier("confirm.possible")
+                    .disabled(selectedSpecies.isEmpty || isAcknowledging)
+                }
+
+                Button {
+                    showSkipConfirm = true
+                } label: {
+                    Label("Skip", systemImage: "forward")
+                }
+                .accessibilityIdentifier("confirm.skip")
+                .disabled(isAcknowledging)
             }
+        }
+        .alert("Mark as Possible?", isPresented: $showPossibleConfirm) {
+            Button("Mark as Possible") {
+                confirmWith(status: .possible)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Mark \(displayName) as a possible sighting for this photo?")
+        }
+        .alert("Skip Photo?", isPresented: $showSkipConfirm) {
+            Button("Skip Photo", role: .destructive) {
+                viewModel.skipCurrentPhoto()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This photo will be excluded from the outing and will not be saved.")
         }
         .onAppear { initializeSelection() }
         .onChange(of: viewModel.currentPhotoIndex) { initializeSelection() }
         .onChange(of: viewModel.currentCandidates.count) { initializeSelection() }
+        .sheet(isPresented: $showOutingDetails) {
+            outingDetailsSheet
+        }
         .sheet(item: $peek) { request in
             SpeciesPeekSheet(
                 candidates: peekCandidates,
@@ -181,6 +202,57 @@ struct PerPhotoConfirmView: View {
             decodeTask?.cancel()
             galleryTask?.cancel()
         }
+    }
+
+    // MARK: - Outing Details
+
+    private var outingDetailsSheet: some View {
+        NavigationStack {
+            Form {
+                if let coordinate = viewModel.outingInferenceLocation,
+                   let location = OutingMapLocation(
+                    name: viewModel.lastLocationName,
+                    coordinate: CLLocationCoordinate2D(latitude: coordinate.lat, longitude: coordinate.lon),
+                    sourceDescription: "Outing location"
+                   ) {
+                    Section {
+                        Map(initialPosition: location.cameraPosition, interactionModes: [.pan, .zoom]) {
+                            Marker(location.name, coordinate: location.coordinate)
+                        }
+                        .mapFeatureSelectionDisabled { _ in true }
+                        .frame(height: 240)
+                        .listRowInsets(EdgeInsets())
+                        .accessibilityIdentifier("confirm.outingMap")
+                    }
+                }
+                Section {
+                    LabeledContent("Location", value: viewModel.lastLocationName.isEmpty
+                        ? "Unknown Location" : viewModel.lastLocationName)
+                        .accessibilityIdentifier("confirm.outingLocation")
+                    if let startTime = viewModel.currentOutingStartTime {
+                        LabeledContent("Date & Time", value:
+                            "\(DateFormatting.formatDate(startTime)), \(DateFormatting.formatTime(startTime))")
+                            .accessibilityIdentifier("confirm.outingDateTime")
+                    }
+                    if viewModel.outingInferenceLocation == nil {
+                        Label("No location coordinates", systemImage: "mappin.slash")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.pageBg.ignoresSafeArea())
+            .navigationTitle("Outing Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showOutingDetails = false }
+                        .accessibilityIdentifier("confirm.outingDetailsDone")
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - No Candidates
@@ -296,13 +368,6 @@ struct PerPhotoConfirmView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 fallbackPhoto(size: size)
-            }
-        }
-        .contextMenu {
-            Button {
-                viewModel.reidentifyCurrentPhoto()
-            } label: {
-                Label("Re-identify", systemImage: "sparkles")
             }
         }
     }
@@ -511,6 +576,7 @@ struct PerPhotoConfirmView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(isAcknowledging)
             .accessibilityAction(named: "Learn more") { openPeek(at: position) }
 
             // Its own hit area, so reading about a candidate is not the same tap
@@ -544,6 +610,7 @@ struct PerPhotoConfirmView: View {
     }
 
     private func selectAlternative(_ candidate: IdentifiedCandidate) {
+        guard !isAcknowledging else { return }
         selectedSpecies = candidate.species
         selectedConfidence = candidate.confidence
         fetchWikiImage()
@@ -670,6 +737,7 @@ struct PerPhotoConfirmView: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
+                vm.lastLocationName = "Carkeek Park"
                 vm.clusters = [PreviewData.sampleCluster(photoCount: 3)]
                 vm.currentPhotoIndex = 1
                 vm.photoResults = [PhotoResult(
@@ -689,6 +757,7 @@ struct PerPhotoConfirmView: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
+                vm.lastLocationName = "Discovery Park"
                 vm.clusters = [PreviewData.sampleCluster(photoCount: 5)]
                 vm.currentPhotoIndex = 2
                 vm.currentCandidates = [
@@ -705,6 +774,7 @@ struct PerPhotoConfirmView: View {
         let vm = AddPhotosViewModel()
         PerPhotoConfirmView(viewModel: vm)
             .onAppear {
+                vm.lastLocationName = "Olympic Sculpture Park"
                 vm.clusters = [PreviewData.sampleCluster(photoCount: 2, lat: nil, lon: nil)]
                 vm.currentCandidates = []
             }
@@ -717,6 +787,7 @@ struct PerPhotoConfirmView: View {
         .frame(width: 390, height: 760)
         .background(Color.pageBg)
         .onAppear {
+            vm.lastLocationName = "Discovery Park"
             vm.clusters = [PreviewData.sampleCluster(photoCount: 5)]
             vm.currentPhotoIndex = 2
             vm.currentCandidates = [

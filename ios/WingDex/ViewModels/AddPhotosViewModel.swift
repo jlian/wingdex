@@ -64,13 +64,6 @@ final class AddPhotosViewModel {
     enum CropPromptContext: Equatable {
         case manualRecrop
         case lowConfidence
-
-        var reasonText: String {
-            switch self {
-            case .manualRecrop, .lowConfidence:
-                return "Crop to one bird."
-            }
-        }
     }
 
     // MARK: - Step State Machine
@@ -120,12 +113,41 @@ final class AddPhotosViewModel {
     /// Last confirmed name, retained for pending-upload recovery only.
     var lastLocationName = ""
 
+    var currentOutingStartTime: String? {
+        if let pendingOuting {
+            return pendingOuting.startTime
+        } else if let existing = dataStore?.outings.first(where: { $0.id == currentOutingId }) {
+            return existing.startTime
+        }
+        guard clusters.indices.contains(currentClusterIndex) else { return nil }
+        let cluster = clusters[currentClusterIndex]
+        return DateFormatting.storageString(
+            draftOverriddenStartTime ?? cluster.startTime,
+            timeZone: currentClusterTimeZone ?? cluster.photos.first?.captureTime?.timeZone ?? .current
+        )
+    }
+
+    /// The cluster ID currently being confirmed or reviewed, used to detect resume.
+    private(set) var confirmedClusterID: UUID?
+
+    /// Saved draft start time override for the current cluster review.
+    private(set) var draftOverriddenStartTime: Date?
+
+    /// Saved draft merge choice for the current cluster review.
+    private(set) var draftUseExistingOuting = false
+
+    /// The timezone resolved for the current cluster review.
+    private(set) var currentClusterTimeZone: TimeZone?
+
+    /// The ID of the photo currently being confirmed, preserved across reorders/removals.
+    private(set) var currentPhotoID: String?
+
     /// The outing ID that the current cluster is being saved into.
     var currentOutingId = ""
 
     /// Coordinates confirmed during outing review. Per-photo GPS normally wins,
     /// but a searched location is an explicit correction and takes precedence.
-    private var outingInferenceLocation: (lat: Double, lon: Double)?
+    private(set) var outingInferenceLocation: (lat: Double, lon: Double)?
     private var outingOverridesPhotoGPS = false
 
     /// The exact coordinates used by the range prior for the current photo.
@@ -166,7 +188,7 @@ final class AddPhotosViewModel {
     var error: AppError?
     /// The outing for the current cluster, held here until the cluster turns out to have a
     /// sighting worth saving. Nil when merging into an outing that already exists.
-    private var pendingOuting: Outing?
+    private(set) var pendingOuting: Outing?
     private var errorRecovery: ErrorRecovery?
     private var preparedObservations: [BirdObservation]?
   private var preparedUpload: PendingPhotoUpload?
@@ -224,6 +246,14 @@ final class AddPhotosViewModel {
         accountID = nil
         authService = nil
         dataStore = nil
+        confirmedClusterID = nil
+        draftOverriddenStartTime = nil
+        draftUseExistingOuting = false
+        currentClusterTimeZone = nil
+        currentPhotoID = nil
+        currentOutingId = ""
+        pendingOuting = nil
+        lastLocationName = ""
     }
 
     func stopShareQueueAfterDismissal() {
@@ -747,27 +777,50 @@ final class AddPhotosViewModel {
         locationName: String,
         lat: Double?,
         lon: Double?,
-        outingOverridesPhotoGPS: Bool
+        outingOverridesPhotoGPS: Bool,
+        overriddenStartTime: Date? = nil,
+        useExistingOuting: Bool = false
     ) {
         guard (try? requireCurrentSession()) != nil else { return }
         let normalizedName = locationName.trimmingCharacters(in: .whitespacesAndNewlines)
         lastLocationName = normalizedName
+        let clusterID = clusters.indices.contains(currentClusterIndex) ? clusters[currentClusterIndex].id : nil
+        let isResumingSameCluster = confirmedClusterID != nil && confirmedClusterID == clusterID && !clusterPhotos.isEmpty
+        confirmedClusterID = clusterID
         currentOutingId = outingId
+        pendingOuting = outing
+        draftOverriddenStartTime = overriddenStartTime
+        draftUseExistingOuting = useExistingOuting
         outingInferenceLocation = if let lat, let lon { (lat: lat, lon: lon) } else { nil }
         self.outingOverridesPhotoGPS = outingOverridesPhotoGPS
-        pendingOuting = outing
-    preparedUpload = nil
-        photoResults = []
-        currentCandidates = []
-        rangeAdjusted = false
-        cropPromptContext = .manualRecrop
-        currentPhotoIndex = 0
+        preparedUpload = nil
 
-        Task { await runSpeciesId(photoIndex: 0) }
+        if !isResumingSameCluster {
+            photoResults = []
+            currentCandidates = []
+            rangeAdjusted = false
+            cropPromptContext = .manualRecrop
+            currentPhotoIndex = 0
+            currentPhotoID = clusterPhotos.first?.id
+        } else {
+            if let currentPhotoID, let foundIdx = clusterPhotos.firstIndex(where: { $0.id == currentPhotoID }) {
+                currentPhotoIndex = foundIdx
+            } else if currentPhotoIndex >= clusterPhotos.count {
+                currentPhotoIndex = max(0, clusterPhotos.count - 1)
+            }
+            currentPhotoID = currentPhoto?.id
+            currentCandidates = []
+            rangeAdjusted = false
+            cropPromptContext = .manualRecrop
+        }
+
+        Task { await runSpeciesId(photoIndex: currentPhotoIndex) }
     }
 
     func resolveCurrentClusterTimeZone(_ timeZone: TimeZone) {
         guard clusters.indices.contains(currentClusterIndex) else { return }
+        currentClusterTimeZone = timeZone
+        let activeID = currentPhoto?.id ?? currentPhotoID
         let resolved = clusters[currentClusterIndex].photos.map { photo in
             var photo = photo
             if let captureTime = photo.captureTime?.resolved(in: timeZone) {
@@ -784,11 +837,18 @@ final class AddPhotosViewModel {
         }
         let photosByID = Dictionary(uniqueKeysWithValues: resolved.map { ($0.id, $0) })
         processedPhotos = processedPhotos.map { photosByID[$0.id] ?? $0 }
+        if let activeID, let newIndex = resolved.firstIndex(where: { $0.id == activeID }) {
+            currentPhotoIndex = newIndex
+            currentPhotoID = activeID
+        }
     }
 
-    private func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
+    func photoMetadata(outingId: String) -> [DataService.PhotoPayload] {
         let fallbackTimeZone = pendingOuting.flatMap { DateFormatting.storedTimeZone($0.startTime) } ?? .current
-        return clusterPhotos.map { photo in
+        let activePhotos = clusterPhotos.filter { photo in
+            !photoResults.contains { $0.photoId == photo.id && $0.status == .rejected }
+        }
+        return activePhotos.map { photo in
             DataService.PhotoPayload(
                 id: photo.id,
                 outingId: outingId,
@@ -999,34 +1059,58 @@ final class AddPhotosViewModel {
     // MARK: - Step 4: Per-Photo Confirmation
 
     /// User confirms species for the current photo with a certainty level.
-  func confirmCurrentPhoto(
-    species: String, confidence: Double, status: ObservationStatus, count: Int
-  ) {
-        let result = PhotoResult(
-            photoId: currentPhoto?.id ?? "",
-            species: species,
-            confidence: confidence,
-            status: status,
-            count: count
-        )
-        photoResults.append(result)
+    func confirmCurrentPhoto(
+        species: String, confidence: Double, status: ObservationStatus, count: Int
+    ) {
+        if let current = currentPhoto {
+            photoResults.removeAll { $0.photoId == current.id }
+            let result = PhotoResult(
+                photoId: current.id,
+                species: species,
+                confidence: confidence,
+                status: status,
+                count: count
+            )
+            photoResults.append(result)
+        }
         advanceToNextPhoto()
     }
 
     /// Skip the current photo (exclude from save).
     func skipCurrentPhoto() {
+        if let current = currentPhoto {
+            photoResults.removeAll { $0.photoId == current.id }
+            photoResults.append(PhotoResult(
+                photoId: current.id,
+                species: "",
+                confidence: 0,
+                status: .rejected,
+                count: 0
+            ))
+        }
         advanceToNextPhoto()
     }
 
     /// Go back to the previous photo, removing its result so the user can re-decide.
     func goBackToPreviousPhoto() {
         guard currentPhotoIndex > 0 else { return }
-        if !photoResults.isEmpty {
-            photoResults.removeLast()
+        let prevIndex = currentPhotoIndex - 1
+        if prevIndex < clusterPhotos.count {
+            let prevPhoto = clusterPhotos[prevIndex]
+            photoResults.removeAll { $0.photoId == prevPhoto.id }
         }
+        currentPhotoIndex = prevIndex
+        currentPhotoID = currentPhoto?.id
         currentCandidates = []
         rangeAdjusted = false
-        Task { await runSpeciesId(photoIndex: currentPhotoIndex - 1) }
+        Task { await runSpeciesId(photoIndex: prevIndex) }
+    }
+
+    /// Return to outing review without losing upload progress or earlier decisions.
+    func returnToOutingReview() {
+        activeImageData = nil
+        activeImagePhotoID = nil
+        currentStep = .outingReview
     }
 
     /// Trigger manual crop, then re-identify with the cropped image.
@@ -1043,14 +1127,23 @@ final class AddPhotosViewModel {
     /// Remove a photo before identification and keep the cluster state valid.
     func removePhotoFromCurrentCluster(id: String) async {
         guard currentClusterIndex < clusters.count else { return }
+        let activeID = currentPhoto?.id ?? currentPhotoID
         if let photo = processedPhotos.first(where: { $0.id == id }), photo.cleanupOriginal {
             PhotoFlowStore.remove([photo.originalURL])
         }
         clusters[currentClusterIndex].photos.removeAll { $0.id == id }
         processedPhotos.removeAll { $0.id == id }
+        photoResults.removeAll { $0.photoId == id }
 
         if clusters[currentClusterIndex].photos.isEmpty {
             clusters.remove(at: currentClusterIndex)
+            confirmedClusterID = nil
+            currentOutingId = ""
+            pendingOuting = nil
+            draftOverriddenStartTime = nil
+            draftUseExistingOuting = false
+            currentPhotoIndex = 0
+            currentPhotoID = nil
             if clusters.isEmpty {
                 currentClusterIndex = 0
                 selectedItems = []
@@ -1059,6 +1152,16 @@ final class AddPhotosViewModel {
                 flowDismissalRequestID = UUID()
             } else if currentClusterIndex >= clusters.count {
                 currentClusterIndex = clusters.count - 1
+            }
+        } else {
+            if let activeID, let newIndex = clusterPhotos.firstIndex(where: { $0.id == activeID }) {
+                currentPhotoIndex = newIndex
+                currentPhotoID = activeID
+            } else if currentPhotoIndex >= clusterPhotos.count {
+                currentPhotoIndex = max(0, clusterPhotos.count - 1)
+                currentPhotoID = currentPhoto?.id
+            } else {
+                currentPhotoID = currentPhoto?.id
             }
         }
     }
@@ -1083,6 +1186,8 @@ final class AddPhotosViewModel {
         activeImagePhotoID = nil
         let nextIdx = currentPhotoIndex + 1
         if nextIdx < clusterPhotos.count {
+            currentPhotoIndex = nextIdx
+            currentPhotoID = currentPhoto?.id
             currentCandidates = []
             rangeAdjusted = false
             cropPromptContext = .manualRecrop
@@ -1227,9 +1332,17 @@ final class AddPhotosViewModel {
             // Move to next cluster or finish
             if currentClusterIndex < clusters.count - 1 {
                 preparedObservations = nil
-        preparedUpload = nil
+                preparedUpload = nil
                 currentClusterIndex += 1
                 currentPhotoIndex = 0
+                currentPhotoID = nil
+                confirmedClusterID = nil
+                currentOutingId = ""
+                pendingOuting = nil
+                draftOverriddenStartTime = nil
+                draftUseExistingOuting = false
+                currentClusterTimeZone = nil
+                lastLocationName = ""
                 photoResults = []
                 currentCandidates = []
                 rangeAdjusted = false
@@ -1355,6 +1468,11 @@ final class AddPhotosViewModel {
         clusters = []
         currentClusterIndex = 0
         currentPhotoIndex = 0
+        currentPhotoID = nil
+        confirmedClusterID = nil
+        draftOverriddenStartTime = nil
+        draftUseExistingOuting = false
+        currentClusterTimeZone = nil
         currentCandidates = []
         photoResults = []
         currentOutingId = ""

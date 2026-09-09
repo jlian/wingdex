@@ -99,10 +99,6 @@ struct OutingReviewView: View {
                 locationBar
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
-            } header: {
-                Text("Location")
-                    .foregroundStyle(Color.foregroundText)
-                    .accessibilityIdentifier("outing.locationHeader")
             } footer: {
                 Text("Powered by [Geoapify](https://www.geoapify.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright)")
                     .accessibilityIdentifier("outing.locationAttribution")
@@ -294,12 +290,27 @@ struct OutingReviewView: View {
     }
 
     private func initializeCluster(forceReset: Bool = false) {
-        guard forceReset || locationModel.activeClusterID != cluster?.id else { return }
+        guard let cluster else { return }
         destination = nil
-        overriddenStartTime = nil
-        matchingOuting = cluster.flatMap { findMatchingOuting(cluster: $0, outings: store.outings) }
-        useExistingOuting = matchingOuting != nil
-        needsInitialLookup = useExistingOuting
+        let isReturningDraft = viewModel.confirmedClusterID == cluster.id
+
+        if isReturningDraft {
+            useExistingOuting = viewModel.draftUseExistingOuting
+            if useExistingOuting {
+                matchingOuting = store.outings.first(where: { $0.id == viewModel.currentOutingId })
+                    ?? findMatchingOuting(cluster: cluster, outings: store.outings)
+            } else {
+                matchingOuting = findMatchingOuting(cluster: cluster, outings: store.outings)
+            }
+            overriddenStartTime = viewModel.draftOverriddenStartTime
+            needsInitialLookup = useExistingOuting
+        } else if forceReset || locationModel.activeClusterID != cluster.id {
+            overriddenStartTime = nil
+            matchingOuting = findMatchingOuting(cluster: cluster, outings: store.outings)
+            useExistingOuting = matchingOuting != nil
+            needsInitialLookup = useExistingOuting
+        }
+
         locationModel.configure(
             for: cluster, useGeoContext: viewModel.useGeoContext && !useExistingOuting,
             forceReset: forceReset
@@ -334,7 +345,8 @@ struct OutingReviewView: View {
             viewModel.resolveCurrentClusterTimeZone(effectiveTimeZone)
             viewModel.outingConfirmed(
                 outing: nil, outingId: existing.id, locationName: existing.locationName,
-                lat: existing.lat, lon: existing.lon, outingOverridesPhotoGPS: false
+                lat: existing.lat, lon: existing.lon, outingOverridesPhotoGPS: false,
+                overriddenStartTime: overriddenStartTime, useExistingOuting: true
             )
             return
         }
@@ -344,8 +356,14 @@ struct OutingReviewView: View {
         let finalName = name.isEmpty ? "Unknown Location" : name
         let start = overriddenStartTime ?? cluster?.startTime ?? Date()
         let duration = cluster.map { $0.endTime.timeIntervalSince($0.startTime) } ?? 0
+        let outingId: String
+        if viewModel.confirmedClusterID == cluster?.id, let existingDraftId = viewModel.pendingOuting?.id {
+            outingId = existingDraftId
+        } else {
+            outingId = "outing_\(UUID().uuidString)"
+        }
         let outing = Outing(
-            id: "outing_\(UUID().uuidString)", userId: "",
+            id: outingId, userId: "",
             startTime: DateFormatting.storageString(start, timeZone: effectiveTimeZone),
             endTime: DateFormatting.storageString(start.addingTimeInterval(duration), timeZone: effectiveTimeZone),
             locationName: finalName, defaultLocationName: finalName,
@@ -355,7 +373,8 @@ struct OutingReviewView: View {
         )
         viewModel.outingConfirmed(
             outing: outing, outingId: outing.id, locationName: finalName,
-            lat: outing.lat, lon: outing.lon, outingOverridesPhotoGPS: selection.overridesPhotoGPS
+            lat: outing.lat, lon: outing.lon, outingOverridesPhotoGPS: selection.overridesPhotoGPS,
+            overriddenStartTime: overriddenStartTime, useExistingOuting: false
         )
     }
 
