@@ -40,7 +40,6 @@ struct SpeciesPeekSheet: View {
     /// Keyed by Commons file page so a paged-to photo never shows the previous
     /// photo's credit while its own is still loading.
     @State private var imageCredits: [String: WikimediaImageCredit] = [:]
-    @State private var safariLink: SafariLink?
     /// Width available to the reference row, so the hero and the thumbnail strip are
     /// derived from the device rather than from a constant that overflows a 390pt phone.
     @State private var referenceRowWidth: CGFloat = 0
@@ -85,7 +84,6 @@ struct SpeciesPeekSheet: View {
         .safeAreaInset(edge: .bottom) { confirmBar }
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
-        .fullScreenCover(item: $safariLink) { SafariView(link: $0) }
         .task(id: current?.species) { await load() }
         .task(id: currentHeroPageUrl) { await loadCredit() }
         .onChange(of: index) { expandedExtract = false }
@@ -157,14 +155,17 @@ struct SpeciesPeekSheet: View {
                 // be uncredited, and CC 4.0 3(a)(2) accepts the file page in place of an
                 // inline creator and licence line.
                 if let filePage {
-                    Button {
-                        safariLink = SafariLink(url: filePage)
-                    } label: {
-                        Text(credit?.label ?? "Photo: Wikimedia Commons")
-                            .foregroundStyle(Color.accentColor)
+                    let label = Text(credit?.label ?? "Photo: Wikimedia Commons")
+                    if let destination = WebURL(url: filePage) {
+                        Link(destination: destination.url) {
+                            label.foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Photo credit and license on Wikimedia Commons")
+                        .accessibilityIdentifier("speciesPeek.photoCredit")
+                    } else {
+                        label
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Photo credit and license on Wikimedia Commons")
 
                     if creditsText {
                         Text("\u{00B7}")
@@ -378,14 +379,16 @@ struct SpeciesPeekSheet: View {
         }
     }
 
+    @ViewBuilder
     private func chip(_ title: String, icon: String, url: URL) -> some View {
-        Button {
-            safariLink = SafariLink(url: url)
-        } label: {
-            Label(title, systemImage: icon)
+        if let destination = WebURL(url: url) {
+            Link(destination: destination.url) {
+                Label(title, systemImage: icon)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityIdentifier("speciesPeek.reference.\(title)")
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
     }
 
     // MARK: - Confirm
