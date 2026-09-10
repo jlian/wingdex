@@ -14,6 +14,9 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         learnMore.tap()
 
         let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        let backgrounded = NSPredicate { _, _ in
+            [.runningBackground, .runningBackgroundSuspended].contains(app.state)
+        }
         for identifier in [
             "speciesPeek.reference.Wikipedia",
             "speciesPeek.reference.eBird",
@@ -24,7 +27,10 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             XCTAssertTrue(scrollUntilVisible(link, in: app), identifier)
             link.tap()
             XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 10), identifier)
-            XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5), identifier)
+            // iOS may suspend WingDex before Safari finishes becoming foreground.
+            let background = XCTNSPredicateExpectation(predicate: backgrounded, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [background], timeout: 5), .completed,
+                           "\(identifier): WingDex state \(app.state)")
             app.activate()
             XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 5))
         }
