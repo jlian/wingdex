@@ -4,6 +4,37 @@ import XCTest
 /// inference are exercised directly in the unit targets without relaunching UI.
 @MainActor
 final class BirdIdFlowUITests: BirdIdFlowUITestCase {
+    func testSpeciesReferenceLinksOpenExternallyAndPreserveReview() {
+        let app = launchApp(autoSignIn: false, extraArguments: [
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+        ])
+        waitForOutingReview(in: app).tap()
+        let learnMore = app.buttons["confirm.learnMore"]
+        XCTAssertTrue(learnMore.existsOrWait(timeout: 10))
+        learnMore.tap()
+
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        for identifier in [
+            "speciesPeek.reference.Wikipedia",
+            "speciesPeek.reference.eBird",
+            "speciesPeek.photoCredit",
+        ] {
+            let link = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+            XCTAssertTrue(link.existsOrWait(timeout: 10), identifier)
+            XCTAssertTrue(scrollUntilVisible(link, in: app), identifier)
+            link.tap()
+            XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 10), identifier)
+            XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5), identifier)
+            app.activate()
+            XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 5))
+        }
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(learnMore.existsOrWait(timeout: 5))
+        XCTAssertEqual(app.staticTexts["confirm.speciesName"].label, Self.expectedSpecies)
+        XCTAssertTrue(app.buttons["confirm.accept"].isEnabled)
+    }
+
     func testMissingGPSRequestsLocationOnlyAfterTap() {
         let app = launchApp(photoGPS: false, extraArguments: [
             "--ui-test-current-location-success", "--ui-test-geocoding-success",
