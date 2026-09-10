@@ -13,24 +13,20 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(learnMore.existsOrWait(timeout: 10))
         learnMore.tap()
 
+        // iOS 26 can report WingDex as foreground even while Safari is visible.
+        // Verify each handoff by launching Safari fresh and returning to the review.
         let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
-        let backgrounded = NSPredicate { _, _ in
-            [.runningBackground, .runningBackgroundSuspended].contains(app.state)
-        }
         for identifier in [
             "speciesPeek.reference.Wikipedia",
             "speciesPeek.reference.eBird",
             "speciesPeek.photoCredit",
         ] {
+            safari.terminate()
             let link = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
             XCTAssertTrue(link.existsOrWait(timeout: 10), identifier)
             XCTAssertTrue(scrollUntilVisible(link, in: app), identifier)
             link.tap()
             XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 10), identifier)
-            // iOS may suspend WingDex before Safari finishes becoming foreground.
-            let background = XCTNSPredicateExpectation(predicate: backgrounded, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [background], timeout: 5), .completed,
-                           "\(identifier): WingDex state \(app.state)")
             app.activate()
             XCTAssertTrue(app.buttons["Done"].existsOrWait(timeout: 5))
         }
