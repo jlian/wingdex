@@ -174,7 +174,8 @@ struct PhotoSelectionView: View {
         .photosPicker(
             isPresented: $showLibrary,
             selection: $viewModel.selectedItems,
-            matching: .images
+            matching: .images,
+            preferredItemEncoding: .current
         )
         .task(id: navigation.addPhotosLaunchRequest?.id) {
             guard let request = navigation.addPhotosLaunchRequest else { return }

@@ -44,9 +44,7 @@ struct AddPhotosFlow: View {
                             searchModel: locationSearch, destination: $outingDestination
                         )
                     }
-                case .photoProcessing:
-                    photoProcessingView
-                case .perPhotoConfirm:
+                case .photoProcessing, .perPhotoConfirm:
                     PerPhotoConfirmView(viewModel: viewModel)
                 case .manualCrop:
                     manualCropDestination
@@ -56,10 +54,14 @@ struct AddPhotosFlow: View {
                     doneView
                 }
             }
-            .id(viewModel.currentStep)
-            .transition(.opacity)
+            .id(viewModel.currentStep == .photoProcessing ? .perPhotoConfirm : viewModel.currentStep)
+            // Removed screens read live wizard state; do not keep them alive while it changes.
+            // Processing and confirmation retain one identity and one toolbar safe area.
+            .transition(.asymmetric(
+                insertion: .opacity.animation(reduceMotion ? nil : .easeOut(duration: 0.2)),
+                removal: .identity
+            ))
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.currentStep)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -77,7 +79,10 @@ struct AddPhotosFlow: View {
                     }
                     .disabled(viewModel.currentStep == .extracting)
                     .accessibilityLabel("Close")
-                    .accessibilityIdentifier(viewModel.currentStep == .perPhotoConfirm ? "confirm.close" : "flow.close")
+                    .accessibilityIdentifier(
+                        viewModel.currentStep == .perPhotoConfirm || viewModel.currentStep == .photoProcessing
+                            ? "confirm.close" : "flow.close"
+                    )
                 }
             }
         }
@@ -229,10 +234,7 @@ struct AddPhotosFlow: View {
                 return "Review Outing \(viewModel.currentClusterIndex + 1) of \(clusters.count)"
             }
             return "Review Outing"
-        case .photoProcessing:
-      return
-        "Identifying photo \(viewModel.currentPhotoIndex + 1) of \(viewModel.clusterPhotos.count)..."
-        case .perPhotoConfirm:
+        case .photoProcessing, .perPhotoConfirm:
             return ""
         case .manualCrop:
             return "Crop Photo \(viewModel.currentPhotoIndex + 1)"
@@ -266,43 +268,6 @@ struct AddPhotosFlow: View {
             Spacer()
         }
         .padding(.horizontal, 24)
-    }
-
-    // MARK: - Photo Processing (AI Identification) View
-
-    /// Spinner while AI identifies the current photo.
-    private var photoProcessingView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            // Show the full current image aspect-fit, not a square crop.
-            if let photo = viewModel.currentPhoto,
-        let uiImage = UIImage(
-          data: photo.croppedImage ?? viewModel.activeImageData ?? photo.thumbnail)
-      {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 320, maxHeight: 260)
-            }
-
-            // A spinner, not a progress bar. Inference is milliseconds on the
-            // Neural Engine and the wait is dominated by decode, so there is no
-            // honest progress to report and every device would fill at a
-            // different rate.
-            ProgressView()
-                .controlSize(.large)
-                .padding(.vertical, 8)
-
-            Text(viewModel.processingMessage)
-                .font(.subheadline)
-                .foregroundStyle(Color.mutedText)
-                .multilineTextAlignment(.center)
-
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Manual Crop Destination
