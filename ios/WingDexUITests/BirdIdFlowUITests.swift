@@ -4,6 +4,73 @@ import XCTest
 /// inference are exercised directly in the unit targets without relaunching UI.
 @MainActor
 final class BirdIdFlowUITests: BirdIdFlowUITestCase {
+    func testNextAndBackKeepConfirmationViewportAndToolbarStable() {
+        let secondPhoto = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WingDex/Resources/CollagePhotos/collage1.jpg")
+        let app = launchApp(extraArguments: [
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+            "--ui-test-photo", secondPhoto.path,
+        ])
+        waitForOutingReview(in: app).tap()
+        let species = app.staticTexts["confirm.speciesName"]
+        XCTAssertTrue(species.existsOrWait(timeout: 10))
+        let speciesY = species.frame.minY
+        let back = app.buttons["confirm.back"]
+        let toolbarY = back.frame.minY
+        let counter = app.staticTexts["confirm.photoCounter"]
+        XCTAssertEqual(counter.label, "Photo 1 of 2")
+
+        app.buttons["confirm.accept"].tap()
+        XCTAssertTrue(counter.labelOrWait("Photo 2 of 2", timeout: 5))
+        XCTAssertTrue(species.existsOrWait(timeout: 10))
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        XCTAssertEqual(app.buttons.matching(identifier: "confirm.back").count, 1)
+        XCTAssertEqual(back.frame.minY, toolbarY, accuracy: 1)
+        XCTAssertEqual(species.frame.minY, speciesY, accuracy: 1)
+
+        back.tap()
+        XCTAssertTrue(counter.labelOrWait("Photo 1 of 2", timeout: 5))
+        XCTAssertTrue(species.existsOrWait(timeout: 10))
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        XCTAssertEqual(back.frame.minY, toolbarY, accuracy: 1)
+        XCTAssertEqual(species.frame.minY, speciesY, accuracy: 1)
+        XCTAssertTrue(app.staticTexts["confirm.attribution"].exists)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Confirmation_After_Back_To_First_Photo"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testBackDuringIdentificationReturnsToReviewWithoutEmptyResult() {
+        let app = launchApp(autoSignIn: false, extraArguments: [
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+            "--ui-test-slow-identification",
+        ])
+        waitForOutingReview(in: app).tap()
+        let back = app.buttons["confirm.back"]
+        XCTAssertTrue(back.existsOrWait(timeout: 5))
+        XCTAssertFalse(app.buttons["confirm.accept"].isEnabled)
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        back.tap()
+        let next = waitForOutingReview(in: app)
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        XCTAssertFalse(app.staticTexts["confirm.speciesName"].exists)
+        next.tap()
+        XCTAssertTrue(app.staticTexts["confirm.identifying"].existsOrWait(timeout: 5))
+        XCTAssertFalse(app.staticTexts["confirm.attribution"].exists)
+        let toolbarY = back.frame.minY
+        XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        XCTAssertTrue(app.staticTexts["Cropped photo"].exists)
+        XCTAssertTrue(app.staticTexts["confirm.attribution"].exists)
+        XCTAssertEqual(back.frame.minY, toolbarY, accuracy: 1)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Stable_ID_After_Back_During_Processing"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func testSpeciesReferenceLinksOpenExternallyAndPreserveReview() {
         let app = launchApp(autoSignIn: false, extraArguments: [
             "--ui-test-geocoding-success", "--ui-test-stub-identification",
@@ -93,6 +160,10 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertEqual(species.label, Self.expectedSpecies)
         XCTAssertTrue(app.staticTexts["confirm.confidence"].label.hasSuffix("%"))
         XCTAssertTrue(app.buttons["confirm.accept"].isEnabled)
+        let speciesFrame = species.frame
+        XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
+        let caption = app.staticTexts["Cropped photo"]
+        let captionFrame = caption.frame
 
         let idAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         idAttachment.name = "ID_Screen"
@@ -127,6 +198,21 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         app.buttons["confirm.outingDetailsDone"].tap()
         XCTAssertTrue(species.existsOrWait(timeout: 5))
         XCTAssertFalse(app.buttons["outing.continue"].exists)
+
+        // Mount the confirmation toolbar again after returning to outing review.
+        // Its safe area and late photo/gallery loading must leave content in place.
+        app.buttons["confirm.back"].tap()
+        waitForOutingReview(in: app).tap()
+        XCTAssertTrue(species.existsOrWait(timeout: 10))
+        XCTAssertTrue(app.buttons["confirm.crop"].isHittable)
+        XCTAssertEqual(species.frame.minY, speciesFrame.minY, accuracy: 1)
+        XCTAssertEqual(caption.frame.minY, captionFrame.minY, accuracy: 1)
+        let returnedAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        returnedAttachment.name = "ID_Screen_After_Return"
+        returnedAttachment.lifetime = .keepAlways
+        add(returnedAttachment)
+        XCTAssertEqual(species.frame.minY, speciesFrame.minY, accuracy: 1)
+        XCTAssertEqual(caption.frame.minY, captionFrame.minY, accuracy: 1)
     }
 
     func testLowConfidenceIdentificationOffersInteractiveCropZoom() {

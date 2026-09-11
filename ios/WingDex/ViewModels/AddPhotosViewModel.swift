@@ -167,6 +167,17 @@ final class AddPhotosViewModel {
     var currentCandidates: [IdentifiedCandidate] = []
     private(set) var activeImageData: Data?
     private var activeImagePhotoID: String?
+    private var identificationTask: Task<Void, Never>?
+    private(set) var identificationRequestID = UUID()
+    private let identify: @MainActor (Data, (lat: Double, lon: Double)?, Int?) async throws -> [BirdIdEngine.Result]
+
+    init(
+        identify: (@MainActor (Data, (lat: Double, lon: Double)?, Int?) async throws -> [BirdIdEngine.Result])? = nil
+    ) {
+        self.identify = identify ?? { imageData, location, month in
+            try await BirdIdEngine.shared.identify(imageData: imageData, location: location, month: month)
+        }
+    }
 
     /// Whether range-prior data was used to adjust confidence.
     var rangeAdjusted = false
@@ -240,6 +251,7 @@ final class AddPhotosViewModel {
     }
 
     func cancelSession() async {
+        cancelIdentification()
         sessionGeneration = UUID()
         await releaseIncomingShare()
         cleanupPhotoFiles()
@@ -809,7 +821,7 @@ final class AddPhotosViewModel {
             cropPromptContext = .manualRecrop
         }
 
-        Task { await runSpeciesId(photoIndex: currentPhotoIndex) }
+        startSpeciesId(photoIndex: currentPhotoIndex)
     }
 
     func resolveCurrentClusterTimeZone(_ timeZone: TimeZone) {
@@ -872,15 +884,52 @@ final class AddPhotosViewModel {
     /// classifier ALWAYS returns 25 ranked species, so "no bird found" is not
     /// expressible and the confidence gate replaces it.
     func runSpeciesId(photoIndex: Int, croppedImageData: Data? = nil) async {
-        guard let sessionID = try? requireCurrentSession() else { return }
-        let photos = clusterPhotos
-        guard photoIndex < photos.count else { return }
-        let photo = photos[photoIndex]
+        guard let task = startSpeciesId(photoIndex: photoIndex, croppedImageData: croppedImageData) else { return }
+        await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
 
+    private func cancelIdentification() {
+        identificationRequestID = UUID()
+        identificationTask?.cancel()
+        identificationTask = nil
+    }
+
+    @discardableResult
+    private func startSpeciesId(photoIndex: Int, croppedImageData: Data? = nil) -> Task<Void, Never>? {
+        cancelIdentification()
+        guard let sessionID = try? requireCurrentSession(),
+              clusterPhotos.indices.contains(photoIndex) else { return nil }
+        let requestID = identificationRequestID
         currentPhotoIndex = photoIndex
+        currentPhotoID = currentPhoto?.id
+        // Enter loading synchronously: an empty candidate list is not a result
+        // while navigation or identification is still in flight.
+        currentStep = .photoProcessing
+        currentCandidates = []
+        rangeAdjusted = false
         error = nil
         errorRecovery = nil
-        currentStep = .photoProcessing
+        let task = Task {
+            await performSpeciesId(
+                photoIndex: photoIndex, croppedImageData: croppedImageData,
+                sessionID: sessionID, requestID: requestID
+            )
+        }
+        identificationTask = task
+        return task
+    }
+
+    private func performSpeciesId(
+        photoIndex: Int, croppedImageData: Data?, sessionID: UUID, requestID: UUID
+    ) async {
+        guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
+        let photos = clusterPhotos
+        guard photos.indices.contains(photoIndex) else { return }
+        let photo = photos[photoIndex]
 
         let isCropped = croppedImageData != nil || photo.croppedImage != nil
         processingMessage = "Photo \(photoIndex + 1)/\(photos.count): Identifying species..."
@@ -893,14 +942,14 @@ final class AddPhotosViewModel {
                 processingImageData = try await Task.detached(priority: .userInitiated) {
                     try PhotoService.processingData(at: photo.originalURL)
                 }.value
-                guard isCurrentSession(sessionID), currentPhotoIndex == photoIndex else { return }
+                guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
                 activeImageData = processingImageData
                 activeImagePhotoID = photo.id
             }
         } catch is CancellationError {
             return
         } catch {
-            guard isCurrentSession(sessionID), currentPhotoIndex == photoIndex else { return }
+            guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
             if error is PhotoService.ProcessingError {
                 self.error = .message(
                     "This photo could not be decoded on this device. Export a JPEG or HEIF copy and try again, or skip it."
@@ -919,6 +968,10 @@ final class AddPhotosViewModel {
 
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--ui-test-slow-identification") {
+            try? await Task.sleep(for: .seconds(2))
+            guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
+        }
       let stubConfidence: Double? =
         if arguments.contains("--ui-test-stub-low-confidence-identification") {
             0.5
@@ -957,12 +1010,8 @@ final class AddPhotosViewModel {
                 return Calendar.current.component(.month, from: date)
             }()
 
-            let results = try await BirdIdEngine.shared.identify(
-                imageData: imageToSend,
-                location: location,
-                month: month
-            )
-            guard isCurrentSession(sessionID) else { return }
+            let results = try await identify(imageToSend, location, month)
+            guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
 
             let mapped = results.map {
                 IdentifiedCandidate(
@@ -1010,6 +1059,7 @@ final class AddPhotosViewModel {
         } catch is CancellationError {
             return
         } catch {
+            guard isCurrentIdentification(sessionID: sessionID, requestID: requestID) else { return }
             log.error("Species identification failed for photo index \(photoIndex + 1)")
             self.error = AppError.map(
                 error,
@@ -1021,6 +1071,11 @@ final class AddPhotosViewModel {
             rangeAdjusted = false
             currentStep = .perPhotoConfirm
         }
+    }
+
+    private func isCurrentIdentification(sessionID: UUID, requestID: UUID) -> Bool {
+        !Task.isCancelled && isCurrentSession(sessionID)
+            && identificationRequestID == requestID && currentStep == .photoProcessing
     }
 
     /// Select location context for the range prior.
@@ -1094,15 +1149,12 @@ final class AddPhotosViewModel {
             let prevPhoto = clusterPhotos[prevIndex]
             photoResults.removeAll { $0.photoId == prevPhoto.id }
         }
-        currentPhotoIndex = prevIndex
-        currentPhotoID = currentPhoto?.id
-        currentCandidates = []
-        rangeAdjusted = false
-        Task { await runSpeciesId(photoIndex: prevIndex) }
+        startSpeciesId(photoIndex: prevIndex)
     }
 
     /// Return to outing review without losing upload progress or earlier decisions.
     func returnToOutingReview() {
+        cancelIdentification()
         activeImageData = nil
         activeImagePhotoID = nil
         currentStep = .outingReview
@@ -1110,13 +1162,14 @@ final class AddPhotosViewModel {
 
     /// Trigger manual crop, then re-identify with the cropped image.
     func requestManualCrop() {
+        cancelIdentification()
         cropPromptContext = .manualRecrop
         currentStep = .manualCrop
     }
 
     /// Run identification again for the current photo using its latest crop, if any.
     func reidentifyCurrentPhoto() {
-        Task { await runSpeciesId(photoIndex: currentPhotoIndex) }
+        startSpeciesId(photoIndex: currentPhotoIndex)
     }
 
     /// Remove a photo before identification and keep the cluster state valid.
@@ -1164,7 +1217,7 @@ final class AddPhotosViewModel {
     /// After user crops, re-identify the cropped image.
     func handleCropComplete(croppedImageData: Data) {
         storeCroppedImage(photoId: currentPhoto?.id, imageData: croppedImageData)
-        Task { await runSpeciesId(photoIndex: currentPhotoIndex, croppedImageData: croppedImageData) }
+        startSpeciesId(photoIndex: currentPhotoIndex, croppedImageData: croppedImageData)
     }
 
     /// Cancel crop -> go to confirm screen with current (possibly empty) candidates.
@@ -1181,16 +1234,10 @@ final class AddPhotosViewModel {
         activeImagePhotoID = nil
         let nextIdx = currentPhotoIndex + 1
         if nextIdx < clusterPhotos.count {
-            currentPhotoIndex = nextIdx
-            currentPhotoID = currentPhoto?.id
-            currentCandidates = []
-            rangeAdjusted = false
             cropPromptContext = .manualRecrop
-            // Leave the confirm screen in the same update that clears the candidates, or it
-            // renders its empty state for a frame and flashes a question mark.
-            currentStep = .photoProcessing
-            Task { await runSpeciesId(photoIndex: nextIdx) }
+            startSpeciesId(photoIndex: nextIdx)
         } else {
+            cancelIdentification()
             currentStep = .saving
             Task { await saveCurrentCluster() }
         }
@@ -1368,7 +1415,7 @@ final class AddPhotosViewModel {
         case .sessionPreparation:
             Task { await processSelectedPhotos() }
         case .speciesIdentification(let photoIndex, let croppedImageData):
-            Task { await runSpeciesId(photoIndex: photoIndex, croppedImageData: croppedImageData) }
+            startSpeciesId(photoIndex: photoIndex, croppedImageData: croppedImageData)
         case .saveCluster:
             Task { await saveCurrentCluster() }
         case nil:
@@ -1450,12 +1497,14 @@ final class AddPhotosViewModel {
     }
 
     private func finalizeDiscardedShare() async {
+        cancelIdentification()
         sessionGeneration = UUID()
         await releaseIncomingShare()
         cleanupPhotoFiles()
     }
 
     private func resetFlowForAccountChange() {
+        cancelIdentification()
         cleanupPhotoFiles()
         selectedItems = []
         processedPhotos = []
@@ -1573,7 +1622,7 @@ struct IdentificationResult {
 }
 
 /// A single AI candidate species with confidence score.
-struct IdentifiedCandidate {
+struct IdentifiedCandidate: Equatable {
     let species: String
     let confidence: Double
     let wikiTitle: String?

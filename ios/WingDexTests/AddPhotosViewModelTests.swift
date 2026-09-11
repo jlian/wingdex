@@ -31,13 +31,14 @@ final class AddPhotosViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.currentPhoto?.exifTime, rawTime.date)
     }
 
-    private func configuredModel() async throws -> (AddPhotosViewModel, DataStore) {
+    private func configuredModel(
+        _ viewModel: AddPhotosViewModel = AddPhotosViewModel()
+    ) async throws -> (AddPhotosViewModel, DataStore) {
         let auth = AuthService()
         auth.installUITestAnonymousIdentity()
         let store = DataStore(service: UITestDataService(mode: .populated))
         store.activate(accountID: try XCTUnwrap(auth.userId))
         await store.loadAll()
-        let viewModel = AddPhotosViewModel()
         viewModel.configure(auth: auth, dataStore: store)
         return (viewModel, store)
     }
@@ -47,6 +48,136 @@ final class AddPhotosViewModelTests: XCTestCase {
             UIColor.blue.setFill()
             context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
         }
+    }
+
+    private func identificationPhotos(_ viewModel: AddPhotosViewModel) throws {
+        let data = try XCTUnwrap(cameraImage().jpegData(compressionQuality: 0.8))
+        let url = try PhotoFlowStore.writeCameraData(data)
+        viewModel.clusters = [PhotoCluster(
+            photos: (0..<2).map { index in
+                ProcessedPhoto(
+                    id: "photo-\(index)", originalURL: url, cleanupOriginal: true,
+                    thumbnail: data, exifTime: nil, gpsLat: nil, gpsLon: nil,
+                    fileHash: "\(index)", fileName: "\(index).jpg", byteCount: data.count
+                )
+            },
+            startTime: .now, endTime: .now, centerLat: nil, centerLon: nil
+        )]
+    }
+
+    private static func identificationResult(_ name: String) -> [BirdIdEngine.Result] {
+        [.init(commonName: name, scientificName: "Test bird", taxonIdx: 0,
+               confidence: 0.95, logP: nil, pBird: 0.99)]
+    }
+
+    @MainActor
+    private final class PendingIdentification {
+        var requests: [CheckedContinuation<[BirdIdEngine.Result], Error>] = []
+
+        func identify() async throws -> [BirdIdEngine.Result] {
+            try await withCheckedThrowingContinuation { requests.append($0) }
+        }
+
+        func waitForRequests(_ count: Int) async throws {
+            for _ in 0..<1_000 {
+                if requests.count >= count { return }
+                try await Task.sleep(for: .milliseconds(1))
+            }
+            XCTFail("Identification did not start")
+            throw CancellationError()
+        }
+    }
+
+    func testFastIdentificationWithCachedImagePublishesNewSameCountCandidates() async throws {
+        var calls = 0
+        let (model, _) = try await configuredModel(AddPhotosViewModel(identify: { _, _, _ in
+            calls += 1
+            return Self.identificationResult("Bird \(calls)")
+        }))
+        try identificationPhotos(model)
+        await model.runSpeciesId(photoIndex: 0)
+        XCTAssertEqual(model.currentStep, .perPhotoConfirm)
+        XCTAssertEqual(model.currentCandidates.first?.species, "Bird 1 (Test bird)")
+        let image = try XCTUnwrap(model.activeImageData)
+
+        // Removing the source proves the next request uses the decoded-image cache.
+        PhotoFlowStore.remove([try XCTUnwrap(model.currentPhoto?.originalURL)])
+        await model.runSpeciesId(photoIndex: 0)
+        XCTAssertEqual(model.currentStep, .perPhotoConfirm)
+        XCTAssertEqual(model.currentCandidates.first?.species, "Bird 2 (Test bird)")
+        XCTAssertEqual(model.activeImageData, image)
+        XCTAssertNil(model.error)
+        await model.cancelSession()
+    }
+
+    func testBackDuringIdentificationIgnoresLateSuccessAndFailure() async throws {
+        for fails in [false, true] {
+            let pending = PendingIdentification()
+            let (model, _) = try await configuredModel(AddPhotosViewModel(identify: { _, _, _ in
+                try await pending.identify()
+            }))
+            try identificationPhotos(model)
+            let request = Task { await model.runSpeciesId(photoIndex: 0) }
+            try await pending.waitForRequests(1)
+            XCTAssertEqual(model.currentStep, .photoProcessing)
+            model.returnToOutingReview()
+            if fails {
+                pending.requests[0].resume(throwing: CocoaError(.fileReadUnknown))
+            } else {
+                pending.requests[0].resume(returning: Self.identificationResult("Stale"))
+            }
+            await request.value
+            XCTAssertEqual(model.currentStep, .outingReview)
+            XCTAssertTrue(model.currentCandidates.isEmpty)
+            XCTAssertNil(model.error)
+            XCTAssertNil(model.activeImageData)
+            await model.cancelSession()
+        }
+    }
+
+    func testBackStartsProcessingSynchronouslyAndRejectsSupersededSamePhotoResult() async throws {
+        let pending = PendingIdentification()
+        let (model, _) = try await configuredModel(AddPhotosViewModel(identify: { _, _, _ in
+            try await pending.identify()
+        }))
+        try identificationPhotos(model)
+        let oldRequest = Task { await model.runSpeciesId(photoIndex: 0) }
+        try await pending.waitForRequests(1)
+        model.currentPhotoIndex = 1
+        model.currentStep = .perPhotoConfirm
+        model.currentCandidates = [.init(species: "Previous", confidence: 0.9, wikiTitle: nil, plumage: nil)]
+        model.goBackToPreviousPhoto()
+        XCTAssertEqual(model.currentStep, .photoProcessing)
+        XCTAssertEqual(model.currentPhotoIndex, 0)
+        XCTAssertTrue(model.currentCandidates.isEmpty)
+        try await pending.waitForRequests(2)
+        pending.requests[1].resume(returning: Self.identificationResult("Current"))
+        for _ in 0..<1_000 {
+            if model.currentStep == .perPhotoConfirm { break }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertEqual(model.currentStep, .perPhotoConfirm)
+        pending.requests[0].resume(returning: Self.identificationResult("Stale"))
+        await oldRequest.value
+        XCTAssertEqual(model.currentCandidates.first?.species, "Current (Test bird)")
+        XCTAssertNil(model.error)
+        await model.cancelSession()
+    }
+
+    func testBackBeforeQueuedIdentificationStartsDoesNotReenterFlow() async throws {
+        var calls = 0
+        let (model, _) = try await configuredModel(AddPhotosViewModel(identify: { _, _, _ in
+            calls += 1
+            return Self.identificationResult("Unexpected")
+        }))
+        try identificationPhotos(model)
+        model.reidentifyCurrentPhoto()
+        XCTAssertEqual(model.currentStep, .photoProcessing)
+        model.returnToOutingReview()
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertEqual(model.currentStep, .outingReview)
+        XCTAssertEqual(calls, 0)
+        await model.cancelSession()
     }
 
     private func cameraCapture(_ image: UIImage) throws -> CameraCapture {

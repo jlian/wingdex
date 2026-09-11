@@ -5,6 +5,71 @@ import SwiftUI
 ///
 struct PerPhotoConfirmView: View {
     @Bindable var viewModel: AddPhotosViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var presentation = PhotoConfirmationPresentation()
+    @State private var opacity = 1.0
+
+    private var liveKey: PhotoConfirmationPresentation.Key {
+        .init(requestID: viewModel.identificationRequestID,
+              isIdentifying: viewModel.currentStep == .photoProcessing)
+    }
+
+    var body: some View {
+        ZStack {
+            if let snapshot = presentation.displayed {
+                PhotoConfirmationPage(
+                    viewModel: viewModel, snapshot: snapshot,
+                    isActive: presentation.isCurrent
+                )
+                .id(snapshot.key)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(reduceMotion ? 1 : opacity)
+        .background(Color.pageBg.ignoresSafeArea())
+        .onChange(of: liveKey, initial: true) { updatePresentation() }
+        .onChange(of: reduceMotion) { updatePresentation() }
+        .task(id: presentation.phase) {
+            switch presentation.phase {
+            case .fadingOut:
+                withAnimation(.easeOut(duration: 0.1)) { opacity = 0 }
+                do {
+                    try await Task.sleep(for: .milliseconds(100))
+                } catch { return }
+                guard !Task.isCancelled else { return }
+                // Read the latest result at the swap boundary, not at fade-out start.
+                presentation.swapSnapshot()
+            case .fadingIn:
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeIn(duration: 0.18)) { opacity = 1 }
+                do {
+                    try await Task.sleep(for: .milliseconds(180))
+                } catch { return }
+                guard !Task.isCancelled else { return }
+                presentation.finishTransition()
+            case .idle:
+                break
+            }
+        }
+    }
+
+    private func updatePresentation() {
+        guard viewModel.currentStep == .photoProcessing || viewModel.currentStep == .perPhotoConfirm else { return }
+        presentation.update(.init(
+            key: liveKey, photo: viewModel.currentPhoto,
+            candidates: viewModel.currentCandidates,
+            location: viewModel.currentInferenceLocation,
+            useGeoContext: viewModel.useGeoContext
+        ), reduceMotion: reduceMotion)
+        if presentation.phase == .idle { opacity = 1 }
+    }
+}
+
+private struct PhotoConfirmationPage: View {
+    @Bindable var viewModel: AddPhotosViewModel
+    let snapshot: PhotoConfirmationPresentation.Snapshot
+    let isActive: Bool
 
     @State private var selectedSpecies = ""
     @State private var selectedConfidence: Double = 0
@@ -14,6 +79,7 @@ struct PerPhotoConfirmView: View {
     @State private var galleryIndex = 0
     @State private var decodedCroppedImage: UIImage?
     @State private var decodedThumbnail: UIImage?
+    @State private var decodedPhotoID: String?
     @State private var decodeTask: Task<Void, Never>?
     /// Set when a confirmed species turns out to be a mega, which is what makes
     /// the mark ping. Nil the rest of the time, so nothing animates by default.
@@ -31,8 +97,15 @@ struct PerPhotoConfirmView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var photo: ProcessedPhoto? { viewModel.currentPhoto }
-    private var candidates: [IdentifiedCandidate] { viewModel.currentCandidates }
+    private var photo: ProcessedPhoto? { snapshot.photo }
+    private var candidates: [IdentifiedCandidate] { snapshot.candidates }
+    private var liveKey: PhotoConfirmationPresentation.Key {
+        .init(requestID: viewModel.identificationRequestID,
+              isIdentifying: viewModel.currentStep == .photoProcessing)
+    }
+    private var canAct: Bool {
+        isActive && snapshot.key == liveKey
+    }
     private var photoIndex: Int { viewModel.currentPhotoIndex }
     private var totalPhotos: Int { viewModel.clusterPhotos.count }
     private var displayName: String { getDisplayName(selectedSpecies) }
@@ -45,8 +118,8 @@ struct PerPhotoConfirmView: View {
     /// turned geographic context off has asked not to be told where a bird
     /// belongs, and a mark would answer a question they declined.
     private func rarity(for species: String) -> RarityState {
-        guard viewModel.useGeoContext, let photo else { return .none }
-        let location = viewModel.currentInferenceLocation
+        guard snapshot.useGeoContext, let photo else { return .none }
+        let location = snapshot.location
         // Same month derivation the ranker used for this photo, so the mark can
         // never contradict the ranking that produced the candidate.
         return RarityStore.shared.state(
@@ -64,7 +137,8 @@ struct PerPhotoConfirmView: View {
         if l.contains("male") { return "\u{2642}" }
         return nil
     }
-    private var hasCandidates: Bool { !candidates.isEmpty }
+    private var isIdentifying: Bool { snapshot.key.isIdentifying }
+    private var hasCandidates: Bool { !isIdentifying && !candidates.isEmpty }
 
     private var peekCandidates: [SpeciesPeekCandidate] {
         candidates.map {
@@ -85,12 +159,16 @@ struct PerPhotoConfirmView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if hasCandidates {
+            if isIdentifying {
+                identifyingView
+            } else if hasCandidates {
                 candidateView
             } else {
                 noCandidatesView
             }
         }
+        .allowsHitTesting(canAct)
+        .accessibilityHidden(!canAct)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
@@ -103,17 +181,15 @@ struct PerPhotoConfirmView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
-                if hasCandidates {
-                    Button {
-                        confirmWith(status: .confirmed)
-                    } label: {
-                        Image(systemName: "checkmark")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Confirm")
-                    .accessibilityIdentifier("confirm.accept")
-                    .disabled(selectedSpecies.isEmpty || isAcknowledging)
+                Button {
+                    confirmWith(status: .confirmed)
+                } label: {
+                    Image(systemName: "checkmark")
                 }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Confirm")
+                .accessibilityIdentifier("confirm.accept")
+                .disabled(!canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging)
             }
 
             ToolbarItemGroup(placement: .bottomBar) {
@@ -144,15 +220,13 @@ struct PerPhotoConfirmView: View {
                     Label("Crop", systemImage: "crop")
                 }
                 .accessibilityIdentifier("confirm.crop")
-                .disabled(isAcknowledging)
+                .disabled(!canAct || isIdentifying || isAcknowledging)
 
-                if hasCandidates {
-                    Button("Possible", systemImage: "questionmark") {
-                        showPossibleConfirm = true
-                    }
-                    .accessibilityIdentifier("confirm.possible")
-                    .disabled(selectedSpecies.isEmpty || isAcknowledging)
+                Button("Possible", systemImage: "questionmark") {
+                    showPossibleConfirm = true
                 }
+                .accessibilityIdentifier("confirm.possible")
+                .disabled(!canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging)
 
                 Button {
                     showSkipConfirm = true
@@ -160,7 +234,7 @@ struct PerPhotoConfirmView: View {
                     Label("Skip", systemImage: "forward")
                 }
                 .accessibilityIdentifier("confirm.skip")
-                .disabled(isAcknowledging)
+                .disabled(!canAct || isIdentifying || isAcknowledging)
             }
         }
         .alert("Mark as Possible?", isPresented: $showPossibleConfirm) {
@@ -180,8 +254,6 @@ struct PerPhotoConfirmView: View {
             Text("This photo will be excluded from the outing and will not be saved.")
         }
         .onAppear { initializeSelection() }
-        .onChange(of: viewModel.currentPhotoIndex) { initializeSelection() }
-        .onChange(of: viewModel.currentCandidates.count) { initializeSelection() }
         .sheet(isPresented: $showOutingDetails) {
             outingDetailsSheet
         }
@@ -202,6 +274,26 @@ struct PerPhotoConfirmView: View {
             decodeTask?.cancel()
             galleryTask?.cancel()
         }
+    }
+
+    private var identifyingView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            if let image = decodedThumbnail {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            ProgressView()
+            Text("Identifying species...")
+                .font(.headline)
+                .accessibilityIdentifier("confirm.identifying")
+            Spacer()
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Outing Details
@@ -278,6 +370,7 @@ struct PerPhotoConfirmView: View {
 
                     Text("No bird species identified")
                         .font(.headline)
+                        .accessibilityIdentifier("confirm.noCandidates")
 
                     Text("Try cropping to isolate the bird, or skip this photo.")
                         .font(.subheadline)
@@ -302,8 +395,6 @@ struct PerPhotoConfirmView: View {
 
             ScrollView {
                 VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-
                     VStack(spacing: 16) {
                         // Top-aligned so a caption that wraps at large text sizes cannot shift the
                         // photo it belongs to.
@@ -347,7 +438,9 @@ struct PerPhotoConfirmView: View {
                             .foregroundStyle(.secondary)
                             .tint(.secondary)
                             .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("confirm.attribution")
                     }
+                    .padding(.top, 24)
 
                     Spacer(minLength: 0)
                 }
@@ -413,7 +506,7 @@ struct PerPhotoConfirmView: View {
 
         return ZStack(alignment: .bottom) {
             if urls.isEmpty {
-                if isLoadingWikiImage {
+                if isLoadingWikiImage && !isIdentifying {
                     wikiPlaceholder(size: size)
                         .overlay { ProgressView() }
                 } else {
@@ -620,9 +713,12 @@ struct PerPhotoConfirmView: View {
     /// Captures only Sendable values into the detached task.
     private func decodeUserImages() {
         decodeTask?.cancel()
-        decodedCroppedImage = nil
-        decodedThumbnail = nil
         guard let currentPhoto = photo else { return }
+        // Do not blank an already decoded photo when only its candidates change.
+        if decodedPhotoID != currentPhoto.id {
+            decodedCroppedImage = nil
+            decodedThumbnail = nil
+        }
         let photoId = currentPhoto.id
         let croppedData = currentPhoto.croppedImage
         let thumbData = currentPhoto.thumbnail
@@ -633,9 +729,10 @@ struct PerPhotoConfirmView: View {
             )
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                guard photo?.id == photoId else { return }
+                guard !Task.isCancelled, photo?.id == photoId else { return }
                 decodedCroppedImage = decoded.cropped
                 decodedThumbnail = decoded.thumb
+                decodedPhotoID = photoId
             }
         }
     }
@@ -659,7 +756,7 @@ struct PerPhotoConfirmView: View {
     /// passes them explicitly because it confirms in the same run loop as it selects,
     /// before the state it just set has been published.
     private func confirmWith(status: ObservationStatus, species: String? = nil, confidence: Double? = nil) {
-        guard !isAcknowledging else { return }
+        guard canAct, !isIdentifying, !isAcknowledging else { return }
         let species = species ?? selectedSpecies
         let confidence = confidence ?? selectedConfidence
         // The mega gets its own beat before the wizard moves on: a ping on the
