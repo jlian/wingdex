@@ -256,16 +256,9 @@ class BirdIdFlowUITestCase: XCTestCase {
                 issue.element?.label == "·" {
                 return true
             }
-            let systemSectionHeaders = [
-                "Account", "Avatar", "Import & Export", "Security",
-                "Bird Identification", "Camera", "Legal", "Data Management",
-            ]
             return (issue.element?.identifier ?? "").isEmpty
-                && (
-                    systemSectionHeaders.contains(issue.element?.label ?? "")
-                        || ["Import eBird CSV", "Export Sightings CSV"]
-                            .contains(issue.element?.label ?? "")
-                )
+                && ["Import eBird CSV", "Export Sightings CSV"]
+                    .contains(issue.element?.label ?? "")
         case .dynamicType:
             return issue.element?.identifier == "settings.birdIdFooter"
         case .textClipped:

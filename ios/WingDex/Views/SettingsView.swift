@@ -155,14 +155,11 @@ struct SettingsView: View {
             // Version info
             Section {
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        let releaseURL = URL(
-          string: "https://github.com/jlian/wingdex/releases/tag/ios-v\(version)")!
                 HStack {
                     Spacer()
                     VStack(spacing: 6) {
                         HStack(spacing: 8) {
-                            Link("WingDex™ \(version)", destination: releaseURL)
-                            .accessibilityIdentifier("settings.versionLink")
+                            Text("WingDex™ \(version)")
                             Text("·")
                                 .accessibilityIdentifier("settings.footerSeparator")
                                 .accessibilityHidden(true)
@@ -213,7 +210,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var accountSection: some View {
-        Section("Account") {
+        Section {
             if !profile.name.isEmpty {
                 displayNameRow
 
@@ -234,7 +231,6 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .headerProminence(.increased)
         .onChange(of: profile.name, initial: true) { _, name in
             guard !isNameFieldFocused else { return }
             editedName = name
@@ -295,7 +291,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var avatarSection: some View {
         if !profile.name.isEmpty && showsAvatarOptions {
-            Section("Avatar") {
+            Section {
                 ScrollView(.horizontal) {
                     HStack(spacing: 2) {
                         ForEach(FunNames.emojiOptions, id: \.self) { emoji in
@@ -327,7 +323,6 @@ struct SettingsView: View {
                 .scrollIndicators(.hidden)
                 .animation(.none, value: profile.image)
             }
-            .headerProminence(.increased)
         }
     }
 
@@ -335,7 +330,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var importExportSection: some View {
-        Section("Import & Export") {
+        Section {
             Button {
                 showingEBirdImport = true
             } label: {
@@ -363,19 +358,17 @@ struct SettingsView: View {
                     .foregroundStyle(.red)
             }
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Security
 
     @ViewBuilder
     private var securitySection: some View {
-        Section("Security") {
+        Section {
             NavigationLink("Manage Passkeys") {
                 PasskeyManagementView()
             }
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Bird Identification
@@ -391,10 +384,6 @@ struct SettingsView: View {
       ) {
                 Text("Use Location and Time")
             }
-        } header: {
-            Text("Bird Identification")
-                .font(.headline)
-                .foregroundStyle(Color.foregroundText)
         } footer: {
       Text(
         "Improves identification using photo location and month. Outing name suggestions are looked up on WingDex servers, not sent to a third party."
@@ -404,7 +393,6 @@ struct SettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("settings.birdIdFooter")
         }
-            .headerProminence(.increased)
     }
 
     private var cameraSection: some View {
@@ -423,20 +411,17 @@ struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(Color.mutedText)
             }
-        } header: {
-            Text("Camera")
         } footer: {
             Text("Automatically saves photos you take in WingDex to Photos, even if you cancel identification. Photos chosen from your library aren't copied.")
                 .foregroundStyle(Color.mutedText)
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Legal
 
     @ViewBuilder
     private var privacySection: some View {
-        Section("Legal") {
+        Section {
             Link(destination: URL(string: "\(Config.apiBaseURL.absoluteString)/privacy.html")!) {
                 Label("Privacy Policy", systemImage: "hand.raised")
             }
@@ -444,14 +429,13 @@ struct SettingsView: View {
                 Label("Terms of Use", systemImage: "doc.text")
             }
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Data Management
 
     @ViewBuilder
     private var dataManagementSection: some View {
-        Section("Data Management") {
+        Section {
             NavigationLink {
                 DataManagementView()
             } label: {
@@ -459,7 +443,6 @@ struct SettingsView: View {
                     .foregroundStyle(Color.destructiveText)
             }
         }
-        .headerProminence(.increased)
     }
 
     // MARK: - Log Out
