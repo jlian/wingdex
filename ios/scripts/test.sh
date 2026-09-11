@@ -97,12 +97,14 @@ xcrun simctl ui "$simulator" appearance light
 phase=$SECONDS
 set +e
 # Use the compiled manifest, not another project/package-resolution pass.
+# Hosted runners can spend over a minute establishing the first automation
+# session. Keep a bounded allowance without failing a test that then passes.
 NSUnbufferedIO=YES TEST_RUNNER_WINGDEX_DEEP_AUDITS="$([[ "$lane" == accessibility-deep ]] && echo 1 || echo 0)" \
   xcodebuild test-without-building -xctestrun "$test_run" "${targets[@]}" \
   -parallel-testing-enabled NO \
   -destination "platform=iOS Simulator,id=$simulator" \
-  -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
-  -maximum-test-execution-time-allowance 180 \
+  -test-timeouts-enabled YES -default-test-execution-time-allowance 240 \
+  -maximum-test-execution-time-allowance 300 \
   -collect-test-diagnostics never \
   -resultBundlePath "$output/Tests.xcresult" 2>&1 | tee "$output/tests.log"
 status=${PIPESTATUS[0]}

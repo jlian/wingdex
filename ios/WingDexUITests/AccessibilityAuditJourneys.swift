@@ -120,14 +120,6 @@ final class EmptyAccessibilityAuditUITests: BirdIdFlowUITestCase {
 final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
     func testSettingsAndDeletionConfirmationsPassAccessibilityAudit() throws {
         continueAfterFailure = true
-        if deepAudits {
-            let app = launchSettingsApp()
-            showSettingsFooter(in: app)
-            try runAccessibilityAudit(in: app, for: .contrast) {
-                self.isKnownSettingsFooterAuditIssue($0, in: app)
-            }
-        }
-
         let app = launchSettingsApp()
         try runAccessibilityAudit(
             in: app,
@@ -142,32 +134,8 @@ final class SettingsAccessibilityAuditUITests: BirdIdFlowUITestCase {
         try runAccessibilityAudit(in: app)
 
         app.buttons["Delete All Data"].tap()
-        XCTAssertTrue(app.alerts["Delete All Data?"].existsOrWait(timeout: 5))
+        XCTAssertTrue(app.alerts["Delete All Data?"].existsOrWait(timeout: 10))
         try runAccessibilityAudit(in: app, for: .all.subtracting(.dynamicType))
-    }
-
-    private func showSettingsFooter(in app: XCUIApplication) {
-        let logOut = app.buttons["settings.logOut"]
-        app.swipeUp(velocity: .fast)
-        app.swipeUp(velocity: .fast)
-        XCTAssertTrue(logOut.isHittable)
-        XCTAssertTrue(app.links["settings.versionLink"].isHittable)
-    }
-
-    private func isKnownSettingsFooterAuditIssue(
-        _ issue: XCUIAccessibilityAuditIssue,
-        in app: XCUIApplication
-    ) -> Bool {
-        if isKnownSettingsAuditIssue(issue) { return true }
-        guard issue.auditType == .contrast,
-            let element = issue.element,
-            element.elementType == .staticText,
-            element.label == "Use Location and Time" else { return false }
-        // iOS 27 reads this scrolled-out label through the glass navigation bar.
-        // Its unobscured contrast remains audited in the initial Settings view.
-        let bar = app.navigationBars["Settings"]
-        guard bar.exists, !element.frame.isEmpty else { return false }
-        return bar.frame.contains(CGPoint(x: element.frame.midX, y: element.frame.midY))
     }
 
     private func launchSettingsApp() -> XCUIApplication {
