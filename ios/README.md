@@ -2,7 +2,7 @@
 
 Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same Cloudflare REST API as the web app - the server owns all business logic, so the iOS app is a thin UI client.
 
-**Target:** iOS 26+ / Xcode 26+ / Swift 6
+**Target:** iOS 26+ / Xcode 27+ / Swift 6
 
 ## Architecture
 
@@ -32,7 +32,7 @@ For device validation, check camera acceptance versus Retake/Cancel, denied Phot
 
 ## Prerequisites
 
-- Xcode 26.3+
+- Xcode 27+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
 - Apple Developer account (for device builds and Sign in with Apple)
 
@@ -222,7 +222,7 @@ are used; Apple does not guarantee the waiter's polling interval.
 
 Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
 Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
-accessibility run on separate macOS 15 ARM machines with Xcode 26.3, using a
+accessibility run on separate Xcode 27 ARM images, using a
 fresh iPhone 17 Pro simulator in CI. Local runs reuse their dedicated simulator
 unless `DESTINATION` overrides it. Smaller SE displays did not improve hosted
 runtime consistently and introduced tight-viewport scrolling failures, so CI
@@ -237,7 +237,7 @@ they are not converted to passes/skips or swallowed with a generic issue filter.
 The default structural checks remain required. Full audits supplement, not
 replace, manual VoiceOver, contrast, dark appearance and Dynamic Type checks.
 
-Historical CI-style verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone
+Historical CI-style verification on 2026-09-07, Xcode 27/iOS 27, iPhone
 17 Pro, fresh simulators and a warm build cache:
 
 | Command | Total, including build and simulator | Result |
@@ -313,7 +313,7 @@ The baseline CI run `34140285029` emitted
 `IDELaunchParametersSnapshot` / `DebuggerLLDB.DebuggerVersionStore.StoreError`
 and `no debugger version` even with `Dev CI`'s debugger disabled. This is emitted
 by Xcode's launch metadata capture, not by WingDex or a failed assertion.
-On the installed Xcode 27 beta (`27A5252f`), UI launches give a more specific
+On the installed Xcode 27 RC (`27A5252f`), UI launches give a more specific
 message: `debugger version lookup failed for path '<nil>': noURL`, while
 `xcrun lldb --version` succeeds. This demonstrates a missing debugger URL in that
 launch snapshot, **not** a missing LLDB installation. Apple has not published a
@@ -345,13 +345,13 @@ not validate physical-device provisioning or credential persistence.
 - [Running tests and interpreting results](https://developer.apple.com/documentation/xcode/running-tests-and-interpreting-results):
   Test navigator and result-based diagnosis.
 
-Verified against the installed Xcode 27 beta simulator SDK:
+Verified against the installed Xcode 27 RC simulator SDK:
 `XCUIAutomation.framework/Headers/XCUIElement.h`, `XCUIApplication.h`,
 `XCUIAccessibilityAuditTypes.h`, its `arm64-apple-ios-simulator.swiftinterface`,
 and Foundation's `NSURLSession.h`. These confirm the native waits, audit
 availability since iOS 17, throwing audit API with **no timeout parameter**, and
-ephemeral session protocol injection. Xcode 26.3 hosted-runner measurements must
-be distinguished from local iOS 27 beta results.
+ephemeral session protocol injection. Hosted-runner measurements must still be
+distinguished from local results.
 
 ## Debug sign-in
 
