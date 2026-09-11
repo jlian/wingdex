@@ -237,7 +237,7 @@ struct SignInView: View {
                         }
                         .buttonStyle(.glassProminent)
                         .buttonSizing(.flexible)
-                        .tint(Color(red: 0.0, green: 0.28, blue: 0.14))
+                        .tint(Color.black.opacity(0.82))
                         .accessibilityIdentifier("auth.passkeyLogin")
 
                         Button {
@@ -250,7 +250,7 @@ struct SignInView: View {
                         .buttonStyle(.glassProminent)
                         .buttonSizing(.flexible)
                         .foregroundStyle(.white)
-                        .tint(Color.black.opacity(0.82))
+                        .tint(Color.accentColor)
                         .accessibilityIdentifier("auth.passkeySignUp")
                     }
                 }
