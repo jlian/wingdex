@@ -268,7 +268,7 @@ jobs:
     name: Archive & Export
     needs: check
     if: needs.check.outputs.should_release == 'true' && needs.check.outputs.has_release == 'true'
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       # Build the exact branch tip used to calculate the release version.

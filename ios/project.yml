@@ -5,7 +5,7 @@ options:
   # install the matching runtime rather than lower this target.
   deploymentTarget:
     iOS: "26.0"
-  xcodeVersion: "26.3"
+  xcodeVersion: "27.0"
   createIntermediateGroups: true
   preGenCommand: scripts/gen-git-info.sh && scripts/sync-birdid-assets.sh
   postGenCommand: scripts/fix-icon-ref.sh
