@@ -99,7 +99,7 @@ After that, local and CI verification use the same commands:
 | Command | Coverage |
 |---------|----------|
 | `npm test` | Web and Worker unit/component tests |
-| `npm run test:ios` | Offline iOS core and accessibility lanes on a fresh simulator |
+| `npm run test:ios` | Offline iOS core and accessibility lanes; local runs reuse a dedicated simulator and CI runs fresh |
 | `make -C ios core` | Native core lane, using the same Makefile entry point as iOS CI |
 | `npm run check` | Lint, typecheck, and unit/component tests |
 | `npm run test:e2e` | Build once, then run browser/API integration tests |
