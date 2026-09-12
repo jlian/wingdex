@@ -3,6 +3,42 @@ import CoreGraphics
 import XCTest
 
 final class CropViewportGeometryTests: XCTestCase {
+    func testFocalRenderedFrameClampsToImageEdges() {
+        let portrait = FocalCropGeometry.renderedFrame(
+            imageSize: CGSize(width: 800, height: 1_200),
+            containerSize: CGSize(width: 150, height: 150),
+            focalPoint: CGPoint(x: 0.5, y: 0.25)
+        )
+        XCTAssertEqual(portrait, CGRect(x: 0, y: 0, width: 150, height: 225))
+
+        let landscape = FocalCropGeometry.renderedFrame(
+            imageSize: CGSize(width: 1_200, height: 800),
+            containerSize: CGSize(width: 150, height: 150),
+            focalPoint: CGPoint(x: 0.75, y: 0.5)
+        )
+        XCTAssertEqual(landscape, CGRect(x: -75, y: 0, width: 225, height: 150))
+    }
+
+    func testLargestSquareCropUsesFocalPointWithoutExtraZoom() {
+        let landscape = CropViewportGeometry.largestSquareCrop(
+            imageSize: CGSize(width: 1_200, height: 800),
+            focalPoint: CGPoint(x: 0.75, y: 0.5)
+        )
+        XCTAssertEqual(landscape.x, 33.333_333, accuracy: 0.000_001)
+        XCTAssertEqual(landscape.y, 0, accuracy: 0.000_001)
+        XCTAssertEqual(landscape.width, 66.666_667, accuracy: 0.000_001)
+        XCTAssertEqual(landscape.height, 100, accuracy: 0.000_001)
+
+        let portrait = CropViewportGeometry.largestSquareCrop(
+            imageSize: CGSize(width: 800, height: 1_200),
+            focalPoint: CGPoint(x: 0.5, y: 0.25)
+        )
+        XCTAssertEqual(portrait.x, 0, accuracy: 0.000_001)
+        XCTAssertEqual(portrait.y, 0, accuracy: 0.000_001)
+        XCTAssertEqual(portrait.width, 100, accuracy: 0.000_001)
+        XCTAssertEqual(portrait.height, 66.666_667, accuracy: 0.000_001)
+    }
+
     func testMinimumZoomScaleFillsSquareForLandscapeAndPortrait() {
         XCTAssertEqual(
             CropViewportGeometry.minimumZoomScale(

@@ -275,14 +275,15 @@ struct AddPhotosFlow: View {
     /// Shows the CropView for the current photo, passing the AI crop box if available.
     @ViewBuilder
     private var manualCropDestination: some View {
-        if viewModel.currentPhoto != nil,
+        if let photo = viewModel.currentPhoto,
       let imageData = viewModel.activeImageData
     {
             CropView(
                 imageData: imageData,
-                // Nil seeds CropView's centred default. The local classifier
-                // localises nothing, so there is never a suggestion to seed it.
                 initialCropBox: nil,
+                suggestedFocalPoint: photo.croppedImage == nil
+                    ? photo.suggestedFocalPoint
+                    : nil,
                 onBack: {
                     viewModel.cancelCrop()
                 },

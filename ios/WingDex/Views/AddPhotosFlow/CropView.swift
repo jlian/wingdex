@@ -7,6 +7,7 @@ import UIKit
 struct CropView: View {
     let imageData: Data
     let initialCropBox: CropBoxResult?
+    let suggestedFocalPoint: CGPoint?
     let onBack: () -> Void
     let onApply: (CropBoxResult) -> Void
 
@@ -17,15 +18,17 @@ struct CropView: View {
     init(
         imageData: Data,
         initialCropBox: CropBoxResult?,
+        suggestedFocalPoint: CGPoint? = nil,
         onBack: @escaping () -> Void,
         onApply: @escaping (CropBoxResult) -> Void
     ) {
         self.imageData = imageData
         self.initialCropBox = initialCropBox
+        self.suggestedFocalPoint = suggestedFocalPoint
         self.onBack = onBack
         self.onApply = onApply
 
-        let defaultCrop = CropBoxResult(x: 25, y: 25, width: 50, height: 50)
+        let defaultCrop = CropBoxResult(x: 0, y: 0, width: 100, height: 100)
         let padded: CropBoxResult
         if let aiCrop = initialCropBox, let uiImage = UIImage(data: imageData) {
             let natW = uiImage.size.width
@@ -121,7 +124,16 @@ struct CropView: View {
             }
         }
         .task {
-            cachedImage = normalizedImage(from: imageData)
+            guard let image = normalizedImage(from: imageData) else { return }
+            if initialCropBox == nil {
+                let crop = CropViewportGeometry.largestSquareCrop(
+                    imageSize: image.size,
+                    focalPoint: suggestedFocalPoint ?? FocalCropGeometry.center
+                )
+                paddedInitialCrop = crop
+                currentCrop = crop
+            }
+            cachedImage = image
         }
         .background(Color.clear)
         .navigationTitle("Crop to One Bird")
@@ -171,6 +183,23 @@ struct CropViewportGeometry {
     static func minimumZoomScale(imageSize: CGSize, viewportSide: CGFloat) -> CGFloat {
         guard imageSize.width > 0, imageSize.height > 0, viewportSide > 0 else { return 1 }
         return max(viewportSide / imageSize.width, viewportSide / imageSize.height)
+    }
+
+    static func largestSquareCrop(
+        imageSize: CGSize,
+        focalPoint: CGPoint
+    ) -> CropBoxResult {
+        let rect = FocalCropGeometry.sourceRect(
+            imageSize: imageSize,
+            containerSize: CGSize(width: 1, height: 1),
+            focalPoint: focalPoint
+        )
+        return CropBoxResult(
+            x: Double(rect.minX * 100),
+            y: Double(rect.minY * 100),
+            width: Double(rect.width * 100),
+            height: Double(rect.height * 100)
+        )
     }
 
     static func viewport(

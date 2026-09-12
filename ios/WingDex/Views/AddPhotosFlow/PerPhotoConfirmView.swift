@@ -468,9 +468,10 @@ private struct PhotoConfirmationPage: View {
     private func fallbackPhoto(size: CGFloat) -> some View {
         Group {
             if let uiImage = decodedThumbnail {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
+                FocalImage(
+                    image: uiImage,
+                    focalPoint: photo?.suggestedFocalPoint ?? FocalCropGeometry.center
+                )
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
