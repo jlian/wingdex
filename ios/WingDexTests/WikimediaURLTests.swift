@@ -36,4 +36,14 @@ final class WikimediaURLTests: XCTestCase {
     func testReturnsNilForMissingThumbnail() {
         XCTAssertNil(heroImageUrl(fromThumbnail: nil))
     }
+
+    func testFilePageIdentityIgnoresRenderedThumbnailWidth() {
+        let thumbnail = prefix + "thumb/5/5a/Schwarzmilan.jpg/330px-Schwarzmilan.jpg"
+        let hero = prefix + "thumb/5/5a/Schwarzmilan.jpg/960px-Schwarzmilan.jpg"
+
+        XCTAssertEqual(
+            wikimediaFilePageUrl(fromImage: thumbnail),
+            wikimediaFilePageUrl(fromImage: hero)
+        )
+    }
 }

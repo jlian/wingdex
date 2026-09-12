@@ -99,20 +99,18 @@ func presentActivitySheet(items: [Any], sourceView: UIView? = nil) {
 
 // MARK: - Bird Thumbnail
 
-/// Center-cropped bird thumbnail. Uses an in-memory cache for smooth scrolling.
+/// Focal-point-cropped bird thumbnail. Uses an in-memory cache for smooth scrolling.
 struct BirdThumbnail: View {
     let url: String?
     var size: CGFloat = 48
     var cornerRadius: CGFloat = 8
     @State private var uiImage: UIImage?
+    @State private var focalPoint = CGPoint(x: 0.5, y: 0.5)
 
     var body: some View {
         Group {
             if let uiImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: size, height: size)
+                FocalImage(image: uiImage, focalPoint: focalPoint)
             } else {
                 placeholder
             }
@@ -123,11 +121,18 @@ struct BirdThumbnail: View {
     }
 
     private func loadImage() async {
-        guard let loaded = await ImageLoader.shared.image(for: url, targetPoints: size) else { return }
+        guard let loaded = await ImageLoader.shared.imageAndFocalPoint(for: url, targetPoints: size) else { return }
         // The loader deliberately outlives its caller, so a load for a previous `url` can
         // still land here and overwrite the current row's image.
         guard !Task.isCancelled else { return }
-        uiImage = loaded
+        focalPoint = loaded.focalPoint
+        uiImage = loaded.image
+        ImageLoader.shared.logCrop(
+            image: loaded.image,
+            focalPoint: loaded.focalPoint,
+            containerSize: CGSize(width: size, height: size),
+            url: url
+        )
     }
 
     private var placeholder: some View {
@@ -137,6 +142,26 @@ struct BirdThumbnail: View {
                 Image(systemName: "bird.fill")
                     .foregroundStyle(Color.mutedText.opacity(0.3))
             }
+    }
+}
+
+struct FocalImage: View {
+    let image: UIImage
+    let focalPoint: CGPoint
+
+    var body: some View {
+        GeometryReader { proxy in
+            let frame = FocalCropGeometry.renderedFrame(
+                imageSize: image.size,
+                containerSize: proxy.size,
+                focalPoint: focalPoint
+            )
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: frame.width, height: frame.height)
+                .offset(x: frame.minX, y: frame.minY)
+        }
+        .clipped()
     }
 }
 
@@ -156,6 +181,8 @@ struct BirdHeroImage: View {
 
     @State private var thumbnailImage: UIImage?
     @State private var fullImage: UIImage?
+    @State private var thumbnailFocalPoint = CGPoint(x: 0.5, y: 0.5)
+    @State private var fullFocalPoint = CGPoint(x: 0.5, y: 0.5)
 
     /// Seeding from the cache in `init` (rather than in `.task`, which runs after the first
     /// render) is what lets a hero already loaded by a context-menu preview appear on frame
@@ -167,10 +194,14 @@ struct BirdHeroImage: View {
         self.width = width
         self.height = height
         let target = max(width, height)
-        _thumbnailImage = State(initialValue: ImageLoader.shared.cached(thumbnailUrl, targetPoints: target))
-        _fullImage = State(initialValue: fullImageUrl == thumbnailUrl
+        let thumbnail = ImageLoader.shared.cachedImageAndFocalPoint(thumbnailUrl, targetPoints: target)
+        let full = fullImageUrl == thumbnailUrl
             ? nil
-            : ImageLoader.shared.cached(fullImageUrl, targetPoints: target))
+            : ImageLoader.shared.cachedImageAndFocalPoint(fullImageUrl, targetPoints: target)
+        _thumbnailImage = State(initialValue: thumbnail?.image)
+        _thumbnailFocalPoint = State(initialValue: thumbnail?.focalPoint ?? CGPoint(x: 0.5, y: 0.5))
+        _fullImage = State(initialValue: full?.image)
+        _fullFocalPoint = State(initialValue: full?.focalPoint ?? CGPoint(x: 0.5, y: 0.5))
     }
 
     private var awaitingFullRes: Bool { fullImageUrl == nil || fullImageUrl != thumbnailUrl }
@@ -179,41 +210,72 @@ struct BirdHeroImage: View {
     var body: some View {
         ZStack {
             if let thumbnailImage {
-                layer(thumbnailImage)
+                layer(thumbnailImage, focalPoint: thumbnailFocalPoint)
                     .blur(radius: awaitingFullRes ? 12 : 0, opaque: true)
             } else if fullImage == nil {
                 placeholder
             }
 
             if let fullImage {
-                layer(fullImage)
+                layer(fullImage, focalPoint: fullFocalPoint)
                     .transition(.opacity)
             }
         }
         .frame(width: width, height: height)
         .clipped()
         .task(id: thumbnailUrl) {
-            if let loaded = await ImageLoader.shared.image(for: thumbnailUrl, targetPoints: targetPoints) {
-                thumbnailImage = loaded
+            if let loaded = await ImageLoader.shared.imageAndFocalPoint(
+                for: thumbnailUrl,
+                targetPoints: targetPoints
+            ) {
+                guard !Task.isCancelled else { return }
+                thumbnailFocalPoint = loaded.focalPoint
+                thumbnailImage = loaded.image
+                ImageLoader.shared.logCrop(
+                    image: loaded.image,
+                    focalPoint: loaded.focalPoint,
+                    containerSize: CGSize(width: width, height: height),
+                    url: thumbnailUrl
+                )
             }
         }
         .task(id: fullImageUrl) {
             guard awaitingFullRes, let fullImageUrl else { return }
-            if let cached = ImageLoader.shared.cached(fullImageUrl, targetPoints: targetPoints) {
-                fullImage = cached
+            if let cached = ImageLoader.shared.cachedImageAndFocalPoint(
+                fullImageUrl,
+                targetPoints: targetPoints
+            ) {
+                guard !Task.isCancelled else { return }
+                fullFocalPoint = cached.focalPoint
+                fullImage = cached.image
+                ImageLoader.shared.logCrop(
+                    image: cached.image,
+                    focalPoint: cached.focalPoint,
+                    containerSize: CGSize(width: width, height: height),
+                    url: fullImageUrl
+                )
                 return
             }
-            guard let loaded = await ImageLoader.shared.image(for: fullImageUrl, targetPoints: targetPoints) else { return }
-            withAnimation(.easeInOut(duration: 0.45)) { fullImage = loaded }
+            guard let loaded = await ImageLoader.shared.imageAndFocalPoint(
+                for: fullImageUrl,
+                targetPoints: targetPoints
+            ) else { return }
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.45)) {
+                fullFocalPoint = loaded.focalPoint
+                fullImage = loaded.image
+            }
+            ImageLoader.shared.logCrop(
+                image: loaded.image,
+                focalPoint: loaded.focalPoint,
+                containerSize: CGSize(width: width, height: height),
+                url: fullImageUrl
+            )
         }
     }
 
-    private func layer(_ image: UIImage) -> some View {
-        Image(uiImage: image)
-            .resizable()
-            .scaledToFill()
-            .frame(width: width, height: height, alignment: .center)
-            .clipped()
+    private func layer(_ image: UIImage, focalPoint: CGPoint) -> some View {
+        FocalImage(image: image, focalPoint: focalPoint)
     }
 
     private var placeholder: some View {

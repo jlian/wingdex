@@ -119,7 +119,12 @@ struct PhotoReviewCarousel: UIViewRepresentable {
                 preconditionFailure("Unexpected photo review cell type")
             }
             let photo = photos[indexPath.item]
-            cell.configure(with: photo.thumbnail)
+            let usesSuggestedCrop = photo.croppedImage == nil
+            cell.configure(
+                with: photo.thumbnail,
+                focalPoint: usesSuggestedCrop ? photo.suggestedFocalPoint : nil,
+                cropLogLabel: usesSuggestedCrop ? photo.id : nil
+            )
             cell.isAccessibilityElement = true
             cell.accessibilityLabel = "Photo \(indexPath.item + 1) of \(photos.count)"
             cell.accessibilityIdentifier = "outing.photo.\(photo.id)"
@@ -223,6 +228,8 @@ final class PhotoReviewCell: UICollectionViewCell {
     private let imageView = UIImageView()
     private let placeholderView = UIView()
     private let placeholderIcon = UIImageView()
+    private var focalPoint = FocalCropGeometry.center
+    private var cropLogLabel: String?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -237,6 +244,9 @@ final class PhotoReviewCell: UICollectionViewCell {
     private func setupViews() {
         backgroundColor = .clear
         contentView.backgroundColor = .clear
+        contentView.layer.cornerRadius = 8
+        contentView.layer.cornerCurve = .continuous
+        contentView.clipsToBounds = true
 
         placeholderView.backgroundColor = UIColor.secondaryLabel.withAlphaComponent(0.1)
         placeholderView.layer.cornerRadius = 8
@@ -251,11 +261,8 @@ final class PhotoReviewCell: UICollectionViewCell {
         placeholderIcon.translatesAutoresizingMaskIntoConstraints = false
         placeholderView.addSubview(placeholderIcon)
 
-        imageView.contentMode = .scaleAspectFill
+        imageView.contentMode = .scaleToFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 8
-        imageView.layer.cornerCurve = .continuous
-        imageView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(imageView)
 
         NSLayoutConstraint.activate([
@@ -268,15 +275,35 @@ final class PhotoReviewCell: UICollectionViewCell {
             placeholderIcon.centerYAnchor.constraint(equalTo: placeholderView.centerYAnchor),
             placeholderIcon.widthAnchor.constraint(equalToConstant: 32),
             placeholderIcon.heightAnchor.constraint(equalToConstant: 32),
-
-            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
         ])
     }
 
-    func configure(with thumbnailData: Data) {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let image = imageView.image else { return }
+        imageView.frame = FocalCropGeometry.renderedFrame(
+            imageSize: image.size,
+            containerSize: contentView.bounds.size,
+            focalPoint: focalPoint
+        )
+        if let cropLogLabel, contentView.bounds.width > 0, contentView.bounds.height > 0 {
+            ImageLoader.shared.logCrop(
+                image: image,
+                focalPoint: focalPoint,
+                containerSize: contentView.bounds.size,
+                label: cropLogLabel
+            )
+            self.cropLogLabel = nil
+        }
+    }
+
+    func configure(
+        with thumbnailData: Data,
+        focalPoint: CGPoint?,
+        cropLogLabel: String?
+    ) {
+        self.focalPoint = focalPoint ?? FocalCropGeometry.center
+        self.cropLogLabel = cropLogLabel
         if let cached = PhotoReviewThumbnailCache.shared.image(for: thumbnailData) {
             imageView.image = cached
             imageView.isHidden = false
@@ -291,6 +318,7 @@ final class PhotoReviewCell: UICollectionViewCell {
             imageView.isHidden = true
             placeholderView.isHidden = false
         }
+        setNeedsLayout()
     }
 
     override func accessibilityActivate() -> Bool {
@@ -304,6 +332,8 @@ final class PhotoReviewCell: UICollectionViewCell {
         onAccessibilityActivate = nil
         accessibilityCustomActions = nil
         imageView.image = nil
+        focalPoint = FocalCropGeometry.center
+        cropLogLabel = nil
     }
 }
 
