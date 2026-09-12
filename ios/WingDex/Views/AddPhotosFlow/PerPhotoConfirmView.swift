@@ -222,11 +222,13 @@ private struct PhotoConfirmationPage: View {
                 .accessibilityIdentifier("confirm.crop")
                 .disabled(!canAct || isIdentifying || isAcknowledging)
 
-                Button("Possible", systemImage: "questionmark") {
-                    showPossibleConfirm = true
+                if hasCandidates && !selectedSpecies.isEmpty {
+                    Button("Possible", systemImage: "questionmark") {
+                        showPossibleConfirm = true
+                    }
+                    .accessibilityIdentifier("confirm.possible")
+                    .disabled(!canAct || isAcknowledging)
                 }
-                .accessibilityIdentifier("confirm.possible")
-                .disabled(!canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging)
 
                 Button {
                     showSkipConfirm = true
