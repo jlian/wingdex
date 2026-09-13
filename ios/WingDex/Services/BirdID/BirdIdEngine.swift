@@ -99,13 +99,13 @@ actor BirdIdEngine {
     /// Confidence is never actually zero, but 91% of the 2nd-to-5th candidates
     /// fall below 0.5% and round to a flat "0%", which reads as "impossible"
     /// rather than "very unlikely". 0.005 is exactly where integer rounding
-    /// starts producing 0, so below it the value is reported as a bound.
+    /// starts producing 0, so below it an approximation marker avoids implying exact zero.
     ///
     /// The number itself is left alone: measured against ground truth it is
     /// well calibrated (mean 0.963 against 94.3% accuracy, ECE 0.021).
     static func formatConfidence(_ confidence: Double) -> String {
         guard confidence.isFinite, confidence >= 0 else { return "-" }
-        if confidence < 0.005 { return "<0.5%" }
+        if confidence < 0.005 { return "~0%" }
         return "\(Int((confidence * 100).rounded()))%"
     }
 
