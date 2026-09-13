@@ -66,7 +66,10 @@ struct AddPhotosFlow: View {
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if outingDestination == nil && viewModel.currentStep != .manualCrop {
+            if outingDestination == nil
+                && viewModel.currentStep != .manualCrop
+                && viewModel.currentStep != .perPhotoConfirm
+                && viewModel.currentStep != .photoProcessing {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         if needsCloseConfirmation {
@@ -275,14 +278,17 @@ struct AddPhotosFlow: View {
     /// Shows the CropView for the current photo, passing the AI crop box if available.
     @ViewBuilder
     private var manualCropDestination: some View {
-        if viewModel.currentPhoto != nil,
+        if let photo = viewModel.currentPhoto,
       let imageData = viewModel.activeImageData
     {
             CropView(
                 imageData: imageData,
-                // Nil seeds CropView's centred default. The local classifier
-                // localises nothing, so there is never a suggestion to seed it.
                 initialCropBox: nil,
+                suggestedFocalPoint: photo.croppedImage == nil
+                    ? photo.suggestedFocalPoint
+                    : nil,
+                photos: viewModel.clusterPhotos,
+                selectedPhotoID: photo.id,
                 onBack: {
                     viewModel.cancelCrop()
                 },

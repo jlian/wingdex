@@ -88,12 +88,15 @@ private struct PhotoConfirmationPage: View {
     @State private var isAcknowledging = false
     /// Carries the candidate the peek opens on.
     @State private var peek: PeekRequest?
-    @State private var showPossibleConfirm = false
     @State private var showSkipConfirm = false
     @State private var showOutingDetails = false
 
-    /// `.sheet(item:)` needs an Identifiable, and the payload here is just an index.
-    private struct PeekRequest: Identifiable { let id: Int }
+    private struct PeekRequest: Identifiable {
+        let id: Int
+        var gallery: [GalleryItem] = []
+        var photoIndex: Int = 0
+        var galleryIsComplete = true
+    }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -107,9 +110,6 @@ private struct PhotoConfirmationPage: View {
         isActive && snapshot.key == liveKey
     }
     private var photoIndex: Int { viewModel.currentPhotoIndex }
-    private var totalPhotos: Int { viewModel.clusterPhotos.count }
-    private var displayName: String { getDisplayName(selectedSpecies) }
-    private var scientificName: String? { getScientificName(selectedSpecies) }
     private var selectedPlumage: String? { candidates.first { $0.species == selectedSpecies }?.plumage }
 
     /// The verdict for one candidate on THIS photo.
@@ -130,13 +130,6 @@ private struct PhotoConfirmationPage: View {
         )
     }
 
-    private func plumageIcon(_ p: String) -> String? {
-        let l = p.lowercased()
-        if l.contains("juvenile") || l.contains("immature") || l.contains("chick") { return "\u{1F423}" }
-        if l.contains("female") { return "\u{2640}" }
-        if l.contains("male") { return "\u{2642}" }
-        return nil
-    }
     private var isIdentifying: Bool { snapshot.key.isIdentifying }
     private var hasCandidates: Bool { !isIdentifying && !candidates.isEmpty }
 
@@ -152,7 +145,13 @@ private struct PhotoConfirmationPage: View {
     }
 
     private func openPeekAtSelection() {
-        openPeek(at: candidates.firstIndex { $0.species == selectedSpecies } ?? 0)
+        peek = PeekRequest(
+            id: candidates.firstIndex { $0.species == selectedSpecies } ?? 0,
+            gallery: galleryItems, photoIndex: galleryIndex,
+            // The lead image may be the fallback from a transient Commons failure.
+            // Let the sheet retry; successful searches are satisfied from its cache.
+            galleryIsComplete: false
+        )
     }
 
 // MARK: - Body
@@ -171,28 +170,54 @@ private struct PhotoConfirmationPage: View {
         .accessibilityHidden(!canAct)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.pageBg.ignoresSafeArea())
-        .navigationTitle("Photo \(photoIndex + 1) of \(totalPhotos)")
+        .navigationTitle("Photo \(photoIndex + 1) of \(viewModel.clusterPhotos.count)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Photo \(photoIndex + 1) of \(totalPhotos)")
-                    .font(.headline)
-                    .accessibilityIdentifier("confirm.photoCounter")
+                PhotoSequenceToolbar(photos: viewModel.clusterPhotos, selectedPhotoID: photo?.id)
+                    .disabled(!canAct || isAcknowledging)
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    confirmWith(status: .confirmed)
-                } label: {
-                    Image(systemName: "checkmark")
+            ToolbarItem(placement: .confirmationAction) {
+                Group {
+                    if !canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging {
+                        Button {} label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .accessibilityLabel("Confirm")
+                        .accessibilityIdentifier("confirm.accept")
+                    } else if isHighConfidence {
+                        Button {
+                            confirmWith(status: .confirmed)
+                        } label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Confirm")
+                        .accessibilityIdentifier("confirm.accept")
+                        .contextMenu {
+                            confirmationActions
+                        } preview: {
+                            EmptyView()
+                        }
+                    } else {
+                        Menu {
+                            confirmationActions
+                        } label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .badge("?")
+                        .menuIndicator(.hidden)
+                        .tint(.primary)
+                        .accessibilityLabel("Choose identification status")
+                        .accessibilityIdentifier("confirm.accept")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Confirm")
-                .accessibilityIdentifier("confirm.accept")
+                .buttonBorderShape(.circle)
                 .disabled(!canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging)
             }
 
-            ToolbarItemGroup(placement: .bottomBar) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button {
                     if photoIndex > 0 {
                         viewModel.goBackToPreviousPhoto()
@@ -205,45 +230,47 @@ private struct PhotoConfirmationPage: View {
                 .accessibilityLabel(photoIndex > 0 ? "Previous Photo" : "Review Outing")
                 .accessibilityIdentifier("confirm.back")
                 .disabled(isAcknowledging)
+            }
 
-                Spacer()
-
-                Button("Outing Details", systemImage: "map") {
-                    showOutingDetails = true
-                }
-                .accessibilityIdentifier("confirm.outingDetails")
-                .disabled(isAcknowledging)
-
-                Button {
+            ToolbarItem(placement: .bottomBar) {
+                Button("Crop", systemImage: "crop") {
                     viewModel.requestManualCrop()
-                } label: {
-                    Label("Crop", systemImage: "crop")
                 }
                 .accessibilityIdentifier("confirm.crop")
                 .disabled(!canAct || isIdentifying || isAcknowledging)
-
-                Button("Possible", systemImage: "questionmark") {
-                    showPossibleConfirm = true
-                }
-                .accessibilityIdentifier("confirm.possible")
-                .disabled(!canAct || !hasCandidates || selectedSpecies.isEmpty || isAcknowledging)
-
+            }
+            ToolbarSpacer(.flexible, placement: .bottomBar)
+            ToolbarItem(placement: .bottomBar) {
                 Button {
-                    showSkipConfirm = true
+                    showOutingDetails = true
                 } label: {
-                    Label("Skip", systemImage: "forward")
+                    VStack(spacing: 1) {
+                        Text(viewModel.lastLocationName.isEmpty ? "Outing Details" : viewModel.lastLocationName)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        if let outingSubtitle {
+                            Text(outingSubtitle)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: 190)
+                    .padding(.horizontal, 8)
+                }
+                .accessibilityLabel(outingDetailsLabel)
+                .accessibilityHint("Opens outing details and map")
+                .accessibilityIdentifier("confirm.outingDetails")
+                .disabled(isAcknowledging)
+            }
+            ToolbarSpacer(.flexible, placement: .bottomBar)
+            ToolbarItem(placement: .bottomBar) {
+                Button("Skip", systemImage: "delete.forward") {
+                    showSkipConfirm = true
                 }
                 .accessibilityIdentifier("confirm.skip")
                 .disabled(!canAct || isIdentifying || isAcknowledging)
             }
-        }
-        .alert("Mark as Possible?", isPresented: $showPossibleConfirm) {
-            Button("Mark as Possible") {
-                confirmWith(status: .possible)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Mark \(displayName) as a possible sighting for this photo?")
         }
         .alert("Skip Photo?", isPresented: $showSkipConfirm) {
             Button("Skip Photo", role: .destructive) {
@@ -262,6 +289,9 @@ private struct PhotoConfirmationPage: View {
                 candidates: peekCandidates,
                 startIndex: request.id,
                 userPhoto: decodedCroppedImage ?? decodedThumbnail,
+                initialGallery: request.gallery,
+                initialPhotoIndex: request.photoIndex,
+                initialGalleryIsComplete: request.galleryIsComplete,
                 onConfirm: { candidate in
                     guard let match = candidates.first(where: { $0.species == candidate.species })
                     else { return }
@@ -276,6 +306,20 @@ private struct PhotoConfirmationPage: View {
         }
     }
 
+    @ViewBuilder
+    private var confirmationActions: some View {
+        Button("Mark as Confirmed", systemImage: "checkmark.circle.fill") {
+            confirmWith(status: .confirmed)
+        }
+        Button("Mark as Possible", systemImage: "questionmark.circle.dashed") {
+            confirmWith(status: .possible)
+        }
+        Divider()
+        Button("Skip", systemImage: "delete.forward") {
+            showSkipConfirm = true
+        }
+    }
+
     private var identifyingView: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -287,7 +331,7 @@ private struct PhotoConfirmationPage: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             ProgressView()
-            Text("Identifying species...")
+            Text("Identifying...")
                 .font(.headline)
                 .accessibilityIdentifier("confirm.identifying")
             Spacer()
@@ -298,50 +342,47 @@ private struct PhotoConfirmationPage: View {
 
     // MARK: - Outing Details
 
+    private var outingTitle: String {
+        "Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)"
+    }
+
+    private var outingSubtitle: String? {
+        viewModel.currentOutingStartTime.map {
+            "\(DateFormatting.formatDate($0)) · \(DateFormatting.formatTime($0))"
+        }
+    }
+
     private var outingDetailsSheet: some View {
         NavigationStack {
-            Form {
+            Group {
                 if let coordinate = viewModel.outingInferenceLocation,
                    let location = OutingMapLocation(
                     name: viewModel.lastLocationName,
                     coordinate: CLLocationCoordinate2D(latitude: coordinate.lat, longitude: coordinate.lon),
                     sourceDescription: "Outing location"
                    ) {
-                    Section {
-                        Map(initialPosition: location.cameraPosition, interactionModes: [.pan, .zoom]) {
-                            Marker(location.name, coordinate: location.coordinate)
+                    OutingLocationMapView(
+                        location: location, title: outingTitle, subtitle: outingSubtitle
+                    )
+                } else {
+                    ContentUnavailableView(
+                        viewModel.lastLocationName.isEmpty ? "Unknown Location" : viewModel.lastLocationName,
+                        systemImage: "mappin.slash",
+                        description: Text("No location coordinates")
+                    )
+                    .navigationTitle(outingTitle)
+                    .navigationSubtitle(outingSubtitle ?? "")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { showOutingDetails = false }
+                                .labelStyle(.iconOnly)
+                                .accessibilityIdentifier("outing.mapClose")
                         }
-                        .mapFeatureSelectionDisabled { _ in true }
-                        .frame(height: 240)
-                        .listRowInsets(EdgeInsets())
-                        .accessibilityIdentifier("confirm.outingMap")
-                    }
-                }
-                Section {
-                    LabeledContent("Location", value: viewModel.lastLocationName.isEmpty
-                        ? "Unknown Location" : viewModel.lastLocationName)
-                        .accessibilityIdentifier("confirm.outingLocation")
-                    if let startTime = viewModel.currentOutingStartTime {
-                        LabeledContent("Date & Time", value:
-                            "\(DateFormatting.formatDate(startTime)), \(DateFormatting.formatTime(startTime))")
-                            .accessibilityIdentifier("confirm.outingDateTime")
-                    }
-                    if viewModel.outingInferenceLocation == nil {
-                        Label("No location coordinates", systemImage: "mappin.slash")
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .background(Color.pageBg.ignoresSafeArea())
-            .navigationTitle("Outing Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showOutingDetails = false }
-                        .accessibilityIdentifier("confirm.outingDetailsDone")
-                }
-            }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
@@ -372,11 +413,32 @@ private struct PhotoConfirmationPage: View {
                         .font(.headline)
                         .accessibilityIdentifier("confirm.noCandidates")
 
-                    Text("Try cropping to isolate the bird, or skip this photo.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                    VStack(spacing: 12) {
+                        Button {
+                            viewModel.requestManualCrop()
+                        } label: {
+                            Label("Crop and Retry", systemImage: "crop")
+                                .font(.body.weight(.medium))
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .buttonSizing(.flexible)
+                        .accessibilityIdentifier("confirm.cropAndRetry")
+
+                        Button {
+                            showSkipConfirm = true
+                        } label: {
+                            Label("Skip", systemImage: "delete.forward")
+                                .font(.body.weight(.medium))
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.glass)
+                        .buttonSizing(.flexible)
+                        .accessibilityIdentifier("confirm.noCandidatesSkip")
+                    }
+                    .frame(maxWidth: 340)
+                    .padding(.horizontal, 32)
+                    .disabled(!canAct || isAcknowledging)
 
                     Spacer(minLength: 0)
                 }
@@ -396,21 +458,48 @@ private struct PhotoConfirmationPage: View {
             ScrollView {
                 VStack(spacing: 0) {
                     VStack(spacing: 16) {
-                        // Top-aligned so a caption that wraps at large text sizes cannot shift the
-                        // photo it belongs to.
                         HStack(alignment: .top, spacing: 12) {
                             VStack(spacing: 6) {
-                                aiCroppedUserPhoto(size: photoSize)
-                                Text("Cropped photo")
+                                Button {
+                                    viewModel.requestManualCrop()
+                                } label: {
+                                    aiCroppedUserPhoto(size: photoSize)
+                                        .overlay(alignment: .bottomTrailing) {
+                                            photoActionIndicator("crop")
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Crop your photo")
+                                .accessibilityIdentifier("confirm.userPhoto")
+                                .disabled(photo == nil || isAcknowledging)
+                                Text("Yours")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(2, reservesSpace: true)
                             }
                             .frame(width: photoSize)
 
                             VStack(spacing: 6) {
-                                wikiSquareThumbnail(size: photoSize)
-                                let credit = currentRefCredit
+                            wikiSquareThumbnail(size: photoSize)
+                                .overlay(alignment: .bottomTrailing) {
+                                    photoActionIndicator("info")
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    guard !isAcknowledging else { return }
+                                    openPeekAtSelection()
+                                }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityLabel("Explore \(getDisplayName(selectedSpecies))")
+                                .accessibilityHint("Opens reference photos and species details")
+                                .accessibilityAction {
+                                    guard !isAcknowledging else { return }
+                                    openPeekAtSelection()
+                                }
+                                .frame(width: photoSize)
                                 Group {
+                                    let credit = currentRefCredit
                                     if let url = credit.url {
                                         Link(credit.label, destination: url).underline()
                                     } else {
@@ -420,12 +509,7 @@ private struct PhotoConfirmationPage: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
-                                // Reserved so swiping to an image with a different plumage tag
-                                // cannot change the column height and shift both photos.
                                 .lineLimit(2, reservesSpace: true)
-                                .accessibilityLabel(credit.url == nil
-                                    ? credit.label
-                                    : "\(credit.label). Photo credit and license on Wikimedia Commons")
                             }
                             .frame(width: photoSize)
                         }
@@ -446,10 +530,40 @@ private struct PhotoConfirmationPage: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
+            .task(id: photoSize) {
+                guard photoSize > 0 else { return }
+                let leads = candidates.compactMap { candidate in
+                    let thumbnail = getWikiThumbnailUrl(for: candidate.species)
+                    return CommonsGallery.leadImage(cardImageUrl(fromThumbnail: thumbnail) ?? thumbnail)?.url
+                }
+                await withTaskGroup(of: Void.self) { group in
+                    for url in leads {
+                        group.addTask {
+                            await Self.preloadReference(url: url, size: photoSize)
+                        }
+                    }
+                }
+            }
         }
     }
 
     // MARK: - AI-Cropped Square User Photo
+
+    @MainActor
+    private static func preloadReference(url: URL, size: CGFloat) async {
+        guard !Task.isCancelled else { return }
+        _ = await ImageLoader.shared.imageAndFocalPoint(for: url.absoluteString, targetPoints: size)
+    }
+
+    private func photoActionIndicator(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.caption.weight(.semibold))
+            .frame(width: 28, height: 28)
+            .glassEffect(.regular, in: Circle())
+            .padding(8)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
 
     private func aiCroppedUserPhoto(size: CGFloat) -> some View {
         Group {
@@ -468,9 +582,10 @@ private struct PhotoConfirmationPage: View {
     private func fallbackPhoto(size: CGFloat) -> some View {
         Group {
             if let uiImage = decodedThumbnail {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
+                FocalImage(
+                    image: uiImage,
+                    focalPoint: photo?.suggestedFocalPoint ?? FocalCropGeometry.center
+                )
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
@@ -514,8 +629,9 @@ private struct PhotoConfirmationPage: View {
                 }
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 0) {
-                        ForEach(Array(urls.enumerated()), id: \.offset) { i, url in
+                    // At most four photos: mount them eagerly to load ahead of swipes.
+                    HStack(spacing: 0) {
+                        ForEach(Array(urls.enumerated()), id: \.element) { i, url in
                             BirdThumbnail(url: url.absoluteString, size: size, cornerRadius: 12)
                                 .frame(width: size, height: size)
                                 .id(i)
@@ -555,76 +671,52 @@ private struct PhotoConfirmationPage: View {
     }
 
     private func wikiPlaceholder(size: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(.regularMaterial)
+        BirdImagePlaceholder()
             .frame(width: size, height: size)
-            .overlay {
-                Image(systemName: "bird")
-                    .font(.title2)
-                    .foregroundStyle(.tertiary)
-            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Species Card
 
     private var speciesCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Button {
-                    openPeekAtSelection()
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text(displayName)
-                                .font(.title3.weight(.semibold))
-                                .accessibilityIdentifier("confirm.speciesName")
-                            if let plumage = selectedPlumage, let icon = plumageIcon(plumage) {
-                                Text(icon)
-                                    .font(.subheadline)
-                                    .accessibilityLabel(plumage)
-                            }
-                            let state = rarity(for: selectedSpecies)
-                            if state != .none {
-                                RarityMark(state: state, pingTrigger: confirmedRarity)
-                                    // The title stack is tighter than a list row, so
-                                    // the mark makes up the difference and sits the
-                                    // same distance from the name on both.
-                                    .padding(.leading, 4)
-                                    .accessibilityIdentifier("confirm.rarity")
-                            }
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        if let sci = scientificName {
-                            Text(sci)
-                                .font(.subheadline.italic())
-                                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
+                ZStack(alignment: .leading) {
+                    Text(getDisplayName(selectedSpecies))
+                        .font(.system(.title3, design: .serif, weight: .semibold))
+                        .lineLimit(2, reservesSpace: true)
+                        .hidden()
+                    HStack(alignment: .center, spacing: 6) {
+                        Text(getDisplayName(selectedSpecies))
+                            .font(.system(.title3, design: .serif, weight: .semibold))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                        let state = rarity(for: selectedSpecies)
+                        if state != .none {
+                            RarityMark(state: state, pingTrigger: confirmedRarity)
                         }
                     }
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Shows photos and reference links for this bird")
-                .accessibilityIdentifier("confirm.learnMore")
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityRepresentation {
+                    Text(getDisplayName(selectedSpecies))
+                        .accessibilityIdentifier("confirm.speciesName")
+                    }
                 Text(BirdIdEngine.formatConfidence(selectedConfidence))
-                    .font(.system(.title2, design: .serif).weight(.semibold).monospacedDigit())
-                    .foregroundStyle(confidenceColor)
+                    .font(.system(.title, design: .serif).weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Color.confidence(selectedConfidence))
                     .accessibilityIdentifier("confirm.confidence")
             }
-
+            .padding(.bottom, 8)
             ProgressView(value: selectedConfidence)
-                .tint(confidenceColor)
-
-            if candidates.count > 1 {
-                Divider()
-                Text("All candidates")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                ForEach(Array(candidates.enumerated()), id: \.element.species) { position, candidate in
-                    candidateRow(candidate, at: position)
+                .tint(Color.confidence(selectedConfidence))
+                .transaction {
+                    $0.animation = nil
+                    $0.disablesAnimations = true
                 }
+                .padding(.bottom, 12)
+            ForEach(Array(candidates.enumerated()), id: \.element.species) { position, candidate in
+                candidateRow(candidate, at: position)
             }
         }
         .padding(16)
@@ -634,64 +726,71 @@ private struct PhotoConfirmationPage: View {
 
     private func candidateRow(_ candidate: IdentifiedCandidate, at position: Int) -> some View {
         let isSelected = candidate.species == selectedSpecies
-        return HStack(spacing: 0) {
+        return HStack(spacing: 8) {
             Button {
-                selectAlternative(candidate)
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.12)) {
+                    selectAlternative(candidate)
+                }
             } label: {
-                HStack {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.body)
                         .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.4))
-                    Text(getDisplayName(candidate.species))
-                        .font(.body)
-                    if let plumage = candidate.plumage, let icon = plumageIcon(plumage) {
-                        Text(icon)
-                            .font(.caption)
-                            .accessibilityLabel(plumage)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(getDisplayName(candidate.species))
+                                .font(.body)
+                                .foregroundStyle(Color.foregroundText)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            let state = rarity(for: candidate.species)
+                            if state != .none {
+                                RarityMark(state: state, pingTrigger: isSelected ? confirmedRarity : nil)
+                            }
+                        }
+                        if let plumage = candidate.plumage {
+                            Text(plumage)
+                                .font(.caption)
+                                .foregroundStyle(Color.mutedText)
+                        }
                     }
-                    // Shown on every candidate, not just the selected one. When the
-                    // top pick is a mega and the runner-up is the ordinary local
-                    // bird, that contrast is the most useful thing on the screen.
-                    // Dimmed when unselected so it informs without competing with
-                    // the selection state.
-                    let state = rarity(for: candidate.species)
-                    if state != .none {
-                        RarityMark(state: state)
-                            .opacity(isSelected ? 1 : 0.45)
-                    }
-                    Spacer()
-                    Text(BirdIdEngine.formatConfidence(candidate.confidence))
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 4)
+                .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(isAcknowledging)
+            .accessibilityHint("Selects this identification")
             .accessibilityAction(named: "Learn more") { openPeek(at: position) }
 
-            // Its own hit area, so reading about a candidate is not the same tap
-            // as choosing it. A full 44 by 44 target, because a near miss here
-            // hits the selection button beside it and silently changes the answer.
             Button {
-                openPeek(at: position)
+                if isSelected { openPeekAtSelection() }
+                else { openPeek(at: position) }
             } label: {
-                Image(systemName: "info.circle")
-                    .font(.body)
-                    .foregroundStyle(.tertiary)
+                Text(BirdIdEngine.formatConfidence(candidate.confidence))
+                    .font(.body.monospacedDigit())
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Learn more about \(getDisplayName(candidate.species))")
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("\(BirdIdEngine.formatConfidence(candidate.confidence)), learn more about \(getDisplayName(candidate.species))")
+            .disabled(isAcknowledging)
         }
+        .padding(.vertical, 4)
     }
 
     // MARK: - Helpers
 
-    private var confidenceColor: Color { .confidence(selectedConfidence) }
+    private var isHighConfidence: Bool {
+        selectedConfidence >= BirdIdEngine.confidencePromptThreshold
+    }
+    private var outingDetailsLabel: String {
+        let location = viewModel.lastLocationName.isEmpty ? "Unknown Location" : viewModel.lastLocationName
+        guard let startTime = viewModel.currentOutingStartTime else { return location }
+        return "\(location), \(DateFormatting.formatDate(startTime)), \(DateFormatting.formatTime(startTime))"
+    }
 
     private func initializeSelection() {
         if let top = candidates.first {
@@ -770,7 +869,8 @@ private struct PhotoConfirmationPage: View {
         let commit = {
             viewModel.confirmCurrentPhoto(species: species,
                                           confidence: confidence,
-                                          status: status, count: 1)
+                                          status: status,
+                                          count: 1)
         }
         guard rarity(for: species) == .both else { return commit() }
 
@@ -811,7 +911,7 @@ private struct PhotoConfirmationPage: View {
         let leadImageUrl = cardImageUrl(fromThumbnail: leadThumb) ?? leadThumb
         let plumage = selectedPlumage
         isLoadingWikiImage = true
-        galleryItems = []
+        galleryItems = CommonsGallery.leadImage(leadImageUrl).map { [$0] } ?? []
 
         galleryTask = Task {
             let items = await CommonsGallery.fetch(
@@ -820,7 +920,7 @@ private struct PhotoConfirmationPage: View {
                 plumage: plumage
             )
             guard !Task.isCancelled else { return }
-            galleryItems = items
+            galleryItems = Array(items.prefix(4))
             isLoadingWikiImage = false
         }
     }

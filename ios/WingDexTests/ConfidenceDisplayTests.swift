@@ -10,12 +10,12 @@ import XCTest
 final class ConfidenceDisplayTests: XCTestCase {
     func testNeverRendersARealValueAsZeroPercent() {
         for p in [0.0000001, 0.00035, 0.001, 0.004, 0.00499] {
-            XCTAssertEqual(BirdIdEngine.formatConfidence(p), "<0.5%", "for \(p)")
+            XCTAssertEqual(BirdIdEngine.formatConfidence(p), "~0%", "for \(p)")
         }
     }
 
     func testSwitchesToPercentageExactlyWhereRoundingStopsGivingZero() {
-        XCTAssertEqual(BirdIdEngine.formatConfidence(0.0049), "<0.5%")
+        XCTAssertEqual(BirdIdEngine.formatConfidence(0.0049), "~0%")
         XCTAssertEqual(BirdIdEngine.formatConfidence(0.005), "1%")
     }
 

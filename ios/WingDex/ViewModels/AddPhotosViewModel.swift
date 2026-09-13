@@ -418,7 +418,7 @@ final class AddPhotosViewModel {
             }
         }
 
-        processingMessage = "Preparing your WingDex..."
+        processingMessage = "Loading..."
         let sessionID: UUID
         do {
             sessionID = try await preparedSession
@@ -467,6 +467,10 @@ final class AddPhotosViewModel {
                     rejectedPhotoCount += 1
                     continue
                 }
+                let suggestedFocalPoint = await ImageLoader.suggestedFocalPoint(
+                    for: prepared.thumbnail,
+                    label: "camera_\(id).jpg"
+                )
         candidatePhotos.append(
           ProcessedPhoto(
                     id: id,
@@ -479,6 +483,7 @@ final class AddPhotosViewModel {
                     fileHash: prepared.fileHash,
                     fileName: "camera_\(id).jpg",
                     byteCount: prepared.byteCount,
+                    suggestedFocalPoint: suggestedFocalPoint,
                     captureTime: camera.captureTime
                 ))
             } catch {
@@ -603,7 +608,7 @@ final class AddPhotosViewModel {
                 batch.registerOwned(imported.url)
                 try Task.checkCancellation()
         guard
-          let photo = makeProcessedPhoto(
+          let photo = await makeProcessedPhoto(
                     fileURL: imported.url,
                     fileName: nil,
                     cleanupOriginal: true
@@ -637,7 +642,7 @@ final class AddPhotosViewModel {
             do {
                 try Task.checkCancellation()
         guard
-          let photo = makeProcessedPhoto(
+          let photo = await makeProcessedPhoto(
                     fileURL: sharedPhoto.fileURL,
                     fileName: sharedPhoto.fileName,
                     cleanupOriginal: false
@@ -680,9 +685,14 @@ final class AddPhotosViewModel {
         fileURL: URL,
         fileName: String?,
         cleanupOriginal: Bool
-    ) -> ProcessedPhoto? {
+    ) async -> ProcessedPhoto? {
         guard let prepared = PhotoService.preparePhoto(at: fileURL) else { return nil }
         let id = UUID().uuidString
+        let resolvedFileName = fileName ?? fileURL.lastPathComponent
+        let suggestedFocalPoint = await ImageLoader.suggestedFocalPoint(
+            for: prepared.thumbnail,
+            label: id
+        )
         return ProcessedPhoto(
             id: id,
             originalURL: fileURL,
@@ -692,8 +702,9 @@ final class AddPhotosViewModel {
             gpsLat: prepared.gpsLat,
             gpsLon: prepared.gpsLon,
             fileHash: prepared.fileHash,
-            fileName: fileName ?? fileURL.lastPathComponent,
+            fileName: resolvedFileName,
             byteCount: prepared.byteCount,
+            suggestedFocalPoint: suggestedFocalPoint,
             captureTime: prepared.captureTime
         )
     }
@@ -1474,12 +1485,14 @@ final class AddPhotosViewModel {
         if let idx = processedPhotos.firstIndex(where: { $0.id == photoId }) {
             processedPhotos[idx].croppedImage = imageData
             processedPhotos[idx].thumbnail = thumbnail
+            processedPhotos[idx].suggestedFocalPoint = nil
         }
 
         for ci in clusters.indices {
             for pi in clusters[ci].photos.indices where clusters[ci].photos[pi].id == photoId {
                 clusters[ci].photos[pi].croppedImage = imageData
                 clusters[ci].photos[pi].thumbnail = thumbnail
+                clusters[ci].photos[pi].suggestedFocalPoint = nil
             }
         }
     }
@@ -1601,6 +1614,8 @@ struct ProcessedPhoto: Identifiable, Sendable {
     let byteCount: Int
     /// User-confirmed cropped image used for re-analysis and preview, matching web croppedDataUrl.
     var croppedImage: Data? = nil
+    /// On-device framing suggestion used only until the user applies an explicit crop.
+    var suggestedFocalPoint: CGPoint? = nil
     var captureTime: PhotoCaptureTime? = nil
 }
 

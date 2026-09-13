@@ -19,11 +19,12 @@ Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same
 - **Review location:** The row under Date & Time shows a green location icon, source label, and four-decimal coordinates, or an orange no-GPS label when coordinates are missing. Cancel and retry controls stay in that row. The Location section has a compact, single-line name and Edit control directly below the map. During reverse geocoding, a small spinner and "Looking up location..." replace the fallback name in that location row. Tap the name or Edit to open a swipe-dismissible sheet. Full names and source/lookup status remain available to VoiceOver. Native search stays at the top, below the title and Close button. Selecting a place or using an entered name applies it and dismisses the sheet; Close or swipe-down discards unselected text. Manual names retain existing coordinates. Current location is offered only when coordinates are missing and requests permission only after a tap. Live place search uses the existing provider with debounce, cancellation, and rate-limit recovery; manual entry remains available offline.
 - **Review map:** A full-width map within the location card previews the accepted location, or the inherited location when adding to an existing outing. Tap to inspect a map-only overlay sheet with pan, zoom, and Recenter without changing the outing's coordinates. A floating Liquid Glass button opens Apple Maps; there is no bottom information panel. The name, coordinates, and source remain available through Recenter's accessibility description. Map tiles and location lookups never make a location mandatory.
 - **Review photos:** Tap a carousel thumbnail to open a swipe-dismissible photo sheet at that photo, then swipe horizontally to browse the outing's photos. The viewer loads screen-sized previews from the originals without changing the photos or interrupting location lookup. Close or swipe down to return; long-press removal remains in the carousel. The top-right chevron continues the review and is announced as "Continue" by VoiceOver.
+- **Image saliency:** Reference images and uncropped user photos use Vision attention-based saliency for square framing. Wikimedia render sizes of the same file share one normalized focal point, including detail blur-up and peek-sheet gallery sizes. User-photo analysis runs once during preparation; outing thumbnails and the identification result reuse it until a manual crop replaces the suggestion. The crop editor starts with the largest possible square around that point rather than an extra-zoomed center crop. Analysis is downsampled to 512 px, accepts saliency confidence of at least 0.20, and otherwise falls back to center. This is generic saliency, not bird-specific detection. Debug logs report download, decode, Vision queue/analysis timing, confidence, focal coordinates, and crop shift; positive crop X/Y means right/down.
 - **Photo preparation:** The library picker requests the current encoding to avoid compatibility conversions. This does not eliminate Photos/iCloud delivery waits or change RAW decoding.
 - **Queued shares:** Photos shared while an ID session is open wait for that session to finish. Confirming or discarding the current session starts the next queued share after dismissal and cleanup, without requiring another app activation. Discard only applies to the current session; account changes still stop automatic queue continuation.
-- **Identification controls:** The bottom toolbar groups outing details, crop, possible, and skip. Possible and Skip ask for confirmation. The map button opens a read-only sheet with the outing's location and local date/time. Back revisits the previous photo, or outing review from the first photo.
+- **Identification controls:** The bottom toolbar contains Crop, the location/date pill, and Skip. The pill opens the shared outing map with the outing number and date/time. Tap your photo to crop, the reference photo to inspect its current gallery image, or a candidate percentage to inspect that bird without selecting it. The first reference image for each candidate is prefetched; selecting a bird loads up to four gallery images. High-confidence results confirm with one tap; long-press opens a native primary-action menu with Mark as Confirmed, Mark as Possible, and Skip. Lower-confidence results open that menu on tap, with a question-mark badge. Skip asks for confirmation. No-result screens offer Crop and Retry and Skip as stacked glass buttons. The top photo counter opens the current outing's full photo sequence at the current photo; browsing does not change the photo being identified. Back revisits the previous photo, or outing review from the first photo.
 - **Identification transitions:** Confirmation content fades out for 100 ms, swaps to the latest photo/loading/result snapshot, then fades in for 180 ms. The fading page retains its photo, species, and selection until the swap. Navigation and toolbar stay stationary. Loading has its own layout; attribution appears only with results. Identification starts immediately: results ready at the swap boundary bypass loading, otherwise loading appears without a minimum duration. Changes during fade-in are coalesced into the next fade. Reduce Motion swaps immediately. Back cancels the current request, and late results cannot replace the photo or outing being reviewed.
-- **Manual crop:** Drag and pinch beneath the fixed square, then tap Done to apply. Back cancels the crop. The crop screen has no upload-close, reset, skip, or separate zoom controls.
+- **Manual crop:** Drag and pinch beneath the fixed square, then tap the checkmark to apply. Back cancels the crop. The noninteractive title shows Photo X of Y with Crop to One Bird beneath it. The crop screen has no upload-close, reset, skip, or separate zoom controls.
 
 The implementation uses Apple's documented `UIImagePickerController.InfoKey.mediaMetadata`, `PHAssetCreationRequest`, `PHAccessLevel.addOnly`, and SwiftUI form, menu, and focus APIs. It leaves the native library picker unchanged.
 
@@ -93,40 +94,63 @@ make -C ios accessibility-deep        # opt-in OS-sensitive full audits
 make -C ios core TESTS=-only-testing:WingDexTests/AuthTransportTests
 ```
 
-The Makefile is the shared local/CI entry point; `scripts/test.sh` owns the one
-simulator/build lifecycle underneath it. `npm run test:ios -- core` also works.
-Install Xcode and XcodeGen, then
-run it; do not boot a simulator, launch a server, choose an API URL, or generate
-the project first. It uses the selected Xcode (`DEVELOPER_DIR` is respected) and
-the newest installed iOS 26+ runtime. `IOS_TEST_DEVICE_TYPE` optionally overrides
-the default `com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro`.
+The Makefile is the shared local/CI entry point; `scripts/test.sh` dispatches the
+same lanes and selectors to the appropriate lifecycle. `npm run test:ios -- core`
+also works. Install Xcode and XcodeGen, then run it; do not boot a simulator,
+launch a server, choose an API URL, or generate the project first. The selected
+Xcode (`DEVELOPER_DIR` is respected) and newest installed iOS 26+ runtime are
+used.
 
-The runner first builds for `generic/platform=iOS Simulator` with the host
-architecture, without waiting for a particular simulator to become ready. It then
-creates a uniquely named simulator, boots it, waits for `simctl bootstatus`, and
-runs tests serially on that UDID. Build and boot are intentionally separate to
-avoid compiler/simulator memory and disk contention on smaller hosted machines.
-`test-without-building` reads the generated SDK/architecture-specific `.xctestrun`
-directly, avoiding a second project/package-resolution pass. This split is
-documented in Apple's [command-line testing guide](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
+The default mode is `local` outside GitHub Actions and `ci` when
+`GITHUB_ACTIONS=true`. Use `GITHUB_ACTIONS=true make -C ios` from the repository
+root to reproduce the CI lifecycle locally. Local mode uses one persistent
+simulator named `WingDex Local Tests`, reusing the newest existing matching
+device and creating one with the newest installed runtime only when no matching
+device exists. Installing a newer runtime does not migrate an existing
+persistent simulator automatically.
+`xcodebuild test` boots that simulator as needed and leaves it available for the
+next run. It does not select an arbitrary booted device because UI fixtures
+replace the app account. Set `IOS_TEST_DEVICE_NAME` to use a different dedicated
+simulator name, or pass an explicit destination:
+
+```bash
+make -C ios core DESTINATION='platform=iOS Simulator,id=YOUR-UDID'
+```
+
+Local project generation uses XcodeGen's `--use-cache` facility and keeps the
+AppIcon resource. With no `DERIVED_DATA_PATH`, local `xcodebuild test` uses
+Xcode's normal `~/Library/Developer/Xcode/DerivedData` location, like the Xcode
+Test navigator. Set `DERIVED_DATA_PATH` when reproducing a specific cache.
+`SCHEME` selects the existing scheme and its test configuration (`WingDex` uses
+`Dev Debug`; `Localhost` uses `Localhost Debug`). `XCODEBUILD_ARGS` is forwarded
+to the xcodebuild actions: local applies it to the single test action, while CI
+applies it to the build-for-testing action.
+
+CI mode retains the isolated lifecycle: it generates a test-only project without
+the home-screen icon, builds for testing on the generic simulator destination
+into `ios/build/DerivedData`, then boots a fresh uniquely named simulator and
+runs its `.xctestrun` with `test-without-building`. It keeps serial execution,
+the bounded CI test allowances, and `-collect-test-diagnostics never`. Cleanup
+shuts down and deletes only the simulator created by that run and restores the
+normal generated project. Local mode never performs those destructive cleanup
+steps or regenerates the project after testing. The split follows Apple's
+[command-line testing guide](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
 and the installed `xcodebuild` man page.
 
-Cleanup shuts down/deletes only the UDID the runner created, including on ordinary
-failure or interruption. It never erases or deletes a developer's simulator.
-A force-killed process or powered-off Mac cannot
-run cleanup; the recorded `Simulator:` UDID identifies that run's device if manual
-cleanup is needed. Builds reuse `ios/build/DerivedData`; simulator state never
-does. Raw logs, toolchain versions, elapsed times, JSON summary, and `.xcresult`
-remain in `ios/build/test-results/<lane>-<uuid>/`. Xcode's exit status is retained.
-Run one iOS lane at a time on a local Mac because the build cache/project is shared.
+Both modes preserve the lane defaults, `-only-testing`/`-skip-testing` selector
+semantics, deep accessibility environment, raw logs, toolchain versions, elapsed
+times, JSON summary, and `.xcresult` under
+`ios/build/test-results/<lane>-<uuid>/`. Xcode's exit status is retained. Run one
+iOS lane at a time on a local Mac because the project and any explicitly selected
+build cache are shared.
 
 CI's compiled-cache fallback can reuse another lane's SwiftPM/DerivedData cache
 when Xcode, OS and architecture match, rather than cold-building core after an
 accessibility lane already built the same targets. Content-keyed generated Bird
 ID assets and the pinned XcodeGen executable are cached separately. These caches
-reuse build inputs/products, never simulator state or test results; tests still
-run on a fresh device.
-The runner disables Xcode's optional **verbose system diagnostics**. Failed
+reuse build inputs/products, never simulator state or test results; CI still runs
+on a fresh device, while local mode reuses its dedicated device.
+The CI runner disables Xcode's optional **verbose system diagnostics**. Failed
 assertions, screenshots, UI hierarchies, raw stderr and result bundles remain.
 Export attachments without `--only-failures`: Xcode can mark a failed test's
 attachments as not directly associated with its assertion. On the local beta,
@@ -135,10 +159,10 @@ one failed assertion otherwise spawned
 minutes with no test progress. This is the documented
 `xcodebuild -collect-test-diagnostics never` option, not a log filter.
 
-For simulator tests the script omits the home-screen Icon Composer asset, which
-is not under test and added almost two minutes on hosted runners. Cleanup
-regenerates the normal project, including that asset, for direct Run/Archive.
-Normal Xcode generation and release archives do not omit it.
+Only CI omits the home-screen Icon Composer asset, which is not under test and
+added almost two minutes on hosted runners. CI cleanup regenerates the normal
+project, including that asset, for direct Run/Archive. Local generation and
+release archives do not omit it.
 
 ### Xcode Test navigator
 
@@ -153,9 +177,11 @@ Profile and Archive behavior of the development/release schemes is unchanged.
 
 No launch arguments, server, backend-selection step, Cloudflare login, or special
 test scheme are required in Xcode. Fixtures are selected in test code, so running
-one test does not require running another test first. The CLI owns a fresh
-simulator; Xcode uses your chosen simulator. Prefer a dedicated test simulator
-there too, since UI tests sign out and replace the app's account with fixtures.
+one test does not require running another test first. Local CLI runs use the
+persistent `WingDex Local Tests` simulator by default; Xcode can use that same
+dedicated simulator or another explicitly chosen device. CI still owns a fresh
+simulator. Prefer a dedicated test simulator because UI tests sign out and
+replace the app's account with fixtures.
 
 ### Coverage and runtime policy
 
@@ -196,11 +222,11 @@ are used; Apple does not guarantee the waiter's polling interval.
 
 Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
 Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
-accessibility run on separate macOS 15 ARM machines with Xcode 26.3, using the
-same fresh iPhone 17 Pro default
-as local runs. Smaller SE displays did not improve hosted runtime consistently
-and introduced tight-viewport scrolling failures, so CI does not override the
-device type.
+accessibility run on separate macOS 15 ARM machines with Xcode 26.3, using a
+fresh iPhone 17 Pro simulator in CI. Local runs reuse their dedicated simulator
+unless `DESTINATION` overrides it. Smaller SE displays did not improve hosted
+runtime consistently and introduced tight-viewport scrolling failures, so CI
+does not override the device type.
 The 15-minute infrastructure ceiling still leaves failure diagnostics time to
 finish. CI calls these exact repo commands; it does not deploy/select a backend
 or manage a second simulator lifecycle. Backend-only changes no longer trigger
@@ -211,18 +237,19 @@ they are not converted to passes/skips or swallowed with a generic issue filter.
 The default structural checks remain required. Full audits supplement, not
 replace, manual VoiceOver, contrast, dark appearance and Dynamic Type checks.
 
-Local verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone 17 Pro,
-fresh simulators and a warm build cache:
+Historical CI-style verification on 2026-09-07, Xcode 27 beta/iOS 27, iPhone
+17 Pro, fresh simulators and a warm build cache:
 
 | Command | Total, including build and simulator | Result |
 |---------|--------------------------------------|--------|
 | `make -C ios` | **6m 24s** | 447 passed, 0 skipped |
 | `make -C ios accessibility-deep` | **3m 22s** | 8 passed, 0 skipped |
 
-These runs used the generic build and direct `.xctestrun` lifecycle; deep-audit
-mode remained active without another package-resolution pass. Three targeted
-large-text/share regressions also passed on an SE simulator in 2m 37s.
-These are local measurements, not a claim about hosted Xcode performance.
+These measurements used the generic build and direct `.xctestrun` lifecycle that
+CI mode retains; they are historical baselines, not measurements of the current
+local persistent-simulator mode or a claim about hosted Xcode performance.
+Three targeted large-text/share regressions also passed on an SE simulator in
+2m 37s.
 The pre-change hosted run `34140285029` took about 22 minutes for core and
 12 minutes for accessibility. Hosted runs must include cache restore, simulator
 setup, diagnostics and job cleanup when evaluating the lane budget.
@@ -408,7 +435,7 @@ renamed with RAW extensions. Compare stable and beta OS versions separately.
 | `scripts/gen-git-info.sh` | Generate `GitInfo.swift` with commit hash and branch |
 | `scripts/bump-version.sh` | Bump marketing version or build number |
 | `scripts/fix-icon-ref.sh` | Fix Xcode project icon references after generation |
-| `scripts/test.sh` | Generate, build and test on a disposable simulator, locally or in CI |
+| `scripts/test.sh` | Dispatch local persistent-simulator or CI isolated test lifecycle |
 
 ## CI
 
