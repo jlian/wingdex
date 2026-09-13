@@ -86,9 +86,6 @@ struct WingDexApp: App {
         _authService = State(initialValue: auth)
         _dataStore = State(initialValue: store)
 
-        // UIKit-rendered controls (menu popovers, pickers, alerts) don't inherit
-        // the SwiftUI AccentColor asset. Set UIKit's global tint to match.
-        UIView.appearance().tintColor = UIColor(named: "AccentColor")
     }
 
     var body: some Scene {

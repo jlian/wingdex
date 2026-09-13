@@ -101,11 +101,25 @@ func presentActivitySheet(items: [Any], sourceView: UIView? = nil) {
 
 /// Focal-point-cropped bird thumbnail. Uses an in-memory cache for smooth scrolling.
 struct BirdThumbnail: View {
+    private struct LoadRequest: Hashable {
+        let url: String?
+        let size: CGFloat
+    }
     let url: String?
     var size: CGFloat = 48
     var cornerRadius: CGFloat = 8
     @State private var uiImage: UIImage?
     @State private var focalPoint = CGPoint(x: 0.5, y: 0.5)
+
+    init(url: String?, size: CGFloat = 48, cornerRadius: CGFloat = 8) {
+        self.url = url
+        self.size = size
+        self.cornerRadius = cornerRadius
+        let cached = size.isFinite && size > 0
+            ? ImageLoader.shared.cachedImageAndFocalPoint(url, targetPoints: size) : nil
+        _uiImage = State(initialValue: cached?.image)
+        _focalPoint = State(initialValue: cached?.focalPoint ?? FocalCropGeometry.center)
+    }
 
     var body: some View {
         Group {
@@ -117,7 +131,11 @@ struct BirdThumbnail: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .task(id: url) { await loadImage() }
+        .task(id: LoadRequest(url: url, size: size)) {
+            // Geometry-driven thumbnails can mount before their container is measured.
+            guard size.isFinite, size > 0 else { return }
+            await loadImage()
+        }
     }
 
     private func loadImage() async {
@@ -136,11 +154,21 @@ struct BirdThumbnail: View {
     }
 
     private var placeholder: some View {
+        BirdImagePlaceholder()
+    }
+}
+
+struct BirdImagePlaceholder: View {
+    var body: some View {
         Rectangle()
-            .fill(Color.warmBorder.opacity(0.2))
+            .fill(.regularMaterial)
             .overlay {
-                Image(systemName: "bird.fill")
-                    .foregroundStyle(Color.mutedText.opacity(0.3))
+                Image("BirdTab")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 42, maxHeight: 42)
+                    .opacity(0.6)
+                    .foregroundStyle(.secondary)
             }
     }
 }

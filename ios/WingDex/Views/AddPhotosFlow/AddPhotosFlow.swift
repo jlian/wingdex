@@ -66,7 +66,10 @@ struct AddPhotosFlow: View {
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if outingDestination == nil && viewModel.currentStep != .manualCrop {
+            if outingDestination == nil
+                && viewModel.currentStep != .manualCrop
+                && viewModel.currentStep != .perPhotoConfirm
+                && viewModel.currentStep != .photoProcessing {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         if needsCloseConfirmation {
@@ -284,6 +287,8 @@ struct AddPhotosFlow: View {
                 suggestedFocalPoint: photo.croppedImage == nil
                     ? photo.suggestedFocalPoint
                     : nil,
+                photos: viewModel.clusterPhotos,
+                selectedPhotoID: photo.id,
                 onBack: {
                     viewModel.cancelCrop()
                 },

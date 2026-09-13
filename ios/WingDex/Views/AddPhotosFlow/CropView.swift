@@ -8,6 +8,8 @@ struct CropView: View {
     let imageData: Data
     let initialCropBox: CropBoxResult?
     let suggestedFocalPoint: CGPoint?
+    let photos: [ProcessedPhoto]
+    let selectedPhotoID: String?
     let onBack: () -> Void
     let onApply: (CropBoxResult) -> Void
 
@@ -19,12 +21,16 @@ struct CropView: View {
         imageData: Data,
         initialCropBox: CropBoxResult?,
         suggestedFocalPoint: CGPoint? = nil,
+        photos: [ProcessedPhoto] = [],
+        selectedPhotoID: String? = nil,
         onBack: @escaping () -> Void,
         onApply: @escaping (CropBoxResult) -> Void
     ) {
         self.imageData = imageData
         self.initialCropBox = initialCropBox
         self.suggestedFocalPoint = suggestedFocalPoint
+        self.photos = photos
+        self.selectedPhotoID = selectedPhotoID
         self.onBack = onBack
         self.onApply = onApply
 
@@ -51,6 +57,10 @@ struct CropView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private let cropInset: CGFloat = 8
+    private var photoTitle: String {
+        guard let index = photos.firstIndex(where: { $0.id == selectedPhotoID }) else { return "Photo" }
+        return "Photo \(index + 1) of \(photos.count)"
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -136,19 +146,32 @@ struct CropView: View {
             cachedImage = image
         }
         .background(Color.clear)
-        .navigationTitle("Crop to One Bird")
+        .navigationTitle(photoTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar, .bottomBar)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Done") {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 1) {
+                    Text(photoTitle)
+                        .font(.headline)
+                        .accessibilityIdentifier("crop.photoCounter")
+                    Text("Crop to One Bird")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
                     onApply(currentCrop)
+                } label: {
+                    Image(systemName: "checkmark")
                 }
                 .tint(.primary)
+                .accessibilityLabel("Apply crop")
                 .accessibilityIdentifier("crop.done")
                 .disabled(cachedImage == nil)
             }
-            ToolbarItemGroup(placement: .bottomBar) {
+            ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     onBack()
                 } label: {

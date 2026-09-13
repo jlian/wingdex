@@ -219,6 +219,10 @@ enum CommonsGallery {
         return name?.replacingOccurrences(of: "_", with: " ").lowercased()
     }
 
+    static func leadImage(_ url: String?) -> GalleryItem? {
+        promotingLead(url, in: []).first
+    }
+
     /// Put the lead image first, absorbing the Commons copy of the same file when the search
     /// already returned it.
     private static func promotingLead(_ leadImageUrl: String?, in items: [GalleryItem]) -> [GalleryItem] {

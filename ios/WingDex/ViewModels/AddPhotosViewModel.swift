@@ -418,7 +418,7 @@ final class AddPhotosViewModel {
             }
         }
 
-        processingMessage = "Preparing your WingDex..."
+        processingMessage = "Loading..."
         let sessionID: UUID
         do {
             sessionID = try await preparedSession

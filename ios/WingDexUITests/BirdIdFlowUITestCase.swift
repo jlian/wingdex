@@ -345,9 +345,12 @@ class BirdIdFlowUITestCase: XCTestCase {
 
     func waitForOutingReview(
         in app: XCUIApplication,
-        requireEnabled: Bool = true
+        requireEnabled: Bool = true,
+        requireDataSetup: Bool = true
     ) -> XCUIElement {
-        waitForDataSetup(in: app)
+        if requireDataSetup {
+            waitForDataSetup(in: app)
+        }
         let continueButton = app.buttons["outing.continue"]
         XCTAssertTrue(continueButton.existsOrWait(timeout: 15), "Outing review never appeared")
         if requireEnabled {

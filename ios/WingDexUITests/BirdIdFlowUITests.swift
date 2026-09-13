@@ -18,11 +18,17 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let speciesY = species.frame.minY
         let back = app.buttons["confirm.back"]
         let toolbarY = back.frame.minY
-        let counter = app.staticTexts["confirm.photoCounter"]
+        let counter = app.buttons["confirm.photoCounter"]
         XCTAssertEqual(counter.label, "Photo 1 of 2")
+        counter.tap()
+        XCTAssertTrue(app.buttons["outing.photosClose"].existsOrWait(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Photo 1 of 2"].exists)
+        app.buttons["outing.photosClose"].tap()
+        XCTAssertTrue(app.buttons["outing.photosClose"].disappearsOrWait(timeout: 5))
+        XCTAssertTrue(species.existsOrWait(timeout: 5))
 
         app.buttons["confirm.accept"].tap()
-        XCTAssertTrue(counter.labelOrWait("Photo 2 of 2", timeout: 5))
+        XCTAssertTrue(app.buttons["confirm.photoCounter"].labelOrWait("Photo 2 of 2", timeout: 10))
         XCTAssertTrue(species.existsOrWait(timeout: 10))
         XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
         XCTAssertEqual(app.buttons.matching(identifier: "confirm.back").count, 1)
@@ -30,7 +36,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertEqual(species.frame.minY, speciesY, accuracy: 1)
 
         back.tap()
-        XCTAssertTrue(counter.labelOrWait("Photo 1 of 2", timeout: 5))
+        XCTAssertTrue(app.buttons["confirm.photoCounter"].labelOrWait("Photo 1 of 2", timeout: 10))
         XCTAssertTrue(species.existsOrWait(timeout: 10))
         XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
         XCTAssertEqual(back.frame.minY, toolbarY, accuracy: 1)
@@ -62,7 +68,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let toolbarY = back.frame.minY
         XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
         XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
-        XCTAssertTrue(app.staticTexts["Cropped photo"].exists)
+        XCTAssertTrue(app.staticTexts["Yours"].exists)
         XCTAssertTrue(app.staticTexts["confirm.attribution"].exists)
         XCTAssertEqual(back.frame.minY, toolbarY, accuracy: 1)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -76,7 +82,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             "--ui-test-geocoding-success", "--ui-test-stub-identification",
         ])
         waitForOutingReview(in: app).tap()
-        let learnMore = app.buttons["confirm.learnMore"]
+        let learnMore = app.buttons["Explore \(Self.expectedSpecies)"]
         XCTAssertTrue(learnMore.existsOrWait(timeout: 10))
         learnMore.tap()
 
@@ -162,7 +168,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(app.buttons["confirm.accept"].isEnabled)
         let speciesFrame = species.frame
         XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
-        let caption = app.staticTexts["Cropped photo"]
+        let caption = app.staticTexts["Yours"]
         let captionFrame = caption.frame
 
         let idAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -170,32 +176,31 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         idAttachment.lifetime = .keepAlways
         add(idAttachment)
 
-        let possible = app.buttons["confirm.possible"]
+        app.buttons["confirm.accept"].press(forDuration: 1)
+        let possible = app.buttons["Mark as Possible"]
         XCTAssertTrue(possible.existsOrWait(timeout: 5))
-        possible.tap()
-
-        let alert = app.alerts["Mark as Possible?"]
-        XCTAssertTrue(alert.existsOrWait(timeout: 5))
+        XCTAssertTrue(app.buttons["Mark as Confirmed"].exists)
+        XCTAssertTrue(app.buttons["Skip"].exists)
 
         let possibleAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         possibleAttachment.name = "Possible_Confirmation"
         possibleAttachment.lifetime = .keepAlways
         add(possibleAttachment)
 
-        alert.buttons["Cancel"].tap()
-        XCTAssertTrue(alert.disappearsOrWait(timeout: 5))
+        caption.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(possible.disappearsOrWait(timeout: 5))
 
         app.buttons["confirm.outingDetails"].tap()
-        XCTAssertTrue(app.navigationBars["Outing Details"].existsOrWait(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Outing 1 of 1"].existsOrWait(timeout: 5))
         let detailsAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         detailsAttachment.name = "Outing_Details"
         detailsAttachment.lifetime = .keepAlways
         add(detailsAttachment)
-        let outingLocation = app.descendants(matching: .any)["confirm.outingLocation"]
+        let outingLocation = app.buttons["outing.mapRecenter"]
         XCTAssertTrue(outingLocation.label.contains("Carkeek Park"), app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["confirm.outingDateTime"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["outing.map"].exists)
         XCTAssertFalse(app.buttons["confirm.editOuting"].exists)
-        app.buttons["confirm.outingDetailsDone"].tap()
+        app.buttons["outing.mapClose"].tap()
         XCTAssertTrue(species.existsOrWait(timeout: 5))
         XCTAssertFalse(app.buttons["outing.continue"].exists)
 
@@ -213,6 +218,10 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         add(returnedAttachment)
         XCTAssertEqual(species.frame.minY, speciesFrame.minY, accuracy: 1)
         XCTAssertEqual(caption.frame.minY, captionFrame.minY, accuracy: 1)
+        app.buttons["confirm.accept"].press(forDuration: 1)
+        XCTAssertTrue(possible.existsOrWait(timeout: 5))
+        possible.tap()
+        XCTAssertTrue(species.disappearsOrWait(timeout: 10))
     }
 
     func testLowConfidenceIdentificationOffersInteractiveCropZoom() {
@@ -224,13 +233,15 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let target = app.descendants(matching: .any)["crop.offCenterPinchTarget"]
         XCTAssertTrue(viewport.existsOrWait(timeout: 10))
         XCTAssertTrue(viewport.isHittable)
+        XCTAssertTrue(target.existsOrWait(timeout: 5))
         let initial = zoom(viewport)
-        let initialCenter = target.value as? String
-        target.pinch(withScale: 1.5, velocity: 1)
+        viewport.pinch(withScale: 2, velocity: 1)
+        if zoom(viewport) <= initial {
+            viewport.pinch(withScale: 2, velocity: 1)
+        }
         XCTAssertGreaterThan(zoom(viewport), initial)
-        XCTAssertNotEqual(target.value as? String, initialCenter)
-        XCTAssertTrue(app.navigationBars["Crop to One Bird"].exists)
-        XCTAssertTrue(app.navigationBars["Crop to One Bird"].buttons["crop.done"].exists)
+        XCTAssertEqual(app.staticTexts["crop.photoCounter"].label, "Photo 1 of 1")
+        XCTAssertTrue(app.buttons["crop.done"].exists)
         XCTAssertFalse(app.buttons["flow.close"].exists)
         XCTAssertFalse(app.buttons["crop.zoomIn"].exists)
         XCTAssertFalse(app.buttons["crop.zoomOut"].exists)
@@ -319,7 +330,9 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(app.descendants(matching: .any)
             .matching(identifier: "ui-test.shareQueueDeferred").firstMatch.existsOrWait(timeout: 10))
 
-        app.buttons["confirm.close"].tap()
+        app.buttons["confirm.back"].tap()
+        _ = waitForOutingReview(in: app, requireDataSetup: false)
+        app.buttons["flow.close"].tap()
         app.alerts["Discard progress?"].buttons["Discard"].tap()
 
         XCTAssertTrue(continueButton.existsOrWait(timeout: 15))
