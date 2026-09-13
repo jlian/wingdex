@@ -30,6 +30,7 @@ struct SpeciesPeekSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var index: Int
     @State private var galleries: [String: [GalleryItem]] = [:]
+    @State private var incompleteGallerySpecies: String?
     @State private var heroIndices: [String: Int] = [:]
     @State private var extracts: [String: String] = [:]
     @State private var expandedExtract = false
@@ -51,6 +52,9 @@ struct SpeciesPeekSheet: View {
         candidates: [SpeciesPeekCandidate],
         startIndex: Int,
         userPhoto: UIImage?,
+        initialGallery: [GalleryItem] = [],
+        initialPhotoIndex: Int = 0,
+        initialGalleryIsComplete: Bool = true,
         onConfirm: @escaping (SpeciesPeekCandidate) -> Void
     ) {
         self.candidates = candidates
@@ -60,6 +64,14 @@ struct SpeciesPeekSheet: View {
         // Seeded here rather than in onAppear: the load task keys off the visible
         // species, and starting at 0 would fetch the wrong bird first.
         _index = State(initialValue: min(max(startIndex, 0), max(candidates.count - 1, 0)))
+        if candidates.indices.contains(startIndex), !initialGallery.isEmpty {
+            let species = candidates[startIndex].species
+            _galleries = State(initialValue: [species: Array(initialGallery.prefix(Self.thumbSlots))])
+            _heroIndices = State(initialValue: [
+                species: min(max(initialPhotoIndex, 0), min(initialGallery.count, Self.thumbSlots) - 1)
+            ])
+            _incompleteGallerySpecies = State(initialValue: initialGalleryIsComplete ? nil : species)
+        }
     }
 
     private var current: SpeciesPeekCandidate? {
@@ -161,7 +173,12 @@ struct SpeciesPeekSheet: View {
                             label.foregroundStyle(Color.accentColor)
                         }
                         .buttonStyle(.plain)
+                        // Keep the link itself as the accessibility node. Older SwiftUI
+                        // runtimes can otherwise expose only the nested Text after returning
+                        // from an external app, dropping the identifier from the Link.
+                        .accessibilityElement(children: .ignore)
                         .accessibilityLabel("Photo credit and license on Wikimedia Commons")
+                        .accessibilityAddTraits(.isLink)
                         .accessibilityIdentifier("speciesPeek.photoCredit")
                     } else {
                         label
@@ -430,7 +447,7 @@ struct SpeciesPeekSheet: View {
     }
 
     private func loadOne(_ candidate: SpeciesPeekCandidate) async {
-        if galleries[candidate.species] == nil {
+        if galleries[candidate.species] == nil || incompleteGallerySpecies == candidate.species {
             let leadThumb = getWikiThumbnailUrl(for: candidate.species)
             let items = await CommonsGallery.fetch(
                 displayName: getDisplayName(candidate.species),
@@ -439,6 +456,7 @@ struct SpeciesPeekSheet: View {
             )
             guard !Task.isCancelled else { return }
             galleries[candidate.species] = items
+            if incompleteGallerySpecies == candidate.species { incompleteGallerySpecies = nil }
         }
         if extracts[candidate.species] == nil,
            let title = getWikiTitle(forSpecies: candidate.species),

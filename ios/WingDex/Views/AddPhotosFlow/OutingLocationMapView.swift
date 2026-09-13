@@ -44,7 +44,7 @@ struct OutingLocationMapPreview: View {
                 .allowsHitTesting(false)
                 Color.clear
             }
-            .frame(height: 200)
+            .frame(height: 160)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -62,6 +62,8 @@ struct OutingLocationMapPreview: View {
 
 struct OutingLocationMapView: View {
     let location: OutingMapLocation
+    let title: String
+    let subtitle: String?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var camera: MapCameraPosition
@@ -70,8 +72,10 @@ struct OutingLocationMapView: View {
     @State private var observedCameraValue = ""
     #endif
 
-    init(location: OutingMapLocation) {
+    init(location: OutingMapLocation, title: String = "Location", subtitle: String? = nil) {
         self.location = location
+        self.title = title
+        self.subtitle = subtitle
         _camera = State(initialValue: location.cameraPosition)
     }
 
@@ -93,7 +97,7 @@ struct OutingLocationMapView: View {
         .accessibilityIdentifier("outing.map")
         .ignoresSafeArea(edges: .bottom)
         .overlay(alignment: .bottom) {
-            Button("Open in Apple Maps") {
+            Button("Open in Maps") {
                 showMapsError = !openInMaps(
                     locationName: location.name,
                     coordinate: location.coordinate
@@ -107,7 +111,8 @@ struct OutingLocationMapView: View {
             #endif
             .padding(.bottom, 16)
         }
-        .navigationTitle("Location")
+        .navigationTitle(title)
+        .navigationSubtitle(subtitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
