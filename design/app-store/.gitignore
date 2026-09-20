@@ -1,0 +1,7 @@
+.generated/
+sources/
+*.mp4
+*.mov
+*.m4v
+*-poster.jpg
+__pycache__/

@@ -1,0 +1,56 @@
+{
+  "previews": [
+    {
+      "name": "Batch identification",
+      "source": "sources/A.mp4",
+      "output": "wingdex-preview-01-batch.mp4",
+      "posterAt": 13.5,
+      "sections": [
+        {
+          "title": "Bring the\nwhole batch.",
+          "cardSeconds": 1.5,
+          "start": 0,
+          "end": 5
+        },
+        {
+          "title": "Auto-grouped\ninto outings.",
+          "cardSeconds": 1.5,
+          "start": 5,
+          "end": 8.5
+        },
+        {
+          "title": "Identify with\nconfidence.",
+          "cardSeconds": 1.5,
+          "start": 8.5,
+          "end": 11
+        },
+        {
+          "title": "Compare and\nlearn.",
+          "cardSeconds": 1.5,
+          "start": 11,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "name": "Connected birding history",
+      "source": "sources/B.mp4",
+      "output": "wingdex-preview-02-history.mp4",
+      "posterAt": 8,
+      "sections": [
+        {
+          "title": "Your birding\nhistory.",
+          "cardSeconds": 2,
+          "start": 2,
+          "end": 9.5
+        },
+        {
+          "title": "All organized.",
+          "cardSeconds": 2,
+          "start": 12,
+          "end": 20
+        }
+      ]
+    }
+  ]
+}
