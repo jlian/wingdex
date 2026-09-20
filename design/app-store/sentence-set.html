@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WingDex - sentence-led screenshot set</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e7e9e3; color: #173d2c; font: 15px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; }
+    header { padding: 22px 24px; background: #f8f7f0; border-bottom: 1px solid #173d2c19; }
+    h1 { margin: 0 0 6px; font-size: 23px; letter-spacing: -.5px; }
+    p { margin: 0; color: #566652; }
+    a { color: #173d2c; }
+    nav { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    nav a, button { padding: 9px 14px; border: 1px solid #173d2c30; border-radius: 8px; background: transparent; color: #173d2c; font: inherit; text-decoration: none; cursor: pointer; }
+    nav a.primary { background: #173d2c; color: #fff; }
+    .strip { display: flex; gap: 22px; overflow-x: auto; padding: 28px 24px 40px; scroll-snap-type: x proximity; }
+    article { flex: 0 0 300px; scroll-snap-align: start; min-width: 0; }
+    h2 { font-size: 16px; margin: 0 0 14px; }
+    .art { display: block; width: 100%; height: auto; box-shadow: 0 12px 28px #173d2c22; }
+    .links { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; }
+    .grid .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 22px; overflow: visible; }
+    footer { padding: 0 24px 28px; font-size: 13px; max-width: 1000px; }
+    footer p + p { margin-top: 10px; }
+    @media (max-width: 700px) { .grid .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WingDex / Sentence-led screenshot set</h1>
+    <p>Direction A: larger headlines, selective subtitles, and the original paired-phone proportions</p>
+    <nav>
+      <button type="button" id="layout" aria-pressed="false">Show as grid</button>
+      <a href="preview-pair.html">App previews</a>
+      <a href="README.md">Regeneration instructions</a>
+    </nav>
+  </header>
+  <main class="strip">
+    <article>
+      <h2>01 / Photos to life list</h2>
+      <a href="wingdex-screenshot-01-sentences.png"><img class="art" src="wingdex-screenshot-01-sentences.png" alt="Bird photos in. Life list out."></a>
+      <div class="links"><a href="wingdex-screenshot-01-sentences.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;slide=01">Source</a></div>
+    </article>
+    <article>
+      <h2>02 / Select and group</h2>
+      <a href="wingdex-screenshot-02-sentences.png"><img class="art" src="wingdex-screenshot-02-sentences.png" alt="Bring the whole batch. Automatically grouped by time and place."></a>
+      <div class="links"><a href="wingdex-screenshot-02-sentences.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;slide=02">Source</a></div>
+    </article>
+    <article>
+      <h2>03 / Identification</h2>
+      <a href="wingdex-screenshot-03-sentences-v2.png"><img class="art" src="wingdex-screenshot-03-sentences-v2.png" alt="Identify with confidence. Compare photos. Explore the alternatives."></a>
+      <div class="links"><a href="wingdex-screenshot-03-sentences-v2.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;revision=2&amp;slide=03">Source</a></div>
+    </article>
+    <article>
+      <h2>04 / Birding history</h2>
+      <a href="wingdex-screenshot-04-sentences-v2.png"><img class="art" src="wingdex-screenshot-04-sentences-v2.png" alt="Birding history. All connected. Birds and outings, linked both ways."></a>
+      <div class="links"><a href="wingdex-screenshot-04-sentences-v2.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;revision=2&amp;slide=04">Source</a></div>
+    </article>
+    <article>
+      <h2>05 / Offline and private</h2>
+      <a href="wingdex-screenshot-05-sentences.png"><img class="art" src="wingdex-screenshot-05-sentences.png" alt="Bird ID. Even offline. Your photos stay on your device."></a>
+      <div class="links"><a href="wingdex-screenshot-05-sentences.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;slide=05">Source</a></div>
+    </article>
+    <article>
+      <h2>06 / Your WingDex</h2>
+      <a href="wingdex-screenshot-06-sentences.png"><img class="art" src="wingdex-screenshot-06-sentences.png" alt="Your WingDex. Ready to grow. No account required."></a>
+      <div class="links"><a href="wingdex-screenshot-06-sentences.png" download>Download</a><a href="polished-artwork.html?direction=sentences&amp;slide=06">Source</a></div>
+    </article>
+  </main>
+  <footer>
+    <p><strong>Direction A:</strong> Headlines are 154px, up from 138px. All six now fit in two lines, with periods and selective supporting copy. Single phones retain the shared 974px frame; 02 uses a smaller picker and larger foreground review, and 04 keeps the original near-side-by-side proportions. Its captions are BIRDS BY OUTING and OUTINGS BY BIRD.</p>
+    <p><strong>Closing line:</strong> “Your WingDex. Ready to grow.” uses the brand as the name of the collection the viewer has just seen being built. “No account required” remains directly beneath it.</p>
+    <p>The updated Goldfinch capture, ID-first ordering, original photo selections, and offline caveat are preserved. All six exports are 1320 &times; 2868 opaque PNGs. This package contains only the selected final set.</p>
+  </footer>
+  <script>
+    document.querySelector('#layout').addEventListener('click', event => {
+      const grid = document.body.classList.toggle('grid');
+      event.currentTarget.textContent = grid ? 'Show as carousel' : 'Show as grid';
+      event.currentTarget.setAttribute('aria-pressed', String(grid));
+    });
+  </script>
+</body>
+</html>

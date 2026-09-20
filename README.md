@@ -166,6 +166,7 @@ image; compare its end-to-end timing rather than just the runner's duration.
 | `migrations/` | D1 SQL migrations |
 | `e2e/` | Playwright specs |
 | `ios/` | Native iOS app (XcodeGen) |
+| `design/app-store/` | App Store screenshots, previews, and [reusable generation sources](design/app-store/README.md) |
 | `ml/` | Model conversion and cross-platform parity harnesses |
 
 ## Releases

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>WingDex - two App Store previews</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px; color: #173d2c; background: #f5efdf; font: 15px/1.5 system-ui, sans-serif; }
+  header, footer { text-align: center; }
+  h1 { margin: 0; font: 34px Georgia, serif; }
+  header p, footer { color: #425b45; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 32px; max-width: 1000px; margin: 24px auto; }
+  section { text-align: center; }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  video { display: block; width: min(100%, 390px); max-height: 72dvh; margin: 0 auto 14px; background: #f5efdf; }
+  .download { display: inline-block; padding: 10px 22px; border-radius: 24px; background: #173d2c; color: white; text-decoration: none; font-weight: 600; }
+  footer a { color: inherit; }
+</style>
+<header>
+  <h1>Two stories. One WingDex.</h1>
+  <p>Full-screen title cards between chapters. Original-speed app footage.</p>
+</header>
+<main>
+  <section>
+    <h2>1. Batch identification &middot; <span class="duration">29</span> seconds</h2>
+    <video controls muted playsinline preload="metadata" poster="wingdex-preview-01-batch-poster.jpg" aria-label="Batch identification preview">
+      <source src="wingdex-preview-01-batch.mp4" type="video/mp4">
+    </video>
+    <a class="download" href="wingdex-preview-01-batch.mp4" download>Download preview 1</a>
+  </section>
+  <section>
+    <h2>2. Connected history &middot; <span class="duration">19.5</span> seconds</h2>
+    <video controls muted playsinline preload="metadata" poster="wingdex-preview-02-history-poster.jpg" aria-label="Connected birding history preview">
+      <source src="wingdex-preview-02-history.mp4" type="video/mp4">
+    </video>
+    <a class="download" href="wingdex-preview-02-history.mp4" download>Download preview 2</a>
+  </section>
+</main>
+<footer>
+  <p>Both: 886 &times; 1920, 30 fps, silent H.264 MP4.</p>
+  <p>Future changes: <a href="preview-edit.json" download>captions and timings</a> live in one edit-list file.</p>
+</footer>
+<script>
+  // Renders replace the same files; refreshing this page must load the new media.
+  const revision = Date.now();
+  for (const video of document.querySelectorAll('video')) {
+    video.addEventListener('loadedmetadata', () => {
+      video.closest('section').querySelector('.duration').textContent =
+        String(Number(video.duration.toFixed(2)));
+    });
+    video.src = `${video.querySelector('source').getAttribute('src')}?v=${revision}`;
+    video.poster = `${video.getAttribute('poster')}?v=${revision}`;
+  }
+  for (const link of document.querySelectorAll('.download')) {
+    link.href = `${link.getAttribute('href')}?v=${revision}`;
+  }
+</script>
+</html>
