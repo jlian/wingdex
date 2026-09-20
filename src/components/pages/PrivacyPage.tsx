@@ -21,7 +21,7 @@ export default function PrivacyPage() {
               <li><strong>Birding data:</strong> Observations, outings, species lists, counts, identification confidence, notes, dates and times, location names, precise coordinates when present, checklist details, and related metadata you enter into the app.</li>
               <li><strong>Photo metadata:</strong> Images you add for bird identification are processed entirely on your device. WingDex does not upload or store the image pixels. We store associated metadata such as capture time, GPS coordinates when present, file name, and a file fingerprint hash used for duplicate detection.</li>
               <li><strong>Imported data:</strong> When you import an eBird CSV export, the file is uploaded to WingDex for server-side parsing. WingDex stores the resulting birding records, submission identifiers, and an import fingerprint used to prevent duplicate imports, but does not retain the original CSV after the request is processed.</li>
-              <li><strong>Private contact information:</strong> If you use the private contact form linked in Section 12, the separately hosted form collects your name, email address, and message, along with technical information including your user agent and referrer.</li>
+              <li><strong>Private contact information:</strong> If you use the private contact form linked in Section 11, the separately hosted form collects your name, email address, and message, along with technical information including your user agent and referrer.</li>
             </ul>
           </div>
           <div className="space-y-2">
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
             <li><strong>Google Maps:</strong> The web app provides optional links that include an outing's precise coordinates. If you follow one, your device sends those coordinates and ordinary request information to Google Maps under Google's privacy policy.</li>
             <li><strong>Apple MapKit and Apple Maps:</strong> The iOS app uses MapKit to display maps for saved outing coordinates. MapKit may send those coordinates and ordinary device and request information to Apple to provide map content. If you choose to open the location in Apple Maps, WingDex also passes the coordinates and outing name to Apple Maps. Apple's privacy policy applies.</li>
             <li><strong>Social-login providers:</strong> WingDex may offer GitHub, Google, and Apple sign-in. If you choose one, WingDex and that provider exchange a provider-issued account identifier, authentication tokens, and profile fields authorized for login, such as name, email address, and profile image. The provider also learns that you initiated a WingDex sign-in and receives ordinary network and device information. Each provider processes information under its own privacy policy, and you can review or revoke WingDex's access through the provider's account settings.</li>
-            <li><strong>Private contact services:</strong> The private contact form linked in Section 12 is hosted separately on Cloudflare. It stores your name, email address, message, user agent, referrer, and submission time in Cloudflare KV, sends your name, email address, and message through Resend for email delivery, and sends a challenge token and your IP address to Cloudflare Turnstile for abuse prevention. Cloudflare and Resend process this information under their own privacy policies.</li>
+            <li><strong>Private contact services:</strong> The private contact form linked in Section 11 is hosted separately on Cloudflare. It stores your name, email address, message, user agent, referrer, and submission time in Cloudflare KV, sends your name, email address, and message through Resend for email delivery, and sends a challenge token and your IP address to Cloudflare Turnstile for abuse prevention. Cloudflare and Resend process this information under their own privacy policies.</li>
           </ul>
         </section>
 
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">8. Your rights</h3>
-          <p>Depending on your jurisdiction, you may have the right to access, correct, delete, or export your personal data, or to object to certain processing. To exercise these rights, contact us as described in Section 12.</p>
+          <p>Depending on your jurisdiction, you may have the right to access, correct, delete, or export your personal data, or to object to certain processing. To exercise these rights, contact us as described in Section 11.</p>
         </section>
 
         <section className="space-y-1">
@@ -104,17 +104,12 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-1">
-          <h3 className="font-semibold text-foreground">10. Children's privacy</h3>
-          <p>WingDex is not directed at children under age 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children.</p>
-        </section>
-
-        <section className="space-y-1">
-          <h3 className="font-semibold text-foreground">11. International data transfers</h3>
+          <h3 className="font-semibold text-foreground">10. International data transfers</h3>
           <p>WingDex is hosted on globally distributed Cloudflare infrastructure. Cloudflare states that it primarily stores information in the United States and European Economic Area and may process or transfer it elsewhere using the safeguards described in its privacy policy. Your data may therefore be processed in jurisdictions outside your country of residence, which may have different data protection laws.</p>
         </section>
 
         <section className="space-y-1">
-          <h3 className="font-semibold text-foreground">12. Changes and contact</h3>
+          <h3 className="font-semibold text-foreground">11. Changes and contact</h3>
           <p>We may update this policy from time to time. Material changes will be reflected in the "Last updated" date above. For private questions or requests, use the{' '}
             <a href="https://johnlian.net/about/#contact" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">private contact form</a>. For public project questions, open an issue on the{' '}
             <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">WingDex GitHub repository</a>.
