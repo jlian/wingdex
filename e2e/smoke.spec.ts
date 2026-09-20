@@ -9,6 +9,10 @@ test('a mobile visitor can browse, open uploads and legal pages, but not Setting
   page.on('pageerror', error => errors.push(error.message))
   await loadApp(page, { promote: false })
   await expect(page.locator('header').getByText('WingDex')).toBeVisible()
+  await expect(page.locator('meta[name="apple-itunes-app"]')).toHaveAttribute(
+    'content',
+    'app-id=6760330119',
+  )
   expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(375)
 
   await page.getByRole('tab', { name: 'Outings' }).first().click()
