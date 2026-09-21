@@ -1,3 +1,17 @@
+# [1.32.0](https://github.com/jlian/wingdex/compare/v1.31.3...v1.32.0) (2026-09-21)
+
+
+### Bug Fixes
+
+* **Web:** preserve direct app and legal routes ([2fb658b](https://github.com/jlian/wingdex/commit/2fb658b69b528d114ae2840c82b69a1683039456))
+* **Web:** preserve legal themes and data-load state ([0f8fb6a](https://github.com/jlian/wingdex/commit/0f8fb6a9db96aeb5d2faa984374fadbee468eae9))
+
+
+### Features
+
+* **Landing:** add SEO-friendly product page ([f041221](https://github.com/jlian/wingdex/commit/f0412213fc7229d2544646cda827a20edd297da2))
+* **Web:** add App Store smart banner ([2b8aa5c](https://github.com/jlian/wingdex/commit/2b8aa5c15b8b00052188c3b239e07ea339ed48e3))
+
 ## [1.31.3](https://github.com/jlian/wingdex/compare/v1.31.2...v1.31.3) (2026-09-07)
 
 
