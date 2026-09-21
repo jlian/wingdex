@@ -418,10 +418,18 @@ struct PreviewTabs<Content: View>: View {
                     if tab == .outings { content } else { Color.pageBg }
                 }
             }
-            SwiftUI.Tab(value: Tab.add, role: .search) {
-                if tab == .add { content } else { Color.pageBg }
-            } label: {
-                Label("Add", systemImage: "camera.fill")
+            if #available(iOS 27.0, *) {
+                SwiftUI.Tab(value: Tab.add, role: .prominent) {
+                    if tab == .add { content } else { Color.pageBg }
+                } label: {
+                    Label("Add", systemImage: "camera.fill")
+                }
+            } else {
+                SwiftUI.Tab(value: Tab.add, role: .search) {
+                    if tab == .add { content } else { Color.pageBg }
+                } label: {
+                    Label("Add", systemImage: "camera.fill")
+                }
             }
         }
         .environment(ToastCenter())

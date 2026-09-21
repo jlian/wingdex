@@ -618,26 +618,18 @@ struct MainTabView: View {
                 }
             }
 
-            Tab(value: AppTab.add, role: .search) {
-                // Add is a real tab, not a modal trigger. Its own stack keeps
-                // picker navigation scoped to the tab when it is reselected.
-                NavigationStack {
-                    PhotoSelectionView(viewModel: addPhotosVM)
-                        .navigationTitle("Add Photos")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .onAppear {
-                            addPhotosVM.configure(
-                                auth: auth,
-                                dataStore: store
-                            )
-                        }
-                        // Opening this tab is the first sign the user intends to
-                        // identify, and paying the model load here keeps it off
-                        // launch for everyone who never does.
-                        .task { try? await BirdIdEngine.shared.warmUp() }
+            if #available(iOS 27.0, *) {
+                Tab(value: AppTab.add, role: .prominent) {
+                    addPhotosTabContent
+                } label: {
+                    Label("Add", systemImage: "camera.fill")
                 }
-            } label: {
-                Label("Add", systemImage: "camera.fill")
+            } else {
+                Tab(value: AppTab.add, role: .search) {
+                    addPhotosTabContent
+                } label: {
+                    Label("Add", systemImage: "camera.fill")
+                }
             }
         }
         .toastPresenter(toasts.notice)
@@ -825,6 +817,26 @@ struct MainTabView: View {
         .environment(\.showWingDex) { navigation.route(to: .wingdex()) }
         .environment(\.showHome) { navigation.route(to: .home) }
         .environment(\.showOutings) { navigation.route(to: .outings) }
+    }
+
+    private var addPhotosTabContent: some View {
+        // Add is a real tab, not a modal trigger. Its own stack keeps picker
+        // navigation scoped to the tab when it is reselected.
+        NavigationStack {
+            PhotoSelectionView(viewModel: addPhotosVM)
+                .navigationTitle("Add Photos")
+                .navigationBarTitleDisplayMode(.inline)
+                .onAppear {
+                    addPhotosVM.configure(
+                        auth: auth,
+                        dataStore: store
+                    )
+                }
+                // Opening this tab is the first sign the user intends to
+                // identify, and paying the model load here keeps it off launch
+                // for everyone who never does.
+                .task { try? await BirdIdEngine.shared.warmUp() }
+        }
     }
 
     private func acknowledgeReverseGeocodingCancellation() {

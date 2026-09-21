@@ -202,7 +202,10 @@ final class AddPhotosAccessibilityAuditUITests: BirdIdFlowUITestCase {
 
     func testLocationSearchPassesAccessibilityAudit() throws {
         let app = launchReview()
-        _ = showPlaceSearch(in: app)
+        let result = showPlaceSearch(in: app)
+        app.searchFields.firstMatch.typeText("\n")
+        XCTAssertTrue(app.keyboards.firstMatch.disappearsOrWait(timeout: 5))
+        XCTAssertTrue(result.existsOrWait(timeout: 5))
         try runAccessibilityAudit(in: app) {
             self.isKnownAddPhotosSearchAuditIssue($0, in: app)
         }
