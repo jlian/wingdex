@@ -325,6 +325,7 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise
 
 export function useWingDexData(userId: string, { hasSession = true }: { hasSession?: boolean } = {}) {
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [storageMode, setStorageMode] = useState<StorageMode>('api')
   const [payload, setPayload] = useState<WingDexPayload>({
     outings: [],
@@ -362,12 +363,14 @@ export function useWingDexData(userId: string, { hasSession = true }: { hasSessi
     // Clearing rather than returning: signing out must not leave the previous
     // account's sightings on screen until the next reload.
     if (!hasSession) {
+      setLoadError(false)
       setPayload({ outings: [], photos: [], observations: [], dex: [] })
       return
     }
     try {
       const next = await apiJson<WingDexPayload>('/api/data/all')
       if (refreshGeneration.current !== generation) return
+      setLoadError(false)
       setStorageMode('api')
       setPayload({
         outings: next.outings || [],
@@ -375,7 +378,7 @@ export function useWingDexData(userId: string, { hasSession = true }: { hasSessi
         observations: next.observations || [],
         dex: next.dex || [],
       })
-    } catch {
+    } catch (err) {
       if (refreshGeneration.current !== generation) return
       if (isLocalRuntime()) {
         const next = await enrichLocalDex(readLocalData(userId))
@@ -383,6 +386,9 @@ export function useWingDexData(userId: string, { hasSession = true }: { hasSessi
         setStorageMode('local')
         setPayload(next)
         writeLocalData(userId, next)
+      } else {
+        logClientFailure('data/all/read', err)
+        setLoadError(true)
       }
     }
   }, [userId, hasSession])
@@ -862,6 +868,7 @@ export function useWingDexData(userId: string, { hasSession = true }: { hasSessi
 
   const store = useMemo(() => ({
     isLoading,
+    loadError,
     photos: payload.photos,
     outings: payload.outings,
     observations: payload.observations,
@@ -881,7 +888,7 @@ export function useWingDexData(userId: string, { hasSession = true }: { hasSessi
     clearAllData,
     refresh,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation fns close over refs, not state; intentionally omitted
-  }), [isLoading, payload, refresh])
+  }), [isLoading, loadError, payload, refresh])
 
   return store
 }

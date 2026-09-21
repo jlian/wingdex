@@ -24,6 +24,7 @@ test('privacy and terms share their layout across themes and viewport sizes', as
       for (const [path, title] of [['/privacy.html', 'Privacy Policy'], ['/terms.html', 'Terms of Use']]) {
         await page.goto(path)
         await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+        expect(await page.locator('html').evaluate(element => element.classList.contains('dark'))).toBe(colorScheme === 'dark')
         layouts.push(await page.locator('article').evaluate(article => {
           const container = article.parentElement!
           const heading = article.querySelector('h3')!

@@ -27,6 +27,22 @@ try {
 
   const stylesheet = prerenderedHtml.match(/<link rel="stylesheet"[^>]+href="([^"]+)"/)?.[1]
   if (!stylesheet) throw new Error('Built stylesheet link is missing')
+  const themeBootstrap = `(() => {
+  try {
+    const stored = localStorage.getItem('theme')
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const theme = stored === 'dark' || stored === 'light'
+      ? stored
+      : (systemDark ? 'dark' : 'light')
+    document.documentElement.classList.remove('light', 'dark')
+    document.documentElement.classList.add(theme)
+    document.documentElement.style.colorScheme = theme
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#262e29' : '#e5ddd0')
+  } catch {
+    // Keep the default light theme when storage or media queries are unavailable.
+  }
+})()`
 
   for (const [filename, title, page] of [
     ['privacy.html', 'Privacy Policy', 'privacy'],
@@ -40,6 +56,8 @@ try {
     <title>${title} - WingDex</title>
     <link rel="canonical" href="https://wingdex.app/${filename}" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#e5ddd0" />
+    <script>${themeBootstrap}</script>
     <link rel="stylesheet" crossorigin href="${stylesheet}" />
   </head>
   <body>

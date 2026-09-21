@@ -29,6 +29,7 @@ const baseOuting: Outing = {
 function createDataStore(): WingDexDataStore {
   return {
     isLoading: false,
+    loadError: false,
     photos: [],
     outings: [baseOuting],
     observations: [],
