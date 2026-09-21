@@ -2,15 +2,8 @@ import XCTest
 
 @MainActor
 final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
-    func testPhotoSheetSelectionSwipeRemovalAndDismissalPreserveReview() {
-        let folder = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("WingDex/Resources/CollagePhotos")
-        let app = launchApp(extraArguments: [
-            "--ui-test-geocoding-success", "--ui-test-stub-identification",
-            "--ui-test-photo", folder.appendingPathComponent("collage1.jpg").path,
-            "--ui-test-photo", folder.appendingPathComponent("collage2.jpg").path,
-        ])
+    func testPhotoSheetSelectionAndPartialSwipePreserveReview() {
+        let app = launchPhotoReview()
         _ = waitForOutingReview(in: app)
         XCTAssertFalse(app.staticTexts["outing.locationHeader"].exists)
         let second = thumbnail(2, of: 3, in: app)
@@ -46,7 +39,13 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         app.buttons["outing.photosClose"].tap()
         XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 5))
         XCTAssertEqual(locationValue(in: app), "Carkeek Park")
+    }
 
+    func testPhotoRemovalAndSheetDismissalPreserveReview() {
+        let app = launchPhotoReview()
+        _ = waitForOutingReview(in: app)
+        let second = thumbnail(2, of: 3, in: app)
+        let secondID = second.identifier.replacingOccurrences(of: "outing.photo.", with: "")
         let first = thumbnail(1, of: 3, in: app)
         XCTAssertTrue(scrollUntilVisible(first, in: app))
         first.press(forDuration: 1)
@@ -57,10 +56,22 @@ final class OutingLocationVisualUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(remaining.existsOrWait(timeout: 5))
         XCTAssertEqual(remaining.identifier, "outing.photo.\(secondID)")
         remaining.tap()
+        let secondPage = app.images["outing.photoPage.\(secondID)"]
         XCTAssertTrue(secondPage.existsOrWait(timeout: 5))
         dismissSheet(app, title: "Photo 1 of 2")
         XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 5))
         XCTAssertEqual(app.staticTexts["outing.photosHeader"].label, "Photos (2)")
+    }
+
+    private func launchPhotoReview() -> XCUIApplication {
+        let folder = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WingDex/Resources/CollagePhotos")
+        return launchApp(extraArguments: [
+            "--ui-test-geocoding-success", "--ui-test-stub-identification",
+            "--ui-test-photo", folder.appendingPathComponent("collage1.jpg").path,
+            "--ui-test-photo", folder.appendingPathComponent("collage2.jpg").path,
+        ])
     }
 
     func testSearchAndMapSheetsAtLargeTextSize() throws {

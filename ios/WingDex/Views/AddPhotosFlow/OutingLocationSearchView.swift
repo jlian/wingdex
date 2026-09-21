@@ -460,7 +460,8 @@ private struct LocationSearchField: UIViewRepresentable {
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             parent.onSubmit()
-            return false
+            textField.resignFirstResponder()
+            return true
         }
     }
 }
