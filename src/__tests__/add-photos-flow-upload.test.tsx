@@ -29,6 +29,7 @@ vi.mock('@/components/flows/OutingReview', () => ({
 function createDataStore(): WingDexDataStore {
   return {
     isLoading: false,
+    loadError: false,
     photos: [],
     outings: [],
     observations: [],

@@ -151,6 +151,18 @@ test('registered visitors reach their app and legal deep links remain available'
   await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
 })
 
+test('failed data loads keep returning empty accounts in the app shell', async ({ page }) => {
+  await page.route('**/api/data/all', route => route.fulfill({
+    status: 503,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: 'temporarily unavailable' }),
+  }))
+  await loadApp(page)
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: /Bird photos in/ })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Upload & Identify' }).first()).toBeVisible()
+})
+
 test('OAuth errors still reach the existing app notification', async ({ page }) => {
   await page.goto('/?error=access_denied')
   await expect(page.getByText('Sign-in failed: access_denied')).toBeVisible()

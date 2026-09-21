@@ -36,6 +36,7 @@ vi.mock('sonner', () => ({
 function createDataStore(): WingDexDataStore {
   return {
     isLoading: false,
+    loadError: false,
     photos: [],
     outings: [],
     observations: [],

@@ -639,7 +639,8 @@ function AppContent({ initialUpload, user, hasSession, sessionResolved, refetchS
   const isEmojiAvatar = avatarColorClass.length > 0
   const [explicitApp] = useState(() => window.location.hash === '#home' || window.location.hash === '#upload')
   const landingHome = tab === 'home' && !explicitApp && data.dex.length === 0
-    && data.outings.length === 0 && (showAddPhotos || (sessionResolved && !data.isLoading))
+    && data.outings.length === 0
+    && (showAddPhotos || (sessionResolved && !data.isLoading && !data.loadError))
 
   useEffect(() => {
     delete document.documentElement.dataset.booting
