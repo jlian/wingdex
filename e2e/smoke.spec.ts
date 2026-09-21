@@ -30,8 +30,8 @@ test('a mobile visitor can browse, open uploads and legal pages, but not Setting
   await expect(page.getByRole('dialog')).toBeHidden()
 
   const footer = page.locator('footer')
-  await expect(footer.getByRole('link', { name: 'Privacy', exact: true })).toHaveAttribute('href', '/#privacy')
-  await expect(footer.getByRole('link', { name: 'Terms', exact: true })).toHaveAttribute('href', '/#terms')
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true })).toHaveAttribute('href', '/privacy.html')
+  await expect(footer.getByRole('link', { name: 'Terms', exact: true })).toHaveAttribute('href', '/terms.html')
   await footer.getByRole('link', { name: 'Privacy', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
   await footer.getByRole('link', { name: 'Terms', exact: true }).click()

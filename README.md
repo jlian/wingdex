@@ -85,6 +85,8 @@ The landing page does not create an account on view. `npm run build:assets`
 pre-renders its shared React component into `dist/client/index.html`; no
 request-time SSR or session-specific HTML is cached. Regenerate its optimized
 local images with `node scripts/build-landing-images.mjs`.
+The same build emits `/privacy.html` and `/terms.html` from the shared legal
+components, so the footer's legal links remain readable without JavaScript.
 Product concepts use server-rendered illustrations with local bird photos rather
 than app screenshots. Small, isolated React demos show photo grouping, ID
 confirmation, and outing/species navigation without creating sessions or saving
