@@ -70,6 +70,29 @@ The same model, priors, and preprocessing ship on both platforms, and a golden-v
 
 ## Development
 
+The root page is a build-time-rendered landing page, hydrated by React.
+Empty accounts and new visitors share the landing home, with uploads opening
+in a modal without navigating away. Accounts with outings or species see the dashboard.
+Session and data loading keep a neutral shell instead of flashing marketing content;
+`/#home` opens the compact app explicitly, and `/#upload` starts photo selection.
+The landing home uses the same app header, navigation, account controls, and footer,
+with shared theme tokens, breakpoints, responsive gutters, and a 48rem content
+width. At the app's `xl` breakpoint (1280px), only the landing hero expands
+to 80rem; all remaining content, the header, and footer stay aligned with the app.
+The hero's example identification is a one-time reveal after the photo loads,
+not a live inference request; reduced-motion visitors see a static image and label.
+The landing page does not create an account on view. `npm run build:assets`
+pre-renders its shared React component into `dist/client/index.html`; no
+request-time SSR or session-specific HTML is cached. Regenerate its optimized
+local images with `node scripts/build-landing-images.mjs`.
+Product concepts use server-rendered illustrations with local bird photos rather
+than app screenshots. Small, isolated React demos show photo grouping, ID
+confirmation, and outing/species navigation without creating sessions or saving
+records. Dates, counts, and confidence are illustrative; the initial examples
+remain readable without JavaScript. The unmodified App Store badge comes from
+[Apple's official artwork](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)
+and follows its [marketing guidelines](https://developer.apple.com/app-store/marketing/guidelines/).
+
 Requires Node 24+. No API keys: identification runs on the device, and anonymous auth works out of the box.
 
 ```bash

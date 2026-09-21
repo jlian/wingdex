@@ -1,12 +1,8 @@
+import LegalPageLayout from './LegalPageLayout'
+
 export default function TermsPage() {
   return (
-    <div className="px-4 sm:px-6 py-6 space-y-6 max-w-3xl mx-auto">
-      <div className="space-y-2">
-        <h2 className="font-serif text-2xl font-semibold text-foreground">Terms of Use</h2>
-        <p className="text-sm text-muted-foreground">Last updated: September 2026</p>
-      </div>
-
-      <article className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+    <LegalPageLayout title="Terms of Use" updated="September 2026">
         <section className="space-y-1">
           <h3 className="font-semibold text-foreground">1. Acceptance of terms</h3>
           <p>By accessing or using WingDex™ ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, you must not use the Service. We may update these Terms from time to time; continued use after changes constitutes acceptance.</p>
@@ -103,7 +99,6 @@ export default function TermsPage() {
             <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">WingDex GitHub repository</a>.
           </p>
         </section>
-      </article>
-    </div>
+    </LegalPageLayout>
   )
 }

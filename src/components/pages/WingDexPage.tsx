@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { UploadIdentifyButton } from '@/components/ui/upload-identify-button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   MagnifyingGlass, CalendarBlank, ArrowLeft, ArrowSquareOut,
-  ArrowUp, ArrowDown, Camera, Hash, TextAa, Leaf
+  ArrowUp, ArrowDown, Hash, TextAa, Leaf
 } from '@phosphor-icons/react'
 import { BirdLogo } from '@/components/ui/bird-logo'
 import { useBirdSummary } from '@/hooks/use-bird-image'
@@ -179,18 +180,7 @@ export default function WingDexPage({
         description="Upload photos and confirm species to start building your WingDex"
       >
         {onAddPhotos && (
-          <Button
-            size="lg"
-            onClick={onAddPhotos}
-            onPointerDown={onAddPhotosIntent}
-            onMouseEnter={onAddPhotosIntent}
-            onFocus={onAddPhotosIntent}
-            onTouchStart={onAddPhotosIntent}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md mt-2"
-          >
-            <Camera size={20} className="mr-2" weight="bold" />
-            Upload & Identify
-          </Button>
+          <UploadIdentifyButton onClick={onAddPhotos} onIntent={onAddPhotosIntent} />
         )}
       </EmptyState>
     )

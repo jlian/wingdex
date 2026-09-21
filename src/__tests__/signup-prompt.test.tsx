@@ -98,6 +98,7 @@ async function openFlowSaveAndClose() {
 
 describe('signup prompt at first outing save', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/#home')
     vi.restoreAllMocks()
     mockOpenSignIn.mockClear()
     window.localStorage.clear()
@@ -113,6 +114,7 @@ describe('signup prompt at first outing save', () => {
   })
 
   afterEach(() => {
+    window.history.replaceState(null, '', '/')
     vi.unstubAllGlobals()
   })
 

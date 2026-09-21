@@ -58,6 +58,10 @@ vi.mock('@phosphor-icons/react', () => ({
   List: () => <span>List</span>,
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
+  Camera: () => <span>Camera</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+  CalendarBlank: () => <span>CalendarBlank</span>,
+  CaretRight: () => <span>CaretRight</span>,
   GithubLogo: () => <span>GithubLogo</span>,
   Key: () => <span>Key</span>,
   PlusCircle: () => <span>PlusCircle</span>,
@@ -119,7 +123,7 @@ describe('App auth guard (local runtime)', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    expect(await screen.findByText('HomePage')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Bird photos in.')
     expect(screen.queryByText('Welcome to WingDex')).not.toBeInTheDocument()
   })
 })
