@@ -59,6 +59,10 @@ vi.mock('@phosphor-icons/react', () => ({
   Bird: () => <span>Bird</span>,
   Gear: () => <span>Gear</span>,
   MapPin: () => <span>MapPin</span>,
+  Camera: () => <span>Camera</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+  CalendarBlank: () => <span>CalendarBlank</span>,
+  CaretRight: () => <span>CaretRight</span>,
   GithubLogo: () => <span>GithubLogo</span>,
   AppleLogo: () => <span>AppleLogo</span>,
   UserCircle: () => <span>UserCircle</span>,
@@ -119,7 +123,7 @@ describe('App auth guard (hosted runtime)', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    expect(await screen.findByText('HomePage')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Bird photos in/ })).toBeInTheDocument()
   })
 
   it('renders the app while the hosted session check is still in flight', async () => {
@@ -151,7 +155,7 @@ describe('App auth guard (hosted runtime)', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    expect(await screen.findByText('HomePage')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Bird photos in/ })).toBeInTheDocument()
   })
 
   it('renders app content for anonymous session (demo-first)', async () => {
@@ -164,8 +168,8 @@ describe('App auth guard (hosted runtime)', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    // Anonymous users see the app (demo-first UX)
-    expect(await screen.findByText('HomePage')).toBeInTheDocument()
+    // Empty anonymous accounts keep the same home as new visitors.
+    expect(await screen.findByRole('heading', { level: 1, name: /Bird photos in/ })).toBeInTheDocument()
     // Log-in entry point should be visible in the header
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument()
   })

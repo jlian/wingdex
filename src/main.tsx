@@ -1,9 +1,5 @@
-import { createRoot } from 'react-dom/client'
-import { ErrorBoundary } from "react-error-boundary";
-import { ThemeProvider } from 'next-themes'
-
-import App from './App.tsx'
-import { ErrorFallback } from './ErrorFallback.tsx'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import Root from './Root'
 
 import "./main.css"
 import "./lib/touch-press" // iOS-style delayed press highlight for touch
@@ -15,10 +11,8 @@ if ('serviceWorker' in navigator) {
   )
 }
 
-createRoot(document.getElementById('app')!).render(
-  <ErrorBoundary FallbackComponent={ErrorFallback}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <App />
-    </ThemeProvider>
-  </ErrorBoundary>
-)
+const content = <Root />
+
+const root = document.getElementById('app')!
+if (root.dataset.prerendered) hydrateRoot(root, content)
+else createRoot(root).render(content)

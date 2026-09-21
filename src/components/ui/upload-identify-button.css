@@ -1,0 +1,27 @@
+.upload-identify-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font: 500 18px/1.2 var(--font-serif);
+  cursor: pointer;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 180ms ease-out;
+}
+.upload-identify-icon { display: flex; align-items: center; }
+@media (hover: hover) {
+  .upload-identify-button:hover { opacity: .88; }
+}
+.upload-identify-button:focus-visible { outline: 3px solid var(--ring); outline-offset: 5px; }
+.upload-identify-button:active, .upload-identify-button[data-pressed] { opacity: .7; }
+@media (prefers-reduced-motion: reduce) {
+  .upload-identify-button { transition: none; }
+}

@@ -4,31 +4,37 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>WingDex</title>
+    <title>WingDex - Free Bird Photo Identification &amp; Life List</title>
+    <link rel="canonical" href="https://wingdex.app/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png" />
     <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-v2.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="description" content="Upload bird photos, let AI identify the species, build your WingDex." />
+    <meta name="description" content="Identify batches of bird photos, organize outings, and build a connected life list with WingDex. Free on web and iPhone. No account needed to get started." />
     <meta name="theme-color" content="#e5ddd0" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-itunes-app" content="app-id=6760330119" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="WingDex" />
-    <meta property="og:title" content="WingDex" />
-    <meta property="og:description" content="Upload bird photos, let AI identify the species, build your WingDex." />
+    <meta property="og:title" content="WingDex - Free Bird Photo Identification &amp; Life List" />
+    <meta property="og:url" content="https://wingdex.app/" />
+    <meta property="og:description" content="Identify batches of bird photos, organize outings, and build a connected life list with WingDex. Free on web and iPhone. No account needed to get started." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:image" content="https://wingdex.app/landing/social.png" />
+    <meta property="og:image:alt" content="WingDex: Bird photos in. Life list out." />
     <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="WingDex" />
-    <meta name="twitter:description" content="Upload bird photos, let AI identify the species, build your WingDex." />
-    <meta name="twitter:image" content="/icon-512.png" />
+    <meta name="twitter:title" content="WingDex - Free Bird Photo Identification &amp; Life List" />
+    <meta name="twitter:description" content="Identify batches of bird photos, organize outings, and build a connected life list with WingDex. Free on web and iPhone. No account needed to get started." />
+    <meta name="twitter:image" content="https://wingdex.app/landing/social.png" />
+    <meta name="twitter:image:alt" content="WingDex: Bird photos in. Life list out." />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"WingDex","url":"https://wingdex.app/","description":"Free on-device bird photo identification, batch outing organization, and connected bird life list tracking for web and iPhone.","applicationCategory":"LifestyleApplication","operatingSystem":"Web, iOS","installUrl":"https://apps.apple.com/app/id6760330119","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Batch bird photo identification","Review suggestions for more than 10,000 bird species","Connected outings and bird life list","On-device identification, offline after model download","eBird CSV import and export with an account"]}</script>
         <script>
+            document.documentElement.dataset.booting = 'true';
             (() => {
                 try {
                     const stored = localStorage.getItem('theme')
@@ -54,9 +60,7 @@
 
 <body>
     <div id="app">
-        <div style="min-height:100dvh;background:var(--color-background,#e5ddd0)">
-        </div>
-        <style>@media(prefers-color-scheme:dark){#app>div{background:var(--color-background,#262e29)}}</style>
+        <!--landing-->
     </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>

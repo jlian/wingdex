@@ -252,10 +252,10 @@ test('a returning user is never shown the logged-out button while the session re
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('tab', { name: 'Outings' }).first()).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('.landing')).toBeHidden()
   await expect(
     page.getByRole('button', { name: 'Log in' }),
-    'the header must hold the slot rather than claim the user is logged out',
+    'the landing page must not claim the returning user is logged out',
   ).toBeHidden()
 
   release()

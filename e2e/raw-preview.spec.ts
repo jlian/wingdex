@@ -8,7 +8,7 @@ test.describe('embedded JPEG preview import', () => {
   ]) {
     const { extension, layout, orientation } = fixtureCase
     test(`imports a TIFF JPEG ${layout} named .${extension} with orientation ${orientation}`, async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/#home')
       const fixture = await page.evaluate(async ({ extension, layout, orientation, littleEndian }) => {
         const makeJpeg = async (width: number, height: number) => {
           const canvas = document.createElement('canvas')
@@ -73,7 +73,7 @@ test.describe('embedded JPEG preview import', () => {
   }
 
   test('explains an unsupported image and allows another selection', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/#home')
     await page.getByRole('button', { name: 'Upload & Identify', exact: true }).click()
     await page.locator('input[type="file"]').setInputFiles({
       name: 'unsupported.raw',

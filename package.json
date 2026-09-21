@@ -24,7 +24,7 @@
         "start": "npm run dev",
         "stop": "bash scripts/kill-dev.sh",
         "build": "npm run typecheck && npm run build:assets",
-        "build:assets": "npm run taxonomy:codes && vite build && node scripts/check-asset-cap.mjs",
+        "build:assets": "npm run taxonomy:codes && vite build && node scripts/prerender-landing.mjs && node scripts/check-asset-cap.mjs",
         "deploy": "npm run build && wrangler deploy",
         "lint": "eslint .",
         "typecheck": "tsc -b && tsc -p functions/tsconfig.json",

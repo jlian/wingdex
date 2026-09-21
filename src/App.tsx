@@ -4,7 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
-import { MapPin, GithubLogo, UserCircle } from '@phosphor-icons/react'
+import { MapPin, UserCircle } from '@phosphor-icons/react'
+import { AppHeader, AppFooter } from '@/components/AppChrome'
 import { BirdLogo } from '@/components/ui/bird-logo'
 import { useWingDexData } from '@/hooks/use-wingdex-data'
 import {
@@ -24,6 +25,7 @@ import type { OutingSortField, SortDir as OutingSortDir } from '@/components/pag
 import type { SortField as WingDexSortField, SortDir as WingDexSortDir } from '@/components/pages/WingDexPage'
 
 import HomePage from '@/components/pages/HomePage'
+import LandingPage from '@/components/pages/LandingPage'
 
 const OutingsPage = lazy(() => import('@/components/pages/OutingsPage'))
 const WingDexPage = lazy(() => import('@/components/pages/WingDexPage'))
@@ -152,7 +154,7 @@ function useHashRouter() {
 
 // ─── App ──────────────────────────────────────────────────
 
-function App() {
+function App({ initialUpload = false }: { initialUpload?: boolean }) {
   const sessionState = authClient.useSession()
   const session = sessionState.data
   const isSessionPending = sessionState.isPending
@@ -453,10 +455,10 @@ function App() {
 
   // A guest is a placeholder identity with no server row, so data fetching waits
   // until a real session exists.
-  return <AppContent user={user} hasSession={Boolean(session?.user)} sessionResolved={sessionResolved} refetchSession={refetchSession} ensureAnonymousSession={ensureAnonymousSession} onBeforeSignOut={() => { explicitSignOutRef.current = true; discardUnboundAccountMergeToken() }} />
+  return <AppContent initialUpload={initialUpload} user={user} hasSession={Boolean(session?.user)} sessionResolved={sessionResolved} refetchSession={refetchSession} ensureAnonymousSession={ensureAnonymousSession} onBeforeSignOut={() => { explicitSignOutRef.current = true; discardUnboundAccountMergeToken() }} />
 }
 
-function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureAnonymousSession, onBeforeSignOut }: { user: UserInfo; hasSession: boolean; sessionResolved: boolean; refetchSession: () => Promise<unknown>; ensureAnonymousSession: () => Promise<boolean>; onBeforeSignOut: () => void }) {
+function AppContent({ initialUpload, user, hasSession, sessionResolved, refetchSession, ensureAnonymousSession, onBeforeSignOut }: { initialUpload: boolean; user: UserInfo; hasSession: boolean; sessionResolved: boolean; refetchSession: () => Promise<unknown>; ensureAnonymousSession: () => Promise<boolean>; onBeforeSignOut: () => void }) {
   const { tab, subId, navigate, handleTabChange } = useHashRouter()
   const [showAddPhotos, setShowAddPhotos] = useState(false)
   const data = useWingDexData(user.id, { hasSession })
@@ -510,6 +512,14 @@ function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureA
       }
     })
   }, [ensureAnonymousSession])
+
+  const initialUploadStarted = useRef(false)
+  useEffect(() => {
+    if (!initialUpload || initialUploadStarted.current) return
+    initialUploadStarted.current = true
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search + '#home')
+    handleAddPhotos()
+  }, [initialUpload, handleAddPhotos])
 
   // Prompt to sign up exactly once, at the first save rather than the first
   // identification: saving is the moment there is something to lose. If they
@@ -627,6 +637,13 @@ function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureA
   ]
   const avatarColorClass = getEmojiAvatarColor(user.image)
   const isEmojiAvatar = avatarColorClass.length > 0
+  const [explicitApp] = useState(() => window.location.hash === '#home')
+  const landingHome = tab === 'home' && !explicitApp && data.dex.length === 0
+    && data.outings.length === 0 && (showAddPhotos || (sessionResolved && !data.isLoading))
+
+  useEffect(() => {
+    delete document.documentElement.dataset.booting
+  }, [])
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -635,17 +652,7 @@ function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureA
       <Tabs value={tab} onValueChange={handleTabChange} activationMode="manual" className="flex-1 flex flex-col">
         {/* ── Top header, fixed at top so iOS Safari doesn't invalidate
               the compositor layer during programmatic scrollTo jumps ── */}
-        <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-16">
-              {/* Logo, navigates to Home */}
-              <button
-                onClick={() => navigate('home')}
-                className="flex items-center gap-2 cursor-pointer press-feel-light"
-                aria-label="Home"
-              >
-                <BirdLogo size={32} className="text-primary" duotone />
-              </button>
+        <AppHeader onHome={() => navigate('home')}>
 
               {/* Nav tabs, WingDex + Outings (Home via logo, Settings via avatar) */}
               <TabsList className="flex bg-transparent gap-1 h-auto p-0">
@@ -709,25 +716,20 @@ function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureA
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Spacer for fixed header */}
-        <div className="h-14 sm:h-16 shrink-0" />
+        </AppHeader>
 
         {/* ── Main content ────────────────────────────────── */}
-        <main className="w-full max-w-3xl mx-auto pb-8 flex-1">
+        <main className={`w-full max-w-3xl mx-auto pb-8 flex-1${landingHome ? ' xl:max-w-7xl' : ''}`}>
           {tab === 'home' && (
             <TabsContent value="home" className="mt-0">
-              <HomePage
+              {landingHome ? <LandingPage embedded onUpload={handleAddPhotos} onUploadIntent={prefetchAddPhotosFlow} /> : <HomePage
                 data={data}
                 onAddPhotos={handleAddPhotos}
                 onAddPhotosIntent={prefetchAddPhotosFlow}
                 onSelectOuting={handleSelectOuting}
                 onSelectSpecies={handleSelectSpecies}
                 onNavigate={handleNavigate}
-              />
+              />}
             </TabsContent>
           )}
 
@@ -817,27 +819,7 @@ function AppContent({ user, hasSession, sessionResolved, refetchSession, ensureA
 
       {/* Preview deployments may use production bundles, so hostname - not
           build mode - decides whether commit diagnostics are useful. */}
-      <footer className="flex flex-col-reverse items-center gap-4 px-4 pt-12 pb-10 text-xs text-muted-foreground/50 sm:flex-row sm:justify-center sm:gap-4">
-        <div className="flex items-center gap-2">
-          <a href="https://github.com/jlian/wingdex/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="press-feel-light">
-            WingDex™ {typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'dev'}
-            {__GIT_HASH__ && window.location.hostname !== 'wingdex.app' && (
-              <span className="font-mono text-[10px]">
-                {` (${__GIT_BRANCH__}@${__GIT_HASH__})`}
-              </span>
-            )}
-          </a>
-          <a href="https://github.com/jlian/wingdex" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="press-feel-light">
-            <GithubLogo size={16} />
-          </a>
-          <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="press-feel-light">By John Lian</a>
-        </div>
-        <nav className="flex items-center gap-4">
-          <a href="/#privacy" className="press-feel-light">Privacy</a>
-          <a href="/#terms" className="press-feel-light">Terms</a>
-          <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="press-feel-light">Issues?</a>
-        </nav>
-      </footer>
+      <AppFooter diagnostics={__GIT_HASH__ && window.location.hostname !== 'wingdex.app' ? `(${__GIT_BRANCH__}@${__GIT_HASH__})` : ''} />
 
     </div>
   )

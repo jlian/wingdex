@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  MapPin, Camera, ArrowRight
+  MapPin, ArrowRight
 } from '@phosphor-icons/react'
 import { BirdLogo } from '@/components/ui/bird-logo'
+import { UploadIdentifyButton } from '@/components/ui/upload-identify-button'
 import { WikiBirdThumbnail } from '@/components/ui/wiki-bird-thumbnail'
 import { ListRow } from '@/components/ui/list-row'
 import { getDisplayName } from '@/lib/utils'
@@ -92,20 +93,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               WingDex. <em>Reverse birding</em> at its finest.
             </p>
           </div>
-          <button
-            onClick={onAddPhotos}
-            onPointerDown={onAddPhotosIntent}
-            onMouseEnter={onAddPhotosIntent}
-            onFocus={onAddPhotosIntent}
-            onTouchStart={onAddPhotosIntent}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
-              bg-gradient-to-r from-emerald-600 to-teal-500
-              text-white text-base
-              shadow-sm press-feel cursor-pointer flex-shrink-0"
-          >
-            <Camera size={20} weight="bold" />
-            Upload & Identify
-          </button>
+          <UploadIdentifyButton onClick={onAddPhotos} onIntent={onAddPhotosIntent} />
         </div>
       </div>
     )
@@ -124,20 +112,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               species observed
             </p>
           </div>
-          <button
-            onClick={onAddPhotos}
-            onPointerDown={onAddPhotosIntent}
-            onMouseEnter={onAddPhotosIntent}
-            onFocus={onAddPhotosIntent}
-            onTouchStart={onAddPhotosIntent}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg
-              bg-gradient-to-r from-emerald-600 to-teal-500
-              text-white text-base
-              shadow-sm press-feel cursor-pointer flex-shrink-0"
-          >
-            <Camera size={18} weight="bold" />
-            Upload & Identify
-          </button>
+          <UploadIdentifyButton onClick={onAddPhotos} onIntent={onAddPhotosIntent} />
         </div>
       </div>
 

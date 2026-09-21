@@ -1,22 +1,18 @@
+import LegalPageLayout from './LegalPageLayout'
+
 export default function PrivacyPage() {
   return (
-    <div className="px-5 sm:px-8 py-8 sm:py-10 space-y-8 max-w-2xl mx-auto">
-      <div className="space-y-2">
-        <h2 className="font-serif text-2xl font-semibold text-foreground">Privacy Policy</h2>
-        <p className="text-sm text-muted-foreground/90">Last updated: September 2026</p>
-      </div>
-
-      <article className="space-y-8 text-[0.9375rem] text-foreground/75 leading-7">
-        <section className="space-y-3">
-          <h3 className="text-base font-semibold text-foreground">1. Introduction</h3>
+    <LegalPageLayout title="Privacy Policy" updated="September 2026">
+        <section className="space-y-1">
+          <h3 className="font-semibold text-foreground">1. Introduction</h3>
           <p>This Privacy Policy describes how WingDex™ ("we," "us," or "the Service") collects, uses, and shares information when you use the WingDex web application or iOS app. By accessing or using WingDex, you acknowledge that you have read and understood this policy.</p>
         </section>
 
-        <section className="space-y-4">
-          <h3 className="text-base font-semibold text-foreground">2. Information we collect</h3>
+        <section className="space-y-1">
+          <h3 className="font-semibold text-foreground">2. Information we collect</h3>
           <div className="space-y-2">
             <h4 className="font-medium text-foreground">2.1 Information you provide</h4>
-            <ul className="list-disc ml-5 space-y-1.5">
+            <ul className="list-disc ml-5 space-y-0.5">
               <li><strong>Account and authentication information:</strong> Display name, email address, profile image, provider-issued account identifiers, and authentication tokens when you use social login. For passkeys, WingDex stores the public key and credential metadata; the private key remains with your device or passkey provider.</li>
               <li><strong>Birding data:</strong> Observations, outings, species lists, counts, identification confidence, notes, dates and times, location names, precise coordinates when present, checklist details, and related metadata you enter into the app.</li>
               <li><strong>Photo metadata:</strong> Images you add for bird identification are processed entirely on your device. WingDex does not upload or store the image pixels. We store associated metadata such as capture time, GPS coordinates when present, file name, and a file fingerprint hash used for duplicate detection.</li>
@@ -26,7 +22,7 @@ export default function PrivacyPage() {
           </div>
           <div className="space-y-2">
             <h4 className="font-medium text-foreground">2.2 Information collected automatically</h4>
-            <ul className="list-disc ml-5 space-y-1.5">
+            <ul className="list-disc ml-5 space-y-0.5">
               <li><strong>Session and request data:</strong> Session identifiers and expiration, IP address, user-agent information, authenticated account identifier, requested API route, response status, request duration, trace identifiers, and limited operational counts. WingDex does not include request bodies, photos, coordinates, location searches, file names, or notes in its application logs.</li>
               <li><strong>Device storage:</strong> The web app uses first-party cookies and browser storage for sessions, preferences, and limited content caches. The iOS app stores authentication tokens in the system Keychain and may keep a local cache of your WingDex account data. Photos shared to the iOS app may be staged temporarily on your device while the app imports them. We do not use third-party tracking or advertising cookies.</li>
             </ul>
@@ -115,7 +111,6 @@ export default function PrivacyPage() {
             <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">WingDex GitHub repository</a>.
           </p>
         </section>
-      </article>
-    </div>
+    </LegalPageLayout>
   )
 }
