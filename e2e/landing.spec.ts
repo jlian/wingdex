@@ -31,7 +31,7 @@ test('root delivers indexable HTML and works without JavaScript', async ({ reque
     await expect(page.locator('.landing-comparison img').nth(1)).toHaveAttribute('src', '/landing/heron.webp')
     await expect(page.locator('img[src*="life-list"], img[src*="outing"]')).toHaveCount(0)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://wingdex.app/')
-    await expect(page.getByRole('link', { name: 'Privacy', exact: true })).toHaveAttribute('href', '/#privacy')
+    await expect(page.getByRole('link', { name: 'Privacy', exact: true })).toHaveAttribute('href', '/privacy.html')
     const description = await page.locator('meta[name="description"]').getAttribute('content')
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description!)
     await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', description!)
@@ -132,6 +132,14 @@ test('fresh landing hydrates, stays sessionless, and starts upload directly', as
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bird photos in.')
   expect(errors).toEqual([])
+})
+
+test('upload deep links stay in the compact app after the modal closes', async ({ page }) => {
+  await page.goto('/#upload')
+  await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: /Bird photos in/ })).toBeHidden()
+  await expect(page).toHaveURL(/\/#home$/)
 })
 
 test('registered visitors reach their app and legal deep links remain available', async ({ page }) => {

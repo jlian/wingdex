@@ -33,8 +33,8 @@ export function AppFooter({ diagnostics = '' }: { diagnostics?: string }) {
         <a href="https://johnlian.net" target="_blank" rel="noopener noreferrer" className="press-feel-light">By John Lian</a>
       </div>
       <nav className="flex items-center gap-4" aria-label="Footer">
-        <a href="/#privacy" className="press-feel-light">Privacy</a>
-        <a href="/#terms" className="press-feel-light">Terms</a>
+        <a href="/privacy.html" className="press-feel-light">Privacy</a>
+        <a href="/terms.html" className="press-feel-light">Terms</a>
         <a href="https://github.com/jlian/wingdex/issues" target="_blank" rel="noopener noreferrer" className="press-feel-light">Issues?</a>
       </nav>
     </footer>

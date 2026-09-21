@@ -1,5 +1,20 @@
 import { test, expect } from './fixtures'
 
+test('legal documents remain readable without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  try {
+    const page = await context.newPage()
+    for (const [path, title] of [['/privacy.html', 'Privacy Policy'], ['/terms.html', 'Terms of Use']]) {
+      await page.goto(path)
+      await expect(page).toHaveTitle(`${title} - WingDex`)
+      await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+      await expect(page.locator('meta[http-equiv="refresh"]')).toHaveCount(0)
+    }
+  } finally {
+    await context.close()
+  }
+})
+
 test('privacy and terms share their layout across themes and viewport sizes', async ({ page }) => {
   for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 900 })
