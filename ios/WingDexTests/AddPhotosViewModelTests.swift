@@ -347,6 +347,9 @@ final class AddPhotosViewModelTests: XCTestCase {
             lat: 47.7115123, lon: -122.3717456, outingOverridesPhotoGPS: true
         )
         XCTAssertEqual(viewModel.lastLocationName, "Current Park")
+        // Returning to the foreground re-runs configure for the share-queue check.
+        viewModel.configure(auth: auth, dataStore: store)
+        XCTAssertEqual(viewModel.lastLocationName, "Current Park")
         XCTAssertEqual(viewModel.currentInferenceLocation?.lat, 47.7115123)
         XCTAssertEqual(viewModel.currentInferenceLocation?.lon, -122.3717456)
         XCTAssertNil(viewModel.currentPhoto?.gpsLat)
@@ -387,6 +390,7 @@ final class AddPhotosViewModelTests: XCTestCase {
         )]
         viewModel.currentStep = .outingReview
         viewModel.isProcessing = true
+        viewModel.lastLocationName = "Account A Park"
         let dismissalRequestID = viewModel.flowDismissalRequestID
 
         auth.userId = "account-b"
@@ -394,6 +398,7 @@ final class AddPhotosViewModelTests: XCTestCase {
         viewModel.configure(auth: auth, dataStore: store)
 
         XCTAssertEqual(viewModel.currentStep, .selectPhotos)
+        XCTAssertEqual(viewModel.lastLocationName, "")
         XCTAssertTrue(viewModel.processedPhotos.isEmpty)
         XCTAssertTrue(viewModel.clusters.isEmpty)
         XCTAssertFalse(viewModel.isProcessing)
