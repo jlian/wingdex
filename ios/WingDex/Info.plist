@@ -55,7 +55,7 @@
 			<key>UIApplicationShortcutItemIconSymbolName</key>
 			<string>photo.on.rectangle</string>
 			<key>UIApplicationShortcutItemTitle</key>
-			<string>Upload Photos</string>
+			<string>Choose Photos</string>
 			<key>UIApplicationShortcutItemType</key>
 			<string>app.wingdex.quick-action.upload-photos</string>
 		</dict>

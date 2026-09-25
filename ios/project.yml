@@ -127,7 +127,7 @@ targets:
             UIApplicationShortcutItemTitle: Take Photo
             UIApplicationShortcutItemIconSymbolName: camera.fill
           - UIApplicationShortcutItemType: app.wingdex.quick-action.upload-photos
-            UIApplicationShortcutItemTitle: Upload Photos
+            UIApplicationShortcutItemTitle: Choose Photos
             UIApplicationShortcutItemIconSymbolName: photo.on.rectangle
           - UIApplicationShortcutItemType: app.wingdex.quick-action.view-wingdex
             UIApplicationShortcutItemTitle: View WingDex

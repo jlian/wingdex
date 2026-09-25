@@ -131,7 +131,7 @@ struct HomeView: View {
                     .foregroundStyle(Color.foregroundText)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Upload your photos, ID the birds, and build your WingDex.")
+                Text("Add your photos, ID the birds, and build your WingDex.")
                     .font(.body)
                     .foregroundStyle(Color.mutedText)
                     .multilineTextAlignment(.center)

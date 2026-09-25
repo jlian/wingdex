@@ -300,7 +300,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let alert = app.alerts["Could Not Continue"]
         XCTAssertTrue(alert.existsOrWait(timeout: 15), app.debugDescription)
         XCTAssertTrue(alert.buttons["Retry"].exists)
-        alert.buttons["Close Upload"].tap()
+        alert.buttons["Discard Progress"].tap()
         XCTAssertTrue(alert.disappearsOrWait(timeout: 5))
         app.terminate()
         app.launchArguments = [

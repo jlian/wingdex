@@ -178,7 +178,7 @@ struct OutingsView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.foregroundText)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Upload photos to create your first outing.")
+                    Text("Identify birds in your photos to create your first outing.")
                         .font(.body)
                         .foregroundStyle(Color.mutedText)
                         .multilineTextAlignment(.center)

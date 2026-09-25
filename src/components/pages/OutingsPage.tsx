@@ -229,7 +229,7 @@ export default function OutingsPage({
       <EmptyState
         icon={BirdLogo}
         title="No outings yet"
-        description="Upload photos to create your first outing"
+        description="Identify birds in your photos to create your first outing"
       />
     )
   }

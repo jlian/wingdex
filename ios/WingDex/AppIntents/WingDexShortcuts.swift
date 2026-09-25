@@ -14,10 +14,10 @@ struct WingDexShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: UploadPhotosIntent(),
             phrases: [
-                "Upload bird photos with \(.applicationName)",
+                "Identify birds with \(.applicationName)",
                 "Identify bird photos with \(.applicationName)",
             ],
-            shortTitle: "Upload Photos",
+            shortTitle: "Identify Birds",
             systemImageName: "photo.on.rectangle"
         )
         AppShortcut(
