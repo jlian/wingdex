@@ -247,7 +247,6 @@ final class AddPhotosViewModel {
         self.accountID = accountID
         authService = auth
         self.dataStore = dataStore
-        lastLocationName = ""
     }
 
     func cancelSession() async {
@@ -1533,6 +1532,7 @@ final class AddPhotosViewModel {
         currentCandidates = []
         photoResults = []
         currentOutingId = ""
+        lastLocationName = ""
         outingInferenceLocation = nil
         outingOverridesPhotoGPS = false
         pendingOuting = nil
