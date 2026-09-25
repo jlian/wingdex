@@ -1,3 +1,11 @@
+## [1.32.1](https://github.com/jlian/wingdex/compare/v1.32.0...v1.32.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **AddPhotos:** rename Upload & Identify to Identify Birds ([f9b232e](https://github.com/jlian/wingdex/commit/f9b232e826ff4927d2620ff64687bcadd6fa4c23)), closes [#446](https://github.com/jlian/wingdex/issues/446)
+* **AddPhotos:** replace upload wording with identify and save ([f87cc98](https://github.com/jlian/wingdex/commit/f87cc98d99137c24df79cfdfba99dcf76dd02115)), closes [#446](https://github.com/jlian/wingdex/issues/446)
+
 # [1.32.0](https://github.com/jlian/wingdex/compare/v1.31.3...v1.32.0) (2026-09-21)
 
 
