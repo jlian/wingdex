@@ -1,0 +1,896 @@
+[
+ {
+  "model": "bioclip-2",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 95.48,
+  "top5": 99.77,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 95.48
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.7,
+    "acc_on_kept": 95.62
+   },
+   {
+    "thr": 0.5,
+    "coverage": 97.9,
+    "acc_on_kept": 96.32
+   },
+   {
+    "thr": 0.7,
+    "coverage": 92.6,
+    "acc_on_kept": 97.88
+   },
+   {
+    "thr": 0.9,
+    "coverage": 81.2,
+    "acc_on_kept": 99.06
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "bioclip-2",
+  "n": 24615,
+  "n_classes": 11167,
+  "top1": 86.4,
+  "top5": 97.26,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 86.4
+   },
+   {
+    "thr": 0.3,
+    "coverage": 95.3,
+    "acc_on_kept": 89.05
+   },
+   {
+    "thr": 0.5,
+    "coverage": 85.1,
+    "acc_on_kept": 93.09
+   },
+   {
+    "thr": 0.7,
+    "coverage": 71.8,
+    "acc_on_kept": 96.57
+   },
+   {
+    "thr": 0.9,
+    "coverage": 49.2,
+    "acc_on_kept": 98.56
+   }
+  ],
+  "split": "test",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "bioclip-2",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 86.31,
+  "top5": 97.24,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 86.31
+   },
+   {
+    "thr": 0.3,
+    "coverage": 95.1,
+    "acc_on_kept": 89.1
+   },
+   {
+    "thr": 0.5,
+    "coverage": 85.1,
+    "acc_on_kept": 93.04
+   },
+   {
+    "thr": 0.7,
+    "coverage": 71.7,
+    "acc_on_kept": 96.51
+   },
+   {
+    "thr": 0.9,
+    "coverage": 48.9,
+    "acc_on_kept": 98.49
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "bioclip-2.5",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 97.56,
+  "top5": 99.91,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 97.56
+   },
+   {
+    "thr": 0.3,
+    "coverage": 100.0,
+    "acc_on_kept": 97.56
+   },
+   {
+    "thr": 0.5,
+    "coverage": 99.9,
+    "acc_on_kept": 97.63
+   },
+   {
+    "thr": 0.7,
+    "coverage": 98.9,
+    "acc_on_kept": 98.1
+   },
+   {
+    "thr": 0.9,
+    "coverage": 97.0,
+    "acc_on_kept": 98.59
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip-2.5-vith14"
+ },
+ {
+  "model": "bioclip-2.5",
+  "n": 24615,
+  "n_classes": 11167,
+  "top1": 90.19,
+  "top5": 97.99,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 90.19
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.7,
+    "acc_on_kept": 90.4
+   },
+   {
+    "thr": 0.5,
+    "coverage": 97.8,
+    "acc_on_kept": 91.55
+   },
+   {
+    "thr": 0.7,
+    "coverage": 92.5,
+    "acc_on_kept": 93.96
+   },
+   {
+    "thr": 0.9,
+    "coverage": 84.0,
+    "acc_on_kept": 96.49
+   }
+  ],
+  "split": "test",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2.5-vith14"
+ },
+ {
+  "model": "wingclip-0.3",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 94.27,
+  "top5": 99.43,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 94.27
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.3,
+    "acc_on_kept": 94.73
+   },
+   {
+    "thr": 0.5,
+    "coverage": 96.8,
+    "acc_on_kept": 95.86
+   },
+   {
+    "thr": 0.7,
+    "coverage": 90.7,
+    "acc_on_kept": 97.79
+   },
+   {
+    "thr": 0.9,
+    "coverage": 75.1,
+    "acc_on_kept": 99.26
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "wingclip-0.3",
+  "n": 24615,
+  "n_classes": 11167,
+  "top1": 86.89,
+  "top5": 96.93,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 86.89
+   },
+   {
+    "thr": 0.3,
+    "coverage": 91.7,
+    "acc_on_kept": 91.38
+   },
+   {
+    "thr": 0.5,
+    "coverage": 77.0,
+    "acc_on_kept": 96.02
+   },
+   {
+    "thr": 0.7,
+    "coverage": 50.3,
+    "acc_on_kept": 98.26
+   },
+   {
+    "thr": 0.9,
+    "coverage": 2.4,
+    "acc_on_kept": 99.33
+   }
+  ],
+  "split": "test",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "wingclip-0.3",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 86.84,
+  "top5": 96.99,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 86.84
+   },
+   {
+    "thr": 0.3,
+    "coverage": 91.8,
+    "acc_on_kept": 91.22
+   },
+   {
+    "thr": 0.5,
+    "coverage": 77.2,
+    "acc_on_kept": 95.89
+   },
+   {
+    "thr": 0.7,
+    "coverage": 50.6,
+    "acc_on_kept": 98.15
+   },
+   {
+    "thr": 0.9,
+    "coverage": 2.5,
+    "acc_on_kept": 99.0
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "wingclip-0.1",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 95.69,
+  "top5": 99.62,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 95.69
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.6,
+    "acc_on_kept": 95.94
+   },
+   {
+    "thr": 0.5,
+    "coverage": 98.2,
+    "acc_on_kept": 96.62
+   },
+   {
+    "thr": 0.7,
+    "coverage": 94.3,
+    "acc_on_kept": 97.97
+   },
+   {
+    "thr": 0.9,
+    "coverage": 84.3,
+    "acc_on_kept": 99.12
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "wingclip-0.1",
+  "n": 24615,
+  "n_classes": 11167,
+  "top1": 89.92,
+  "top5": 97.8,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 89.92
+   },
+   {
+    "thr": 0.3,
+    "coverage": 95.3,
+    "acc_on_kept": 92.6
+   },
+   {
+    "thr": 0.5,
+    "coverage": 85.5,
+    "acc_on_kept": 96.13
+   },
+   {
+    "thr": 0.7,
+    "coverage": 67.2,
+    "acc_on_kept": 97.89
+   },
+   {
+    "thr": 0.9,
+    "coverage": 9.5,
+    "acc_on_kept": 98.68
+   }
+  ],
+  "split": "test",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "wingclip-0.1",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 89.9,
+  "top5": 97.86,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 89.9
+   },
+   {
+    "thr": 0.3,
+    "coverage": 95.4,
+    "acc_on_kept": 92.56
+   },
+   {
+    "thr": 0.5,
+    "coverage": 85.6,
+    "acc_on_kept": 96.07
+   },
+   {
+    "thr": 0.7,
+    "coverage": 67.4,
+    "acc_on_kept": 97.85
+   },
+   {
+    "thr": 0.9,
+    "coverage": 9.7,
+    "acc_on_kept": 98.47
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2"
+ },
+ {
+  "model": "bioclip-2.5",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 90.31,
+  "top5": 98.06,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 90.31
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.8,
+    "acc_on_kept": 90.5
+   },
+   {
+    "thr": 0.5,
+    "coverage": 97.8,
+    "acc_on_kept": 91.62
+   },
+   {
+    "thr": 0.7,
+    "coverage": 92.4,
+    "acc_on_kept": 94.11
+   },
+   {
+    "thr": 0.9,
+    "coverage": 84.0,
+    "acc_on_kept": 96.61
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-2.5-vith14"
+ },
+ {
+  "model": "bioclip-1",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 80.74,
+  "top5": 96.53,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 80.74
+   },
+   {
+    "thr": 0.3,
+    "coverage": 99.2,
+    "acc_on_kept": 81.27
+   },
+   {
+    "thr": 0.5,
+    "coverage": 93.1,
+    "acc_on_kept": 84.43
+   },
+   {
+    "thr": 0.7,
+    "coverage": 80.5,
+    "acc_on_kept": 89.85
+   },
+   {
+    "thr": 0.9,
+    "coverage": 63.4,
+    "acc_on_kept": 95.59
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip"
+ },
+ {
+  "model": "bioclip-1",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 70.21,
+  "top5": 90.22,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 70.21
+   },
+   {
+    "thr": 0.3,
+    "coverage": 95.4,
+    "acc_on_kept": 72.78
+   },
+   {
+    "thr": 0.5,
+    "coverage": 81.5,
+    "acc_on_kept": 79.64
+   },
+   {
+    "thr": 0.7,
+    "coverage": 64.6,
+    "acc_on_kept": 87.24
+   },
+   {
+    "thr": 0.9,
+    "coverage": 43.6,
+    "acc_on_kept": 95.0
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip"
+ },
+ {
+  "model": "biotrove-clip",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 33.28,
+  "top5": 56.6,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 33.28
+   },
+   {
+    "thr": 0.3,
+    "coverage": 96.3,
+    "acc_on_kept": 34.22
+   },
+   {
+    "thr": 0.5,
+    "coverage": 81.3,
+    "acc_on_kept": 37.81
+   },
+   {
+    "thr": 0.7,
+    "coverage": 62.4,
+    "acc_on_kept": 42.44
+   },
+   {
+    "thr": 0.9,
+    "coverage": 41.0,
+    "acc_on_kept": 49.98
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:BGLab/BioTrove-CLIP"
+ },
+ {
+  "model": "biotrove-clip",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 17.98,
+  "top5": 34.34,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 17.98
+   },
+   {
+    "thr": 0.3,
+    "coverage": 88.2,
+    "acc_on_kept": 19.57
+   },
+   {
+    "thr": 0.5,
+    "coverage": 65.1,
+    "acc_on_kept": 23.48
+   },
+   {
+    "thr": 0.7,
+    "coverage": 43.6,
+    "acc_on_kept": 28.7
+   },
+   {
+    "thr": 0.9,
+    "coverage": 24.0,
+    "acc_on_kept": 37.96
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:BGLab/BioTrove-CLIP"
+ },
+ {
+  "model": "bioclip-inat-only",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 85.76,
+  "top5": 97.48,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 85.76
+   },
+   {
+    "thr": 0.3,
+    "coverage": 98.7,
+    "acc_on_kept": 86.68
+   },
+   {
+    "thr": 0.5,
+    "coverage": 93.5,
+    "acc_on_kept": 89.5
+   },
+   {
+    "thr": 0.7,
+    "coverage": 84.5,
+    "acc_on_kept": 93.2
+   },
+   {
+    "thr": 0.9,
+    "coverage": 71.4,
+    "acc_on_kept": 96.69
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "hf-hub:imageomics/bioclip-vit-b-16-inat-only"
+ },
+ {
+  "model": "bioclip-inat-only",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 75.94,
+  "top5": 89.65,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 75.94
+   },
+   {
+    "thr": 0.3,
+    "coverage": 87.2,
+    "acc_on_kept": 83.36
+   },
+   {
+    "thr": 0.5,
+    "coverage": 74.2,
+    "acc_on_kept": 89.07
+   },
+   {
+    "thr": 0.7,
+    "coverage": 60.4,
+    "acc_on_kept": 93.44
+   },
+   {
+    "thr": 0.9,
+    "coverage": 40.1,
+    "acc_on_kept": 97.02
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "hf-hub:imageomics/bioclip-vit-b-16-inat-only"
+ },
+ {
+  "model": "clip-vit-b16",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 51.47,
+  "top5": 84.31,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 51.47
+   },
+   {
+    "thr": 0.3,
+    "coverage": 69.4,
+    "acc_on_kept": 64.35
+   },
+   {
+    "thr": 0.5,
+    "coverage": 38.2,
+    "acc_on_kept": 80.7
+   },
+   {
+    "thr": 0.7,
+    "coverage": 20.2,
+    "acc_on_kept": 93.05
+   },
+   {
+    "thr": 0.9,
+    "coverage": 8.1,
+    "acc_on_kept": 98.65
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "ViT-B-16-quickgelu",
+  "pretrained": "openai"
+ },
+ {
+  "model": "clip-vit-b16",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 25.59,
+  "top5": 50.67,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 25.59
+   },
+   {
+    "thr": 0.3,
+    "coverage": 8.1,
+    "acc_on_kept": 72.3
+   },
+   {
+    "thr": 0.5,
+    "coverage": 2.3,
+    "acc_on_kept": 88.32
+   },
+   {
+    "thr": 0.7,
+    "coverage": 0.6,
+    "acc_on_kept": 95.21
+   },
+   {
+    "thr": 0.9,
+    "coverage": 0.1,
+    "acc_on_kept": 100.0
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "ViT-B-16-quickgelu",
+  "pretrained": "openai"
+ },
+ {
+  "model": "clip-vit-l14",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 60.77,
+  "top5": 92.19,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 60.77
+   },
+   {
+    "thr": 0.3,
+    "coverage": 86.6,
+    "acc_on_kept": 66.59
+   },
+   {
+    "thr": 0.5,
+    "coverage": 58.4,
+    "acc_on_kept": 79.69
+   },
+   {
+    "thr": 0.7,
+    "coverage": 36.1,
+    "acc_on_kept": 90.96
+   },
+   {
+    "thr": 0.9,
+    "coverage": 17.8,
+    "acc_on_kept": 98.16
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "ViT-L-14-quickgelu",
+  "pretrained": "openai"
+ },
+ {
+  "model": "clip-vit-l14",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 32.5,
+  "top5": 61.01,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 32.5
+   },
+   {
+    "thr": 0.3,
+    "coverage": 25.7,
+    "acc_on_kept": 65.06
+   },
+   {
+    "thr": 0.5,
+    "coverage": 10.7,
+    "acc_on_kept": 79.56
+   },
+   {
+    "thr": 0.7,
+    "coverage": 4.0,
+    "acc_on_kept": 88.81
+   },
+   {
+    "thr": 0.9,
+    "coverage": 0.5,
+    "acc_on_kept": 94.21
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "ViT-L-14-quickgelu",
+  "pretrained": "openai"
+ },
+ {
+  "model": "siglip-b16",
+  "n": 48527,
+  "n_classes": 401,
+  "top1": 54.12,
+  "top5": 85.93,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 54.12
+   },
+   {
+    "thr": 0.3,
+    "coverage": 73.1,
+    "acc_on_kept": 65.95
+   },
+   {
+    "thr": 0.5,
+    "coverage": 44.4,
+    "acc_on_kept": 80.83
+   },
+   {
+    "thr": 0.7,
+    "coverage": 25.0,
+    "acc_on_kept": 92.03
+   },
+   {
+    "thr": 0.9,
+    "coverage": 10.3,
+    "acc_on_kept": 98.54
+   }
+  ],
+  "split": "all",
+  "labels": "nabirds555",
+  "text_tower": "ViT-B-16-SigLIP",
+  "pretrained": "webli"
+ },
+ {
+  "model": "siglip-b16",
+  "n": 48527,
+  "n_classes": 11167,
+  "top1": 26.75,
+  "top5": 51.77,
+  "abstention": [
+   {
+    "thr": 0.0,
+    "coverage": 100.0,
+    "acc_on_kept": 26.75
+   },
+   {
+    "thr": 0.3,
+    "coverage": 13.6,
+    "acc_on_kept": 68.25
+   },
+   {
+    "thr": 0.5,
+    "coverage": 4.3,
+    "acc_on_kept": 86.25
+   },
+   {
+    "thr": 0.7,
+    "coverage": 1.2,
+    "acc_on_kept": 94.25
+   },
+   {
+    "thr": 0.9,
+    "coverage": 0.1,
+    "acc_on_kept": 100.0
+   }
+  ],
+  "split": "all",
+  "labels": "full",
+  "text_tower": "ViT-B-16-SigLIP",
+  "pretrained": "webli"
+ }
+]

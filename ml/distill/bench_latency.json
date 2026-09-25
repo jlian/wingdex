@@ -1,0 +1,142 @@
+[
+ {
+  "model": "bioclip-2",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 304.0,
+  "ms_per_batch": 17.45,
+  "ms_per_image": 17.453,
+  "img_per_s": 57.3
+ },
+ {
+  "model": "bioclip-2",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 304.0,
+  "ms_per_batch": 355.35,
+  "ms_per_image": 11.105,
+  "img_per_s": 90.1
+ },
+ {
+  "model": "bioclip-2.5-vith14",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 632.1,
+  "ms_per_batch": 33.11,
+  "ms_per_image": 33.112,
+  "img_per_s": 30.2
+ },
+ {
+  "model": "bioclip-2.5-vith14",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 632.1,
+  "ms_per_batch": 754.72,
+  "ms_per_image": 23.585,
+  "img_per_s": 42.4
+ },
+ {
+  "model": "bioclip",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 86.2,
+  "ms_per_batch": 7.45,
+  "ms_per_image": 7.45,
+  "img_per_s": 134.2
+ },
+ {
+  "model": "bioclip",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 86.2,
+  "ms_per_batch": 86.08,
+  "ms_per_image": 2.69,
+  "img_per_s": 371.7
+ },
+ {
+  "model": "bioclip-vit-b-16-inat-only",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 86.2,
+  "ms_per_batch": 5.89,
+  "ms_per_image": 5.887,
+  "img_per_s": 169.9
+ },
+ {
+  "model": "bioclip-vit-b-16-inat-only",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 86.2,
+  "ms_per_batch": 85.42,
+  "ms_per_image": 2.669,
+  "img_per_s": 374.6
+ },
+ {
+  "model": "wise_a0.60.pt",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 38.7,
+  "ms_per_batch": 7.4,
+  "ms_per_image": 7.402,
+  "img_per_s": 135.1
+ },
+ {
+  "model": "wise_a0.60.pt",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 38.7,
+  "ms_per_batch": 43.0,
+  "ms_per_image": 1.344,
+  "img_per_s": 744.1
+ },
+ {
+  "model": "wingclip-0.1.pt",
+  "device": "cuda",
+  "res": 224,
+  "batch": 1,
+  "visual_params_M": 86.6,
+  "ms_per_batch": 7.51,
+  "ms_per_image": 7.514,
+  "img_per_s": 133.1
+ },
+ {
+  "model": "wingclip-0.1.pt",
+  "device": "cuda",
+  "res": 224,
+  "batch": 32,
+  "visual_params_M": 86.6,
+  "ms_per_batch": 85.95,
+  "ms_per_image": 2.686,
+  "img_per_s": 372.3
+ },
+ {
+  "model": "eva02_large_patch14_clip_336.merged2b_ft_inat21",
+  "device": "cuda",
+  "res": 336,
+  "batch": 1,
+  "visual_params_M": 313.9,
+  "ms_per_batch": 41.53,
+  "ms_per_image": 41.532,
+  "img_per_s": 24.1
+ },
+ {
+  "model": "eva02_large_patch14_clip_336.merged2b_ft_inat21",
+  "device": "cuda",
+  "res": 336,
+  "batch": 32,
+  "visual_params_M": 313.9,
+  "ms_per_batch": 1051.49,
+  "ms_per_image": 32.859,
+  "img_per_s": 30.4
+ }
+]

@@ -1,0 +1,35 @@
+[
+ {
+  "model": "wingclip-0.3-prod",
+  "n": 24615,
+  "no_cell_data": 598,
+  "no_metadata": 222,
+  "temperature": 0.007435,
+  "beta": 1.1634,
+  "occ_floor": -10.41431317630212,
+  "backoff_k": 0.3,
+  "blob_version": 4,
+  "vision_only_top1": 86.9,
+  "vision_only_top5": 96.93,
+  "pipeline_top1": 90.3,
+  "pipeline_top5": 98.33,
+  "geo_gain_top1": 3.4
+ },
+ {
+  "model": "wingclip-0.3-prod-401",
+  "labels": "nabirds401",
+  "n": 24615,
+  "no_cell_data": 598,
+  "no_metadata": 222,
+  "temperature": 0.007435,
+  "beta": 1.1634,
+  "occ_floor": -10.41431317630212,
+  "backoff_k": 0.3,
+  "blob_version": 4,
+  "vision_only_top1": 94.28,
+  "vision_only_top5": 99.44,
+  "pipeline_top1": 91.82,
+  "pipeline_top5": 99.37,
+  "geo_gain_top1": -2.46
+ }
+]

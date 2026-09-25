@@ -1,0 +1,17 @@
+[
+ {
+  "model": "eva02-L-inat21",
+  "supervised": true,
+  "visual_params_M": 313.9,
+  "n": 46580,
+  "unscoreable": 1947,
+  "species_mapped": 384,
+  "species_total": 401,
+  "restricted_top1": 97.06,
+  "restricted_top5": 99.8,
+  "restricted_classes": 384,
+  "open10k_top1": 94.6,
+  "open10k_top5": 99.44,
+  "open10k_classes": 10000
+ }
+]
