@@ -86,7 +86,7 @@ test.describe('CSV import + photo upload integration', () => {
     await loadApp(page, { promote: false })
 
     // Open upload wizard
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    await page.getByRole('button', { name: 'Identify Birds' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
 
     // Upload a Chukar image (has EXIF GPS for Haleakala)
@@ -183,7 +183,7 @@ test.describe('CSV import + photo upload integration', () => {
     await mockGeocoding(page, 'Current location park')
     await loadApp(page, { promote: false })
     const image = await sharp('src/assets/images/Chukar_partridge_near_Haleakala_summit_Maui.jpg').jpeg().toBuffer()
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    await page.getByRole('button', { name: 'Identify Birds' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.locator('input[type="file"]').setInputFiles({ name: 'no-gps.jpg', mimeType: 'image/jpeg', buffer: image })
     await expect(dialog.getByText('No GPS data in photo')).toBeVisible()
@@ -221,7 +221,7 @@ test.describe('CSV import + photo upload integration', () => {
     await context.grantPermissions(['notifications'])
     await loadApp(page, { promote: false })
     const image = await sharp('src/assets/images/Chukar_partridge_near_Haleakala_summit_Maui.jpg').jpeg().toBuffer()
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    await page.getByRole('button', { name: 'Identify Birds' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.locator('input[type="file"]').setInputFiles({ name: 'no-gps.jpg', mimeType: 'image/jpeg', buffer: image })
     await dialog.getByRole('button', { name: 'Tap to set location' }).click()
@@ -265,8 +265,8 @@ test.describe('CSV import + photo upload integration', () => {
 
     // Navigate home and open upload wizard
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible({ timeout: 5_000 })
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    await expect(page.getByRole('button', { name: 'Identify Birds' })).toBeVisible({ timeout: 5_000 })
+    await page.getByRole('button', { name: 'Identify Birds' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
 
     const fileInput = page.getByRole('dialog').locator('input[type="file"]')
@@ -320,7 +320,7 @@ test.describe('CSV import + photo upload integration', () => {
     await loadApp(page, { promote: false })
 
     // Open upload wizard
-    await page.getByRole('button', { name: 'Upload & Identify' }).click()
+    await page.getByRole('button', { name: 'Identify Birds' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
 
     // Upload two photos from very different locations:

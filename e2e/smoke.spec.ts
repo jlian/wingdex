@@ -21,10 +21,10 @@ test('a mobile visitor can browse, open uploads and legal pages, but not Setting
   await expect(page.getByText('Your WingDex is empty')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Settings' })).toBeHidden()
   await page.goto('/#settings')
-  await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Identify Birds' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeHidden()
 
-  await page.getByRole('button', { name: 'Upload & Identify' }).click()
+  await page.getByRole('button', { name: 'Identify Birds' }).click()
   await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
@@ -52,7 +52,7 @@ test('serves the occurrence prior as raw gzip bytes', async ({ request }) => {
 
 test('multiple photo selection reaches review and supports keeping or discarding progress', async ({ page }) => {
   await loadApp(page, { promote: false })
-  await page.getByRole('button', { name: 'Upload & Identify' }).click()
+  await page.getByRole('button', { name: 'Identify Birds' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.locator('input[type="file"]').setInputFiles([
     path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg'),
@@ -73,7 +73,7 @@ test('multiple photo selection reaches review and supports keeping or discarding
 
 test('drag-and-drop reaches photo review', async ({ page }) => {
   await loadApp(page, { promote: false })
-  await page.getByRole('button', { name: 'Upload & Identify' }).click()
+  await page.getByRole('button', { name: 'Identify Birds' }).click()
   const imagePath = path.resolve('src/assets/images/Common_kingfisher_at_Taipei_Zoo.jpeg')
   const dataTransfer = await page.evaluateHandle(({ bytesBase64, fileName }) => {
     const bytes = Uint8Array.from(atob(bytesBase64), char => char.charCodeAt(0))

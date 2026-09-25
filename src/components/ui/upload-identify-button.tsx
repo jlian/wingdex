@@ -6,7 +6,7 @@ export function UploadIdentifyButton({ onClick, onIntent }: { onClick?: () => vo
     <button type="button" className="upload-identify-button" onClick={onClick}
       onPointerDown={onIntent} onMouseEnter={onIntent} onFocus={onIntent} onTouchStart={onIntent}>
       <span className="upload-identify-icon" aria-hidden="true"><Camera size={20} /></span>
-      <span>Upload &amp; Identify</span>
+      <span>Identify Birds</span>
     </button>
   )
 }

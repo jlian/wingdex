@@ -64,7 +64,7 @@ vi.mock('@phosphor-icons/react', () => ({
 
 vi.mock('@/components/pages/HomePage', () => ({
   default: ({ onAddPhotos }: { onAddPhotos: () => void }) => (
-    <button onClick={onAddPhotos}>Upload &amp; Identify</button>
+    <button onClick={onAddPhotos}>Identify Birds</button>
   ),
 }))
 
@@ -91,7 +91,7 @@ vi.mock('@/hooks/use-auth-gate', () => ({
 }))
 
 async function openFlowSaveAndClose() {
-  fireEvent.click(await screen.findByText('Upload & Identify'))
+  fireEvent.click(await screen.findByText('Identify Birds'))
   fireEvent.click(await screen.findByText('fire-saved'))
   fireEvent.click(screen.getByText('fire-close'))
 }
@@ -131,7 +131,7 @@ describe('signup prompt at first outing save', () => {
     const { default: App } = await import('@/App')
     render(<App />)
 
-    fireEvent.click(await screen.findByText('Upload & Identify'))
+    fireEvent.click(await screen.findByText('Identify Birds'))
     fireEvent.click(await screen.findByText('fire-saved'))
 
     expect(mockOpenSignIn).not.toHaveBeenCalled()

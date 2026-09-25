@@ -10,7 +10,7 @@ Google and GitHub sign-in are also available. No subscription or purchase is req
 ## Core review flow
 
 1. Sign up with Apple or a passkey.
-2. On Home, tap **Upload & Identify**, or tap the camera button in the bottom navigation.
+2. On Home, tap **Identify Birds**, or tap the camera button in the bottom navigation.
 3. Choose one or more bird photos from the system photo picker.
 4. Review the suggested outing date and location, then confirm or edit each bird identification.
 5. Save the result. The identified species appears in **WingDex**, and the saved outing appears in **Outings**.
