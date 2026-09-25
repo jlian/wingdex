@@ -128,7 +128,7 @@ test('the loss event: clearing cookies leaves a working app', async ({ page, con
   expect(await readSession(page), 'the anonymous account is unreachable now').toBeNull()
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible()
   await expect(page.getByLabel(BADGE)).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Identify Birds' })).toBeVisible()
 
   await page.getByRole('tab', { name: 'Outings' }).first().click()
   await expect(page.getByText('Doomed Patch')).toBeHidden()

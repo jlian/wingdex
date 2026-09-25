@@ -55,7 +55,7 @@ test.describe('embedded JPEG preview import', () => {
         return { base64 }
       }, fixtureCase)
 
-      await page.getByRole('button', { name: 'Upload & Identify', exact: true }).click()
+      await page.getByRole('button', { name: 'Identify Birds', exact: true }).click()
       await expect(page.locator('input[type="file"]')).toHaveAttribute('accept', new RegExp(`\\.${extension.toLowerCase()}`))
       await page.locator('input[type="file"]').setInputFiles({
         name: `synthetic.${extension}`,
@@ -74,7 +74,7 @@ test.describe('embedded JPEG preview import', () => {
 
   test('explains an unsupported image and allows another selection', async ({ page }) => {
     await page.goto('/#home')
-    await page.getByRole('button', { name: 'Upload & Identify', exact: true }).click()
+    await page.getByRole('button', { name: 'Identify Birds', exact: true }).click()
     await page.locator('input[type="file"]').setInputFiles({
       name: 'unsupported.raw',
       mimeType: '',

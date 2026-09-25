@@ -100,7 +100,7 @@ struct PhotoSelectionView: View {
                 Spacer()
 
                 VStack(spacing: 6) {
-                    Text("Upload & Identify")
+                    Text("Identify Birds")
                         .font(.system(.title, design: .serif, weight: .semibold))
                         .foregroundStyle(Color.foregroundText)
                     Text("One bird per photo for accuracy\nClose-ups and side profiles work best")

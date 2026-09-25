@@ -38,7 +38,7 @@ test.describe('App with seeded data', () => {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
     }
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByRole('button', { name: 'Upload & Identify' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Identify Birds' })).toBeVisible()
   })
 
   test('species detail view loads Wikipedia image', async ({ page }) => {

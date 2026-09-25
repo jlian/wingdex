@@ -142,7 +142,7 @@ struct HomeView: View {
                 showAddPhotos()
             } label: {
                 Label {
-                    Text("Upload & Identify")
+                    Text("Identify Birds")
                         .font(.body.weight(.medium))
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {

@@ -59,7 +59,7 @@ test('example reveal respects reduced motion and only the hero is extra wide', a
     expect(await section.evaluate(el => el.getBoundingClientRect().width)).toBe(768)
   }
   await expect(page.locator('.landing-ios').getByRole('button')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Upload & Identify' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Identify Birds' })).toHaveCount(1)
   await expect(page.locator('.landing-promise, .landing-wordmark')).toHaveCount(0)
   await expect(page.locator('.landing-field-note')).toHaveText('Free. No account needed.')
   await expect(page.locator('.landing-caption')).toHaveCount(0)
@@ -120,13 +120,13 @@ test('fresh landing hydrates, stays sessionless, and starts upload directly', as
   expect(await session.json()).toBeNull()
   expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(375)
   const originalUrl = page.url()
-  await page.getByRole('button', { name: 'Upload & Identify' }).first().click()
+  await page.getByRole('button', { name: 'Identify Birds' }).first().click()
   await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible()
   expect(page.url()).toBe(originalUrl)
   await expect(page.locator('.landing')).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bird photos in.')
-  await page.getByRole('button', { name: 'Upload & Identify' }).first().click()
+  await page.getByRole('button', { name: 'Identify Birds' }).first().click()
   await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await page.goto('/')
@@ -146,7 +146,7 @@ test('registered visitors reach their app and legal deep links remain available'
   await loadApp(page)
   await page.goto('/')
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Upload & Identify' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Identify Birds' }).first()).toBeVisible()
   await page.goto('/#privacy')
   await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
 })
@@ -160,13 +160,13 @@ test('failed data loads keep returning empty accounts in the app shell', async (
   await loadApp(page)
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: /Bird photos in/ })).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Upload & Identify' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Identify Birds' }).first()).toBeVisible()
 })
 
 test('OAuth errors still reach the existing app notification', async ({ page }) => {
   await page.goto('/?error=access_denied')
   await expect(page.getByText('Sign-in failed: access_denied')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Upload & Identify' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Identify Birds' }).first()).toBeVisible()
 })
 
 for (const identity of ['anonymous', 'registered']) {
@@ -175,7 +175,7 @@ test(`returning ${identity} sightings never flash the landing while session and 
     await seedViaCSVImport(page)
   } else {
     await page.goto('/')
-    await page.getByRole('button', { name: 'Upload & Identify' }).first().click()
+    await page.getByRole('button', { name: 'Identify Birds' }).first().click()
     await expect(page.getByRole('button', { name: 'Select Photos' })).toBeVisible()
     await expect.poll(async () => {
       const response = await page.request.get('/api/auth/get-session')
