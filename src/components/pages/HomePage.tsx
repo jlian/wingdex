@@ -89,7 +89,7 @@ export default function HomePage({ data, onAddPhotos, onAddPhotosIntent, onSelec
               Got bird pics?
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-              Upload your pics, ID the birds, and build your
+              Add your pics, ID the birds, and build your
               WingDex. <em>Reverse birding</em> at its finest.
             </p>
           </div>

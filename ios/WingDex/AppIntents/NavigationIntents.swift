@@ -1,7 +1,7 @@
 import AppIntents
 
 struct UploadPhotosIntent: AppIntent {
-    static let title: LocalizedStringResource = "Upload Bird Photos"
+    static let title: LocalizedStringResource = "Identify Bird Photos"
     static let description = IntentDescription("Opens WingDex to add and identify bird photos.")
     static let supportedModes: IntentModes = [.foreground(.immediate)]
 

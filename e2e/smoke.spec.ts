@@ -62,7 +62,7 @@ test('multiple photo selection reaches review and supports keeping or discarding
   await expect(dialog.getByRole('button', { name: /continue to species/i })).toBeVisible()
   await dialog.getByRole('button', { name: 'Close' }).click()
   await expect(page.getByText('Discard progress?')).toBeVisible()
-  await page.getByRole('button', { name: 'Continue uploading' }).click()
+  await page.getByRole('button', { name: 'Keep identifying' }).click()
   await expect(page.getByText('Discard progress?')).toBeHidden()
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Close' }).click()

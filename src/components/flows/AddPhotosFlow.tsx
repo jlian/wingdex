@@ -633,7 +633,7 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
       case 'photo-manual-crop':
         return `Crop Photo ${currentPhotoIndex + 1}`
       case 'complete': return 'Complete!'
-      case 'summary': return 'Upload complete'
+      case 'summary': return 'Sightings saved'
       default: return 'Add Photos'
     }
   }
@@ -669,11 +669,11 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
           <AlertDialogHeader>
             <AlertDialogTitle>Discard progress?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your upload is still in progress. If you close now, any unsaved changes will be lost.
+              You're still identifying photos. If you close now, unsaved sightings will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continue uploading</AlertDialogCancel>
+            <AlertDialogCancel>Keep identifying</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onClose}>Discard</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -684,7 +684,7 @@ export default function AddPhotosFlow({ data, onClose, onOutingSaved, ensureSess
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl">{getTitle()}</DialogTitle>
             <DialogDescription className="sr-only">
-              Upload photos to identify birds and save sightings.
+              Choose photos to identify birds and save sightings.
             </DialogDescription>
           </DialogHeader>
 

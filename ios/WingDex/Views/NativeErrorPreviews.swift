@@ -50,7 +50,7 @@ private struct AddPhotosErrorPreview: View {
         }
         .alert("Could Not Continue", isPresented: $showError) {
             Button("Retry") {}
-            Button("Close Upload", role: .destructive) {}
+            Button("Discard Progress", role: .destructive) {}
         } message: {
             Text("AI identification limit reached (150 requests/day). Try again later.")
         }

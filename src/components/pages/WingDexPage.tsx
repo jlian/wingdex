@@ -177,7 +177,7 @@ export default function WingDexPage({
       <EmptyState
         icon={BirdLogo}
         title="Your WingDex is empty"
-        description="Upload photos and confirm species to start building your WingDex"
+        description="Identify birds in your photos to start building your WingDex"
       >
         {onAddPhotos && (
           <UploadIdentifyButton onClick={onAddPhotos} onIntent={onAddPhotosIntent} />

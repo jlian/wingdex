@@ -91,9 +91,9 @@ struct AddPhotosFlow: View {
         }
         .alert("Discard progress?", isPresented: $showCloseConfirm) {
             Button("Discard", role: .destructive) { dismissWizard(discardProgress: true) }
-            Button("Continue Uploading", role: .cancel) {}
+            Button("Keep Identifying", role: .cancel) {}
         } message: {
-            Text("Your upload is still in progress. If you close now, any unsaved changes will be lost.")
+            Text("You're still identifying photos. If you close now, unsaved sightings will be lost.")
         }
         // Duplicate photo detection alert
         .alert("Duplicate photos found", isPresented: $viewModel.showDuplicateConfirm) {
@@ -121,7 +121,7 @@ struct AddPhotosFlow: View {
         .alert("Could Not Continue", isPresented: addPhotosErrorBinding) {
             if viewModel.canRetryError {
                 Button("Retry") { viewModel.retryCurrentError() }
-                Button("Close Upload", role: .destructive) { dismissWizard(discardProgress: true) }
+                Button("Discard Progress", role: .destructive) { dismissWizard(discardProgress: true) }
             } else {
                 Button("OK", role: .cancel) { viewModel.error = nil }
             }
@@ -244,7 +244,7 @@ struct AddPhotosFlow: View {
         case .saving:
             return "Saving..."
         case .done:
-            return "Upload Complete"
+            return "Sightings Saved"
         }
     }
 
@@ -376,7 +376,7 @@ struct AddPhotosFlow: View {
                 .padding(.horizontal)
             } else {
                 VStack(spacing: 8) {
-                    Text("Upload Complete!")
+                    Text("Sightings Saved!")
                         .font(.system(size: 22, weight: .semibold, design: .serif))
                         .foregroundStyle(Color.foregroundText)
           Text(
