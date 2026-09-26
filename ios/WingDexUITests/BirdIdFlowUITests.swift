@@ -154,6 +154,17 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
     }
 
+    func testDuplicatePhotoPromptAppearsAndReimportReachesReview() {
+        let app = launchApp(extraArguments: [
+            "--ui-test-duplicate-photo", "--ui-test-geocoding-success",
+        ])
+        waitForDataSetup(in: app)
+        let alert = app.alerts["Duplicate photos found"]
+        XCTAssertTrue(alert.existsOrWait(timeout: 10), app.debugDescription)
+        alert.buttons["Re-import"].tap()
+        XCTAssertTrue(waitForOutingReview(in: app, requireDataSetup: false).exists)
+    }
+
     func testSessionlessPhotoReachesSpeciesConfirmation() {
         let app = launchApp(autoSignIn: false, extraArguments: [
             "--ui-test-geocoding-success", "--ui-test-stub-identification",
