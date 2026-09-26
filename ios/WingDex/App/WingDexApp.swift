@@ -1091,6 +1091,12 @@ struct MainTabView: View {
         guard let capture = try? CameraCapture.make(
             image: image, metadata: [:], latitude: latitude, longitude: longitude
         ) else { return }
+        if args.contains("--ui-test-duplicate-photo") {
+            store.photos.append(Photo(
+                id: "ui-test-duplicate", outingId: "ui-test-duplicate", dataUrl: "", thumbnail: "",
+                fileHash: PhotoService.fileHash(for: capture.data), fileName: "duplicate.jpg"
+            ))
+        }
         addPhotosVM.addCameraPhoto(capture)
         for index in args.indices where args[index] == "--ui-test-photo" && index != flag {
             guard args.index(after: index) < args.endIndex,
