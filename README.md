@@ -25,6 +25,9 @@ Drop a whole day's photos at once and the batch wizard clusters them into outing
 - **Accounts** - anonymous sessions, passkeys, and GitHub / Google / Apple sign-in
 - **iOS app** - native companion app in [`ios/`](ios/)
 
+Accounts without a provider-supplied display name receive a stored bird-themed
+name. Blank display-name edits are rejected; web and iOS share this server policy.
+
 ## How it works
 
 1. **Upload** photos from your device

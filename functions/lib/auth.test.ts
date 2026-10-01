@@ -26,6 +26,64 @@ const testEnv = {
 } as Env
 
 describe('auth routes', () => {
+  it.each(['', ' \n '])('generates a stored bird name for a new account with blank name %j, without a logger', async (name) => {
+    const auth = createAuth(testEnv)
+    const before = (await auth.$context).options.databaseHooks?.user?.create?.before
+    const user = {
+      id: 'new-account',
+      name,
+      email: 'bird@example.com',
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const result = await before?.(user, null)
+
+    expect(result).toEqual({
+      data: { ...user, name: expect.stringMatching(/^[a-z]+-[a-z]+-[a-z]+$/) },
+    })
+  })
+
+  it('preserves provider-supplied and existing bird names when creating accounts', async () => {
+    const auth = createAuth(testEnv)
+    const before = (await auth.$context).options.databaseHooks?.user?.create?.before
+    for (const name of ['Jun Park', 'Zoë 王', 'quiet-meadow-heron']) {
+      const user = {
+        id: 'new-account',
+        name,
+        email: 'bird@example.com',
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      expect(await before?.(user, null)).toEqual({ data: user })
+    }
+  })
+
+  it.each(['', ' \n '])('rejects blank profile name updates %j before changing the database', async (name) => {
+    const auth = createAuth(testEnv)
+    const before = (await auth.$context).options.databaseHooks?.user?.update?.before
+
+    await expect(before?.({ name }, null)).rejects.toMatchObject({
+      status: 'BAD_REQUEST',
+      body: {
+        code: 'INVALID_DISPLAY_NAME',
+        message: 'Display name must not be empty',
+      },
+    })
+  })
+
+  it('allows valid profile names and updates that do not change the name', async () => {
+    const auth = createAuth(testEnv)
+    const before = (await auth.$context).options.databaseHooks?.user?.update?.before
+
+    await expect(before?.({ name: 'Quiet Heron' }, null)).resolves.toBeUndefined()
+    await expect(before?.({ image: 'https://example.com/avatar.png' }, null)).resolves.toBeUndefined()
+    await expect(before?.({ emailVerified: true }, null)).resolves.toBeUndefined()
+  })
+
   it('derives merge methods only from supported Better Auth callback paths and bodies', () => {
     expect(accountMergeAuthMethod({ path: '/callback/github' })).toBe('github')
     expect(accountMergeAuthMethod({ path: '/callback/google' })).toBe('google')

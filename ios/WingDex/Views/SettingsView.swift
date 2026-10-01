@@ -8,6 +8,7 @@ import Photos
 final class ProfileEditor {
     var name: String
     var image: String
+    let namePlaceholder: String
     private let auth: AuthService
     private let userId: String?
     private var pendingTask: Task<Void, Never>?
@@ -20,6 +21,12 @@ final class ProfileEditor {
         self.userId = auth.userId
         self.name = auth.userName ?? ""
         self.image = auth.userImage ?? ""
+        if let email = auth.userEmail?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !email.isEmpty {
+            self.namePlaceholder = email
+        } else {
+            self.namePlaceholder = "Display Name"
+        }
         self.originalSocialImage = {
             let img = auth.userImage ?? ""
             return img.hasPrefix("data:image/svg+xml") ? "" : img
@@ -211,7 +218,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var accountSection: some View {
         Section {
-            if !profile.name.isEmpty {
+            if auth.hasSession {
                 displayNameRow
 
                 Button {
@@ -265,7 +272,7 @@ struct SettingsView: View {
     }
 
     private var displayNameField: some View {
-        TextField("Display Name", text: $editedName)
+        TextField(profile.namePlaceholder, text: $editedName)
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
             .submitLabel(.done)
@@ -290,7 +297,7 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var avatarSection: some View {
-        if !profile.name.isEmpty && showsAvatarOptions {
+        if auth.hasSession && showsAvatarOptions {
             Section {
                 ScrollView(.horizontal) {
                     HStack(spacing: 2) {

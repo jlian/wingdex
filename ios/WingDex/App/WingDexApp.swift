@@ -61,7 +61,13 @@ struct WingDexApp: App {
         #if DEBUG
         let uiTestDataMode = UITestDataService.Mode(arguments: ProcessInfo.processInfo.arguments)
         if uiTestDataMode != nil {
-            auth.installUITestAnonymousIdentity()
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-registered-blank-name") {
+                auth.installUITestIdentity(
+                    .registered, sessionToken: "ui-test-token", name: "", email: "bird@example.com"
+                )
+            } else {
+                auth.installUITestAnonymousIdentity()
+            }
         }
         #endif
         let store = DataStore(

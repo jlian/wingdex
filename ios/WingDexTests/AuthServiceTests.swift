@@ -206,6 +206,100 @@ final class AuthCallbackParsingTests: XCTestCase {
     }
 }
 
+final class AppleSignInPayloadTests: XCTestCase {
+    func testFirstAuthorizationIncludesNameInBetterAuthIDTokenUser() throws {
+        var name = PersonNameComponents()
+        name.givenName = " Jun "
+        name.familyName = "Park"
+        let body = try decodeBody(fullName: name)
+        let idToken = try XCTUnwrap(body["idToken"] as? [String: Any])
+        let user = try XCTUnwrap(idToken["user"] as? [String: Any])
+        let sentName = try XCTUnwrap(user["name"] as? [String: String])
+
+        XCTAssertEqual(body["provider"] as? String, "apple")
+        XCTAssertEqual(idToken["token"] as? String, "identity-token")
+        XCTAssertEqual(idToken["nonce"] as? String, "raw-nonce")
+        XCTAssertEqual(sentName, ["firstName": "Jun", "lastName": "Park"])
+        XCTAssertNil(body["user"])
+    }
+
+    func testReturningAuthorizationDoesNotInventOrSendAnEmptyName() throws {
+        for name in [nil, PersonNameComponents()] {
+            let body = try decodeBody(fullName: name)
+            let idToken = try XCTUnwrap(body["idToken"] as? [String: Any])
+            XCTAssertNil(idToken["user"])
+            XCTAssertEqual(idToken["token"] as? String, "identity-token")
+            XCTAssertEqual(idToken["nonce"] as? String, "raw-nonce")
+        }
+    }
+
+    func testPartialAndUnicodeNamesArePreserved() throws {
+        for (firstName, lastName) in [("Zoë", nil), (nil, "王")] {
+            var name = PersonNameComponents()
+            name.givenName = firstName
+            name.familyName = lastName
+            let body = try decodeBody(fullName: name)
+            let idToken = try XCTUnwrap(body["idToken"] as? [String: Any])
+            let user = try XCTUnwrap(idToken["user"] as? [String: Any])
+            let sentName = try XCTUnwrap(user["name"] as? [String: String])
+            XCTAssertEqual(sentName["firstName"], firstName)
+            XCTAssertEqual(sentName["lastName"], lastName)
+        }
+    }
+
+    func testWhitespaceOnlyNameIsOmitted() throws {
+        var name = PersonNameComponents()
+        name.givenName = " \n "
+        name.familyName = " "
+        let body = try decodeBody(fullName: name)
+        let idToken = try XCTUnwrap(body["idToken"] as? [String: Any])
+        XCTAssertNil(idToken["user"])
+    }
+
+    private func decodeBody(fullName: PersonNameComponents?) throws -> [String: Any] {
+        let data = try AuthService.appleSignInBody(
+            identityToken: "identity-token", nonce: "raw-nonce", fullName: fullName
+        )
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+}
+
+@MainActor
+final class ProfileEditorTests: XCTestCase {
+    func testBlankRegisteredNameUsesEmailOnlyAsPlaceholder() {
+        let auth = AuthService()
+        auth.installUITestIdentity(.registered, name: "", email: "bird@example.com")
+        let profile = ProfileEditor(auth: auth)
+
+        XCTAssertTrue(auth.isRegisteredAccount)
+        XCTAssertEqual(profile.name, "")
+        XCTAssertEqual(profile.namePlaceholder, "bird@example.com")
+        profile.syncToAuth()
+        XCTAssertEqual(auth.userName, "")
+        XCTAssertTrue(auth.isRegisteredAccount)
+    }
+
+    func testMissingNameAndEmailStillAllowAnEmptyNameEditor() {
+        let auth = AuthService()
+        auth.installUITestIdentity(.registered)
+        let profile = ProfileEditor(auth: auth)
+
+        XCTAssertTrue(auth.hasSession)
+        XCTAssertEqual(profile.name, "")
+        XCTAssertEqual(profile.namePlaceholder, "Display Name")
+    }
+
+    func testExistingNameIsNotReplacedByEmail() {
+        let auth = AuthService()
+        auth.installUITestIdentity(.registered, name: "Quiet Heron", email: "bird@example.com")
+        let profile = ProfileEditor(auth: auth)
+
+        XCTAssertEqual(profile.name, "Quiet Heron")
+        profile.syncToAuth()
+        XCTAssertEqual(auth.userName, "Quiet Heron")
+    }
+}
+
 // MARK: - Session Validation Tests
 
 final class SessionValidationTests: XCTestCase {

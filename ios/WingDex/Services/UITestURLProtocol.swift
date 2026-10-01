@@ -19,7 +19,7 @@ final class UITestURLProtocol: URLProtocol, @unchecked Sendable {
             json = #"{"token":"ui-test-token","user":{"id":"ui-test-account","name":"Swift Sparrow","isAnonymous":true},"session":{"id":"ui-test-session","userId":"ui-test-account","expiresAt":"2099-01-01T00:00:00Z"}}"#
         case "/api/auth/get-session":
             json = #"{"user":{"id":"ui-test-account","name":"Swift Sparrow","isAnonymous":true},"session":{"id":"ui-test-session","userId":"ui-test-account","expiresAt":"2099-01-01T00:00:00Z"}}"#
-        case "/api/auth/sign-out":
+        case "/api/auth/sign-out", "/api/auth/update-user":
             json = "{}"
         case "/api/data/all":
             json = #"{"outings":[],"photos":[],"observations":[],"dex":[]}"#

@@ -167,6 +167,18 @@ final class AuthService: @unchecked Sendable {
         userID: String = "ui-test-account",
         sessionToken: String? = nil
     ) {
+        installUITestIdentity(
+            .anonymous, userID: userID, sessionToken: sessionToken, name: "Swift Sparrow"
+        )
+    }
+
+    func installUITestIdentity(
+        _ identity: SessionIdentity,
+        userID: String = "ui-test-account",
+        sessionToken: String? = nil,
+        name: String? = nil,
+        email: String? = nil
+    ) {
         authenticationGeneration += 1
         resetSessionValidation()
         sessionEnrichmentTask?.cancel()
@@ -179,10 +191,10 @@ final class AuthService: @unchecked Sendable {
         signedSessionToken = nil
         sessionExpiry = nil
         usesUITestIdentity = true
-        identity = .anonymous
+        self.identity = identity
         userId = userID
-        userName = "Swift Sparrow"
-        userEmail = nil
+        userName = name
+        userEmail = email
         userImage = nil
     }
     #endif
@@ -348,7 +360,6 @@ final class AuthService: @unchecked Sendable {
         let sourceToken = identity == .anonymous ? try validToken() : nil
         try await prepareAccountMerge(authMethod: "apple")
         let generation = beginAuthentication()
-        let idToken: [String: Any] = ["token": identityToken, "nonce": nonce]
 
         // POST to Better Auth's sign-in/social endpoint with the Apple ID token.
         // Better Auth verifies the token with Apple, creates/links the account,
@@ -362,11 +373,9 @@ final class AuthService: @unchecked Sendable {
             request.setValue("Bearer \(sourceToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let body: [String: Any] = [
-            "provider": "apple",
-            "idToken": idToken,
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try Self.appleSignInBody(
+            identityToken: identityToken, nonce: nonce, fullName: credential.fullName
+        )
         AuthenticatedRequest.instrument(&request)
 
         let (data, response) = try await AuthenticatedRequest.data(
@@ -417,6 +426,33 @@ final class AuthService: @unchecked Sendable {
             log.error("Apple sign-in failed\(reference, privacy: .public)")
             throw error
         }
+    }
+
+    nonisolated static func appleSignInBody(
+        identityToken: String,
+        nonce: String,
+        fullName: PersonNameComponents?
+    ) throws -> Data {
+        var idToken: [String: Any] = ["token": identityToken, "nonce": nonce]
+        if let fullName {
+            var name: [String: String] = [:]
+            if let firstName = fullName.givenName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !firstName.isEmpty {
+                name["firstName"] = firstName
+            }
+            if let lastName = fullName.familyName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !lastName.isEmpty {
+                name["lastName"] = lastName
+            }
+            // Apple supplies the name separately from the ID token, usually only on first authorization.
+            if !name.isEmpty {
+                idToken["user"] = ["name": name]
+            }
+        }
+        return try JSONSerialization.data(withJSONObject: [
+            "provider": "apple",
+            "idToken": idToken,
+        ])
     }
 
     nonisolated static func appleNonceHash(_ nonce: String) -> String {
@@ -726,7 +762,11 @@ final class AuthService: @unchecked Sendable {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.apiBaseURL.absoluteString, forHTTPHeaderField: "Origin")
 
-        let body: [String: String] = ["name": name.trimmingCharacters(in: .whitespacesAndNewlines), "image": image]
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        var body: [String: String] = ["image": image]
+        if !trimmedName.isEmpty {
+            body["name"] = trimmedName
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         AuthenticatedRequest.instrument(&request)
 
@@ -750,7 +790,9 @@ final class AuthService: @unchecked Sendable {
         }
 
         guard Self.isSameSession(currentToken: sessionToken, initiatingToken: token) else { return }
-        userName = name
+        if !trimmedName.isEmpty {
+            userName = trimmedName
+        }
         userImage = image
         persistSession()
     }

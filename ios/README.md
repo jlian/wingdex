@@ -11,6 +11,14 @@ Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same
 - **Auth:** anonymous sessions, passkeys (WebAuthn), and social OAuth (GitHub, Google, Apple) via Better Auth bearer tokens
 - **Strict concurrency** (`SWIFT_STRICT_CONCURRENCY: complete`)
 
+Native Apple sign-in forwards the separately supplied name through Better Auth's
+`idToken.user.name` on first authorization. Apple usually omits that name on later
+authorizations. The server generates a stored bird-themed name when a new account
+has no provider-supplied name and rejects blank display-name edits. A missing
+legacy display name does not imply a guest account: Settings
+keeps profile editing, name shuffling, and avatar selection available for signed-in
+accounts, using the email only as the empty display-name field's placeholder.
+
 ## Photo and outing behavior
 
 - **Camera saving:** Settings → Camera → Save Camera Photos defaults to On. Accepting a camera capture saves its full-resolution JPEG and capture metadata to Photos independently of identification, even if identification is later canceled. Retakes, canceled captures, and library selections do not create copies. Saving requests add-only Photos access; turning the preference off skips both saving and authorization. Denied access or a save failure never blocks identification, and Settings provides a recovery link when access is denied.
