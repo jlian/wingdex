@@ -1,3 +1,10 @@
+## [1.32.2](https://github.com/jlian/wingdex/compare/v1.32.1...v1.32.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **Auth:** preserve Apple names and prevent blank display names ([f1a7493](https://github.com/jlian/wingdex/commit/f1a749372989dbc23a5676f8dbd4b1564b04f711))
+
 ## [1.32.1](https://github.com/jlian/wingdex/compare/v1.32.0...v1.32.1) (2026-09-25)
 
 
