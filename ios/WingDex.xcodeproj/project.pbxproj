@@ -88,6 +88,7 @@
 		7343027377F7570D1E5C00C3 /* PendingUploadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 617821A78E1B45F42175DB1F /* PendingUploadsView.swift */; };
 		735564E615ECED94D844C13B /* TaxonomyOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C56DDD787BF000019EB3051 /* TaxonomyOrderTests.swift */; };
 		75B873FCC6E6BCF322B477DF /* OutingLocationReviewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7178EFD5DC3EA92DD892366 /* OutingLocationReviewModelTests.swift */; };
+		76287337523AFD8CC3BD1A89 /* SettingsProfileUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1EC6B654B4FE27993AEC15 /* SettingsProfileUITests.swift */; };
 		764596672DB1A7AC6E42C586 /* SightingsMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A40EA46444DE64147E772AD /* SightingsMergeTests.swift */; };
 		76BE543EE5F776BD1B15CE35 /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BAE17AAA614FB4ADD32A259 /* CameraCapture.swift */; };
 		76D79E728919533E7EC625BA /* wingdex.bird.fill.svg in Resources */ = {isa = PBXBuildFile; fileRef = B594465F1456F0C7DB88CEDC /* wingdex.bird.fill.svg */; };
@@ -324,6 +325,7 @@
 		79C773C10B5077F676FE0D9A /* AppNavigationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationModel.swift; sourceTree = "<group>"; };
 		7A292B9762D444579B157E2C /* collage21.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = collage21.jpg; sourceTree = "<group>"; };
 		7BD4FF0AC381DC4E16952A44 /* occurrence.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = occurrence.bin; sourceTree = "<group>"; };
+		7D1EC6B654B4FE27993AEC15 /* SettingsProfileUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProfileUITests.swift; sourceTree = "<group>"; };
 		7E72665B257D80E572558029 /* WikimediaURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WikimediaURLTests.swift; sourceTree = "<group>"; };
 		8067616AAFB940F869E1FFAB /* WingCLIP.mlpackage */ = {isa = PBXFileReference; path = WingCLIP.mlpackage; sourceTree = "<group>"; };
 		839C24B2C567AC5C75E3844C /* Data+Base64URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Base64URL.swift"; sourceTree = "<group>"; };
@@ -627,6 +629,7 @@
 				CA69B74CFC590D24F250F13B /* CameraSettingsUITests.swift */,
 				D7A7EB7A927DD7466090098B /* OutingListRegressionUITests.swift */,
 				336D6F040A418EBAFC4FA98B /* OutingLocationVisualUITests.swift */,
+				7D1EC6B654B4FE27993AEC15 /* SettingsProfileUITests.swift */,
 			);
 			path = WingDexUITests;
 			sourceTree = "<group>";
@@ -1147,6 +1150,7 @@ CAF5CA6AE5E559BB812F83AC /* Assets.xcassets in Resources */,
 				BA47452C1A1F3A99C60114A4 /* CameraSettingsUITests.swift in Sources */,
 				254D34CAC9D06DD06A59AF67 /* OutingListRegressionUITests.swift in Sources */,
 				3372C8D8BBF192DD06FFFF7E /* OutingLocationVisualUITests.swift in Sources */,
+				76287337523AFD8CC3BD1A89 /* SettingsProfileUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

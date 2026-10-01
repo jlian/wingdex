@@ -73,6 +73,60 @@ final class AuthTransportTests: XCTestCase {
         }
     }
 
+    func testRegisteredAccountWithoutDisplayNameCanUpdateProfile() async throws {
+        auth.installUITestIdentity(
+            .registered, userID: "transport-user", sessionToken: "transport-token",
+            name: "", email: "bird@example.com"
+        )
+        XCTAssertTrue(auth.isRegisteredAccount)
+
+        try await auth.updateProfile(name: "Quiet Heron", image: "")
+
+        XCTAssertEqual(auth.userName, "Quiet Heron")
+        XCTAssertTrue(auth.isRegisteredAccount)
+        let request = try XCTUnwrap(AuthTransportURLProtocol.requests.first {
+            $0.url?.path == "/api/auth/update-user"
+        })
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer transport-token")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+    }
+
+    func testLegacyBlankNameDoesNotSendAnEmptyNameWhenUpdatingAvatar() async throws {
+        auth.installUITestIdentity(
+            .registered, userID: "transport-user", sessionToken: "transport-token",
+            name: "", email: "bird@example.com"
+        )
+
+        try await auth.updateProfile(name: "", image: "https://example.com/avatar.png")
+
+        let request = try XCTUnwrap(AuthTransportURLProtocol.requests.first {
+            $0.url?.path == "/api/auth/update-user"
+        })
+        let data = try requestBody(request)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: String])
+        XCTAssertNil(body["name"])
+        XCTAssertEqual(body["image"], "https://example.com/avatar.png")
+        XCTAssertEqual(auth.userName, "")
+        XCTAssertTrue(auth.isRegisteredAccount)
+    }
+
+    private func requestBody(_ request: URLRequest) throws -> Data {
+        if let body = request.httpBody { return body }
+        let stream = try XCTUnwrap(request.httpBodyStream)
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 { throw stream.streamError ?? URLError(.cannotDecodeContentData) }
+            if count == 0 { break }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        return data
+    }
+
     func testFailedAnonymousSignInDoesNotInstallIdentity() async {
         AuthTransportURLProtocol.signInStatus = 503
         do {
@@ -118,7 +172,7 @@ private final class AuthTransportURLProtocol: URLProtocol, @unchecked Sendable {
         case "/api/data/all":
             body = #"{"outings":[],"photos":[],"observations":[],"dex":[]}"#
             status = Self.dataStatus
-        case "/api/auth/sign-out":
+        case "/api/auth/sign-out", "/api/auth/update-user":
             body = "{}"
             status = 200
         default:

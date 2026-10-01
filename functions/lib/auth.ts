@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { APIError } from 'better-auth/api'
 import { anonymous, bearer } from 'better-auth/plugins'
 import { passkey } from '@better-auth/passkey'
 import { Kysely } from 'kysely'
@@ -270,9 +271,15 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
         allowDifferentEmails: true,
       },
     },
-    databaseHooks: options.log ? {
+    databaseHooks: {
       user: {
         create: {
+          before: async (user) => ({
+            data: {
+              ...user,
+              name: user.name?.trim() || generateBirdName(),
+            },
+          }),
           after: async (user) => {
             const userKind: CreatedUserKind = user.isAnonymous === true ? 'anonymous' : 'authenticated'
             createdUsers.set(user.id, userKind)
@@ -283,6 +290,16 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
                 ? 'Created a temporary anonymous WingDex account for the guest session'
                 : 'Created a persistent WingDex account during authentication',
             })
+          },
+        },
+        update: {
+          before: async (user) => {
+            if (user.name !== undefined && (typeof user.name !== 'string' || !user.name.trim())) {
+              throw new APIError('BAD_REQUEST', {
+                code: 'INVALID_DISPLAY_NAME',
+                message: 'Display name must not be empty',
+              })
+            }
           },
         },
       },
@@ -328,7 +345,7 @@ export function createAuth(env: Env, options: CreateAuthOptions = {}) {
           },
         },
       },
-    } : undefined,
+    },
     plugins: [
       // Native social requests carry the anonymous source as a bearer token.
       // Normalize it to Better Auth's signed session cookie before the

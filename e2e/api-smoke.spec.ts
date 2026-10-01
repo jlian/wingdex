@@ -16,6 +16,51 @@ function buildCookieHeader(setCookieHeaders: string[]) {
 }
 
 test.describe('API smoke (request context)', () => {
+  test('rejects blank names and preserves stored profile names for cookie and native bearer clients', async ({ page }) => {
+    await loadApp(page)
+    const current = await (await page.request.get('/api/auth/get-session')).json() as {
+      session: { token: string }
+      user: { id: string; name: string }
+    }
+    expect(current.user.name).toMatch(/^[a-z]+-[a-z]+-[a-z]+$/)
+    const native = await request.newContext({
+      baseURL: API_BASE,
+      extraHTTPHeaders: { Authorization: `Bearer ${current.session.token}`, Origin: API_BASE },
+    })
+    try {
+      for (const client of [page.request, native]) {
+        for (const name of ['', ' \n ']) {
+          const response = await client.post('/api/auth/update-user', {
+            headers: { Origin: API_BASE },
+            data: { name },
+          })
+          expect(response.status()).toBe(400)
+          expect(await response.json()).toMatchObject({ code: 'INVALID_DISPLAY_NAME' })
+        }
+        const session = await (await client.get('/api/auth/get-session')).json()
+        expect(session.user.name).toBe(current.user.name)
+      }
+
+      const renamed = await page.request.post('/api/auth/update-user', {
+        headers: { Origin: API_BASE },
+        data: { name: 'Quiet Heron' },
+      })
+      expect(renamed.status()).toBe(200)
+      const avatarUpdated = await native.post('/api/auth/update-user', {
+        data: { image: 'https://example.com/avatar.png' },
+      })
+      expect(avatarUpdated.status()).toBe(200)
+      const finalSession = await (await native.get('/api/auth/get-session')).json()
+      expect(finalSession.user).toMatchObject({
+        id: current.user.id,
+        name: 'Quiet Heron',
+        image: 'https://example.com/avatar.png',
+      })
+    } finally {
+      await native.dispose()
+    }
+  })
+
   test('import is closed to anonymous sessions', async () => {
     const api = await request.newContext({ baseURL: API_BASE })
 
