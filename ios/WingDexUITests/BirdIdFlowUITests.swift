@@ -97,7 +97,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
             safari.terminate()
             let link = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
             XCTAssertTrue(link.existsOrWait(timeout: 10), identifier)
-            XCTAssertTrue(scrollUntilVisible(link, in: app), identifier)
+            XCTAssertTrue(scrollUntilVisible(link, in: app), "\(identifier)\n\(app.debugDescription)")
             link.tap()
             XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 10), identifier)
             app.activate()
@@ -166,6 +166,8 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         XCTAssertEqual(species.label, Self.expectedSpecies)
         XCTAssertTrue(app.staticTexts["confirm.confidence"].label.hasSuffix("%"))
         XCTAssertTrue(app.buttons["confirm.accept"].isEnabled)
+        XCTAssertTrue(app.buttons["confirm.userPhoto"].isHittable)
+        XCTAssertTrue(app.buttons["Explore \(Self.expectedSpecies)"].isHittable)
         let speciesFrame = species.frame
         XCTAssertFalse(app.staticTexts["confirm.noCandidates"].exists)
         let caption = app.staticTexts["Yours"]
@@ -187,7 +189,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         possibleAttachment.lifetime = .keepAlways
         add(possibleAttachment)
 
-        caption.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        app.staticTexts["Photo 1 of 1"].tap()
         XCTAssertTrue(possible.disappearsOrWait(timeout: 5))
 
         app.buttons["confirm.outingDetails"].tap()
@@ -233,6 +235,9 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         let target = app.descendants(matching: .any)["crop.offCenterPinchTarget"]
         XCTAssertTrue(viewport.existsOrWait(timeout: 10))
         XCTAssertTrue(viewport.isHittable)
+        XCTAssertTrue(app.frame.contains(viewport.frame))
+        XCTAssertFalse(viewport.frame.intersects(app.buttons["crop.done"].frame))
+        XCTAssertFalse(viewport.frame.intersects(app.buttons["crop.back"].frame))
         XCTAssertTrue(target.existsOrWait(timeout: 5))
         let initial = zoom(viewport)
         viewport.pinch(withScale: 2, velocity: 1)
@@ -267,7 +272,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         ]
         app.launch()
         waitForDataSetup(in: app)
-        XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
+        _ = waitForOutingReview(in: app, requireEnabled: false, requireDataSetup: false)
         app.terminate()
         app.launchArguments = [
             "--ui-test-sign-out", "--ui-test-share-store", "--ui-test-observe-share-queue",
@@ -286,7 +291,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         app.launch()
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Home"].existsOrWait(timeout: 15))
-        XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
+        _ = waitForOutingReview(in: app, requireEnabled: false, requireDataSetup: false)
     }
 
     func testShareBootstrapFailureOffersRetryAndExplicitDiscard() {

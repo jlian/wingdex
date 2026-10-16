@@ -68,6 +68,10 @@ struct PasskeyManagementView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .frame(maxWidth: AdaptiveLayout.readableWidth)
+        .frame(maxWidth: .infinity)
+        .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle("Passkeys")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

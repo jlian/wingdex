@@ -15,6 +15,7 @@ struct SpeciesCarousel: UIViewRepresentable {
     let menu: (DexEntry) -> UIMenu
     let accessibilityActions: (DexEntry) -> [ContextMenuAccessibilityAction]
     let onSelect: (DexEntry) -> Void
+    var scrollDirection: UICollectionView.ScrollDirection = .horizontal
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -31,7 +32,7 @@ struct SpeciesCarousel: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UICollectionView {
         let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
+        layout.scrollDirection = scrollDirection
         layout.minimumLineSpacing = 10
         layout.minimumInteritemSpacing = 10
         layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
@@ -40,7 +41,8 @@ struct SpeciesCarousel: UIViewRepresentable {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.alwaysBounceHorizontal = true
+        collectionView.alwaysBounceHorizontal = scrollDirection == .horizontal
+        collectionView.alwaysBounceVertical = scrollDirection == .vertical
         collectionView.delaysContentTouches = false
         collectionView.canCancelContentTouches = true
         collectionView.register(SpeciesCarouselCell.self, forCellWithReuseIdentifier: SpeciesCarouselCell.reuseIdentifier)
@@ -63,11 +65,16 @@ struct SpeciesCarousel: UIViewRepresentable {
             onSelect: onSelect
         )
 
-        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout,
-           layout.itemSize != CGSize(width: cardSize, height: cardSize) {
-            layout.itemSize = CGSize(width: cardSize, height: cardSize)
-            layout.invalidateLayout()
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            if layout.itemSize != CGSize(width: cardSize, height: cardSize)
+                || layout.scrollDirection != scrollDirection {
+                layout.itemSize = CGSize(width: cardSize, height: cardSize)
+                layout.scrollDirection = scrollDirection
+                layout.invalidateLayout()
+            }
         }
+        collectionView.alwaysBounceHorizontal = scrollDirection == .horizontal
+        collectionView.alwaysBounceVertical = scrollDirection == .vertical
         if needsReload { collectionView.reloadData() }
     }
 

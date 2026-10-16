@@ -1,8 +1,43 @@
 @testable import WingDex
 import CoreGraphics
+import SwiftUI
 import XCTest
 
 final class CropViewportGeometryTests: XCTestCase {
+    @MainActor
+    func testResizingRestoresTheCurrentCropInsteadOfPublishingTransitionalBounds() {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 1_200, height: 800)).image { _ in }
+        let initialCrop = CropBoxResult(x: 25, y: 12.5, width: 50, height: 75)
+        var crop = initialCrop
+        let parent = CropScrollView(
+            image: image,
+            initialCrop: initialCrop,
+            cropResult: Binding(get: { crop }, set: { crop = $0 })
+        )
+        let coordinator = CropScrollView.Coordinator(parent: parent)
+        let scrollView = CropUIScrollView(frame: CGRect(x: 0, y: 0, width: 300, height: 300))
+        scrollView.delegate = coordinator
+        scrollView.addSubview(coordinator.imageView)
+        coordinator.layout(scrollView)
+
+        scrollView.setZoomScale(scrollView.zoomScale * 1.5, animated: false)
+        scrollView.setContentOffset(CGPoint(x: 200, y: 100), animated: false)
+        coordinator.scrollViewDidScroll(scrollView)
+        let editedCrop = crop
+        XCTAssertNotEqual(editedCrop.width, initialCrop.width)
+
+        for side: CGFloat in [200, 384, 260, 384] {
+            scrollView.bounds.size = CGSize(width: side, height: side)
+            coordinator.scrollViewDidScroll(scrollView)
+            XCTAssertEqual(crop.width, editedCrop.width, accuracy: 0.000_001)
+            coordinator.layout(scrollView)
+            XCTAssertEqual(crop.x, editedCrop.x, accuracy: 0.000_001)
+            XCTAssertEqual(crop.y, editedCrop.y, accuracy: 0.000_001)
+            XCTAssertEqual(crop.width, editedCrop.width, accuracy: 0.000_001)
+            XCTAssertEqual(crop.height, editedCrop.height, accuracy: 0.000_001)
+        }
+    }
+
     func testFocalRenderedFrameClampsToImageEdges() {
         let portrait = FocalCropGeometry.renderedFrame(
             imageSize: CGSize(width: 800, height: 1_200),

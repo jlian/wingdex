@@ -58,6 +58,10 @@ struct OutingRenameSheet: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .frame(maxWidth: AdaptiveLayout.readableWidth)
+            .frame(maxWidth: .infinity)
+            .background(Color.pageBg.ignoresSafeArea())
             .navigationTitle("Rename Outing")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

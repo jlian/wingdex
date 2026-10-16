@@ -63,6 +63,7 @@ struct PhotoReviewCarousel: UIViewRepresentable {
     let photos: [ProcessedPhoto]
     let onOpen: (ProcessedPhoto) -> Void
     let onRemove: (ProcessedPhoto) -> Void
+    var thumbnailSize: CGFloat = 150
 
     func makeCoordinator() -> Coordinator {
         Coordinator(photos: photos, onOpen: onOpen, onRemove: onRemove)
@@ -73,7 +74,7 @@ struct PhotoReviewCarousel: UIViewRepresentable {
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 8
         layout.minimumInteritemSpacing = 8
-        layout.itemSize = CGSize(width: 150, height: 150)
+        layout.itemSize = CGSize(width: thumbnailSize, height: thumbnailSize)
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
@@ -92,6 +93,11 @@ struct PhotoReviewCarousel: UIViewRepresentable {
         context.coordinator.photos = photos
         context.coordinator.onOpen = onOpen
         context.coordinator.onRemove = onRemove
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout,
+           layout.itemSize != CGSize(width: thumbnailSize, height: thumbnailSize) {
+            layout.itemSize = CGSize(width: thumbnailSize, height: thumbnailSize)
+            layout.invalidateLayout()
+        }
         if oldIDs != photos.map(\.id) { collectionView.reloadData() }
     }
 

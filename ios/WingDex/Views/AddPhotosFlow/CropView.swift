@@ -63,15 +63,12 @@ struct CropView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
+        FoldAwareContent { availableSize in
             if let uiImage = cachedImage {
                 let squareSide = max(
-                    min(geo.size.width, geo.size.height, 400) - cropInset * 2,
+                    min(availableSize.width, availableSize.height, 400) - cropInset * 2,
                     0
                 )
-                // Total height including safe area (since we ignoresSafeArea)
-                let totalHeight = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
-                let cropCenterY = totalHeight / 2
 
                 ZStack {
                     Color.pageBg
@@ -82,7 +79,6 @@ struct CropView: View {
                         cropResult: $currentCrop
                     )
                         .frame(width: squareSide, height: squareSide)
-                        .position(x: geo.size.width / 2, y: cropCenterY)
 
                     #if DEBUG
                     if ProcessInfo.processInfo.arguments.contains("--ui-test-stub-low-confidence-identification") {
@@ -90,8 +86,8 @@ struct CropView: View {
                             .frame(width: squareSide / 3, height: squareSide / 3)
                             .contentShape(Rectangle())
                             .position(
-                                x: geo.size.width / 2 - squareSide / 6,
-                                y: cropCenterY - squareSide / 6
+                                x: availableSize.width / 2 - squareSide / 6,
+                                y: availableSize.height / 2 - squareSide / 6
                             )
                             .allowsHitTesting(false)
                             .accessibilityElement()
@@ -105,13 +101,11 @@ struct CropView: View {
                     }
                     #endif
 
-                    // Glass overlay with a rectangular cutout for the crop area
                     Rectangle()
-                        .fill(.ultraThinMaterial)
+                        .fill(Color.pageBg)
                         .reverseMask {
                             Rectangle()
                                 .frame(width: squareSide, height: squareSide)
-                                .position(x: geo.size.width / 2, y: cropCenterY)
                         }
                             .allowsHitTesting(false)
 
@@ -119,11 +113,9 @@ struct CropView: View {
                     Rectangle()
                         .stroke(colorScheme == .dark ? Color.white : Color.black, lineWidth: 1)
                         .frame(width: squareSide, height: squareSide)
-                        .position(x: geo.size.width / 2, y: cropCenterY)
                         .allowsHitTesting(false)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea()
             } else {
                 Color.pageBg
                     .overlay {
@@ -145,7 +137,7 @@ struct CropView: View {
             }
             cachedImage = image
         }
-        .background(Color.clear)
+        .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle(photoTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar, .bottomBar)
@@ -286,7 +278,7 @@ struct CropViewportGeometry {
     }
 }
 
-private final class CropUIScrollView: UIScrollView {
+final class CropUIScrollView: UIScrollView {
     var onLayout: (() -> Void)?
 
     override func layoutSubviews() {
@@ -295,7 +287,7 @@ private final class CropUIScrollView: UIScrollView {
     }
 }
 
-private struct CropScrollView: UIViewRepresentable {
+struct CropScrollView: UIViewRepresentable {
     let image: UIImage
     let initialCrop: CropBoxResult
     @Binding var cropResult: CropBoxResult
@@ -407,7 +399,10 @@ private struct CropScrollView: UIViewRepresentable {
         }
 
         private func publishViewport(_ scrollView: UIScrollView) {
-            guard isConfigured, !isApplyingViewport else { return }
+            // UIKit can report scrolling after a resize but before the crop is restored.
+            guard isConfigured, !isApplyingViewport,
+                  scrollView.bounds.size == lastViewportSize
+            else { return }
             let side = min(scrollView.bounds.width, scrollView.bounds.height)
             guard side > 0 else { return }
             parent.cropResult = CropViewportGeometry.cropResult(

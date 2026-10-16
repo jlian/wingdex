@@ -8,7 +8,7 @@ struct WingDexView: View {
     @Environment(\.showSettings) private var showSettings
     @State private var sortField: DexSortField = .date
     @State private var sortAscending = false
-    @State private var contextMenuSpecies: DexEntry?
+    @State private var selectedSpeciesID: String?
 
     // MARK: - Sort Options
 
@@ -76,7 +76,7 @@ struct WingDexView: View {
     var body: some View {
         @Bindable var navigation = navigation
 
-        NavigationStack {
+        NavigationSplitView {
             VStack(spacing: 0) {
                 CachedDataNotice()
                 rootContent
@@ -100,15 +100,21 @@ struct WingDexView: View {
                     placement: .navigationBarDrawer(displayMode: .automatic),
                     prompt: "Search species"
                 )
-                .navigationDestination(for: DexEntry.self) { entry in
-                    SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
-                }
-                .navigationDestination(item: $contextMenuSpecies) { entry in
-                    SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
-                }
                 .sensoryFeedback(.selection, trigger: sortField)
                 .sensoryFeedback(.selection, trigger: sortAscending)
+                .navigationSplitViewColumnWidth(min: 260, ideal: 320)
+        } detail: {
+            NavigationStack {
+                if let selectedSpeciesID, let entry = store.dexEntry(byKey: selectedSpeciesID) {
+                    SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
+                } else {
+                    ContentUnavailableView("Select a Species", systemImage: "bird")
+                        .background(Color.pageBg.ignoresSafeArea())
+                }
+            }
+            .id(selectedSpeciesID)
         }
+        .navigationSplitViewStyle(.balanced)
     }
 
     private var cachedLoadErrorBinding: Binding<Bool> {
@@ -120,48 +126,45 @@ struct WingDexView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 5) {
-                Menu {
-                    Picker(
-                        "Sort by",
-                        selection: Binding(
-                            get: { sortField },
-                            set: { selectSortField($0) }
-                        )
-                    ) {
-                        ForEach(DexSortField.allCases, id: \.self) { field in
-                            Label(field.label, systemImage: field.icon)
-                                .tag(field)
-                        }
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Menu {
+                Picker(
+                    "Sort by",
+                    selection: Binding(
+                        get: { sortField },
+                        set: { selectSortField($0) }
+                    )
+                ) {
+                    ForEach(DexSortField.allCases, id: \.self) { field in
+                        Label(field.label, systemImage: field.icon)
+                            .tag(field)
                     }
+                }
 
-                    Divider()
+                Divider()
 
-                    Button {
-                        sortAscending.toggle()
-                    } label: {
-                        Label(
-                            sortAscending ? "Ascending" : "Descending",
-                            systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                        )
-                    }
+                Button {
+                    sortAscending.toggle()
                 } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                    Label(
+                        sortAscending ? "Ascending" : "Descending",
+                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                    )
                 }
-                .glassEffect(.regular.interactive())
-
-                Button { showSettings() } label: {
-                    AccountAvatarView(size: 40)
-                }
-                .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
-                .accessibilityValue(
-                    auth.identity == .anonymous && store.hasAccountDataAtRisk
-                        ? "These sightings are only on this device"
-                        : ""
-                )
+            } label: {
+                Label("Sort", systemImage: "arrow.up.arrow.down")
             }
-            .padding(.trailing, -12)
+            .glassEffect(.regular.interactive())
+
+            Button { showSettings() } label: {
+                AccountAvatarView(size: 40)
+            }
+            .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
+            .accessibilityValue(
+                auth.identity == .anonymous && store.hasAccountDataAtRisk
+                    ? "These sightings are only on this device"
+                    : ""
+            )
         }
         .sharedBackgroundVisibility(.hidden)
     }
@@ -233,8 +236,8 @@ struct WingDexView: View {
     // MARK: - Species List
 
     private var speciesList: some View {
-        List(sortedDex) { entry in
-            NavigationLink(value: entry) {
+        List(sortedDex, selection: $selectedSpeciesID) { entry in
+            NavigationLink(value: entry.id) {
                 BirdRow(
                     speciesName: entry.speciesName,
                     displayName: entry.commonName,
@@ -246,7 +249,7 @@ struct WingDexView: View {
             }
             .contextMenu {
                 Button {
-                    contextMenuSpecies = entry
+                    selectedSpeciesID = entry.id
                 } label: {
                     Label("View Details", systemImage: "bird")
                 }

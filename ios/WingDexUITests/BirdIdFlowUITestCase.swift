@@ -46,33 +46,47 @@ class BirdIdFlowUITestCase: XCTestCase {
     func scrollUntilVisible(
         _ element: XCUIElement,
         in app: XCUIApplication,
+        scrollingContainer: XCUIElement? = nil,
         maximumSwipes: Int = 5
     ) -> Bool {
-        let container = app.collectionViews.firstMatch.exists
-            ? app.collectionViews.firstMatch
-            : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
+        let container = scrollingContainer ?? self.scrollingContainer(containing: element, in: app)
 
         for swipe in 0...maximumSwipes {
             let keyboard = app.keyboards.firstMatch
             let topNav = app.navigationBars.firstMatch
 
-            let visibleTop = topNav.exists ? topNav.frame.maxY : container.frame.minY
+            var visibleFrame = container.frame
+            if topNav.exists, topNav.frame.intersects(visibleFrame) {
+                let bar = topNav.frame
+                if bar.width >= bar.height {
+                    visibleFrame.origin.y = max(visibleFrame.minY, bar.maxY)
+                    visibleFrame.size.height = max(0, container.frame.maxY - visibleFrame.minY)
+                } else if bar.midX > visibleFrame.midX {
+                    visibleFrame.size.width = max(0, bar.minX - visibleFrame.minX)
+                } else {
+                    visibleFrame.origin.x = max(visibleFrame.minX, bar.maxX)
+                    visibleFrame.size.width = max(0, container.frame.maxX - visibleFrame.minX)
+                }
+            }
+            let visibleTop = visibleFrame.minY
             let visibleBottom = keyboard.exists && keyboard.frame.minY > visibleTop + 60
-                ? keyboard.frame.minY
-                : container.frame.maxY
+                ? min(keyboard.frame.minY, visibleFrame.maxY)
+                : visibleFrame.maxY
             let visibleHeight = visibleBottom - visibleTop
 
             // A clipped control can be hittable while its tap center is behind
             // the navigation bar or keyboard, especially after sheet dismissal.
             if element.exists && element.isHittable,
-                element.frame.midY > visibleTop + 10,
-                element.frame.midY < visibleBottom - 10 {
+                isCenterVisible(element.frame, in: CGRect(
+                    x: visibleFrame.minX, y: visibleTop,
+                    width: visibleFrame.width, height: visibleHeight
+                )) {
                 return true
             }
             if swipe == maximumSwipes { break }
 
             guard visibleHeight > 60 else {
-                app.swipeUp()
+                container.swipeUp()
                 continue
             }
 
@@ -99,15 +113,37 @@ class BirdIdFlowUITestCase: XCTestCase {
                 endY = visibleTop + visibleHeight * 0.25
             }
 
-            let centerX = container.frame.midX
-            let startCoord = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: centerX, dy: startY))
-            let endCoord = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: centerX, dy: endY))
+            let centerX = visibleFrame.midX
+            // Keep the drag on the scrolling container's display.
+            let origin = container.frame.origin
+            let startCoord = container.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: centerX - origin.x, dy: startY - origin.y))
+            let endCoord = container.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: centerX - origin.x, dy: endY - origin.y))
 
             startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
         }
         return false
+    }
+
+    func isCenterVisible(_ frame: CGRect, in viewport: CGRect) -> Bool {
+        frame.midX > viewport.minX + 10 && frame.midX < viewport.maxX - 10
+            && frame.midY > viewport.minY + 10 && frame.midY < viewport.maxY - 10
+    }
+
+    func scrollingContainer(containing element: XCUIElement, in app: XCUIApplication) -> XCUIElement {
+        if element.exists {
+            let identifier = element.identifier.isEmpty ? element.label : element.identifier
+            if !identifier.isEmpty {
+                for containers in [app.collectionViews, app.scrollViews] {
+                    let container = containers.containing(element.elementType, identifier: identifier).firstMatch
+                    if container.exists { return container }
+                }
+            }
+        }
+        return app.collectionViews.firstMatch.exists
+            ? app.collectionViews.firstMatch
+            : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
     }
 
     /// The accepted name is on the adjustLocation button; empty is displayed as 'No location'.
@@ -124,7 +160,12 @@ class BirdIdFlowUITestCase: XCTestCase {
     @discardableResult
     func openLocationPicker(in app: XCUIApplication) -> XCUIElement {
         let adjustButton = app.buttons["outing.adjustLocation"]
-        XCTAssertTrue(scrollUntilVisible(adjustButton, in: app), "Adjust location button not found on review screen")
+        XCTAssertTrue(
+            scrollUntilVisible(
+                adjustButton, in: app, scrollingContainer: app.collectionViews["outing.metadata"]
+            ),
+            "Adjust location button not found on review screen"
+        )
         adjustButton.tap()
         let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.existsOrWait(timeout: 5), "Native search field did not appear in location picker")
@@ -352,7 +393,11 @@ class BirdIdFlowUITestCase: XCTestCase {
             waitForDataSetup(in: app)
         }
         let continueButton = app.buttons["outing.continue"]
-        XCTAssertTrue(continueButton.existsOrWait(timeout: 15), "Outing review never appeared")
+        // Cold session creation and first-use photo analysis can outlast UI transitions.
+        XCTAssertTrue(
+            continueButton.existsOrWait(timeout: 60),
+            "Outing review never appeared\n\(app.debugDescription)"
+        )
         if requireEnabled {
             XCTAssertTrue(
                 continueButton.isEnabledOrWait(timeout: 15),
