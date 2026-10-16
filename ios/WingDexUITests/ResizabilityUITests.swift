@@ -85,6 +85,11 @@ final class ResizabilityUITests: BirdIdFlowUITestCase {
             app.buttons[tab].tap()
             if tab != "Home" {
                 let sort = app.buttons["Sort"]
+                if !sort.exists {
+                    let sidebar = app.buttons["Show Sidebar"]
+                    XCTAssertTrue(sidebar.isHittable, app.debugDescription)
+                    sidebar.tap()
+                }
                 XCTAssertTrue(sort.isHittable, app.debugDescription)
                 sort.tap()
                 let name = app.buttons["Name"]
