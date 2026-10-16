@@ -77,8 +77,10 @@ class BirdIdFlowUITestCase: XCTestCase {
             // A clipped control can be hittable while its tap center is behind
             // the navigation bar or keyboard, especially after sheet dismissal.
             if element.exists && element.isHittable,
-                element.frame.midY > visibleTop + 10,
-                element.frame.midY < visibleBottom - 10 {
+                isCenterVisible(element.frame, in: CGRect(
+                    x: visibleFrame.minX, y: visibleTop,
+                    width: visibleFrame.width, height: visibleHeight
+                )) {
                 return true
             }
             if swipe == maximumSwipes { break }
@@ -112,14 +114,21 @@ class BirdIdFlowUITestCase: XCTestCase {
             }
 
             let centerX = visibleFrame.midX
-            let startCoord = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: centerX, dy: startY))
-            let endCoord = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: centerX, dy: endY))
+            // Keep the drag on the scrolling container's display.
+            let origin = container.frame.origin
+            let startCoord = container.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: centerX - origin.x, dy: startY - origin.y))
+            let endCoord = container.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: centerX - origin.x, dy: endY - origin.y))
 
             startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
         }
         return false
+    }
+
+    func isCenterVisible(_ frame: CGRect, in viewport: CGRect) -> Bool {
+        frame.midX > viewport.minX + 10 && frame.midX < viewport.maxX - 10
+            && frame.midY > viewport.minY + 10 && frame.midY < viewport.maxY - 10
     }
 
     func scrollingContainer(containing element: XCUIElement, in app: XCUIApplication) -> XCUIElement {

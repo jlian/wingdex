@@ -133,4 +133,14 @@ final class AdaptiveLayoutTests: XCTestCase {
             .zero
         )
     }
+
+    @MainActor
+    func testDeletingOutingOnlyClearsItsOwnSplitViewSelection() {
+        XCTAssertNil(OutingsView.selectionAfterDeleting("outing-a", currentSelection: "outing-a"))
+        XCTAssertEqual(
+            OutingsView.selectionAfterDeleting("outing-a", currentSelection: "outing-b"),
+            "outing-b"
+        )
+        XCTAssertNil(OutingsView.selectionAfterDeleting("outing-a", currentSelection: nil))
+    }
 }

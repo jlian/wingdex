@@ -2,6 +2,19 @@ import XCTest
 
 @MainActor
 final class ResizabilityUITests: BirdIdFlowUITestCase {
+    func testControlVisibilityRequiresHorizontalAndVerticalClearance() {
+        let viewport = CGRect(x: 80, y: 100, width: 400, height: 500)
+        XCTAssertTrue(isCenterVisible(CGRect(x: 100, y: 120, width: 44, height: 44), in: viewport))
+        for frame in [
+            CGRect(x: 40, y: 120, width: 44, height: 44),
+            CGRect(x: 450, y: 120, width: 44, height: 44),
+            CGRect(x: 100, y: 60, width: 44, height: 44),
+            CGRect(x: 100, y: 570, width: 44, height: 44),
+        ] {
+            XCTAssertFalse(isCenterVisible(frame, in: viewport), "Obstructed control: \(frame)")
+        }
+    }
+
     func testEmptyHomeControlsScrollWithAccessibilityText() {
         let app = application()
         app.launchArguments += [
@@ -14,7 +27,10 @@ final class ResizabilityUITests: BirdIdFlowUITestCase {
         let scroll = app.scrollViews["home.emptyContent"]
         XCTAssertTrue(scroll.existsOrWait(timeout: 5))
         let identify = app.buttons["Identify Birds"]
-        XCTAssertTrue(scrollUntilVisible(identify, in: app, scrollingContainer: scroll))
+        XCTAssertTrue(
+            scrollUntilVisible(identify, in: app, scrollingContainer: scroll),
+            "Window: \(app.windows.firstMatch.frame), scroll: \(scroll.frame), button: \(identify.frame)\n\(app.debugDescription)"
+        )
         XCTAssertTrue(app.windows.firstMatch.frame.contains(identify.frame))
         identify.tap()
         XCTAssertTrue(app.buttons["Choose from Library"].existsOrWait(timeout: 5))

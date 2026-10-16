@@ -106,7 +106,9 @@ stays inside the current safe area and restores the edited, normalized crop
 when its bounds change. Photo selection scrolls in short windows; photo
 selection and sign-in controls stay at a readable width in expanded windows.
 WingDex and Outings use native collection/detail navigation, collapsing to a
-single navigation stack at compact widths. Sidebar widths have no hard maximum,
+single navigation stack at compact widths. A completed outing deletion clears
+only its matching sidebar selection, preserving a more recently selected outing.
+Sidebar widths have no hard maximum,
 letting the system balance the columns around an active fold. Wide Home layouts place the recent
 species grid beside recent outings, with 44-point minimum section-heading tap
 targets. Recent-species cards and sighting links share

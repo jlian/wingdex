@@ -125,7 +125,11 @@ struct OutingsView: View {
         } detail: {
             NavigationStack {
                 if let selectedOutingID, store.outing(id: selectedOutingID) != nil {
-                    OutingDetailView(outingId: selectedOutingID, onDeleted: { self.selectedOutingID = nil })
+                    OutingDetailView(outingId: selectedOutingID, onDeleted: {
+                        self.selectedOutingID = Self.selectionAfterDeleting(
+                            selectedOutingID, currentSelection: self.selectedOutingID
+                        )
+                    })
                 } else {
                     ContentUnavailableView("Select an Outing", systemImage: "binoculars")
                         .background(Color.pageBg.ignoresSafeArea())
@@ -134,6 +138,10 @@ struct OutingsView: View {
             .id(selectedOutingID)
         }
         .navigationSplitViewStyle(.balanced)
+    }
+
+    static func selectionAfterDeleting(_ deletedID: String, currentSelection: String?) -> String? {
+        currentSelection == deletedID ? nil : currentSelection
     }
 
     private var cachedLoadErrorBinding: Binding<Bool> {
