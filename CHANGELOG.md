@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/jlian/wingdex/compare/v1.32.2...v1.33.0) (2026-10-16)
+
+
+### Features
+
+* **iOS:** adapt WingDex for iPhone Duo ([#451](https://github.com/jlian/wingdex/issues/451)) ([49be78a](https://github.com/jlian/wingdex/commit/49be78a8624fff414e7fea4208e5c6b541776e4c)), closes [#123](https://github.com/jlian/wingdex/issues/123)
+
 ## [1.32.2](https://github.com/jlian/wingdex/compare/v1.32.1...v1.32.2) (2026-10-01)
 
 
