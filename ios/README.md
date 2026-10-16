@@ -91,6 +91,8 @@ build cache.
 
 Build release archives with Xcode 27.1 or later. The deployment target remains
 iOS 26; building with an older SDK does not enable Duo's full-display layout.
+The native test and release workflows explicitly select the installed Xcode 27.1
+on the `xcode-27` runner image, whose default Xcode is still 27.0.
 See Apple's [preparation guide](https://developer.apple.com/iphone-duo/prepare/).
 The adaptive design follows Apple's
 [Duo design guidance](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo/).

@@ -269,6 +269,9 @@ jobs:
     needs: check
     if: needs.check.outputs.should_release == 'true' && needs.check.outputs.has_release == 'true'
     runs-on: xcode-27
+    env:
+      # Match native tests and enable Duo's full-display layout in archives.
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     timeout-minutes: 45
     steps:
       # Build the exact branch tip used to calculate the release version.
