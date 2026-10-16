@@ -272,7 +272,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         ]
         app.launch()
         waitForDataSetup(in: app)
-        XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
+        _ = waitForOutingReview(in: app, requireEnabled: false, requireDataSetup: false)
         app.terminate()
         app.launchArguments = [
             "--ui-test-sign-out", "--ui-test-share-store", "--ui-test-observe-share-queue",
@@ -291,7 +291,7 @@ final class BirdIdFlowUITests: BirdIdFlowUITestCase {
         app.launch()
         waitForDataSetup(in: app)
         XCTAssertTrue(app.buttons["Home"].existsOrWait(timeout: 15))
-        XCTAssertTrue(app.buttons["outing.continue"].existsOrWait(timeout: 15))
+        _ = waitForOutingReview(in: app, requireEnabled: false, requireDataSetup: false)
     }
 
     func testShareBootstrapFailureOffersRetryAndExplicitDiscard() {

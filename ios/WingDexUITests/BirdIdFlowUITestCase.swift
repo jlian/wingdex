@@ -393,7 +393,11 @@ class BirdIdFlowUITestCase: XCTestCase {
             waitForDataSetup(in: app)
         }
         let continueButton = app.buttons["outing.continue"]
-        XCTAssertTrue(continueButton.existsOrWait(timeout: 15), "Outing review never appeared")
+        // Cold session creation and first-use photo analysis can outlast UI transitions.
+        XCTAssertTrue(
+            continueButton.existsOrWait(timeout: 60),
+            "Outing review never appeared\n\(app.debugDescription)"
+        )
         if requireEnabled {
             XCTAssertTrue(
                 continueButton.isEnabledOrWait(timeout: 15),

@@ -314,6 +314,11 @@ fall back to XCTest's native wait only when needed. Value/camera predicates also
 check their current value first. No private XCTest polling or quiescence settings
 are used; Apple does not guarantee the waiter's polling interval.
 
+Outing-review readiness has a bounded 60-second startup allowance for anonymous
+session creation and first-use photo analysis on cold simulators. Share bootstrap
+journeys use the same readiness helper. This is a predicate wait, not a sleep or
+test retry; failures include the current UI hierarchy.
+
 Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
 Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
 accessibility run on separate Xcode 27 ARM images, using a
