@@ -16,14 +16,16 @@ private let collageCornerRadius: CGFloat = 10
 /// Photo opacity (0 = invisible, 1 = full brightness)
 private let collageOpacity: Double = 1
 
-// -- Blur overlay parameters (same system as SignInView) --
-
 /// Where the top blur finishes fading out (fraction of screen, 0 = no top blur)
-private let collageTopBlurFadeEnd: Double = 0.05
-/// How far down the screen remains unblurred (0 = top only, 1 = full screen)
-private let collageBlurFadeEnd: Double = 0.5
-/// Blur fade-in length as a fraction of screen height
-private let collageBlurFadeLength: Double = 0.25
+private let collageTopBlurFadeEnd: CGFloat = 0.05
+
+enum PhotoSelectionLayout {
+    static func fadeRange(height: CGFloat, controlsTop: CGFloat?) -> ClosedRange<CGFloat> {
+        let height = max(0, height)
+        let end = min(max(controlsTop ?? height * 0.65, 0), height)
+        return max(0, end - min(180, height * 0.3))...end
+    }
+}
 
 // MARK: - Photo Selection View
 
@@ -35,137 +37,87 @@ private let collageBlurFadeLength: Double = 0.25
 struct PhotoSelectionView: View {
     @Environment(AppNavigationModel.self) private var navigation
     @Environment(ToastCenter.self) private var toasts
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(CameraPhotoSaver.preferenceKey) private var saveCameraPhotos = true
     @Bindable var viewModel: AddPhotosViewModel
     @State private var showLibrary = false
     @State private var showCamera = false
     @State private var showCameraUnavailable = false
     @State private var collageDrag: CGSize = .zero
+    @State private var controlsTop: CGFloat?
     @State private var collageCache = CollageImageCache.shared
     @StateObject private var locationService = LocationService()
     @State private var cameraPhotoSaver = CameraPhotoSaver()
 
     var body: some View {
         GeometryReader { geo in
-            let screenH = geo.size.height
-        ZStack {
-            // Base background
-            Color.pageBg.ignoresSafeArea()
+            let divisions = AdaptiveLayout.activeDivisionFrames(in: geo)
+            ZStack {
+                Color.pageBg.ignoresSafeArea()
 
-            // Diagonal photo collage -- full screen
-            DiagonalPhotoCollage(imageNames: CollageImageCache.names, images: collageCache.images)
-                .offset(collageDrag)
-                .ignoresSafeArea()
+                if divisions.isEmpty {
+                    photoCollage.ignoresSafeArea()
 
-            // Blur mask (shared shape, same system as SignInView)
-            //
-            // Top:    black -> clear over collageTopBlurFadeEnd
-            // Middle: clear (unblurred) until collageBlurFadeEnd
-            // Bottom: clear -> black over collageBlurFadeLength, then solid black
-            let blurMask = VStack(spacing: 0) {
-                LinearGradient(
-                    colors: [.black, .clear] as [Color],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: screenH * collageTopBlurFadeEnd)
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .mask(collageMask(height: geo.size.height))
+                        .ignoresSafeArea()
 
-                Color.clear
-                    .frame(height: screenH * max(collageBlurFadeEnd - collageTopBlurFadeEnd, 0))
+                    Color.pageBg
+                        .mask(collageMask(height: geo.size.height))
+                        .ignoresSafeArea()
 
-                LinearGradient(
-                    colors: [.clear, .black] as [Color],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: screenH * collageBlurFadeLength)
-
-                Color.black
+                    selectionContent(in: geo.size, centered: false)
+                } else {
+                    AdaptiveColumns {
+                        photoCollage
+                            .mask(LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0),
+                                    .init(color: .black, location: 0.06),
+                                    .init(color: .black, location: 0.9),
+                                    .init(color: .clear, location: 1),
+                                ],
+                                startPoint: .top, endPoint: .bottom
+                            ))
+                            .clipped()
+                    } secondary: {
+                        GeometryReader { pane in
+                            selectionContent(in: pane.size, centered: true)
+                        }
+                    }
+                }
             }
-
-            // Blur layer
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .mask(blurMask)
-                .ignoresSafeArea()
-
-            // Fade to background color -- same mask so it follows the blur transition
-            Color.pageBg
-                .mask(blurMask)
-                .opacity(0.60)
-                .ignoresSafeArea()
-
-            // Foreground content
-            VStack(spacing: 0) {
-                Spacer()
-
-                VStack(spacing: 6) {
-                    Text("Identify Birds")
-                        .font(.system(.title, design: .serif, weight: .semibold))
-                        .foregroundStyle(Color.foregroundText)
-                    Text("One bird per photo for accuracy\nClose-ups and side profiles work best")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mutedText)
-                        .multilineTextAlignment(.center)
-                }
-
-                Spacer().frame(height: 28)
-
-                VStack(spacing: 12) {
-                    Button {
-                        showLibrary = true
-                    } label: {
-                        Label("Choose from Library", systemImage: "photo.on.rectangle")
-                            .font(.body.weight(.medium))
-                            .frame(maxWidth: .infinity, minHeight: 50)
+            .coordinateSpace(name: "photoSelection")
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        guard !reduceMotion else { return }
+                        // Rubber-band function: maps unbounded input to bounded output.
+                        let rubberBand = { (v: CGFloat, limit: CGFloat, resistance: CGFloat) -> CGFloat in
+                            limit * tanh(v / (limit * resistance))
+                        }
+                        let limit: CGFloat = 60
+                        let resistance: CGFloat = 16
+                        collageDrag = CGSize(
+                            width: rubberBand(value.translation.width, limit, resistance),
+                            height: rubberBand(value.translation.height, limit, resistance)
+                        )
                     }
-                    .buttonStyle(.glassProminent)
-                    .buttonSizing(.flexible)
-
-                    Button {
-                        openCamera()
-                    } label: {
-                        Label("Take Photo", systemImage: "camera")
-                            .font(.body.weight(.medium))
-                            .frame(maxWidth: .infinity, minHeight: 50)
+                    .onEnded { _ in
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                            collageDrag = .zero
+                        }
                     }
-                    .buttonStyle(.glass)
-                    .buttonSizing(.flexible)
-                    .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-            }
-        }
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture()
-                .onChanged { value in
-                    // Rubber-band function: maps unbounded input to bounded output.
-                    // limit: max displacement in points
-                    // resistance: how hard to drag (higher = stiffer). 1.0 = no resistance.
-                    let rubberBand = { (v: CGFloat, limit: CGFloat, resistance: CGFloat) -> CGFloat in
-                        limit * tanh(v / (limit * resistance))
-                    }
-                    let limit: CGFloat = 60   // max pixels the collage can move
-                    let resistance: CGFloat = 16  // drag divisor (16 = very stiff)
-                    collageDrag = CGSize(
-                        width: rubberBand(value.translation.width, limit, resistance),
-                        height: rubberBand(value.translation.height, limit, resistance)
-                    )
-                }
-                .onEnded { _ in
-                    // Spring back to center
-                    // response: duration in seconds (lower = snappier)
-                    // dampingFraction: 0 = infinite bounce, 1 = no bounce (critically damped)
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                        collageDrag = .zero
-                    }
-                }
-        )
-        .toolbar(.hidden, for: .navigationBar)
+            )
+            .toolbar(.hidden, for: .navigationBar)
         }
         .task { await collageCache.load() }
+        .onChange(of: reduceMotion) {
+            if reduceMotion { collageDrag = .zero }
+        }
         .onChange(of: viewModel.selectedItems) {
             if !viewModel.selectedItems.isEmpty {
                 Task { await viewModel.processSelectedPhotos() }
@@ -227,6 +179,87 @@ struct PhotoSelectionView: View {
                 }
             }
             .ignoresSafeArea()
+        }
+    }
+
+    private var photoCollage: some View {
+        DiagonalPhotoCollage(imageNames: CollageImageCache.names, images: collageCache.images)
+            .offset(collageDrag)
+            .opacity(dynamicTypeSize.isAccessibilitySize ? 0.12 : 1)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private func collageMask(height: CGFloat) -> some View {
+        let fade = PhotoSelectionLayout.fadeRange(height: height, controlsTop: controlsTop)
+        let height = max(1, height)
+        return LinearGradient(
+            stops: [
+                .init(color: .black, location: 0),
+                .init(color: .clear, location: min(collageTopBlurFadeEnd, fade.lowerBound / height)),
+                .init(color: .clear, location: fade.lowerBound / height),
+                .init(color: .black, location: fade.upperBound / height),
+                .init(color: .black, location: 1),
+            ],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+
+    private func selectionContent(in size: CGSize, centered: Bool) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+                selectionControls
+                    .onGeometryChange(for: CGFloat.self) { geometry in
+                        geometry.frame(in: .named("photoSelection")).minY
+                    } action: { controlsTop = $0 }
+                if centered {
+                    Spacer(minLength: 24)
+                } else {
+                    Spacer().frame(height: 24)
+                }
+            }
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity, minHeight: size.height)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private var selectionControls: some View {
+        VStack(spacing: 28) {
+            VStack(spacing: 6) {
+                Text("Identify Birds")
+                    .font(.system(.title, design: .serif, weight: .semibold))
+                    .foregroundStyle(Color.foregroundText)
+                Text("One bird per photo for accuracy\nClose-ups and side profiles work best")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 12) {
+                Button {
+                    showLibrary = true
+                } label: {
+                    Label("Choose from Library", systemImage: "photo.on.rectangle")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonSizing(.flexible)
+
+                Button {
+                    openCamera()
+                } label: {
+                    Label("Take Photo", systemImage: "camera")
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.glass)
+                .buttonSizing(.flexible)
+                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+            }
+            .padding(.horizontal, 24)
         }
     }
 

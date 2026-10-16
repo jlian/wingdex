@@ -44,8 +44,12 @@ struct PendingUploadsView: View {
             }
             .padding(.vertical, 4)
           }
+          .scrollContentBackground(.hidden)
+          .frame(maxWidth: AdaptiveLayout.readableWidth)
+          .frame(maxWidth: .infinity)
         }
       }
+      .background(Color.pageBg.ignoresSafeArea())
       .navigationTitle("Saved Uploads")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

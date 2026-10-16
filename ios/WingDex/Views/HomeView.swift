@@ -10,11 +10,11 @@ struct HomeView: View {
     @Environment(\.showOutings) private var showOutings
     @Environment(\.showSettings) private var showSettings
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var committedSpeciesEntry: DexEntry?
-    @State private var actionDestination: OutingActionDestination?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 CachedDataNotice()
                 rootContent
@@ -28,30 +28,16 @@ struct HomeView: View {
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // WHY HStack around a single button: the other tabs group the avatar
-                        // with a sort button, and that custom container drops the toolbar
-                        // button style's content insets. Without the same container here the
-                        // avatar sits further from the trailing edge than on every other tab.
-                        HStack(spacing: 5) {
-                            Button { showSettings() } label: {
-                                AccountAvatarView(size: 40)
-                            }
-                            .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
-                            .accessibilityValue(
-                                auth.identity == .anonymous && store.hasAccountDataAtRisk
-                                    ? "These sightings are only on this device"
-                                    : ""
-                            )
+                        Button { showSettings() } label: {
+                            AccountAvatarView(size: 40)
                         }
-                        // WHY negative padding: shifts the avatar closer to the trailing edge
-                        // to match Apple Music's profile button position. Without this, the
-                        // system toolbar inset leaves too much gap on the right.
-                        .padding(.trailing, -12)
+                        .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
+                        .accessibilityValue(
+                            auth.identity == .anonymous && store.hasAccountDataAtRisk
+                                ? "These sightings are only on this device"
+                                : ""
+                        )
                     }
-                    // WHY .sharedBackgroundVisibility(.hidden): removes the default liquid glass
-                    // pill from behind the avatar button so it renders flat (like Apple Music's
-                    // profile icon). HomeView has no sort button, so no explicit .glassEffect
-                    // is needed here.
                     .sharedBackgroundVisibility(.hidden)
                 }
                 .refreshable {
@@ -68,12 +54,6 @@ struct HomeView: View {
                 }
                 .navigationDestination(for: Outing.self) { outing in
                     OutingDetailView(outingId: outing.id)
-                }
-                .navigationDestination(item: $actionDestination) { destination in
-                    OutingDetailView(outingId: destination.outing.id)
-                }
-                .navigationDestination(item: $committedSpeciesEntry) { entry in
-                    SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
                 }
         }
     }
@@ -109,152 +89,118 @@ struct HomeView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        FoldAwareContent { _ in
+            VStack(spacing: 24) {
+                Spacer()
 
-            // Bird icon in circular tinted background - matches web layout
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                Image("BirdLogo")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
-                    .foregroundStyle(Color.accentColor)
-            }
-
-            VStack(spacing: 12) {
-                Text("Got bird pics?")
-                    .font(.system(.largeTitle, design: .serif, weight: .semibold))
-                    .foregroundStyle(Color.foregroundText)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Add your photos, ID the birds, and build your WingDex.")
-                    .font(.body)
-                    .foregroundStyle(Color.mutedText)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Button {
-                showAddPhotos()
-            } label: {
-                Label {
-                    Text("Identify Birds")
-                        .font(.body.weight(.medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "camera.fill")
-                        .font(.body)
+                // Bird icon in circular tinted background - matches web layout
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image("BirdLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .foregroundStyle(Color.accentColor)
                 }
-                .font(.body.weight(.medium))
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .padding(.vertical, 10)
-            }
-            .buttonStyle(.glassProminent)
-            .buttonSizing(.flexible)
-            .tint(Color.accentColor)
-            .padding(.horizontal, 32)
 
-            Spacer()
+                VStack(spacing: 12) {
+                    Text("Got bird pics?")
+                        .font(.system(.largeTitle, design: .serif, weight: .semibold))
+                        .foregroundStyle(Color.foregroundText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Add your photos, ID the birds, and build your WingDex.")
+                        .font(.body)
+                        .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button {
+                    showAddPhotos()
+                } label: {
+                    Label {
+                        Text("Identify Birds")
+                            .font(.body.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "camera.fill")
+                            .font(.body)
+                    }
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonSizing(.flexible)
+                .tint(Color.accentColor)
+                .padding(.horizontal, 32)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, 24)
     }
 
     // MARK: - Data View
 
     private var dataView: some View {
-        List {
-            // Hero stats
-            Section {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(store.dex.count)")
-                        .font(.system(.largeTitle, design: .serif, weight: .semibold))
-                        .foregroundStyle(Color.foregroundText)
-                    Text("species observed")
-                        .font(.system(.title3, design: .serif))
-                        .italic()
-                        .foregroundStyle(Color.mutedText)
-                }
-            }
-            .listRowSeparator(.hidden)
-
-            // Recent species - horizontal scroll with gradient cards
-            let recentSpecies = store.recentSpecies()
-            if !recentSpecies.isEmpty {
-                Section {
-                    Button {
-                        showWingDex()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text("Recent Species")
-                                .font(.system(.title3, design: .serif, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(Color.foregroundText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .listRowSeparator(.hidden)
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open WingDex")
-
-                    GeometryReader { geo in
-                        let spacing: CGFloat = 10
-                        let padding: CGFloat = 16
-                        let visibleCards: CGFloat = dynamicTypeSize.isAccessibilitySize ? 1.1 : 2.25
-                        let cardSize = (geo.size.width - padding * 2 - spacing * 2) / visibleCards
-                        SpeciesCarousel(
-                            entries: recentSpecies,
-                            auth: auth,
-                            store: store,
-                            toasts: toasts,
-                            cardSize: cardSize,
-                            menu: { speciesContextMenu(for: $0) },
-                            accessibilityActions: { speciesAccessibilityActions(for: $0) },
-                            onSelect: { committedSpeciesEntry = $0 }
-                        )
-                        .frame(height: cardSize)
-                    }
-                    .aspectRatio(dynamicTypeSize.isAccessibilitySize ? 1.1 : 2.25, contentMode: .fit)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                }
-            }
-
-            // Recent outings
-            let recentOutings = store.recentOutings()
-            if !recentOutings.isEmpty {
-                Section {
-                    Button {
-                        showOutings()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text("Recent Outings")
-                                .font(.system(.title3, design: .serif, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(Color.foregroundText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .listRowSeparator(.hidden)
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open Outings")
-
-                    ForEach(recentOutings) { outing in
-                        NavigationLink(value: outing) {
-                            OutingRow(outing: outing, store: store)
-                        }
-                        .outingRowActions(
-                            outing: outing,
-                            onView: {
-                                actionDestination = OutingActionDestination(outing: outing)
+        GeometryReader { geo in
+            if AdaptiveLayout.prefersPairedPanes(
+                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    speciesSummary.padding(.horizontal, 16)
+                    AdaptiveColumns {
+                        VStack(alignment: .leading, spacing: 12) {
+                            sectionHeading("Recent Species", accessibilityLabel: "Open WingDex", action: showWingDex)
+                                .padding(.horizontal, 16)
+                            GeometryReader { pane in
+                                recentSpeciesCarousel(
+                                    cardSize: max(0, min((pane.size.width - 42) / 2, 200)),
+                                    scrollDirection: .vertical
+                                )
                             }
-                        )
+                        }
+                    } secondary: {
+                        if !store.recentOutings().isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                sectionHeading("Recent Outings", accessibilityLabel: "Open Outings", action: showOutings)
+                                    .padding(.horizontal, 16)
+                                List { recentOutingRows }
+                            }
+                        }
                     }
+                }
+                .padding(.top, 16)
+            } else {
+                let visibleCards: CGFloat = dynamicTypeSize.isAccessibilitySize ? 1.1 : 2.25
+                let cardSize = max(0, min(
+                    (geo.size.width - 52) / visibleCards,
+                    dynamicTypeSize.isAccessibilitySize ? 360 : 200
+                ))
+                List {
+                    Section {
+                        speciesSummary
+                    }
+                    .listRowSeparator(.hidden)
+
+                    if !store.recentSpecies().isEmpty {
+                        Section {
+                            sectionHeading("Recent Species", accessibilityLabel: "Open WingDex", action: showWingDex)
+                                .listRowSeparator(.hidden)
+                            recentSpeciesCarousel(cardSize: cardSize)
+                                .frame(height: cardSize)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    recentOutingsSection
                 }
             }
         }
@@ -263,11 +209,79 @@ struct HomeView: View {
         .listSectionSeparator(.hidden, edges: .top)
     }
 
+    private var speciesSummary: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("\(store.dex.count)")
+                .font(.system(.largeTitle, design: .serif, weight: .semibold))
+                .foregroundStyle(Color.foregroundText)
+            Text("species observed")
+                .font(.system(.title3, design: .serif))
+                .italic()
+                .foregroundStyle(Color.mutedText)
+        }
+    }
+
+    private func recentSpeciesCarousel(
+        cardSize: CGFloat,
+        scrollDirection: UICollectionView.ScrollDirection = .horizontal
+    ) -> some View {
+        SpeciesCarousel(
+            entries: store.recentSpecies(), auth: auth, store: store, toasts: toasts,
+            cardSize: cardSize,
+            menu: { speciesContextMenu(for: $0) },
+            accessibilityActions: { speciesAccessibilityActions(for: $0) },
+            onSelect: { path.append($0) },
+            scrollDirection: scrollDirection
+        )
+    }
+
+    private func sectionHeading(
+        _ title: String, accessibilityLabel: String, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Text(title)
+                    .font(.system(.title3, design: .serif, weight: .semibold))
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(Color.foregroundText)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var recentOutingsSection: some View {
+        let recentOutings = store.recentOutings()
+        if !recentOutings.isEmpty {
+            Section {
+                sectionHeading("Recent Outings", accessibilityLabel: "Open Outings", action: showOutings)
+                    .listRowSeparator(.hidden)
+                recentOutingRows
+            }
+        }
+    }
+
+    private var recentOutingRows: some View {
+        ForEach(store.recentOutings()) { outing in
+            NavigationLink(value: outing) {
+                OutingRow(outing: outing, store: store)
+            }
+            .outingRowActions(
+                outing: outing,
+                onView: { path.append(outing) }
+            )
+        }
+    }
+
     private func speciesContextMenu(for entry: DexEntry) -> UIMenu {
         var actions: [UIMenuElement] = []
 
         actions.append(UIAction(title: "View Details", image: UIImage(systemName: "bird")) { _ in
-            committedSpeciesEntry = entry
+            path.append(entry)
         })
 
         actions.append(UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { _ in
@@ -294,7 +308,7 @@ struct HomeView: View {
     ) -> [ContextMenuAccessibilityAction] {
         var actions = [
             ContextMenuAccessibilityAction(name: "View Details") {
-                committedSpeciesEntry = entry
+                path.append(entry)
             },
             ContextMenuAccessibilityAction(name: "Share") {
                 presentActivitySheet(items: [SharePayload.species(entry)])

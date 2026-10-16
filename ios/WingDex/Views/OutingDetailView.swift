@@ -12,9 +12,12 @@ struct SpeciesRoute: Hashable {
 
 struct OutingDetailView: View {
     let outingId: String
+    var onDeleted: (() -> Void)?
     @Environment(AuthService.self) private var auth
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
     @State private var editingNotes = false
@@ -106,6 +109,7 @@ struct OutingDetailView: View {
                     do {
                         deletedOuting = outing
                         try await store.deleteOuting(id: outingId)
+                        onDeleted?()
                         dismiss()
                         toasts.show("Outing deleted")
                     } catch {
@@ -133,31 +137,23 @@ struct OutingDetailView: View {
 
     @ViewBuilder
     private func outingContent(_ outing: Outing) -> some View {
-        List {
-            // Header + stats
-            Section {
-                headerSection(outing)
-                statsSection(outing)
-                mapSection(outing)
+        GeometryReader { geo in
+            if AdaptiveLayout.prefersPairedPanes(
+                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+            ) {
+                AdaptiveColumns {
+                    List {
+                        overviewSection(outing, mapHeight: min(300, geo.size.height / 2))
+                    }
+                } secondary: {
+                    List { sightingsSections(outing) }
+                }
+            } else {
+                List {
+                    overviewSection(outing)
+                    sightingsSections(outing)
+                }
             }
-            .listRowSeparator(.hidden)
-
-            // Confirmed species
-            confirmedListSection
-
-            // Possible species
-            possibleListSection
-
-            // Notes
-            Section {
-                notesSection(outing)
-            } header: {
-                Text("Notes")
-                    .font(.system(size: 16, weight: .semibold, design: .serif))
-                    .foregroundStyle(Color.foregroundText)
-            }
-            .listRowSeparator(.hidden)
-
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -166,6 +162,30 @@ struct OutingDetailView: View {
         }
         .navigationDestination(item: $contextMenuSpecies) { route in
             SpeciesDetailView(speciesName: route.label, speciesKey: route.key)
+        }
+    }
+
+    private func overviewSection(_ outing: Outing, mapHeight: CGFloat = 160) -> some View {
+        Section {
+            headerSection(outing)
+            statsSection(outing)
+            mapSection(outing, height: mapHeight)
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private func sightingsSections(_ outing: Outing) -> some View {
+        Group {
+            confirmedListSection
+            possibleListSection
+            Section {
+                notesSection(outing)
+            } header: {
+                Text("Notes")
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
+                    .foregroundStyle(Color.foregroundText)
+            }
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -239,7 +259,7 @@ struct OutingDetailView: View {
     // MARK: - Map
 
     @ViewBuilder
-    private func mapSection(_ outing: Outing) -> some View {
+    private func mapSection(_ outing: Outing, height: CGFloat = 160) -> some View {
         if let lat = outing.lat, let lon = outing.lon {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
             Button {
@@ -249,7 +269,7 @@ struct OutingDetailView: View {
                     Marker(outing.locationName, coordinate: coordinate)
                 }
                 .allowsHitTesting(false)
-                .frame(height: 160)
+                .frame(height: height)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(alignment: .topTrailing) {
                     Image(systemName: "arrow.up.right.square.fill")

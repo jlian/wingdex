@@ -56,10 +56,23 @@ class BirdIdFlowUITestCase: XCTestCase {
             let keyboard = app.keyboards.firstMatch
             let topNav = app.navigationBars.firstMatch
 
-            let visibleTop = topNav.exists ? topNav.frame.maxY : container.frame.minY
+            var visibleFrame = container.frame
+            if topNav.exists, topNav.frame.intersects(visibleFrame) {
+                let bar = topNav.frame
+                if bar.width >= bar.height {
+                    visibleFrame.origin.y = max(visibleFrame.minY, bar.maxY)
+                    visibleFrame.size.height = max(0, container.frame.maxY - visibleFrame.minY)
+                } else if bar.midX > visibleFrame.midX {
+                    visibleFrame.size.width = max(0, bar.minX - visibleFrame.minX)
+                } else {
+                    visibleFrame.origin.x = max(visibleFrame.minX, bar.maxX)
+                    visibleFrame.size.width = max(0, container.frame.maxX - visibleFrame.minX)
+                }
+            }
+            let visibleTop = visibleFrame.minY
             let visibleBottom = keyboard.exists && keyboard.frame.minY > visibleTop + 60
                 ? keyboard.frame.minY
-                : container.frame.maxY
+                : visibleFrame.maxY
             let visibleHeight = visibleBottom - visibleTop
 
             // A clipped control can be hittable while its tap center is behind
@@ -99,7 +112,7 @@ class BirdIdFlowUITestCase: XCTestCase {
                 endY = visibleTop + visibleHeight * 0.25
             }
 
-            let centerX = container.frame.midX
+            let centerX = visibleFrame.midX
             let startCoord = app.coordinate(withNormalizedOffset: .zero)
                 .withOffset(CGVector(dx: centerX, dy: startY))
             let endCoord = app.coordinate(withNormalizedOffset: .zero)

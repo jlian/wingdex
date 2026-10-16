@@ -7,7 +7,7 @@ struct OutingsView: View {
     @State private var searchText = ""
     @State private var sortField: OutingSortField = .date
     @State private var sortAscending = false
-    @State private var actionDestination: OutingActionDestination?
+    @State private var selectedOutingID: String?
 
     // MARK: - Sort Options
 
@@ -61,7 +61,7 @@ struct OutingsView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
+        NavigationSplitView {
             VStack(spacing: 0) {
                 CachedDataNotice()
                 rootContent
@@ -71,46 +71,40 @@ struct OutingsView: View {
                 .navigationTitle("Outings")
                 .toolbarTitleDisplayMode(.inlineLarge)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        // WHY HStack: see WingDexView - keeps sort + avatar tightly grouped.
-                        HStack(spacing: 5) {
-                            Menu {
-                                Picker("Sort by", selection: $sortField) {
-                                    ForEach(OutingSortField.allCases, id: \.self) { field in
-                                        Label(field.label, systemImage: field.icon)
-                                            .tag(field)
-                                    }
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Menu {
+                            Picker("Sort by", selection: $sortField) {
+                                ForEach(OutingSortField.allCases, id: \.self) { field in
+                                    Label(field.label, systemImage: field.icon)
+                                        .tag(field)
                                 }
+                            }
 
-                                Divider()
+                            Divider()
 
-                                Button {
-                                    sortAscending.toggle()
-                                } label: {
-                                    Label(
-                                        sortAscending ? "Ascending" : "Descending",
-                                        systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                                    )
-                                }
+                            Button {
+                                sortAscending.toggle()
                             } label: {
-                                Label("Sort", systemImage: "arrow.up.arrow.down")
+                                Label(
+                                    sortAscending ? "Ascending" : "Descending",
+                                    systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                                )
                             }
-                            // WHY: see WingDexView - re-add glass on sort only.
-                            .glassEffect(.regular.interactive())
-
-                            Button { showSettings() } label: {
-                                AccountAvatarView(size: 40)
-                            }
-                            .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
-                            .accessibilityValue(
-                                auth.identity == .anonymous && store.hasAccountDataAtRisk
-                                    ? "These sightings are only on this device"
-                                    : ""
-                            )
+                        } label: {
+                            Label("Sort", systemImage: "arrow.up.arrow.down")
                         }
-                        .padding(.trailing, -12)
+                        .glassEffect(.regular.interactive())
+
+                        Button { showSettings() } label: {
+                            AccountAvatarView(size: 40)
+                        }
+                        .accessibilityLabel(auth.isRegisteredAccount ? "Settings" : "Log in")
+                        .accessibilityValue(
+                            auth.identity == .anonymous && store.hasAccountDataAtRisk
+                                ? "These sightings are only on this device"
+                                : ""
+                        )
                     }
-                    // WHY: see WingDexView - independent glass per button.
                     .sharedBackgroundVisibility(.hidden)
                 }
                 .refreshable {
@@ -127,13 +121,19 @@ struct OutingsView: View {
                     placement: .navigationBarDrawer(displayMode: .automatic),
                     prompt: "Search outings"
                 )
-                .navigationDestination(for: Outing.self) { outing in
-                    OutingDetailView(outingId: outing.id)
+                .navigationSplitViewColumnWidth(min: 260, ideal: 320)
+        } detail: {
+            NavigationStack {
+                if let selectedOutingID, store.outing(id: selectedOutingID) != nil {
+                    OutingDetailView(outingId: selectedOutingID, onDeleted: { self.selectedOutingID = nil })
+                } else {
+                    ContentUnavailableView("Select an Outing", systemImage: "binoculars")
+                        .background(Color.pageBg.ignoresSafeArea())
                 }
-                .navigationDestination(item: $actionDestination) { destination in
-                    OutingDetailView(outingId: destination.outing.id)
-                }
+            }
+            .id(selectedOutingID)
         }
+        .navigationSplitViewStyle(.balanced)
     }
 
     private var cachedLoadErrorBinding: Binding<Bool> {
@@ -197,14 +197,14 @@ struct OutingsView: View {
     // MARK: - Outings List
 
     private var outingsList: some View {
-        List(sortedOutings) { outing in
-            NavigationLink(value: outing) {
+        List(sortedOutings, selection: $selectedOutingID) { outing in
+            NavigationLink(value: outing.id) {
                 OutingRow(outing: outing, store: store)
             }
             .outingRowActions(
                 outing: outing,
                 onView: {
-                    actionDestination = OutingActionDestination(outing: outing)
+                    selectedOutingID = outing.id
                 }
             )
         }

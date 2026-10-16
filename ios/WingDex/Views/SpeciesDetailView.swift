@@ -15,6 +15,8 @@ struct SpeciesDetailView: View {
     var reference: CompoundTaxonParent?
     @Environment(DataStore.self) private var store
     @Environment(ToastCenter.self) private var toasts
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var wikiExtract: String?
     @State private var fullImageUrl: String?
     @State private var imageCredit: WikimediaImageCredit?
@@ -73,14 +75,13 @@ struct SpeciesDetailView: View {
             ?? cachedSummary?.imageUrl
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            CachedDataNotice()
-            List {
-            // Hero image section - no separators, full bleed
-            Section {
-                heroSection
-                    .listRowInsets(EdgeInsets())
+    private func detailsList(heroSize: CGSize? = nil) -> some View {
+        List {
+            if let heroSize {
+                Section {
+                    heroSection(size: heroSize)
+                        .listRowInsets(EdgeInsets())
+                }
             }
 
             if let borrowedFrom = entry?.borrowedFrom {
@@ -143,6 +144,7 @@ struct SpeciesDetailView: View {
                     NavigationLink(value: item.outing) {
                         OutingRow(outing: item.outing, store: store, observation: item.observation)
                     }
+                    .accessibilityIdentifier("species.sighting.\(item.outing.id)")
                     .contextMenu {
                         Button {
                             contextMenuOuting = item.outing
@@ -183,7 +185,6 @@ struct SpeciesDetailView: View {
                 }
                 .listRowSeparator(.hidden)
             }
-            }
         }
         .listStyle(.plain)
         // WHY .scrollContentBackground(.hidden) + .background(): SwiftUI List has an
@@ -191,6 +192,39 @@ struct SpeciesDetailView: View {
         // and apply our own pageBg so the warm beige shows through. This two-step
         // pattern is used on every plain List in the app.
         .scrollContentBackground(.hidden)
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                CachedDataNotice()
+                if AdaptiveLayout.prefersPairedPanes(
+                    in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+                ) {
+                    AdaptiveColumns {
+                        GeometryReader { pane in
+                            ScrollView {
+                                heroSection(size: CGSize(
+                                    width: max(0, pane.size.width - 32),
+                                    height: max(0, min(pane.size.width - 32, pane.size.height - 32))
+                                ))
+                                .padding(.vertical, 16)
+                            }
+                        }
+                    } secondary: {
+                        detailsList()
+                    }
+                } else {
+                    detailsList(heroSize: CGSize(
+                        width: max(0, geo.size.width - 32),
+                        height: max(0, min(
+                            geo.size.width - 32,
+                            geo.size.height * 0.65
+                        ))
+                    ))
+                }
+            }
+        }
         .navigationTitle(displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -232,60 +266,57 @@ struct SpeciesDetailView: View {
 
     // MARK: - Hero
 
-    private var heroSection: some View {
-        // The square gives portrait and landscape source photos equal treatment. The
-        // GeometryReader still constrains scaled-to-fill images inside the List row.
-        GeometryReader { geo in
-            ZStack(alignment: .bottomLeading) {
-                BirdHeroImage(
-                    thumbnailUrl: thumbnailUrl,
-                    fullImageUrl: displayedFullImageUrl,
-                    width: geo.size.width,
-                    height: geo.size.width
-                )
+    private func heroSection(size: CGSize) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            BirdHeroImage(
+                thumbnailUrl: thumbnailUrl,
+                fullImageUrl: displayedFullImageUrl,
+                width: size.width,
+                height: size.height
+            )
 
-                // Gradient overlay
-                LinearGradient(
-                    colors: [.clear, .clear, .black.opacity(0.6)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+            // Gradient overlay
+            LinearGradient(
+                colors: [.clear, .clear, .black.opacity(0.6)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-                // Name + stats overlay
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(displayName)
-                        .font(.system(size: 26, weight: .semibold, design: .serif))
-                        .foregroundStyle(.white.opacity(0.9))
+            // Name + stats overlay
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayName)
+                    .font(.system(.title2, design: .serif, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
 
-                    if let sci = scientificName {
-                        Text(sci)
-                            .font(.system(size: 14))
-                            .italic()
-                            .foregroundStyle(.white.opacity(0.75))
-                    }
-
-                    if let entry {
-                        HStack(spacing: 4) {
-                            Text("\(entry.totalCount) seen")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white.opacity(0.9))
-                            Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
-                            Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s")")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white.opacity(0.9))
-                            Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
-                            Text("First \(Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium)).fontWeight(.semibold).foregroundStyle(.white.opacity(0.9)))")
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-                        .font(.system(size: 13))
-                    }
+                if let sci = scientificName {
+                    Text(sci)
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.75))
                 }
-                .padding()
+
+                if let entry {
+                    HStack(spacing: 4) {
+                        Text("\(entry.totalCount) seen")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white.opacity(0.9))
+                        Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
+                        Text("\(entry.totalOutings) outing\(entry.totalOutings == 1 ? "" : "s")")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white.opacity(0.9))
+                        Text("\u{00B7}").foregroundStyle(.white.opacity(0.4))
+                        Text(
+                            "First \(Text(DateFormatting.formatDate(entry.firstSeenDate, style: .medium)).fontWeight(.semibold).foregroundStyle(.white.opacity(0.9)))"
+                        )
+                        .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .font(.caption)
+                }
             }
-            .frame(width: geo.size.width, height: geo.size.width)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding()
         }
-        .aspectRatio(1, contentMode: .fit)
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal)
         .contextMenu {
             Button {

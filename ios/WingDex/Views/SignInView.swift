@@ -106,181 +106,194 @@ struct SignInView: View {
                 .ignoresSafeArea()
 
             // Foreground content
-            ScrollView {
-            VStack(spacing: 0) {
-                Spacer()
+                FoldAwareContent { availableSize in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Spacer()
 
-                // Big left-aligned title
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(hasAnonymousData ? "Keep your" : "Start your")
-                        .font(.system(size: titleSize, weight: .bold, design: .serif))
-                    Text("WingDex")
-                        .font(.system(size: titleSize, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.accentColor)
-                        .environment(\.colorScheme, .dark)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 28)
-                .padding(.bottom, 32)
-
-                if hasAnonymousData {
-                    Text("Create an account to keep your data saved. No email or password required.")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("auth.accountDurability")
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 20)
-                }
-
-                // Social sign-in buttons
-                let btnHeight: CGFloat = 44
-                let iconSize: CGFloat = btnHeight * 0.32
-                let glassLabelHeight: CGFloat = btnHeight - 14
-                VStack(spacing: 12) {
-                    // Apple -- native SignInWithAppleButton
-                    SignInWithAppleButton(.continue) { request in
-                        auth.configureAppleSignInRequest(request)
-                    } onCompletion: { result in
-                        requestSignIn {
-                            let authorization = try result.get()
-                            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                                throw URLError(.userAuthenticationRequired)
+                            // Big left-aligned title
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(hasAnonymousData ? "Keep your" : "Start your")
+                                    .font(.system(size: titleSize, weight: .bold, design: .serif))
+                                Text("WingDex")
+                                    .font(.system(size: titleSize, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color.accentColor)
+                                    .environment(\.colorScheme, .dark)
                             }
-                            return try await auth.signInWithApple(credential: credential)
-                        }
-                    }
-                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                    .id(colorScheme)
-                    .frame(height: btnHeight)
-                    .clipShape(Capsule())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 28)
+                            .padding(.bottom, 32)
 
-                    // Google -- neutral style per branding guidelines
-                    Button {
-                        requestSignIn { try await auth.signInWithGoogle() }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image("GoogleIcon")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: iconSize, height: iconSize)
-                            Text("Continue with Google")
+                            if hasAnonymousData {
+                                Text(
+                                    "Create an account to keep your data saved. No email or password required."
+                                )
+                                .font(.subheadline)
+                                .multilineTextAlignment(.center)
+                                .accessibilityIdentifier("auth.accountDurability")
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 28)
+                                .padding(.bottom, 20)
+                            }
+
+                            // Social sign-in buttons
+                            let btnHeight: CGFloat = 44
+                            let iconSize: CGFloat = btnHeight * 0.32
+                            let glassLabelHeight: CGFloat = btnHeight - 14
+                            VStack(spacing: 12) {
+                                // Apple -- native SignInWithAppleButton
+                                SignInWithAppleButton(.continue) { request in
+                                    auth.configureAppleSignInRequest(request)
+                                } onCompletion: { result in
+                                    requestSignIn {
+                                        let authorization = try result.get()
+                                        guard
+                                            let credential = authorization.credential
+                                                as? ASAuthorizationAppleIDCredential
+                                        else {
+                                            throw URLError(.userAuthenticationRequired)
+                                        }
+                                        return try await auth.signInWithApple(
+                                            credential: credential)
+                                    }
+                                }
+                                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                                .id(colorScheme)
+                                .frame(height: btnHeight)
+                                .clipShape(Capsule())
+
+                                // Google -- neutral style per branding guidelines
+                                Button {
+                                    requestSignIn { try await auth.signInWithGoogle() }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image("GoogleIcon")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: iconSize, height: iconSize)
+                                        Text("Continue with Google")
+                                            .font(.body.weight(.medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(minHeight: glassLabelHeight)
+                                    .clipShape(Capsule())
+                                }
+                                .buttonStyle(.glass)
+                                .colorScheme(colorScheme == .dark ? .light : .dark)
+                                .background(Color.black.opacity(0.72), in: Capsule())
+                                .accessibilityIdentifier("auth.google")
+
+                                // GitHub -- neutral style matching Google
+                                Button {
+                                    requestSignIn { try await auth.signInWithGitHub() }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image("GitHubIcon")
+                                            .renderingMode(.template)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: iconSize, height: iconSize)
+                                        Text("Continue with GitHub")
+                                            .font(.body.weight(.medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(minHeight: glassLabelHeight)
+                                    .clipShape(Capsule())
+                                }
+                                .buttonStyle(.glass)
+                                .colorScheme(colorScheme == .dark ? .light : .dark)
+                                .background(Color.black.opacity(0.72), in: Capsule())
+                                .accessibilityIdentifier("auth.github")
+                            }
+                            .padding(.horizontal, 28)
+
+                            // OR divider
+                            HStack(spacing: 8) {
+                                Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
+                                Text("OR")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .background(Color.black, in: Capsule())
+                                Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
+                            }
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 16)
+
+                            // Passkey section
+                            VStack(spacing: 12) {
+                                Label {
+                                    Text("Continue with a Passkey")
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } icon: {
+                                    Image(systemName: "person.badge.key.fill")
+                                }
                                 .font(.body.weight(.medium))
+                                .foregroundStyle(.white)
+
+                                // Both controls use prominent material for reliable contrast
+                                // over the moving collage; tint distinguishes login/signup.
+                                HStack(spacing: 12) {
+                                    Button {
+                                        requestSignIn { try await auth.signInWithPasskey() }
+                                    } label: {
+                                        Text("Log in")
+                                            .font(.body.weight(.medium))
+                                            .frame(minHeight: glassLabelHeight)
+                                    }
+                                    .buttonStyle(.glassProminent)
+                                    .buttonSizing(.flexible)
+                                    .tint(Color.black.opacity(0.82))
+                                    .accessibilityIdentifier("auth.passkeyLogin")
+
+                                    Button {
+                                        signIn(successMessage: "Signed up with passkey") {
+                                            try await auth.signUpWithPasskey()
+                                        }
+                                    } label: {
+                                        Text("Sign up")
+                                            .font(.body.weight(.medium))
+                                            .frame(minHeight: glassLabelHeight)
+                                    }
+                                    .buttonStyle(.glassProminent)
+                                    .buttonSizing(.flexible)
+                                    .foregroundStyle(.white)
+                                    .tint(Color.accentColor)
+                                    .accessibilityIdentifier("auth.passkeySignUp")
+                                }
+                            }
+                            .padding(16)
+                            .background(
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 22)
+                                        .fill(Color.black.opacity(0.78))
+                                    RoundedRectangle(cornerRadius: 22)
+                                        .fill(.ultraThinMaterial)
+                                        .environment(\.colorScheme, .dark)
+                                }
+                            )
+                            .padding(.horizontal, 28)
+
+                            // Legal text
+                            Text(
+                                "By continuing, you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy)."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.65))
+                            .tint(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("auth.legal")
+                            .padding(.horizontal, 28)
+                            .padding(.top, 4)
+                            .padding(.bottom, 8)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: glassLabelHeight)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.glass)
-                    .colorScheme(colorScheme == .dark ? .light : .dark)
-                    .background(Color.black.opacity(0.72), in: Capsule())
-                    .accessibilityIdentifier("auth.google")
-
-                    // GitHub -- neutral style matching Google
-                    Button {
-                        requestSignIn { try await auth.signInWithGitHub() }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image("GitHubIcon")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: iconSize, height: iconSize)
-                            Text("Continue with GitHub")
-                                .font(.body.weight(.medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: glassLabelHeight)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.glass)
-                    .colorScheme(colorScheme == .dark ? .light : .dark)
-                    .background(Color.black.opacity(0.72), in: Capsule())
-                    .accessibilityIdentifier("auth.github")
-                }
-                .padding(.horizontal, 28)
-
-                // OR divider
-                HStack(spacing: 8) {
-                    Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
-                    Text("OR")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .background(Color.black, in: Capsule())
-                    Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
-                }
-                .padding(.horizontal, 28)
-                .padding(.vertical, 16)
-
-                // Passkey section
-                VStack(spacing: 12) {
-                    Label {
-                        Text("Continue with a Passkey")
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "person.badge.key.fill")
-                    }
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(.white)
-
-                    // Both controls use prominent material for reliable contrast
-                    // over the moving collage; tint distinguishes login/signup.
-                    HStack(spacing: 12) {
-                        Button {
-                            requestSignIn { try await auth.signInWithPasskey() }
-                        } label: {
-                            Text("Log in")
-                                .font(.body.weight(.medium))
-                                .frame(minHeight: glassLabelHeight)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .buttonSizing(.flexible)
-                        .tint(Color.black.opacity(0.82))
-                        .accessibilityIdentifier("auth.passkeyLogin")
-
-                        Button {
-                            signIn(successMessage: "Signed up with passkey") { try await auth.signUpWithPasskey() }
-                        } label: {
-                            Text("Sign up")
-                                .font(.body.weight(.medium))
-                                .frame(minHeight: glassLabelHeight)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .buttonSizing(.flexible)
-                        .foregroundStyle(.white)
-                        .tint(Color.accentColor)
-                        .accessibilityIdentifier("auth.passkeySignUp")
-                    }
-                }
-                .padding(16)
-                .background(
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(Color.black.opacity(0.78))
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(.ultraThinMaterial)
-                            .environment(\.colorScheme, .dark)
-                    }
-                )
-                .padding(.horizontal, 28)
-
-                // Legal text
-                Text("By continuing, you accept our [Terms of Use](https://wingdex.app/terms) and [Privacy Policy](https://wingdex.app/privacy).")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.65))
-                    .tint(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("auth.legal")
-                    .padding(.horizontal, 28)
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
-            }
-                    .frame(minHeight: screenH)
+                        .frame(maxWidth: 480)
+                        .frame(maxWidth: .infinity, minHeight: availableSize.height)
                     }
                     .scrollIndicators(.hidden)
                     .scrollBounceBehavior(.basedOnSize)
+                }
         }
         .disabled(isSigningIn)
         .overlay {

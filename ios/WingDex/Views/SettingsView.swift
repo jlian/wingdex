@@ -187,6 +187,8 @@ struct SettingsView: View {
             .listRowBackground(Color.clear)
         }
         .scrollContentBackground(.hidden)
+        .frame(maxWidth: AdaptiveLayout.readableWidth)
+        .frame(maxWidth: .infinity)
         .background(Color.pageBg.ignoresSafeArea())
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.inline)

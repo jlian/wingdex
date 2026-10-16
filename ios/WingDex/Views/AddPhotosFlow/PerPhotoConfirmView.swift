@@ -66,6 +66,30 @@ struct PerPhotoConfirmView: View {
     }
 }
 
+enum PhotoComparisonLayout {
+    static let horizontalInset: CGFloat = 16
+    static let spacing: CGFloat = 12
+
+    static func photoSize(in availableSize: CGSize) -> CGFloat {
+        let pairedWidth = availableSize.width - horizontalInset * 2 - spacing
+        return max(0, min(pairedWidth / 2, availableSize.height / 2, 400))
+    }
+
+    static func comparisonAxis(in paneSize: CGSize) -> Axis {
+        paneSize.height > paneSize.width ? .vertical : .horizontal
+    }
+
+    static func photoSize(in paneSize: CGSize, axis: Axis, captionHeight: CGFloat) -> CGFloat {
+        let width = paneSize.width - horizontalInset * 2
+        switch axis {
+        case .horizontal:
+            return max(0, min((width - spacing) / 2, paneSize.height - captionHeight, 400))
+        case .vertical:
+            return max(0, min(width, (paneSize.height - spacing) / 2 - captionHeight, 400))
+        }
+    }
+}
+
 private struct PhotoConfirmationPage: View {
     @Bindable var viewModel: AddPhotosViewModel
     let snapshot: PhotoConfirmationPresentation.Snapshot
@@ -99,6 +123,11 @@ private struct PhotoConfirmationPage: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .caption) private var comparisonCaptionHeight: CGFloat = 38
 
     private var photo: ProcessedPhoto? { snapshot.photo }
     private var candidates: [IdentifiedCandidate] { snapshot.candidates }
@@ -244,19 +273,13 @@ private struct PhotoConfirmationPage: View {
                 Button {
                     showOutingDetails = true
                 } label: {
-                    VStack(spacing: 1) {
-                        Text(viewModel.lastLocationName.isEmpty ? "Outing Details" : viewModel.lastLocationName)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        if let outingSubtitle {
-                            Text(outingSubtitle)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                    if #available(iOS 27.1, *) {
+                        OutingDetailsToolbarLabel {
+                            outingDetailsText
                         }
+                    } else {
+                        outingDetailsText
                     }
-                    .frame(maxWidth: 190)
-                    .padding(.horizontal, 8)
                 }
                 .accessibilityLabel(outingDetailsLabel)
                 .accessibilityHint("Opens outing details and map")
@@ -321,26 +344,44 @@ private struct PhotoConfirmationPage: View {
     }
 
     private var identifyingView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            if let image = decodedThumbnail {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+        FoldAwareContent(verticalPlacement: .top) { _ in
+            VStack(spacing: 24) {
+                Spacer()
+                if let image = decodedThumbnail {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 280)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                ProgressView()
+                Text("Identifying...")
+                    .font(.headline)
+                    .accessibilityIdentifier("confirm.identifying")
+                Spacer()
             }
-            ProgressView()
-            Text("Identifying...")
-                .font(.headline)
-                .accessibilityIdentifier("confirm.identifying")
-            Spacer()
+            .padding(32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Outing Details
+
+    private var outingDetailsText: some View {
+        VStack(spacing: 1) {
+            Text(viewModel.lastLocationName.isEmpty ? "Outing Details" : viewModel.lastLocationName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+            if let outingSubtitle {
+                Text(outingSubtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: 190)
+        .padding(.horizontal, 8)
+    }
 
     private var outingTitle: String {
         "Outing \(viewModel.currentClusterIndex + 1) of \(viewModel.clusters.count)"
@@ -391,7 +432,7 @@ private struct PhotoConfirmationPage: View {
     // MARK: - No Candidates
 
     private var noCandidatesView: some View {
-        GeometryReader { geo in
+        FoldAwareContent { availableSize in
             ScrollView {
                 VStack(spacing: 24) {
                     Spacer(minLength: 0)
@@ -442,7 +483,7 @@ private struct PhotoConfirmationPage: View {
 
                     Spacer(minLength: 0)
                 }
-                .frame(maxWidth: .infinity, minHeight: geo.size.height)
+                .frame(maxWidth: .infinity, minHeight: availableSize.height)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
@@ -452,95 +493,130 @@ private struct PhotoConfirmationPage: View {
 
     private var candidateView: some View {
         GeometryReader { geo in
-            let contentWidth = min(geo.size.width - 32, 400)
-            let photoSize = max((contentWidth - 12) / 2, 0)
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    VStack(spacing: 16) {
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(spacing: 6) {
-                                Button {
-                                    viewModel.requestManualCrop()
-                                } label: {
-                                    aiCroppedUserPhoto(size: photoSize)
-                                        .overlay(alignment: .bottomTrailing) {
-                                            photoActionIndicator("crop")
-                                        }
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Crop your photo")
-                                .accessibilityIdentifier("confirm.userPhoto")
-                                .disabled(photo == nil || isAcknowledging)
-                                Text("Yours")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2, reservesSpace: true)
-                            }
-                            .frame(width: photoSize)
-
-                            VStack(spacing: 6) {
-                            wikiSquareThumbnail(size: photoSize)
-                                .overlay(alignment: .bottomTrailing) {
-                                    photoActionIndicator("info")
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    guard !isAcknowledging else { return }
-                                    openPeekAtSelection()
-                                }
-                                .accessibilityElement(children: .ignore)
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityLabel("Explore \(getDisplayName(selectedSpecies))")
-                                .accessibilityHint("Opens reference photos and species details")
-                                .accessibilityAction {
-                                    guard !isAcknowledging else { return }
-                                    openPeekAtSelection()
-                                }
-                                .frame(width: photoSize)
-                                Group {
-                                    let credit = currentRefCredit
-                                    if let url = credit.url {
-                                        Link(credit.label, destination: url).underline()
-                                    } else {
-                                        Text(credit.label)
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2, reservesSpace: true)
-                            }
-                            .frame(width: photoSize)
+            if AdaptiveLayout.prefersPairedPanes(
+                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+            ) {
+                AdaptiveColumns {
+                    GeometryReader { pane in
+                        let axis = PhotoComparisonLayout.comparisonAxis(in: pane.size)
+                        let photoSize = PhotoComparisonLayout.photoSize(
+                            in: CGSize(width: pane.size.width, height: pane.size.height - 48),
+                            axis: axis, captionHeight: comparisonCaptionHeight
+                        )
+                        ScrollView {
+                            comparisonPhotos(photoSize: photoSize, axis: axis)
+                                .padding(.vertical, 24)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 16)
-
-                        speciesCard
-                        Text("Photos from [Wikimedia Commons](https://commons.wikimedia.org), occurrence data from [iNaturalist](https://www.inaturalist.org).")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                            .tint(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .accessibilityIdentifier("confirm.attribution")
+                    }
+                } secondary: {
+                    ScrollView {
+                        candidateDetails.padding(.vertical, 24)
+                    }
+                }
+            } else {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        comparisonPhotos(photoSize: PhotoComparisonLayout.photoSize(in: geo.size))
+                        candidateDetails
+                        Spacer(minLength: 0)
                     }
                     .padding(.top, 24)
-
-                    Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
                 }
-                .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
-            .task(id: photoSize) {
-                guard photoSize > 0 else { return }
-                let leads = candidates.compactMap { candidate in
-                    let thumbnail = getWikiThumbnailUrl(for: candidate.species)
-                    return CommonsGallery.leadImage(cardImageUrl(fromThumbnail: thumbnail) ?? thumbnail)?.url
-                }
-                await withTaskGroup(of: Void.self) { group in
-                    for url in leads {
-                        group.addTask {
-                            await Self.preloadReference(url: url, size: photoSize)
+        }
+    }
+
+    private var candidateDetails: some View {
+        VStack(spacing: 16) {
+            speciesCard
+                .frame(maxWidth: 600)
+            Text("Photos from [Wikimedia Commons](https://commons.wikimedia.org), occurrence data from [iNaturalist](https://www.inaturalist.org).")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            .tint(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 560)
+            .padding(.horizontal, 16)
+            .accessibilityIdentifier("confirm.attribution")
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func comparisonPhotos(photoSize: CGFloat, axis: Axis = .horizontal) -> some View {
+        let layout = axis == .vertical
+            ? AnyLayout(VStackLayout(spacing: PhotoComparisonLayout.spacing))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: PhotoComparisonLayout.spacing))
+        return layout {
+            VStack(spacing: 6) {
+                Button {
+                    viewModel.requestManualCrop()
+                } label: {
+                    aiCroppedUserPhoto(size: photoSize)
+                        .overlay(alignment: .bottomTrailing) {
+                            photoActionIndicator("crop")
                         }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Crop your photo")
+                .accessibilityIdentifier("confirm.userPhoto")
+                .disabled(photo == nil || isAcknowledging)
+                Text("Yours")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2, reservesSpace: true)
+            }
+            .frame(width: photoSize)
+
+            VStack(spacing: 6) {
+                wikiSquareThumbnail(size: photoSize)
+                    .overlay(alignment: .bottomTrailing) {
+                        photoActionIndicator("info")
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard !isAcknowledging else { return }
+                        openPeekAtSelection()
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Explore \(getDisplayName(selectedSpecies))")
+                    .accessibilityHint("Opens reference photos and species details")
+                    .accessibilityAction {
+                        guard !isAcknowledging else { return }
+                        openPeekAtSelection()
+                    }
+                    .frame(width: photoSize)
+                Group {
+                    let credit = currentRefCredit
+                    if let url = credit.url {
+                        Link(credit.label, destination: url).underline()
+                    } else {
+                        Text(credit.label)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2, reservesSpace: true)
+            }
+            .frame(width: photoSize)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, PhotoComparisonLayout.horizontalInset)
+        .task(id: [photoSize, displayScale]) {
+            guard photoSize > 0 else { return }
+            let leads = candidates.compactMap { candidate in
+                let thumbnail = getWikiThumbnailUrl(for: candidate.species)
+                return CommonsGallery.leadImage(
+                    cardImageUrl(fromThumbnail: thumbnail) ?? thumbnail)?.url
+            }
+            let scale = displayScale
+            await withTaskGroup(of: Void.self) { group in
+                for url in leads {
+                    group.addTask {
+                        await Self.preloadReference(url: url, size: photoSize, displayScale: scale)
                     }
                 }
             }
@@ -550,9 +626,11 @@ private struct PhotoConfirmationPage: View {
     // MARK: - AI-Cropped Square User Photo
 
     @MainActor
-    private static func preloadReference(url: URL, size: CGFloat) async {
+    private static func preloadReference(url: URL, size: CGFloat, displayScale: CGFloat) async {
         guard !Task.isCancelled else { return }
-        _ = await ImageLoader.shared.imageAndFocalPoint(for: url.absoluteString, targetPoints: size)
+        _ = await ImageLoader.shared.imageAndFocalPoint(
+            for: url.absoluteString, targetPoints: size, displayScale: displayScale
+        )
     }
 
     private func photoActionIndicator(_ symbol: String) -> some View {
@@ -922,6 +1000,20 @@ private struct PhotoConfirmationPage: View {
             guard !Task.isCancelled else { return }
             galleryItems = Array(items.prefix(4))
             isLoadingWikiImage = false
+        }
+    }
+}
+
+@available(iOS 27.1, *)
+private struct OutingDetailsToolbarLabel<Content: View>: View {
+    @Environment(\.toolbarVerticalEdge) private var verticalEdge
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if verticalEdge != nil {
+            Image(systemName: "mappin.and.ellipse")
+        } else {
+            content()
         }
     }
 }

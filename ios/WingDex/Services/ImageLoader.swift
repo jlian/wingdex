@@ -100,18 +100,20 @@ final class ImageLoader {
     }
 
     /// Synchronous cache probe, for seeding `@State` in an initializer so a warm image
-    /// renders on frame one instead of after `.task` runs.
-    func cached(_ url: String?, targetPoints: CGFloat) -> UIImage? {
+    /// renders on frame one instead of after `.task` runs. Use the consuming view's
+    /// environment display scale for cache probes and loads.
+    func cached(_ url: String?, targetPoints: CGFloat, displayScale: CGFloat) -> UIImage? {
         guard let url, !url.isEmpty else { return nil }
-        return images.object(forKey: Self.cacheKey(url, targetPoints) as NSString)
+        return images.object(forKey: Self.cacheKey(url, targetPoints, displayScale) as NSString)
     }
 
     func cachedImageAndFocalPoint(
         _ url: String?,
-        targetPoints: CGFloat
+        targetPoints: CGFloat,
+        displayScale: CGFloat
     ) -> (image: UIImage, focalPoint: CGPoint)? {
         guard let url, !url.isEmpty else { return nil }
-        let imageKey = Self.cacheKey(url, targetPoints)
+        let imageKey = Self.cacheKey(url, targetPoints, displayScale)
         let focalKey = Self.focalCacheKey(url)
         guard let image = images.object(forKey: imageKey as NSString),
               let result = focalPoints[focalKey]
@@ -119,15 +121,15 @@ final class ImageLoader {
         return (image, result.point ?? Self.center)
     }
 
-    func image(for url: String?, targetPoints: CGFloat) async -> UIImage? {
+    func image(for url: String?, targetPoints: CGFloat, displayScale: CGFloat) async -> UIImage? {
         guard let url, !url.isEmpty else { return nil }
-        let key = Self.cacheKey(url, targetPoints)
+        let key = Self.cacheKey(url, targetPoints, displayScale)
         if let hit = images.object(forKey: key as NSString) {
             return hit
         }
         if let inFlight = decodes[key] { return await inFlight.value }
 
-        let maxPixelSize = targetPoints * Self.displayScale
+        let maxPixelSize = (targetPoints * displayScale).rounded(.up)
         let task = Task { [weak self] () -> UIImage? in
             guard let self, let data = await self.data(for: url) else { return nil }
             let decodeStarted = DispatchTime.now().uptimeNanoseconds
@@ -154,10 +156,11 @@ final class ImageLoader {
 
     func imageAndFocalPoint(
         for url: String?,
-        targetPoints: CGFloat
+        targetPoints: CGFloat,
+        displayScale: CGFloat
     ) async -> (image: UIImage, focalPoint: CGPoint)? {
         guard let url, !url.isEmpty,
-              let image = await image(for: url, targetPoints: targetPoints),
+              let image = await image(for: url, targetPoints: targetPoints, displayScale: displayScale),
               let result = await focalPointResult(for: url)
         else { return nil }
         return (image, result.point ?? Self.center)
@@ -341,8 +344,8 @@ final class ImageLoader {
         Int((end - start) / 1_000_000)
     }
 
-    private static func cacheKey(_ url: String, _ targetPoints: CGFloat) -> String {
-        "\(url)|\(Int(targetPoints.rounded()))"
+    private static func cacheKey(_ url: String, _ targetPoints: CGFloat, _ displayScale: CGFloat) -> String {
+        "\(url)|\((targetPoints * displayScale).rounded(.up))|\(displayScale)"
     }
 
     /// Wikimedia thumbnail widths are render variants of one source file, so they share
@@ -360,18 +363,6 @@ final class ImageLoader {
         label: "com.jlian.wingdex.image-saliency",
         qos: .utility
     )
-
-    /// `UITraitCollection.current` is only populated while a view is updating, so it reads
-    /// 0 when a prefetch runs outside that window. The attached window's traits are the
-    /// reliable source.
-    private static var displayScale: CGFloat {
-        let windowScale = UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.traitCollection.displayScale }
-            .first { $0 > 0 }
-        if let windowScale { return windowScale }
-        let currentScale = UITraitCollection.current.displayScale
-        return currentScale > 0 ? currentScale : 2
-    }
 }
 
 extension UIImage {

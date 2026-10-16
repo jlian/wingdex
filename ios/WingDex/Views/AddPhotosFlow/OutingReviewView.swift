@@ -15,6 +15,8 @@ struct OutingReviewView: View {
     @Bindable var searchModel: OutingLocationSearchModel
     @Binding var destination: OutingReviewDestination?
     @Environment(DataStore.self) private var store
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var matchingOuting: Outing?
     @State private var useExistingOuting = false
@@ -55,65 +57,22 @@ struct OutingReviewView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                DatePicker(
-                    "Date & Time",
-                    selection: Binding(
-                        get: { overriddenStartTime ?? cluster?.startTime ?? Date() },
-                        set: { overriddenStartTime = $0 }
-                    ),
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .foregroundStyle(.primary)
-                .tint(.primary)
-                .environment(\.timeZone, effectiveTimeZone)
-
-                gpsStatusSection
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-            }
-
-            if let existing = matchingOuting {
-                Section {
-                    Toggle(isOn: $useExistingOuting) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Add to existing outing?")
-                            Text("\(existing.locationName) - \(DateFormatting.formatDate(existing.startTime))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+        GeometryReader { geo in
+            if AdaptiveLayout.prefersPairedPanes(
+                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+            ) {
+                // Add a gutter without replacing Form's vertical navigation clearance.
+                AdaptiveColumns {
+                    Form {
+                        photosSection(height: min(360, geo.size.height - 100))
                     }
-                    .accessibilityIdentifier("outing.useExisting")
+                    .safeAreaPadding(.horizontal, 16)
+                } secondary: {
+                    reviewForm(showsPhotos: false)
+                        .safeAreaPadding(.horizontal, 16)
                 }
-            }
-
-            Section {
-                if let mapLocation {
-                    OutingLocationMapPreview(location: mapLocation) {
-                        locationModel.cancelAllWork()
-                        destination = .map
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                }
-                locationBar
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .listRowSeparator(.hidden)
-            } footer: {
-                Text("Powered by [Geoapify](https://www.geoapify.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright)")
-                    .accessibilityIdentifier("outing.locationAttribution")
-            }
-
-            Section {
-                PhotoReviewCarousel(photos: cluster?.photos ?? [], onOpen: { photo in
-                    selectedPhotoID = photo.id
-                    destination = .photos
-                }, onRemove: removePhoto)
-                    .frame(height: 150)
-            } header: {
-                Text("Photos (\(cluster?.photos.count ?? 0))")
-                    .foregroundStyle(Color.foregroundText)
-                    .accessibilityIdentifier("outing.photosHeader")
+            } else {
+                reviewForm(showsPhotos: true)
             }
         }
         .formStyle(.grouped)
@@ -177,6 +136,78 @@ struct OutingReviewView: View {
                     locationModel.retryReverseGeocoding()
                 }
             }
+        }
+    }
+
+    private func reviewForm(showsPhotos: Bool) -> some View {
+        Form {
+            Section {
+                DatePicker(
+                    "Date & Time",
+                    selection: Binding(
+                        get: { overriddenStartTime ?? cluster?.startTime ?? Date() },
+                        set: { overriddenStartTime = $0 }
+                    ),
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .foregroundStyle(.primary)
+                .tint(.primary)
+                .environment(\.timeZone, effectiveTimeZone)
+
+                gpsStatusSection
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+            }
+
+            if let existing = matchingOuting {
+                Section {
+                    Toggle(isOn: $useExistingOuting) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add to existing outing?")
+                            Text("\(existing.locationName) - \(DateFormatting.formatDate(existing.startTime))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("outing.useExisting")
+                }
+            }
+
+            Section {
+                if let mapLocation {
+                    OutingLocationMapPreview(location: mapLocation) {
+                        locationModel.cancelAllWork()
+                        destination = .map
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                }
+                locationBar
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowSeparator(.hidden)
+            } footer: {
+                Text("Powered by [Geoapify](https://www.geoapify.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright)")
+                    .accessibilityIdentifier("outing.locationAttribution")
+            }
+
+            if showsPhotos {
+                photosSection(height: 150)
+            }
+        }
+    }
+
+    private func photosSection(height: CGFloat) -> some View {
+        Section {
+            GeometryReader { pane in
+                PhotoReviewCarousel(photos: cluster?.photos ?? [], onOpen: { photo in
+                    selectedPhotoID = photo.id
+                    destination = .photos
+                }, onRemove: removePhoto, thumbnailSize: min(pane.size.width, max(150, height)))
+            }
+            .frame(height: max(150, height))
+        } header: {
+            Text("Photos (\(cluster?.photos.count ?? 0))")
+                .foregroundStyle(Color.foregroundText)
+                .accessibilityIdentifier("outing.photosHeader")
         }
     }
 

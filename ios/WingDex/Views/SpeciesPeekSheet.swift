@@ -41,9 +41,6 @@ struct SpeciesPeekSheet: View {
     /// Keyed by Commons file page so a paged-to photo never shows the previous
     /// photo's credit while its own is still loading.
     @State private var imageCredits: [String: WikimediaImageCredit] = [:]
-    /// Width available to the reference row, so the hero and the thumbnail strip are
-    /// derived from the device rather than from a constant that overflows a 390pt phone.
-    @State private var referenceRowWidth: CGFloat = 0
     /// Opens large: the user came here to read. Dragging to medium uncovers the
     /// confirm screen behind, which is why medium stays on offer.
     @State private var detent: PresentationDetent = .large
@@ -83,14 +80,17 @@ struct SpeciesPeekSheet: View {
         VStack(spacing: 0) {
             header
             Divider()
-            TabView(selection: $index) {
-                ForEach(Array(candidates.enumerated()), id: \.element.id) { position, candidate in
-                    ScrollView { page(for: candidate) }
-                        .tag(position)
+            GeometryReader { geo in
+                TabView(selection: $index) {
+                    ForEach(Array(candidates.enumerated()), id: \.element.id) { position, candidate in
+                        ScrollView { page(for: candidate, width: geo.size.width) }
+                            .frame(width: geo.size.width)
+                            .tag(position)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: candidates.count > 1 ? .always : .never))
+                .indexViewStyle(.page(backgroundDisplayMode: .interactive))
             }
-            .tabViewStyle(.page(indexDisplayMode: candidates.count > 1 ? .always : .never))
-            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
         }
         .background(Color.pageBg.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) { confirmBar }
@@ -135,10 +135,11 @@ struct SpeciesPeekSheet: View {
     // MARK: - Page
 
     @ViewBuilder
-    private func page(for candidate: SpeciesPeekCandidate) -> some View {
+    private func page(for candidate: SpeciesPeekCandidate, width: CGFloat) -> some View {
+        let horizontalPadding: CGFloat = 16
         VStack(alignment: .leading, spacing: 16) {
             title(for: candidate)
-            references(for: candidate)
+            references(for: candidate, width: max(width - horizontalPadding * 2, 0))
             if candidate.rarity != .none, let verdict = candidate.rarity.accessibilityLabel {
                 rarityNote(candidate.rarity, verdict: verdict)
             }
@@ -146,10 +147,10 @@ struct SpeciesPeekSheet: View {
             links(for: candidate)
             credits(for: candidate)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, horizontalPadding)
         .padding(.top, 16)
         .padding(.bottom, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: width, alignment: .leading)
     }
 
     /// The same single credits line the species detail page shows, so a bird credits its
@@ -237,18 +238,18 @@ struct SpeciesPeekSheet: View {
     /// gesture recogniser wins. Vertical keeps the alternates one tap away without
     /// spending a row of height on them.
     ///
-    /// Both widths come from the measured row, so the pair always fits the screen.
+    /// Both widths come from the pager viewport, so loaded images cannot widen the row.
     /// The strip is a fixed four slots wide whatever the gallery returned, so paging
     /// between a bird with four photos and one with two does not resize the hero.
     @ViewBuilder
-    private func references(for candidate: SpeciesPeekCandidate) -> some View {
+    private func references(for candidate: SpeciesPeekCandidate, width: CGFloat) -> some View {
         let items = galleries[candidate.species] ?? []
         let hero = currentHero(for: candidate)
         let spacing = Self.thumbSpacing
         // Four square thumbs plus their gaps span exactly the hero's height, and the
         // hero plus one thumb width plus one gap spans exactly the row.
-        let thumb = max((referenceRowWidth - spacing * CGFloat(Self.thumbSlots)) / CGFloat(Self.thumbSlots + 1), 0)
-        let heroSize = max(referenceRowWidth - spacing - thumb, 0)
+        let thumb = max((width - spacing * CGFloat(Self.thumbSlots)) / CGFloat(Self.thumbSlots + 1), 0)
+        let heroSize = max(width - spacing - thumb, 0)
 
         HStack(alignment: .top, spacing: spacing) {
             Group {
@@ -296,7 +297,6 @@ struct SpeciesPeekSheet: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { referenceRowWidth = $0 }
     }
 
     private static let thumbSlots = 4

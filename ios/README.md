@@ -2,7 +2,7 @@
 
 Native SwiftUI companion app for [WingDex](https://wingdex.app). Shares the same Cloudflare REST API as the web app - the server owns all business logic, so the iOS app is a thin UI client.
 
-**Target:** iOS 26+ / Xcode 27+ / Swift 6
+**Target:** iOS 26+ / Xcode 27.1+ / Swift 6
 
 ## Architecture
 
@@ -40,7 +40,7 @@ For device validation, check camera acceptance versus Retake/Cancel, denied Phot
 
 ## Prerequisites
 
-- Xcode 27+
+- Xcode 27.1+ (iOS 27.1 SDK for full-display iPhone Duo support)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
 - Apple Developer account (for device builds and Sign in with Apple)
 
@@ -86,6 +86,84 @@ make -C ios build SCHEME=Localhost DESTINATION='generic/platform=iOS' XCODEBUILD
 Device builds require the normal signing setup. Plain `make -C ios` still runs
 tests. Run builds and tests serially because they share the generated project and
 build cache.
+
+## Resizable layouts and iPhone Duo
+
+Build release archives with Xcode 27.1 or later. The deployment target remains
+iOS 26; building with an older SDK does not enable Duo's full-display layout.
+See Apple's [preparation guide](https://developer.apple.com/iphone-duo/prepare/).
+The adaptive design follows Apple's
+[Duo design guidance](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo/).
+
+Layouts use the current view's available space, not screen dimensions, device
+idiom, or orientation. System tabs and toolbars handle their own placement.
+The confirmation toolbar shows a location symbol when the system places it
+vertically, retaining the outing name and date in its accessibility label and
+details sheet. Horizontal toolbars keep the name/date pill. The crop viewport
+stays inside the current safe area and restores the edited, normalized crop
+when its bounds change. Photo selection scrolls in short windows; photo
+selection and sign-in controls stay at a readable width in expanded windows.
+WingDex and Outings use native collection/detail navigation, collapsing to a
+single navigation stack at compact widths. Sidebar widths have no hard maximum,
+letting the system balance the columns around an active fold. Wide Home layouts place the recent
+species grid beside recent outings, with 44-point minimum section-heading tap
+targets. Recent-species cards and sighting links share
+one value-driven Home navigation path. Full-width species and outing details
+separate the visual overview from their history and notes; narrower detail
+panes remain stacked. Species photos are bounded by the offered viewport height.
+Identification keeps both comparison photos together, placing results alongside
+them in wide layouts. Tall media panes stack Yours above Reference; wide/tabletop
+media panes keep them side by side. Outing review places photos beside the metadata
+form, using additive safe-area padding for the gutter without replacing the Form's
+native navigation clearance.
+On iOS 27.1, these paired layouts use native arrangements outside their scrolling
+containers so the system can respond to a fold. An active division also enables
+paired panes in tall/tabletop windows: the system puts media above the metadata
+or identification controls, rather than spanning the curve. Accessibility text
+sizes retain the single-column layout when flat and use the native panes when a
+fold divides the view. Custom centered entry, sign-in, recovery and crop controls
+stay together in one usable region. Interactive groups prefer the lower region
+in tabletop poses; identification progress prefers the upper region. Division
+frames already include Apple's interactive margins. Continuous lists, articles
+and photo galleries are not displaced as a whole. Secondary settings, account-data
+and import forms use a consistent readable width. Sort and account controls
+use native toolbar groups. The selection collage fades at the measured control
+group rather than halfway down the window. Half-folded selection uses native panes
+for the collage and centered controls, placing artwork above controls in tabletop
+poses. The collage quiets further at accessibility text sizes and stops moving with
+Reduce Motion. The crop surround uses the same page background as the rest of the flow.
+Candidate pages stay within their current pager width after external-link handoffs.
+Reference images reload for changes in their view size or display scale, with
+scale-aware cache entries rather than a globally selected window's traits.
+The existing iPhone-only distribution and portrait orientation policy are
+unchanged; neither is used to choose a layout.
+
+Run the photo-flow regressions on a dedicated Duo test simulator by passing its
+UDID. Fixture UI tests clear local app data, so do not use a simulator holding a
+populated personal account:
+
+```bash
+make -C ios core DESTINATION='platform=iOS Simulator,id=YOUR-DUO-TEST-UDID' \
+  XCODEBUILD_ARGS='CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never' \
+  TESTS='-only-testing:WingDexTests/PhotoComparisonLayoutTests -only-testing:WingDexTests/PhotoSelectionLayoutTests -only-testing:WingDexTests/CropViewportGeometryTests -only-testing:WingDexTests/ImageLoaderTests -only-testing:WingDexUITests/HomeNavigationUITests -only-testing:WingDexUITests/BirdIdFlowUITests -only-testing:WingDexUITests/ResizabilityUITests -only-testing:WingDexUITests/DuoReviewLayoutUITests'
+```
+
+Open the dedicated Duo in unfolded landscape before running
+`DuoReviewLayoutUITests`. It checks the review gutter, metadata clearance from
+navigation controls on either edge, stacked comparison, and crop reachability.
+Layout tests use the actual app window's bounds and screenshots because Duo's
+main screen can describe the inactive outer display.
+It skips compact or tall windows.
+
+Before release, fold and unfold the Duo simulator without relaunching while
+viewing each tab, photo selection, outing review, identification, crop, the
+photo viewer, location search/map, and sign-in/settings. Check both side-bar
+placements, light/dark appearance, accessibility text sizes, and keyboard
+presentation. Selection, navigation, and an edited crop must survive the
+transition; controls must remain reachable without overlapping system bars.
+Repeat with the resizable simulator or iPhone Mirroring at narrow, wide, and
+short window sizes. Automated crop geometry coverage supplements, rather than
+replaces, these live-resize checks and physical-device validation.
 
 ## Tests
 

@@ -3,6 +3,146 @@ import MapKit
 import UIKit
 import os
 
+// MARK: - Adaptive Layout
+
+enum AdaptiveLayout {
+    static let readableWidth: CGFloat = 640
+
+    static func prefersPairedPanes(
+        in geometry: GeometryProxy,
+        sizeClass: UserInterfaceSizeClass?,
+        dynamicTypeSize: DynamicTypeSize
+    ) -> Bool {
+        prefersPairedPanes(
+            in: geometry.size, sizeClass: sizeClass, dynamicTypeSize: dynamicTypeSize,
+            divisionFrames: activeDivisionFrames(in: geometry)
+        )
+    }
+
+    static func prefersPairedPanes(
+        in size: CGSize,
+        sizeClass: UserInterfaceSizeClass?,
+        dynamicTypeSize: DynamicTypeSize,
+        divisionFrames: [CGRect] = []
+    ) -> Bool {
+        guard sizeClass == .regular else { return false }
+        let hasDivision = divisionFrames.contains { division in
+            if division.height > division.width {
+                return division.minX > 0 && division.maxX < size.width
+                    && division.maxY > 0 && division.minY < size.height
+            }
+            return division.minY > 0 && division.maxY < size.height
+                && division.maxX > 0 && division.minX < size.width
+        }
+        // A tabletop fold needs top/bottom panes even in a tall viewport.
+        return hasDivision
+            || (!dynamicTypeSize.isAccessibilitySize
+                && size.width >= readableWidth && size.width > size.height)
+    }
+
+    static func activeDivisionFrames(in geometry: GeometryProxy) -> [CGRect] {
+        if #available(iOS 27.1, *) {
+            let bounds = CGRect(origin: .zero, size: geometry.size)
+            return geometry.reservedRegions(kind: .division, layoutDirectionBehavior: .fixed)
+                .filter { $0.isActive && bounds.intersects($0.frame) }
+                .map(\.frame)
+        }
+        return []
+    }
+
+    static func displacedFrame(
+        in size: CGSize,
+        avoiding divisionFrames: [CGRect],
+        layoutDirection: LayoutDirection = .leftToRight,
+        verticalPlacement: VerticalEdge = .bottom
+    ) -> CGRect {
+        divisionFrames.reduce(CGRect(origin: .zero, size: size)) { bounds, division in
+            let overlap = bounds.intersection(division)
+            guard !overlap.isNull, !overlap.isEmpty else { return bounds }
+
+            let preferred: CGRect
+            let alternate: CGRect
+            if division.height > division.width {
+                let left = CGRect(
+                    x: bounds.minX, y: bounds.minY,
+                    width: overlap.minX - bounds.minX, height: bounds.height
+                )
+                let right = CGRect(
+                    x: overlap.maxX, y: bounds.minY,
+                    width: bounds.maxX - overlap.maxX, height: bounds.height
+                )
+                preferred = layoutDirection == .rightToLeft ? left : right
+                alternate = layoutDirection == .rightToLeft ? right : left
+                // A division at a pane's edge must not squeeze controls into a sliver.
+                return preferred.width >= min(readableWidth / 2, bounds.width / 2)
+                    ? preferred : alternate
+            } else {
+                let top = CGRect(
+                    x: bounds.minX, y: bounds.minY,
+                    width: bounds.width, height: overlap.minY - bounds.minY
+                )
+                let bottom = CGRect(
+                    x: bounds.minX, y: overlap.maxY,
+                    width: bounds.width, height: bounds.maxY - overlap.maxY
+                )
+                preferred = verticalPlacement == .top ? top : bottom
+                alternate = verticalPlacement == .top ? bottom : top
+                return preferred.height > 0 ? preferred : alternate
+            }
+        }
+    }
+}
+
+/// Displaces a single related control group, not continuous lists or articles.
+struct FoldAwareContent<Content: View>: View {
+    @Environment(\.layoutDirection) private var layoutDirection
+    private let verticalPlacement: VerticalEdge
+    private let content: (CGSize) -> Content
+
+    init(
+        verticalPlacement: VerticalEdge = .bottom,
+        @ViewBuilder content: @escaping (CGSize) -> Content
+    ) {
+        self.verticalPlacement = verticalPlacement
+        self.content = content
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let frame = AdaptiveLayout.displacedFrame(
+                in: geometry.size,
+                avoiding: AdaptiveLayout.activeDivisionFrames(in: geometry),
+                layoutDirection: layoutDirection, verticalPlacement: verticalPlacement
+            )
+            content(frame.size)
+                .frame(width: frame.width, height: frame.height)
+                .position(x: frame.midX, y: frame.midY)
+        }
+    }
+}
+
+/// Place outside scrolling containers; each pane owns its scrolling.
+struct AdaptiveColumns<Primary: View, Secondary: View>: View {
+    @ViewBuilder var primary: Primary
+    @ViewBuilder var secondary: Secondary
+
+    var body: some View {
+        if #available(iOS 27.1, *) {
+            ArrangementView {
+                primary
+            } secondary: {
+                secondary
+            }
+            .arrangementViewStyle(.split)
+        } else {
+            HStack(alignment: .top, spacing: 16) {
+                primary.frame(maxWidth: .infinity)
+                secondary.frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
 // MARK: - System Share Sheet
 
 struct ExportFileItem: Identifiable {
@@ -101,22 +241,51 @@ func presentActivitySheet(items: [Any], sourceView: UIView? = nil) {
 
 /// Focal-point-cropped bird thumbnail. Uses an in-memory cache for smooth scrolling.
 struct BirdThumbnail: View {
-    private struct LoadRequest: Hashable {
-        let url: String?
-        let size: CGFloat
-    }
     let url: String?
     var size: CGFloat = 48
     var cornerRadius: CGFloat = 8
-    @State private var uiImage: UIImage?
-    @State private var focalPoint = CGPoint(x: 0.5, y: 0.5)
+
+    @Environment(\.displayScale) private var displayScale
 
     init(url: String?, size: CGFloat = 48, cornerRadius: CGFloat = 8) {
         self.url = url
         self.size = size
         self.cornerRadius = cornerRadius
+    }
+
+    var body: some View {
+        // Resolve the environment before the stateful content seeds its state from the cache.
+        BirdThumbnailContent(
+            url: url,
+            size: size,
+            cornerRadius: cornerRadius,
+            displayScale: displayScale
+        )
+    }
+}
+
+private struct BirdThumbnailContent: View {
+    private struct LoadRequest: Hashable {
+        let url: String?
+        let size: CGFloat
+        let displayScale: CGFloat
+    }
+    let url: String?
+    let size: CGFloat
+    let cornerRadius: CGFloat
+    let displayScale: CGFloat
+    @State private var uiImage: UIImage?
+    @State private var focalPoint = CGPoint(x: 0.5, y: 0.5)
+
+    init(url: String?, size: CGFloat, cornerRadius: CGFloat, displayScale: CGFloat) {
+        self.url = url
+        self.size = size
+        self.cornerRadius = cornerRadius
+        self.displayScale = displayScale
         let cached = size.isFinite && size > 0
-            ? ImageLoader.shared.cachedImageAndFocalPoint(url, targetPoints: size) : nil
+            ? ImageLoader.shared.cachedImageAndFocalPoint(
+                url, targetPoints: size, displayScale: displayScale
+            ) : nil
         _uiImage = State(initialValue: cached?.image)
         _focalPoint = State(initialValue: cached?.focalPoint ?? FocalCropGeometry.center)
     }
@@ -131,7 +300,7 @@ struct BirdThumbnail: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .task(id: LoadRequest(url: url, size: size)) {
+        .task(id: LoadRequest(url: url, size: size, displayScale: displayScale)) {
             // Geometry-driven thumbnails can mount before their container is measured.
             guard size.isFinite, size > 0 else { return }
             await loadImage()
@@ -139,7 +308,9 @@ struct BirdThumbnail: View {
     }
 
     private func loadImage() async {
-        guard let loaded = await ImageLoader.shared.imageAndFocalPoint(for: url, targetPoints: size) else { return }
+        guard let loaded = await ImageLoader.shared.imageAndFocalPoint(
+            for: url, targetPoints: size, displayScale: displayScale
+        ) else { return }
         // The loader deliberately outlives its caller, so a load for a previous `url` can
         // still land here and overwrite the current row's image.
         guard !Task.isCancelled else { return }
@@ -207,6 +378,40 @@ struct BirdHeroImage: View {
     let width: CGFloat
     let height: CGFloat
 
+    @Environment(\.displayScale) private var displayScale
+
+    init(thumbnailUrl: String?, fullImageUrl: String?, width: CGFloat, height: CGFloat) {
+        self.thumbnailUrl = thumbnailUrl
+        self.fullImageUrl = fullImageUrl
+        self.width = width
+        self.height = height
+    }
+
+    var body: some View {
+        BirdHeroImageContent(
+            thumbnailUrl: thumbnailUrl,
+            fullImageUrl: fullImageUrl,
+            width: width,
+            height: height,
+            displayScale: displayScale
+        )
+    }
+}
+
+private struct BirdHeroImageContent: View {
+    private struct LoadRequest: Hashable {
+        let url: String?
+        let width: CGFloat
+        let height: CGFloat
+        let displayScale: CGFloat
+    }
+
+    let thumbnailUrl: String?
+    let fullImageUrl: String?
+    let width: CGFloat
+    let height: CGFloat
+    let displayScale: CGFloat
+
     @State private var thumbnailImage: UIImage?
     @State private var fullImage: UIImage?
     @State private var thumbnailFocalPoint = CGPoint(x: 0.5, y: 0.5)
@@ -216,16 +421,27 @@ struct BirdHeroImage: View {
     /// render) is what lets a hero already loaded by a context-menu preview appear on frame
     /// one when the view is pushed, with no blur-up replay.
     @MainActor
-    init(thumbnailUrl: String?, fullImageUrl: String?, width: CGFloat, height: CGFloat) {
+    init(
+        thumbnailUrl: String?,
+        fullImageUrl: String?,
+        width: CGFloat,
+        height: CGFloat,
+        displayScale: CGFloat
+    ) {
         self.thumbnailUrl = thumbnailUrl
         self.fullImageUrl = fullImageUrl
         self.width = width
         self.height = height
+        self.displayScale = displayScale
         let target = max(width, height)
-        let thumbnail = ImageLoader.shared.cachedImageAndFocalPoint(thumbnailUrl, targetPoints: target)
+        let thumbnail = ImageLoader.shared.cachedImageAndFocalPoint(
+            thumbnailUrl, targetPoints: target, displayScale: displayScale
+        )
         let full = fullImageUrl == thumbnailUrl
             ? nil
-            : ImageLoader.shared.cachedImageAndFocalPoint(fullImageUrl, targetPoints: target)
+            : ImageLoader.shared.cachedImageAndFocalPoint(
+                fullImageUrl, targetPoints: target, displayScale: displayScale
+            )
         _thumbnailImage = State(initialValue: thumbnail?.image)
         _thumbnailFocalPoint = State(initialValue: thumbnail?.focalPoint ?? CGPoint(x: 0.5, y: 0.5))
         _fullImage = State(initialValue: full?.image)
@@ -251,10 +467,14 @@ struct BirdHeroImage: View {
         }
         .frame(width: width, height: height)
         .clipped()
-        .task(id: thumbnailUrl) {
+        .task(id: LoadRequest(
+            url: thumbnailUrl, width: width, height: height, displayScale: displayScale
+        )) {
+            guard width.isFinite, width > 0, height.isFinite, height > 0 else { return }
             if let loaded = await ImageLoader.shared.imageAndFocalPoint(
                 for: thumbnailUrl,
-                targetPoints: targetPoints
+                targetPoints: targetPoints,
+                displayScale: displayScale
             ) {
                 guard !Task.isCancelled else { return }
                 thumbnailFocalPoint = loaded.focalPoint
@@ -267,11 +487,15 @@ struct BirdHeroImage: View {
                 )
             }
         }
-        .task(id: fullImageUrl) {
+        .task(id: LoadRequest(
+            url: fullImageUrl, width: width, height: height, displayScale: displayScale
+        )) {
+            guard width.isFinite, width > 0, height.isFinite, height > 0 else { return }
             guard awaitingFullRes, let fullImageUrl else { return }
             if let cached = ImageLoader.shared.cachedImageAndFocalPoint(
                 fullImageUrl,
-                targetPoints: targetPoints
+                targetPoints: targetPoints,
+                displayScale: displayScale
             ) {
                 guard !Task.isCancelled else { return }
                 fullFocalPoint = cached.focalPoint
@@ -286,7 +510,8 @@ struct BirdHeroImage: View {
             }
             guard let loaded = await ImageLoader.shared.imageAndFocalPoint(
                 for: fullImageUrl,
-                targetPoints: targetPoints
+                targetPoints: targetPoints,
+                displayScale: displayScale
             ) else { return }
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.45)) {
