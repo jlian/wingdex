@@ -23,6 +23,7 @@ struct OutingDetailView: View {
     @State private var editingNotes = false
     @State private var notesText = ""
     @State private var savingNotes = false
+    @State private var viewportSize: CGSize?
     @FocusState private var notesFocused: Bool
     @State private var contextMenuSpecies: SpeciesRoute?
     @State private var outingToRename: Outing?
@@ -139,7 +140,8 @@ struct OutingDetailView: View {
     private func outingContent(_ outing: Outing) -> some View {
         GeometryReader { geo in
             if AdaptiveLayout.prefersPairedPanes(
-                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+                in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize,
+                viewportSize: viewportSize
             ) {
                 AdaptiveColumns {
                     List {
@@ -155,6 +157,7 @@ struct OutingDetailView: View {
                 }
             }
         }
+        .keyboardIndependentViewportSize($viewportSize)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .navigationDestination(for: SpeciesRoute.self) { route in
@@ -498,6 +501,7 @@ struct OutingDetailView: View {
                 .lineLimit(3...12)
                 .focused($notesFocused)
                 .disabled(savingNotes)
+                .accessibilityIdentifier("outing.notes")
 
             // .borderless per button, not on the HStack: with the automatic style a List
             // row is one tap target and a tap fires every button in it, so Cancel also saved.

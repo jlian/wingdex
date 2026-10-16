@@ -11,10 +11,11 @@ enum AdaptiveLayout {
     static func prefersPairedPanes(
         in geometry: GeometryProxy,
         sizeClass: UserInterfaceSizeClass?,
-        dynamicTypeSize: DynamicTypeSize
+        dynamicTypeSize: DynamicTypeSize,
+        viewportSize: CGSize? = nil
     ) -> Bool {
         prefersPairedPanes(
-            in: geometry.size, sizeClass: sizeClass, dynamicTypeSize: dynamicTypeSize,
+            in: viewportSize ?? geometry.size, sizeClass: sizeClass, dynamicTypeSize: dynamicTypeSize,
             divisionFrames: activeDivisionFrames(in: geometry)
         )
     }
@@ -87,7 +88,8 @@ enum AdaptiveLayout {
                 )
                 preferred = verticalPlacement == .top ? top : bottom
                 alternate = verticalPlacement == .top ? bottom : top
-                return preferred.height > 0 ? preferred : alternate
+                return preferred.height >= min(readableWidth / 2, bounds.height / 2)
+                    ? preferred : alternate
             }
         }
     }
@@ -194,6 +196,21 @@ private struct OutingRowActionsModifier: ViewModifier {
 }
 
 extension View {
+    func keyboardIndependentViewportSize(_ size: Binding<CGSize?>) -> some View {
+        background {
+            // Only the measurement ignores the keyboard; content keeps native avoidance.
+            GeometryReader { geometry in
+                Color.clear
+                    .onGeometryChange(for: CGSize.self) { _ in
+                        geometry.size
+                    } action: { newSize in
+                        size.wrappedValue = newSize
+                    }
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+    }
+
     func outingRowActions(
         outing: Outing,
         onView: @escaping () -> Void

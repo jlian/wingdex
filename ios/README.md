@@ -113,6 +113,8 @@ targets. Recent-species cards and sighting links share
 one value-driven Home navigation path. Full-width species and outing details
 separate the visual overview from their history and notes; narrower detail
 panes remain stacked. Species photos are bounded by the offered viewport height.
+Detail pane selection measures the keyboard-independent viewport while lists retain
+native keyboard avoidance, so opening notes does not recreate the editor.
 Identification keeps both comparison photos together, placing results alongside
 them in wide layouts. Tall media panes stack Yours above Reference; wide/tabletop
 media panes keep them side by side. Outing review places photos beside the metadata
@@ -126,7 +128,9 @@ sizes retain the single-column layout when flat and use the native panes when a
 fold divides the view. Custom centered entry, sign-in, recovery and crop controls
 stay together in one usable region. Interactive groups prefer the lower region
 in tabletop poses; identification progress prefers the upper region. Division
-frames already include Apple's interactive margins. Continuous lists, articles
+frames already include Apple's interactive margins; divisions near an edge do not
+squeeze controls into a narrow sliver. Empty Home controls scroll inside their
+usable region when space or text size requires it. Continuous lists, articles
 and photo galleries are not displaced as a whole. Secondary settings, account-data
 and import forms use a consistent readable width. Sort and account controls
 use native toolbar groups. The selection collage fades at the measured control

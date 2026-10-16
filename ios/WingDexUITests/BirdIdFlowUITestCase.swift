@@ -46,11 +46,10 @@ class BirdIdFlowUITestCase: XCTestCase {
     func scrollUntilVisible(
         _ element: XCUIElement,
         in app: XCUIApplication,
+        scrollingContainer: XCUIElement? = nil,
         maximumSwipes: Int = 5
     ) -> Bool {
-        let container = app.collectionViews.firstMatch.exists
-            ? app.collectionViews.firstMatch
-            : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
+        let container = scrollingContainer ?? self.scrollingContainer(containing: element, in: app)
 
         for swipe in 0...maximumSwipes {
             let keyboard = app.keyboards.firstMatch
@@ -71,7 +70,7 @@ class BirdIdFlowUITestCase: XCTestCase {
             }
             let visibleTop = visibleFrame.minY
             let visibleBottom = keyboard.exists && keyboard.frame.minY > visibleTop + 60
-                ? keyboard.frame.minY
+                ? min(keyboard.frame.minY, visibleFrame.maxY)
                 : visibleFrame.maxY
             let visibleHeight = visibleBottom - visibleTop
 
@@ -85,7 +84,7 @@ class BirdIdFlowUITestCase: XCTestCase {
             if swipe == maximumSwipes { break }
 
             guard visibleHeight > 60 else {
-                app.swipeUp()
+                container.swipeUp()
                 continue
             }
 
@@ -123,6 +122,21 @@ class BirdIdFlowUITestCase: XCTestCase {
         return false
     }
 
+    func scrollingContainer(containing element: XCUIElement, in app: XCUIApplication) -> XCUIElement {
+        if element.exists {
+            let identifier = element.identifier.isEmpty ? element.label : element.identifier
+            if !identifier.isEmpty {
+                for containers in [app.collectionViews, app.scrollViews] {
+                    let container = containers.containing(element.elementType, identifier: identifier).firstMatch
+                    if container.exists { return container }
+                }
+            }
+        }
+        return app.collectionViews.firstMatch.exists
+            ? app.collectionViews.firstMatch
+            : (app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app)
+    }
+
     /// The accepted name is on the adjustLocation button; empty is displayed as 'No location'.
     func locationValue(_ element: XCUIElement) -> String {
         let label = element.label
@@ -137,7 +151,12 @@ class BirdIdFlowUITestCase: XCTestCase {
     @discardableResult
     func openLocationPicker(in app: XCUIApplication) -> XCUIElement {
         let adjustButton = app.buttons["outing.adjustLocation"]
-        XCTAssertTrue(scrollUntilVisible(adjustButton, in: app), "Adjust location button not found on review screen")
+        XCTAssertTrue(
+            scrollUntilVisible(
+                adjustButton, in: app, scrollingContainer: app.collectionViews["outing.metadata"]
+            ),
+            "Adjust location button not found on review screen"
+        )
         adjustButton.tap()
         let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.existsOrWait(timeout: 5), "Native search field did not appear in location picker")

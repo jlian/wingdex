@@ -27,6 +27,7 @@ struct SpeciesDetailView: View {
     @State private var editingNotes = false
     @State private var notesDraft = ""
     @State private var savingNotes = false
+    @State private var viewportSize: CGSize?
     @FocusState private var notesFocused: Bool
 
     private var entry: DexEntry? {
@@ -199,7 +200,8 @@ struct SpeciesDetailView: View {
             VStack(spacing: 0) {
                 CachedDataNotice()
                 if AdaptiveLayout.prefersPairedPanes(
-                    in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
+                    in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize,
+                    viewportSize: viewportSize
                 ) {
                     AdaptiveColumns {
                         GeometryReader { pane in
@@ -225,6 +227,7 @@ struct SpeciesDetailView: View {
                 }
             }
         }
+        .keyboardIndependentViewportSize($viewportSize)
         .navigationTitle(displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -357,6 +360,7 @@ struct SpeciesDetailView: View {
                 .lineLimit(3...12)
                 .focused($notesFocused)
                 .disabled(savingNotes)
+                .accessibilityIdentifier("species.notes")
 
             // .borderless per button, not on the HStack: with the automatic style a List
             // row is one tap target and a tap fires every button in it, so Cancel also saved.

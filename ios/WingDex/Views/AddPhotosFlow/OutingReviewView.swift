@@ -193,6 +193,7 @@ struct OutingReviewView: View {
                 photosSection(height: 150)
             }
         }
+        .accessibilityIdentifier("outing.metadata")
     }
 
     private func photosSection(height: CGFloat) -> some View {

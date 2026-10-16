@@ -108,6 +108,25 @@ final class AdaptiveLayoutTests: XCTestCase {
         )
     }
 
+    func testTabletopDivisionAtTheBottomDoesNotSelectASliver() {
+        XCTAssertEqual(
+            AdaptiveLayout.displacedFrame(
+                in: tall, avoiding: [CGRect(x: 0, y: 950, width: 700, height: 40)]
+            ),
+            CGRect(x: 0, y: 0, width: 700, height: 950)
+        )
+    }
+
+    func testTabletopDivisionAtTheTopDoesNotSelectASliver() {
+        XCTAssertEqual(
+            AdaptiveLayout.displacedFrame(
+                in: tall, avoiding: [CGRect(x: 0, y: 10, width: 700, height: 40)],
+                verticalPlacement: .top
+            ),
+            CGRect(x: 0, y: 50, width: 700, height: 950)
+        )
+    }
+
     func testCollapsedViewportDoesNotProduceNegativeDimensions() {
         XCTAssertEqual(
             AdaptiveLayout.displacedFrame(in: .zero, avoiding: [bookFold]),

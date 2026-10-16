@@ -23,6 +23,10 @@ final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
         ).firstMatch
         XCTAssertTrue(photosForm.exists, app.debugDescription)
         XCTAssertTrue(metadataForm.exists, app.debugDescription)
+        XCTAssertEqual(
+            scrollingContainer(containing: app.buttons["outing.adjustLocation"], in: app).frame,
+            metadataForm.frame
+        )
         let photosRow = photosForm.cells.firstMatch.frame
         let metadataRow = metadataForm.cells.firstMatch.frame
         XCTAssertGreaterThanOrEqual(metadataRow.minX - photosRow.maxX, 24)
@@ -35,6 +39,8 @@ final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
             }
         }
 
+        openLocationPicker(in: app)
+        returnToReview(in: app)
         next.tap()
         XCTAssertTrue(app.staticTexts["confirm.speciesName"].existsOrWait(timeout: 10))
         let yours = app.buttons["confirm.userPhoto"]

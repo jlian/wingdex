@@ -89,61 +89,65 @@ struct HomeView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        FoldAwareContent { _ in
-            VStack(spacing: 24) {
-                Spacer()
+        FoldAwareContent { availableSize in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer()
 
-                // Bird icon in circular tinted background - matches web layout
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.1))
-                        .frame(width: 80, height: 80)
-                    Image("BirdLogo")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 40, height: 40)
-                        .foregroundStyle(Color.accentColor)
-                }
-
-                VStack(spacing: 12) {
-                    Text("Got bird pics?")
-                        .font(.system(.largeTitle, design: .serif, weight: .semibold))
-                        .foregroundStyle(Color.foregroundText)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Add your photos, ID the birds, and build your WingDex.")
-                        .font(.body)
-                        .foregroundStyle(Color.mutedText)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Button {
-                    showAddPhotos()
-                } label: {
-                    Label {
-                        Text("Identify Birds")
-                            .font(.body.weight(.medium))
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "camera.fill")
-                            .font(.body)
+                    // Bird icon in circular tinted background - matches web layout
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentColor.opacity(0.1))
+                            .frame(width: 80, height: 80)
+                        Image("BirdLogo")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                            .foregroundStyle(Color.accentColor)
                     }
-                    .font(.body.weight(.medium))
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.glassProminent)
-                .buttonSizing(.flexible)
-                .tint(Color.accentColor)
-                .padding(.horizontal, 32)
 
-                Spacer()
+                    VStack(spacing: 12) {
+                        Text("Got bird pics?")
+                            .font(.system(.largeTitle, design: .serif, weight: .semibold))
+                            .foregroundStyle(Color.foregroundText)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Add your photos, ID the birds, and build your WingDex.")
+                            .font(.body)
+                            .foregroundStyle(Color.mutedText)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Button {
+                        showAddPhotos()
+                    } label: {
+                        Label {
+                            Text("Identify Birds")
+                                .font(.body.weight(.medium))
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "camera.fill")
+                                .font(.body)
+                        }
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonSizing(.flexible)
+                    .tint(Color.accentColor)
+                    .padding(.horizontal, 32)
+
+                    Spacer()
+                }
+                .padding(24)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity, minHeight: availableSize.height)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .scrollBounceBehavior(.basedOnSize)
+            .accessibilityIdentifier("home.emptyContent")
         }
     }
 
