@@ -17,6 +17,9 @@ struct AddPhotosFlow: View {
     @State private var locationReview: OutingLocationReviewModel?
     @State private var locationSearch: OutingLocationSearchModel?
     @State private var outingDestination: OutingReviewDestination?
+    /// Alerts requested before the cover finishes presenting can be dropped by UIKit,
+    /// leaving the blank selectPhotos step with no way forward (#448).
+    @State private var isPresentationSettled = false
 
     /// Whether the current step needs a close confirmation (user has unsaved progress).
     private var needsCloseConfirmation: Bool {
@@ -63,6 +66,7 @@ struct AddPhotosFlow: View {
             ))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(PresentationDidAppearReader { isPresentationSettled = true })
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -96,7 +100,7 @@ struct AddPhotosFlow: View {
             Text("You're still identifying photos. If you close now, unsaved sightings will be lost.")
         }
         // Duplicate photo detection alert
-        .alert("Duplicate photos found", isPresented: $viewModel.showDuplicateConfirm) {
+        .alert("Duplicate photos found", isPresented: duplicateConfirmBinding) {
             Button("Skip duplicates") {
                 Task { await viewModel.handleDuplicateChoice(reimport: false) }
             }
@@ -200,9 +204,16 @@ struct AddPhotosFlow: View {
             && !hasError
     }
 
+    private var duplicateConfirmBinding: Binding<Bool> {
+        Binding(
+            get: { isPresentationSettled && viewModel.showDuplicateConfirm },
+            set: { viewModel.showDuplicateConfirm = $0 }
+        )
+    }
+
     private var addPhotosErrorBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.error != nil },
+            get: { isPresentationSettled && viewModel.error != nil },
             set: { if !$0 { viewModel.error = nil } }
         )
     }
@@ -468,6 +479,42 @@ struct AddPhotosFlow: View {
 
         let result = UIImage(cgImage: cropped)
         return result.jpegData(compressionQuality: 0.7)
+    }
+}
+
+/// Calls `onAppear` from UIKit's viewDidAppear, which for a full-screen cover runs
+/// after the presentation transition completes. SwiftUI's onAppear runs when the
+/// view is inserted, which is too early to present an alert on top of the cover.
+private struct PresentationDidAppearReader: UIViewControllerRepresentable {
+    let onAppear: () -> Void
+
+    func makeUIViewController(context: Context) -> Controller {
+        Controller(onAppear: onAppear)
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.onAppear = onAppear
+    }
+
+    final class Controller: UIViewController {
+        var onAppear: () -> Void
+
+        init(onAppear: @escaping () -> Void) {
+            self.onAppear = onAppear
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+        override func loadView() {
+            view = UIView()
+            view.isUserInteractionEnabled = false
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            onAppear()
+        }
     }
 }
 
