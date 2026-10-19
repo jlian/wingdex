@@ -59,8 +59,7 @@ export default function LandingPage({ onUpload, onUploadIntent, embedded = false
         <section className="landing-section landing-identification">
           <div>
             <h2>Bird identification<br /><em>you can review.</em></h2>
-            <p>WingDex's on-device model recognizes more than 10,000 bird species. Confidence scores, reference photos, and range and season indicators help you assess a suggestion rather than accept it blindly.</p>
-            <p>Compare the likely matches, confirm the species, or skip an uncertain photo. Identification is a starting point, not a guarantee.</p>
+            <p>WingDex's on-device model recognizes more than 10,000 bird species. Confidence scores, reference photos, and range and season indicators help you assess each suggestion.</p>
           </div>
           <IdentificationIllustration />
         </section>
@@ -68,23 +67,21 @@ export default function LandingPage({ onUpload, onUploadIntent, embedded = false
           <div>
             <h2>A life list with<br /><em>the sightings behind it.</em></h2>
             <p>Open an outing to see the birds you found, or choose a species to revisit when and where you saw it. Your life list and outing history stay connected.</p>
-            <ul><li>Search and sort your bird life list</li><li>Review first sightings and repeat visits</li><li>Keep dates, counts, and field notes together</li></ul>
-            <button type="button" onClick={onUpload} className="landing-text-link">Start your WingDex <span aria-hidden="true">↗</span></button>
           </div>
           <HistoryIllustration />
         </section>
         <section className="landing-privacy">
           <h2>Your photos.<br /><em>On your device. Always.</em></h2>
-          <p>Your photos are never uploaded to WingDex for identification. Bird ID runs on your device and works offline once the browser has downloaded the model. The iPhone app includes the model from the start.</p>
+          <p>Your photos are never uploaded to WingDex for identification. Bird ID runs entirely on your device.</p>
           <p>Reference images, place lookup, and account syncing may still need an internet connection.</p>
-          <a href="/privacy.html" className="landing-text-link">Read the privacy policy <span aria-hidden="true">↗</span></a>
+          <a href="/privacy.html" className="landing-text-link">Privacy policy <span aria-hidden="true">↗</span></a>
         </section>
         <section className="landing-section landing-records">
           <h2>Keep your eBird records<br /><em>in the picture.</em></h2>
-          <p>Import an eBird CSV to bring existing sightings into WingDex, or export your records in an eBird-compatible format. An account is required for import and export; photo identification, outings, and your life list are available without one.</p>
+          <p>Import an eBird CSV to bring existing sightings into WingDex, or export your records in an eBird-compatible format.</p>
         </section>
         <section className="landing-section landing-ios">
-          <div><h2>Your bird photos,<br /><em>on your iPhone.</em></h2><p>Choose a batch from your library or send it to WingDex from Photos. Review identifications, save outings, and build your life list in the free native app.</p></div>
+          <div><h2>Your bird photos,<br /><em>on your iPhone.</em></h2><p>Choose a batch from your library or send it to WingDex from Photos. Review identifications, save outings, and build your life list in the free app.</p></div>
           <div className="landing-final-actions"><a className="landing-app-store" href="https://apps.apple.com/app/id6760330119"><img src="/landing/download-on-the-app-store.svg" width="144" height="48" alt="Download on the App Store" /></a></div>
         </section>
       </Content>

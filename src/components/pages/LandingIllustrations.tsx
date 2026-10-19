@@ -59,8 +59,8 @@ export function IdentificationIllustration() {
       <div className="landing-id-result">
         <div className="landing-id-heading"><div><strong>Great Blue Heron</strong><em>Ardea herodias</em></div><span className="text-green-700 dark:text-green-400">98%</span></div>
         <div className="landing-confidence" role="meter" aria-label="Example identification confidence" aria-valuenow={98} aria-valuemin={0} aria-valuemax={100}><span className="bg-green-500" /></div>
-        <p className="landing-demo-status" role="status"><CheckCircle size={18} weight="fill" aria-hidden="true" />{confirmed ? 'Confirmed in this example' : 'Suggested match, ready for review'}</p>
-        <button type="button" className="landing-demo-action" disabled={!ready} onClick={() => setConfirmed(!confirmed)}>{confirmed ? 'Reset example' : 'Confirm example ID'}</button>
+        <p className="landing-demo-status" role="status"><CheckCircle size={18} weight="fill" aria-hidden="true" />{confirmed ? 'Confirmed' : 'High confidence'}</p>
+        <button type="button" className="landing-demo-action" disabled={!ready} onClick={() => setConfirmed(!confirmed)}>{confirmed ? 'Reset' : 'Confirm'}</button>
       </div>
     </figure>
   )
