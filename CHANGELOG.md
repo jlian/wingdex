@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/jlian/wingdex/compare/v1.33.0...v1.33.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **Landing:** simplify product copy and example labels ([928fc18](https://github.com/jlian/wingdex/commit/928fc1812eda2db207ac953af7f68760315d1966))
+
 # [1.33.0](https://github.com/jlian/wingdex/compare/v1.32.2...v1.33.0) (2026-10-16)
 
 
