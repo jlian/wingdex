@@ -1,10 +1,13 @@
 # Xcode
 *.xcuserdata
 *.xcworkspace
-# Generated from project.yml; Xcode rewrites these files when schemes are used.
-WingDex.xcodeproj/xcshareddata/xcschemes/
+# Track the generated WingDex scheme for CodeQL autobuild. Regenerate it from
+# project.yml instead of accepting Xcode's local scheme rewrites.
+WingDex.xcodeproj/xcshareddata/xcschemes/*
+!WingDex.xcodeproj/xcshareddata/xcschemes/WingDex.xcscheme
 !WingDex.xcodeproj/project.xcworkspace/
 WingDex.xcodeproj/project.xcworkspace/*
+!WingDex.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 !WingDex.xcodeproj/project.xcworkspace/xcshareddata/
 WingDex.xcodeproj/project.xcworkspace/xcshareddata/*
 !WingDex.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

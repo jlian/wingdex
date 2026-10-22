@@ -41,18 +41,22 @@ For device validation, check camera acceptance versus Retake/Cancel, denied Phot
 ## Prerequisites
 
 - Xcode 27.1+ (iOS 27.1 SDK for full-display iPhone Duo support)
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.46.0, installed by `scripts/install-xcodegen.sh`
 - Apple Developer account (for device builds and Sign in with Apple)
 
 ## Setup
 
 ```bash
 cd ios
-xcodegen generate
+export PATH="${XDG_CACHE_HOME:-$HOME/.cache}/wingdex/xcodegen-2.46.0/install/bin:$PATH"
+make check-project
 open WingDex.xcodeproj
 ```
 
-The Xcode project is generated from `project.yml`. SPM dependencies (swift-openapi-runtime, KeychainAccess) resolve automatically on first build.
+The Xcode project is generated from `project.yml`. `make check-project` uses the
+repository-pinned XcodeGen release and fails if the tracked project, workspace,
+or CodeQL shared scheme need to be committed. SPM dependencies (swift-openapi-runtime,
+KeychainAccess) resolve automatically on first build.
 
 The app connects to the web API. For local development, start the web backend first:
 
@@ -237,6 +241,14 @@ times, JSON summary, and `.xcresult` under
 `ios/build/test-results/<lane>-<uuid>/`. Xcode's exit status is retained. Run one
 iOS lane at a time on a local Mac because the project and any explicitly selected
 build cache are shared.
+
+All generated schemes use automatic screenshots rather than continuous screen
+recording during UI tests. Assertions and explicit screenshot attachments are
+unchanged; result bundles no longer include automatic video recordings.
+CI records appearance setup and simulator/project cleanup separately from boot
+and test execution, so cold-start delays can be distinguished from slow tests.
+Fresh simulators use the newest installed iOS 26+ runtime that supports the
+requested device type; a newer Duo-only runtime does not replace an iPhone runtime.
 
 CI's compiled-cache fallback can reuse another lane's SwiftPM/DerivedData cache
 when Xcode, OS and architecture match, rather than cold-building core after an

@@ -129,6 +129,9 @@ jobs:
           key: ios-bird-id-v1-${{ hashFiles('ios/scripts/sync-birdid-assets.sh', 'public/models/text_classifier_int8.bin', 'public/priors/occurrence.*.bin.gz', 'public/priors/rarity.*.bin.gz', 'src/lib/bird-id-local-adapter.ts', 'src/lib/rarity.ts', 'src/lib/taxonomy.json', 'ios/WingDex/Resources/taxonomy.json') }}
       - name: Install XcodeGen
         run: ios/scripts/install-xcodegen.sh
+      - name: Verify generated Xcode project metadata
+        if: matrix.lane == 'unit'
+        run: make -C ios check-project
       - name: Run tests
         run: make -C ios "${{ matrix.suite }}" TESTS="${{ matrix.tests }}"
       - name: Upload lane diagnostics

@@ -45,18 +45,20 @@ latest_runtime() {
 import json
 import sys
 
+device_type = sys.argv[1]
 runtimes = [
     runtime for runtime in json.load(sys.stdin)["runtimes"]
     if runtime["isAvailable"]
     and runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
     and int(runtime["version"].split(".")[0]) >= 26
+    and any(device["identifier"] == device_type for device in runtime["supportedDeviceTypes"])
 ]
 if not runtimes:
     raise SystemExit(
-        "Install an iOS 26+ simulator runtime in Xcode Settings > Components"
+        f"Install an iOS 26+ simulator runtime compatible with {device_type} in Xcode Settings > Components"
     )
 print(max(runtimes, key=lambda runtime: tuple(map(int, runtime["version"].split("."))))["identifier"])
-'
+' "$1"
 }
 
 find_local_simulator() {
@@ -100,18 +102,23 @@ cleanup() {
   status=$?
   trap - EXIT INT TERM
   if [[ "$mode" == ci && "$created_simulator" == 1 && -n "$simulator" ]]; then
+    phase=$SECONDS
+    echo "Starting simulator cleanup at $(date -u '+%Y-%m-%dT%H:%M:%SZ')" | tee -a "$output/timing.txt"
     xcrun simctl shutdown "$simulator" >> "$output/simulator.log" 2>&1 || true
     if ! xcrun simctl delete "$simulator" >> "$output/simulator.log" 2>&1; then
       echo "Could not delete test simulator $simulator; see ios/$output/simulator.log" >&2
       if [[ "$status" == 0 ]]; then status=1; fi
     fi
+    echo "Simulator cleanup: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
   fi
   if [[ "$mode" == ci && "$generation_attempted" == 1 ]]; then
     # Restore the normal resource graph for the next direct Xcode Run/Archive.
+    phase=$SECONDS
     if ! WINGDEX_SKIP_APP_ICON=0 xcodegen generate >> "$output/generate.log" 2>&1; then
       echo "Could not restore the Xcode project; see ios/$output/generate.log" >&2
       if [[ "$status" == 0 ]]; then status=1; fi
     fi
+    echo "Project restore: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
   fi
   echo "Mode: $mode; total: $((SECONDS - started))s; exit: $status; diagnostics: ios/$output" \
     | tee -a "$output/timing.txt"
@@ -165,17 +172,21 @@ if [[ "$mode" == ci ]]; then
   fi
   phase=$SECONDS
   # Select an installed iPhone runtime, not a user's existing device.
-  runtime=$(latest_runtime)
   device_type=${IOS_TEST_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
+  runtime=$(latest_runtime "$device_type")
   simulator=$(xcrun simctl create "WingDex tests $run_id" "$device_type" "$runtime")
   created_simulator=1
   echo "Simulator: $simulator ($runtime)" | tee "$output/simulator.log"
   xcrun simctl boot "$simulator" >> "$output/simulator.log" 2>&1
   xcrun simctl bootstatus "$simulator" -b 2>&1 | tee -a "$output/simulator.log"
   echo "Simulator setup: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
+  phase=$SECONDS
+  echo "Starting simulator appearance setup at $(date -u '+%Y-%m-%dT%H:%M:%SZ')" | tee -a "$output/timing.txt"
   xcrun simctl ui "$simulator" appearance light
+  echo "Simulator appearance: $((SECONDS - phase))s" | tee -a "$output/timing.txt"
 
   phase=$SECONDS
+  echo "Starting test execution at $(date -u '+%Y-%m-%dT%H:%M:%SZ')" | tee -a "$output/timing.txt"
   set +e
   # Use the compiled manifest, not another project/package-resolution pass.
   # Hosted runners can spend over a minute establishing the first automation
@@ -206,7 +217,7 @@ else
     local_device_name=${IOS_TEST_DEVICE_NAME:-WingDex Local Tests}
     simulator=$(find_local_simulator "$local_device_name" "$device_type")
     if [[ -z "$simulator" ]]; then
-      runtime=$(latest_runtime)
+      runtime=$(latest_runtime "$device_type")
       simulator=$(xcrun simctl create "$local_device_name" "$device_type" "$runtime")
       echo "Created persistent simulator: $simulator ($local_device_name, $runtime)" \
         | tee "$output/simulator.log"

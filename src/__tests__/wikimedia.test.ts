@@ -45,7 +45,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Import after mocking
-const { getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
+const { fetchImageCredit, getWikimediaImage, getWikimediaSummary } = await import('@/lib/wikimedia')
 
 function mockWikiResponse(data: Record<string, unknown> | null) {
   if (data === null) {
@@ -72,6 +72,38 @@ function wikiPageData(overrides: Record<string, unknown> = {}) {
     ...overrides,
   }
 }
+
+describe('fetchImageCredit', () => {
+  it('parses artist and license HTML fragments as text', async () => {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        query: {
+          pages: {
+            '1': {
+              imageinfo: [{
+                extmetadata: {
+                  Artist: { value: '<a href="/wiki/User:Birder">A <b>Bird</a></b> Photographer' },
+                  LicenseShortName: { value: 'CC&nbsp;BY-SA&nbsp;4.0<!-- current -->' },
+                },
+              }],
+            },
+          },
+        },
+      }),
+    }))
+
+    const result = await fetchImageCredit(
+      'https://upload.wikimedia.org/wikipedia/commons/a/ab/Credit_parser_test.jpg',
+    )
+
+    expect(result).toEqual({
+      pageUrl: 'https://commons.wikimedia.org/wiki/File:Credit_parser_test.jpg',
+      artist: 'A Bird Photographer',
+      license: 'CC BY-SA 4.0',
+    })
+  })
+})
 
 // == getWikimediaImage ========================================
 
@@ -526,7 +558,9 @@ describe('getWikimediaGallery', () => {
     const result1 = await getWikimediaGallery('Cached Bird Gallery8')
     const result2 = await getWikimediaGallery('Cached Bird Gallery8')
     expect(result1).toEqual(result2)
-    const commonsCalls = mockFetch.mock.calls.filter(([url]: [string]) => url.includes('commons.wikimedia.org'))
+    const commonsCalls = mockFetch.mock.calls.filter(
+      ([url]: [string]) => new URL(url, 'https://wingdex.test').hostname === 'commons.wikimedia.org',
+    )
     expect(commonsCalls).toHaveLength(1)
   })
 
@@ -546,13 +580,17 @@ describe('getWikimediaGallery', () => {
     expect(result).toEqual([])
   })
 
-  it('strips HTML from captions', async () => {
+  it('parses HTML captions as text', async () => {
     mockFetch.mockImplementationOnce(() => Promise.resolve(commonsResponse({
-      '1': { title: 'File:Bird.jpg', index: 1, description: '<b>A <i>beautiful</i> bird</b> in flight' },
+      '1': {
+        title: 'File:Bird.jpg',
+        index: 1,
+        description: '<b>A <i>beautiful</b></i> bird &amp; friend<!-- hidden -->',
+      },
     })))
 
     const result = await getWikimediaGallery('HTML Bird Gallery11')
-    expect(result[0].caption).toBe('A beautiful bird in flight')
+    expect(result[0].caption).toBe('A beautiful bird & friend')
   })
 
   it('drops results that are not JPEG photos', async () => {

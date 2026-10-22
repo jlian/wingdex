@@ -158,7 +158,7 @@ describe('provider revocation', () => {
       },
     } as unknown as D1Database
     const fetcher = vi.fn<Fetcher>(async (url) => new Response(null, {
-      status: String(url).includes('github.com') ? 204 : 503,
+      status: new URL(String(url)).hostname === 'api.github.com' ? 204 : 503,
     }))
 
     await expect(revokeProvidersAndDeleteUser(db, 'user-1', env, fetcher)).rejects.toMatchObject({
