@@ -24,7 +24,7 @@ jobs:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref_name }}
       url: ${{ github.ref == 'refs/heads/main' && 'https://wingdex.app' || format('https://{0}.wingdex.app', github.ref_name) }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -143,7 +143,7 @@ jobs:
             echo "should_deploy=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.changes.outputs.should_deploy == 'true'
         with:
           node-version: 24
@@ -157,7 +157,7 @@ jobs:
       - name: Cache node_modules
         if: steps.changes.outputs.should_deploy == 'true'
         id: node-modules-cache
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
