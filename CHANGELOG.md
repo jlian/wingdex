@@ -1,3 +1,10 @@
+## [1.33.3](https://github.com/jlian/wingdex/compare/v1.33.2...v1.33.3) (2026-10-22)
+
+
+### Bug Fixes
+
+* **CI:** clean up closed pull request previews ([363b9c5](https://github.com/jlian/wingdex/commit/363b9c54e7cd374f081e49f4a0d4451a2e3806c9))
+
 ## [1.33.2](https://github.com/jlian/wingdex/compare/v1.33.1...v1.33.2) (2026-10-22)
 
 
