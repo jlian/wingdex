@@ -1,6 +1,14 @@
 # Xcode
 *.xcuserdata
 *.xcworkspace
+!WingDex.xcworkspace/
+WingDex.xcworkspace/*
+!WingDex.xcworkspace/contents.xcworkspacedata
+!WingDex.xcworkspace/xcshareddata/
+WingDex.xcworkspace/xcshareddata/*
+!WingDex.xcworkspace/xcshareddata/swiftpm/
+WingDex.xcworkspace/xcshareddata/swiftpm/*
+!WingDex.xcworkspace/xcshareddata/swiftpm/Package.resolved
 # Track the generated WingDex scheme for CodeQL autobuild. Regenerate it from
 # project.yml instead of accepting Xcode's local scheme rewrites.
 WingDex.xcodeproj/xcshareddata/xcschemes/*

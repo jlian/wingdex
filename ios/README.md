@@ -91,6 +91,23 @@ Device builds require the normal signing setup. Plain `make -C ios` still runs
 tests. Run builds and tests serially because they share the generated project and
 build cache.
 
+### CodeQL default setup
+
+`WingDex.xcworkspace` wraps the existing project so CodeQL's Swift autobuilder
+selects `-workspace WingDex.xcworkspace -scheme WingDex` instead of a target-based
+project build. The shared scheme remains generated from `project.yml`; no custom
+CodeQL workflow is required for workspace discovery.
+
+The workspace keeps the same `Package.resolved` as the project so switching build
+entry points does not update dependencies. When intentionally updating packages,
+keep both lockfiles identical; `make -C ios check-project` verifies this.
+
+Check the workspace with `xcodebuild -list -workspace ios/WingDex.xcworkspace`
+from the repository root. A successful local build with Xcode 27.1 does not prove
+compatibility with the scanner's selected Xcode or Swift extractor. After the
+workspace lands on the default branch, re-enable Swift in CodeQL default setup
+and verify both the selected command and completed analysis.
+
 ## Resizable layouts and iPhone Duo
 
 Build release archives with Xcode 27.1 or later. The deployment target remains

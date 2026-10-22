@@ -42,3 +42,11 @@ if [[ "$before" != "$after" ]]; then
   git -C "$ROOT" --no-pager diff -- "${generated_paths[@]}" >&2
   exit 1
 fi
+
+project_pins="$ROOT/ios/WingDex.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+workspace_pins="$ROOT/ios/WingDex.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+if ! cmp -s "$project_pins" "$workspace_pins"; then
+  echo "Project and standalone workspace Package.resolved files must stay in sync." >&2
+  diff -u "$project_pins" "$workspace_pins" >&2 || true
+  exit 1
+fi
