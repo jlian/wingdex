@@ -6,13 +6,13 @@ final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
         let app = launchApp(extraArguments: [
             "--ui-test-geocoding-success", "--ui-test-stub-identification",
         ])
-        let next = waitForOutingReview(in: app)
         let window = app.windows.firstMatch
         let bounds = window.frame
         try XCTSkipIf(
             bounds.width < 640 || bounds.width <= bounds.height,
             "Requires an unfolded, wide simulator window. Current window: \(bounds)."
         )
+        let next = waitForOutingReview(in: app)
 
         capture("Outing_Review", in: window)
         let photosForm = app.collectionViews.containing(

@@ -239,6 +239,7 @@ schemes:
         "--auto-sign-in": false
     test:
       config: Localhost Debug
+      preferredScreenCaptureFormat: screenshots
       targets:
         - name: WingDexTests
           parallelizable: false
@@ -263,6 +264,7 @@ schemes:
         "--auto-sign-in": false
     test:
       config: Dev Debug
+      preferredScreenCaptureFormat: screenshots
       targets:
         - name: WingDexTests
           parallelizable: false
@@ -287,6 +289,7 @@ schemes:
         "--auto-sign-in": false
     test:
       config: Dev Debug
+      preferredScreenCaptureFormat: screenshots
       targets:
         - name: WingDexTests
           parallelizable: false
@@ -309,6 +312,7 @@ schemes:
       config: Release
     test:
       config: Production Debug
+      preferredScreenCaptureFormat: screenshots
       targets:
         - name: WingDexTests
           parallelizable: false

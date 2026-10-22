@@ -242,6 +242,14 @@ times, JSON summary, and `.xcresult` under
 iOS lane at a time on a local Mac because the project and any explicitly selected
 build cache are shared.
 
+All generated schemes use automatic screenshots rather than continuous screen
+recording during UI tests. Assertions and explicit screenshot attachments are
+unchanged; result bundles no longer include automatic video recordings.
+CI records appearance setup and simulator/project cleanup separately from boot
+and test execution, so cold-start delays can be distinguished from slow tests.
+Fresh simulators use the newest installed iOS 26+ runtime that supports the
+requested device type; a newer Duo-only runtime does not replace an iPhone runtime.
+
 CI's compiled-cache fallback can reuse another lane's SwiftPM/DerivedData cache
 when Xcode, OS and architecture match, rather than cold-building core after an
 accessibility lane already built the same targets. Content-keyed generated Bird
