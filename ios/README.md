@@ -48,6 +48,7 @@ For device validation, check camera acceptance versus Retake/Cancel, denied Phot
 
 ```bash
 cd ios
+export PATH="${XDG_CACHE_HOME:-$HOME/.cache}/wingdex/xcodegen-2.46.0/install/bin:$PATH"
 make check-project
 open WingDex.xcodeproj
 ```
