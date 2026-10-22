@@ -9,7 +9,7 @@ on:
       - '.vscode/**'
 
 concurrency:
-  group: preview-${{ github.ref }}
+  group: ci-preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
         run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Check Action SHA pins
-        run: node --test scripts/action-pins.test.mjs
+        run: node --test scripts/action-pins.test.mjs scripts/preview-cleanup.test.mjs
 
       - run: npm run check:static
 
@@ -147,6 +147,10 @@ jobs:
 
   build-and-test:
     name: Verify & Deploy Preview
+    # Serialize publication with cleanup without allowing a CI rerun to cancel it.
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     needs: [checks, unit, browser]
     if: always()
     runs-on: ubuntu-24.04
@@ -155,6 +159,7 @@ jobs:
       actions: read
       contents: read
       deployments: write
+      pull-requests: read
     steps:
       - name: Require every verification lane
         env:
@@ -163,7 +168,20 @@ jobs:
           BROWSER_RESULT: ${{ needs.browser.result }}
         run: test "$CHECKS_RESULT" = success && test "$UNIT_RESULT" = success && test "$BROWSER_RESULT" = success
 
+      - name: Check PR is still open
+        id: pull_request
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            core.setOutput('open', pr.state === 'open');
+            if (pr.state !== 'open') core.info('Skipping preview for a closed PR.');
+
       - name: Detect Cloudflare credentials
+        if: steps.pull_request.outputs.open == 'true'
         id: cloudflare
         # Forks still execute every verification lane, but cannot deploy.
         run: |
@@ -253,6 +271,14 @@ jobs:
           FALLBACK_ALIAS_URL: https://pr-${{ github.event.pull_request.number }}-wingdex-app-preview.lianguanlun.workers.dev
         with:
           script: |
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            if (pr.state !== 'open') {
+              core.info('PR closed during deployment; not recreating its GitHub preview.');
+              return;
+            }
             const out = process.env.COMMAND_OUTPUT || '';
             // wrangler prints e.g. "Version Preview URL: https://pr-259-...workers.dev"
             const m = out.match(/https:\/\/pr-[a-z0-9-]+-wingdex-app-preview\.[a-z0-9-]+\.workers\.dev/i);

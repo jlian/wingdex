@@ -1,33 +1,56 @@
 name: Cleanup Preview
 
 on:
-  pull_request:
+  # Run only trusted base-branch code, including when a fork PR closes.
+  pull_request_target:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report cleanup candidates without changing anything
+        type: boolean
+        default: true
+      pr_number:
+        description: Pull request number (blank scans all numbered preview environments)
+        type: string
+        required: false
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || inputs.pr_number || 'backlog' }}
+  cancel-in-progress: false
 
 permissions:
+  contents: read
   deployments: write
+  pull-requests: read
 
 jobs:
   cleanup:
-    name: Deactivate preview deployments
+    name: Clean up closed PR previews
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Deactivate preview deployments
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Clean up GitHub previews
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          DELETE_ENVIRONMENTS: ${{ secrets.PREVIEW_CLEANUP_TOKEN != '' }}
+        with:
+          # Environment deletion requires Administration: write, which the
+          # built-in workflow token cannot grant.
+          github-token: ${{ secrets.PREVIEW_CLEANUP_TOKEN || github.token }}
           script: |
-            const branch = context.payload.pull_request.head.ref;
-            const envName = `preview (${branch})`;
-            const deployments = await github.rest.repos.listDeployments({
-              ...context.repo,
-              environment: envName,
-              per_page: 100,
+            const { cleanupPreviews } = require('./.github/scripts/cleanup-preview.cjs');
+            await cleanupPreviews({
+              github, context, core,
+              dryRun: process.env.DRY_RUN === 'true',
+              prNumber: process.env.PR_NUMBER,
+              deleteEnvironments: process.env.DELETE_ENVIRONMENTS === 'true',
             });
-            for (const d of deployments.data) {
-              await github.rest.repos.createDeploymentStatus({
-                ...context.repo,
-                deployment_id: d.id,
-                state: 'inactive',
-              });
-            }
-            core.info(`Deactivated ${deployments.data.length} deployment(s) for ${envName}`);

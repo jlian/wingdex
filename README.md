@@ -184,6 +184,36 @@ not cleared for this comparison. CI overlaps the independent verification
 lanes and avoids reinstalling browser libraries already present in the runner
 image; compare its end-to-end timing rather than just the runner's duration.
 
+### Preview cleanup
+
+CI registers each PR as `preview (#<number>)` in GitHub. **Cleanup Preview**
+runs when a PR closes, rechecks its live state, and deactivates all of its
+deployment records, including paginated history. Deployment history is retained.
+CI and close-event cleanup share a concurrency group, and rerunning CI for a
+closed PR does not recreate its preview.
+
+The built-in `GITHUB_TOKEN` cannot delete GitHub environments. To remove the
+environment records too, configure the optional repository secret
+`PREVIEW_CLEANUP_TOKEN` with a fine-grained token scoped to this repository:
+**Administration: write**, **Deployments: write**, and **Pull requests: read**.
+Without it, cleanup warns that environment records remain. This privileged
+workflow checks out only the default branch, never PR code.
+
+To clean the existing backlog, run **Cleanup Preview** from the Actions tab.
+Leave `dry_run` enabled to inspect candidates first, then disable it to apply.
+Set `pr_number` to scope a run to one PR, or leave it blank to scan all
+`preview (#<number>)` environments. Open PRs and other environment names,
+including `production` and `dev`, are never cleaned up.
+
+Cloudflare cleanup is not included: PRs currently use aliased version URLs on
+the shared `wingdex-app-preview` Worker, not individually deletable Workers.
+Cloudflare's documented versions API has no individual deletion endpoint, and
+disabling version URLs on that Worker would disable every PR's URL. GitHub
+cleanup does not revoke those URLs. Moving to individually deletable
+[Cloudflare Previews](https://developers.cloudflare.com/workers/previews/)
+is a separate deployment migration; do not delete the shared Worker, D1 database,
+or R2 bucket as PR cleanup.
+
 | Path | Purpose |
 |------|---------|
 | `src/components/` | React components: `ui/` primitives, `pages/`, `flows/` |
