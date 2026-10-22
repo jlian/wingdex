@@ -199,8 +199,8 @@ export async function fetchImageCredit(imageUrl: string | undefined): Promise<Im
     const meta = Object.values(data.query?.pages ?? {})[0]?.imageinfo?.[0]?.extmetadata
     const credit: ImageCredit = {
       pageUrl,
-      artist: stripHtml(meta?.Artist?.value) || undefined,
-      license: stripHtml(meta?.LicenseShortName?.value) || undefined,
+      artist: htmlFragmentToText(meta?.Artist?.value) || undefined,
+      license: htmlFragmentToText(meta?.LicenseShortName?.value) || undefined,
     }
     creditCache.set(pageUrl, credit)
     return credit
@@ -459,9 +459,11 @@ function parsePlumage(text: string): string | undefined {
   return tags.length > 0 ? tags.join(', ') : undefined
 }
 
-/** Commons returns Artist and license fields as HTML fragments. */
-function stripHtml(value?: string): string {
-  return (value ?? '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+/** Commons returns metadata fields as HTML fragments. */
+function htmlFragmentToText(value?: string): string {
+  if (!value) return ''
+  const document = new DOMParser().parseFromString(value, 'text/html')
+  return (document.body.textContent ?? '').replace(/\s+/g, ' ').trim()
 }
 
 /** Search Wikimedia Commons for bird photos. Returns images with 500px thumbnails and descriptions. */
@@ -512,8 +514,7 @@ async function fetchCommonsGallery(speciesName: string, limit: number): Promise<
       if (ii?.mime !== 'image/jpeg') continue
       const url = ii?.thumburl
       if (!url) continue
-      const rawDesc = ii?.extmetadata?.ImageDescription?.value ?? ''
-      const caption = rawDesc.replace(/<[^>]*>/g, '')
+      const caption = htmlFragmentToText(ii?.extmetadata?.ImageDescription?.value)
       // Skip non-photo content. Spanish terms too: Commons captions the nest and chick shots
       // that outrank the bird itself for several New World species.
       const subject = `${caption} ${title}`.replace(/[_-]/g, ' ')

@@ -13,13 +13,16 @@ export SCHEME DESTINATION DERIVED_DATA_PATH XCODEBUILD_ARGS \
 BUILD_DESTINATION := $(if $(strip $(DESTINATION)),$(DESTINATION),generic/platform=iOS Simulator)
 BUILD_DERIVED_DATA_PATH := $(if $(strip $(DERIVED_DATA_PATH)),$(DERIVED_DATA_PATH),build/DerivedData)
 
-.PHONY: build test all core accessibility accessibility-deep
+.PHONY: build check-project test all core accessibility accessibility-deep
 
 build:
 	WINGDEX_SKIP_APP_ICON=0 xcodegen generate
 	xcodebuild build -project WingDex.xcodeproj -scheme "$(SCHEME)" \
 		-destination "$(BUILD_DESTINATION)" -derivedDataPath "$(BUILD_DERIVED_DATA_PATH)" \
 		-onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation $(XCODEBUILD_ARGS)
+
+check-project:
+	./scripts/check-generated-project.sh
 
 test all:
 	./scripts/test.sh all $(TESTS)

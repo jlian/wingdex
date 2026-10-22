@@ -41,18 +41,21 @@ For device validation, check camera acceptance versus Retake/Cancel, denied Phot
 ## Prerequisites
 
 - Xcode 27.1+ (iOS 27.1 SDK for full-display iPhone Duo support)
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.46.0, installed by `scripts/install-xcodegen.sh`
 - Apple Developer account (for device builds and Sign in with Apple)
 
 ## Setup
 
 ```bash
 cd ios
-xcodegen generate
+make check-project
 open WingDex.xcodeproj
 ```
 
-The Xcode project is generated from `project.yml`. SPM dependencies (swift-openapi-runtime, KeychainAccess) resolve automatically on first build.
+The Xcode project is generated from `project.yml`. `make check-project` uses the
+repository-pinned XcodeGen release and fails if the tracked project, workspace,
+or CodeQL shared scheme need to be committed. SPM dependencies (swift-openapi-runtime,
+KeychainAccess) resolve automatically on first build.
 
 The app connects to the web API. For local development, start the web backend first:
 
