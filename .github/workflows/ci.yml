@@ -20,9 +20,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -32,7 +32,7 @@ jobs:
 
       - name: Cache node_modules
         id: node-modules-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Check Action SHA pins
+        run: node --test scripts/action-pins.test.mjs
 
       - run: npm run check:static
 
@@ -50,9 +53,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -62,7 +65,7 @@ jobs:
 
       - name: Cache node_modules
         id: node-modules-cache
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
@@ -84,9 +87,9 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4, 5]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -96,7 +99,7 @@ jobs:
 
       - name: Cache node_modules
         id: node-modules-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
@@ -106,7 +109,7 @@ jobs:
         run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Cache Chromium
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.playwright }}
@@ -125,7 +128,7 @@ jobs:
 
       - name: Upload browser failures
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: web-test-results-${{ matrix.shard }}
           path: test-results/
@@ -133,7 +136,7 @@ jobs:
 
       - name: Keep tested preview build
         if: matrix.shard == 1
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: web-preview-build
           path: |
@@ -173,7 +176,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         if: steps.cloudflare.outputs.available == 'true'
         with:
           # Root manifests/config plus migrations; deploy the tested artifact,
@@ -182,7 +185,7 @@ jobs:
             migrations
             .github/actions/dependency-versions
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.cloudflare.outputs.available == 'true'
         with:
           node-version: 24
@@ -194,7 +197,7 @@ jobs:
       - name: Cache node_modules
         if: steps.cloudflare.outputs.available == 'true'
         id: node-modules-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: node_modules
           key: node-modules-node24-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.dependencies }}
@@ -205,7 +208,7 @@ jobs:
 
       - name: Restore tested preview build
         if: steps.cloudflare.outputs.available == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: web-preview-build
 
@@ -231,7 +234,7 @@ jobs:
           github.head_ref != 'dev' && github.head_ref != 'main'
           && steps.cloudflare.outputs.available == 'true'
         id: deploy_preview
-        uses: cloudflare/wrangler-action@v4
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -241,7 +244,7 @@ jobs:
         if: >-
           github.head_ref != 'dev' && github.head_ref != 'main'
           && steps.cloudflare.outputs.available == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           # Prefer the alias URL wrangler actually printed (robust to subdomain
           # changes); fall back to the deterministic constructed URL. The URL is
@@ -271,7 +274,7 @@ jobs:
 
       - name: Report workflow runtime
         if: always()
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const { data: run } = await github.rest.actions.getWorkflowRun({

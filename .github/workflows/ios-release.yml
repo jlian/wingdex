@@ -38,7 +38,7 @@ jobs:
       source_sha: ${{ steps.source_sha.outputs.sha }}
       check_sha: ${{ steps.source_sha.outputs.check_sha }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 0
@@ -139,7 +139,7 @@ jobs:
             fi
           fi
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.diff.outputs.has_changes == 'true'
         with:
           node-version: 24
@@ -275,7 +275,7 @@ jobs:
     timeout-minutes: 45
     steps:
       # Build the exact branch tip used to calculate the release version.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.check.outputs.source_sha }}
           fetch-depth: 0
@@ -336,14 +336,14 @@ jobs:
 
       - name: Upload iOS diagnostics
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: iOS-release-diagnostics-attempt-${{ github.run_attempt }}
           path: ios/build/logs/
           retention-days: 7
 
       - name: Upload validated IPA artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: WingDex-${{ needs.check.outputs.release_version }}
           path: |
@@ -355,7 +355,7 @@ jobs:
           retention-days: 7
 
       - name: Upload generated release files
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: WingDex-release-files-${{ needs.check.outputs.release_version }}
           path: |
@@ -370,7 +370,7 @@ jobs:
       - name: Revoke CI-created signing certificates
         if: always()
         continue-on-error: true
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -467,13 +467,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.check.outputs.source_sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -537,7 +537,7 @@ jobs:
 
       - name: Download generated release files
         if: steps.publication.outputs.state == 'source'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: WingDex-release-files-${{ needs.check.outputs.release_version }}
           path: ios
@@ -631,7 +631,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Download validated IPA artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: WingDex-${{ needs.check.outputs.release_version }}
           path: build
@@ -652,7 +652,7 @@ jobs:
           rm -rf "$TMP"
 
       - name: Upload to TestFlight
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}

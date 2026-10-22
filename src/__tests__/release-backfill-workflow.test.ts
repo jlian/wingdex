@@ -39,7 +39,7 @@ describe('release species identity rollout', () => {
   it('runs strict backfill only while the identity migrations are in the release range', () => {
     const deployCheck = workflow.slice(
       workflow.indexOf('- name: Check for deployable changes'),
-      workflow.indexOf('- uses: actions/setup-node@v6')
+      workflow.indexOf('- uses: actions/setup-node@')
     )
     expect(deployCheck.indexOf('BASE_SHA=$(gh api')).toBeLessThan(
       deployCheck.indexOf('elif [ "$EVENT_NAME" = "workflow_dispatch" ]')
