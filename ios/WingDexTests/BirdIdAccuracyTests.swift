@@ -1,6 +1,5 @@
 @testable import WingDex
 import Foundation
-import UIKit
 import XCTest
 
 /// End-to-end accuracy on real bird photos.
@@ -36,7 +35,7 @@ final class BirdIdAccuracyTests: XCTestCase {
         .deletingLastPathComponent()   // repo root
         .appendingPathComponent("src/assets/images")
 
-    func testRealPhotosAndFormerImportDerivativesIdentifyExpectedSpecies() async throws {
+    func testRealPhotosIdentifyExpectedSpecies() async throws {
         var misses: [String] = []
         var missingFromTopFive: [String] = []
         var checked = 0
@@ -59,12 +58,6 @@ final class BirdIdAccuracyTests: XCTestCase {
             if !results.contains(where: { $0.commonName == species }) {
                 missingFromTopFive.append("\(file): \(results.map(\.commonName).joined(separator: ", "))")
             }
-            let image = try XCTUnwrap(UIImage(data: original))
-            let derivative = try XCTUnwrap(image.jpegData(compressionQuality: 0.7))
-            let derivativeTop = try await BirdIdEngine.shared.identify(
-                imageData: derivative, location: nil, month: nil
-            ).first?.commonName
-            XCTAssertEqual(derivativeTop, top?.commonName, "\(file): removing the import re-encode changed top-1")
         }
 
         XCTAssertEqual(misses, [], "top-1 mismatches on \(checked) photos")

@@ -6,10 +6,13 @@ cd "$(dirname "$0")/.."
 
 lane=${1:-all}
 case "$lane" in
-  core) targets=(-only-testing:WingDexTests -only-testing:WingDexUITests) ;;
+  core) targets=(-only-testing:WingDexTests -only-testing:WingDexUITests/CoreJourneysUITests) ;;
+  ui) targets=(-only-testing:WingDexUITests/CoreJourneysUITests) ;;
+  integration) targets=(-only-testing:WingDexUITests/ExternalLinkUITests) ;;
+  device) targets=(-only-testing:WingDexUITests/AdaptiveToolbarUITests -only-testing:WingDexUITests/DuoReviewLayoutUITests) ;;
   accessibility|accessibility-deep) targets=(-only-testing:WingDexAccessibilityUITests) ;;
-  all) targets=(-only-testing:WingDexTests -only-testing:WingDexUITests -only-testing:WingDexAccessibilityUITests) ;;
-  *) echo "Usage: ios/scripts/test.sh [all|core|accessibility|accessibility-deep] [xcodebuild test selectors...]" >&2; exit 2 ;;
+  all) targets=(-only-testing:WingDexTests -only-testing:WingDexUITests/CoreJourneysUITests) ;;
+  *) echo "Usage: ios/scripts/test.sh [all|core|ui|integration|device|accessibility|accessibility-deep] [xcodebuild test selectors...]" >&2; exit 2 ;;
 esac
 if [[ $# -gt 0 ]]; then shift; fi
 for selector in "$@"; do

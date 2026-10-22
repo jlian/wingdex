@@ -3,7 +3,7 @@ import Foundation
 
 /// Deterministic account snapshots for UI tests. AuthTransportTests exercise
 /// native HTTP behavior; the Worker tests own backend integration coverage.
-final class UITestDataService: DataStoreService, Sendable {
+actor UITestDataService: DataStoreService {
     enum Mode: Sendable {
         case empty
         case populated
@@ -19,21 +19,63 @@ final class UITestDataService: DataStoreService, Sendable {
         }
     }
 
-    private let mode: Mode
+    private var response: AllDataResponse
     private let allowsOutingUpdates: Bool
+    private let allowsPhotoUploads: Bool
 
-    init(mode: Mode, allowsOutingUpdates: Bool = false) {
-        self.mode = mode
+    init(mode: Mode, allowsOutingUpdates: Bool = false, allowsPhotoUploads: Bool = false) {
+        response = mode == .empty
+            ? AllDataResponse(outings: [], photos: [], observations: [], dex: [])
+            : Self.populatedResponse
         self.allowsOutingUpdates = allowsOutingUpdates
+        self.allowsPhotoUploads = allowsPhotoUploads
     }
 
     func fetchAllData() async throws -> AllDataResponse {
-        switch mode {
-        case .empty:
-            return AllDataResponse(outings: [], photos: [], observations: [], dex: [])
-        case .populated:
-            return Self.populatedResponse
+        response
+    }
+
+    func submitPendingUpload(_ upload: PendingPhotoUpload) async throws -> DataService.ObservationsResponse {
+        guard allowsPhotoUploads,
+              let submitted = upload.outing ?? response.outings.first(where: { $0.id == upload.observations.first?.outingId }),
+              submitted.userId.isEmpty || submitted.userId == upload.accountID
+        else { throw URLError(.unsupportedURL) }
+        // The API, not the client draft, assigns the authenticated outing owner.
+        let outing = Outing(
+            id: submitted.id, userId: upload.accountID, startTime: submitted.startTime,
+            endTime: submitted.endTime, locationName: submitted.locationName,
+            defaultLocationName: submitted.defaultLocationName, lat: submitted.lat, lon: submitted.lon,
+            stateProvince: submitted.stateProvince, countryCode: submitted.countryCode,
+            protocol: submitted.protocol, numberObservers: submitted.numberObservers,
+            allObsReported: submitted.allObsReported, effortDistanceMiles: submitted.effortDistanceMiles,
+            effortAreaAcres: submitted.effortAreaAcres, notes: submitted.notes, createdAt: submitted.createdAt
+        )
+        let outings = response.outings.filter { $0.id != outing.id } + [outing]
+        let photos = response.photos.filter { photo in !upload.photos.contains { $0.id == photo.id } }
+            + upload.photos.map {
+                Photo(
+                    id: $0.id, outingId: $0.outingId, dataUrl: "", thumbnail: "",
+                    exifTime: $0.exifTime, gps: $0.gps.map { Photo.GPS(lat: $0.lat, lon: $0.lon) },
+                    fileHash: $0.fileHash, fileName: $0.fileName
+                )
+            }
+        let observations = response.observations.filter { observation in
+            !upload.observations.contains { $0.id == observation.id }
+        } + upload.observations
+        let dex = groupByDexKey(observations).map { group in
+            let sightings = group.observations
+            let dates = outings.filter { outing in sightings.contains { $0.outingId == outing.id } }
+                .map(\.startTime).sorted()
+            return DexEntry(
+                speciesName: group.label, speciesCode: sightings.first?.speciesCode,
+                firstSeenDate: dates.first ?? outing.startTime,
+                lastSeenDate: dates.last ?? outing.startTime,
+                totalOutings: Set(sightings.map(\.outingId)).count,
+                totalCount: sightings.reduce(0) { $0 + $1.count }, notes: ""
+            )
         }
+        response = AllDataResponse(outings: outings, photos: photos, observations: observations, dex: dex)
+        return DataService.ObservationsResponse(observations: upload.observations, dexUpdates: dex)
     }
 
     func deleteOuting(id _: String) async throws -> DexUpdateResponse {
@@ -41,10 +83,10 @@ final class UITestDataService: DataStoreService, Sendable {
     }
 
     func updateOuting(id: String, fields: OutingUpdate) async throws -> Outing {
-        guard allowsOutingUpdates, let outing = Self.populatedResponse.outings.first(where: { $0.id == id }) else {
+        guard allowsOutingUpdates, let outing = response.outings.first(where: { $0.id == id }) else {
             throw URLError(.unsupportedURL)
         }
-        return Outing(
+        let updated = Outing(
             id: outing.id, userId: outing.userId, startTime: outing.startTime, endTime: outing.endTime,
             locationName: fields.locationName ?? outing.locationName,
             defaultLocationName: fields.defaultLocationName ?? outing.defaultLocationName,
@@ -53,6 +95,11 @@ final class UITestDataService: DataStoreService, Sendable {
             effortDistanceMiles: outing.effortDistanceMiles, effortAreaAcres: outing.effortAreaAcres,
             notes: fields.notes ?? outing.notes, createdAt: outing.createdAt
         )
+        response = AllDataResponse(
+            outings: response.outings.map { $0.id == id ? updated : $0 },
+            photos: response.photos, observations: response.observations, dex: response.dex
+        )
+        return updated
     }
 
     func updateDexEntry(fields _: DexUpdate) async throws -> [DexEntry] {

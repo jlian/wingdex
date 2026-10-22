@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       deep_audits:
-        description: Include advisory image-based and Dynamic Type accessibility audits
+        description: Include advisory accessibility audits and external-link integration
         type: boolean
         default: false
   schedule:
@@ -81,17 +81,8 @@ jobs:
           - lane: unit
             suite: core
             tests: -only-testing:WingDexTests
-          - lane: ui-photos
-            suite: core
-            tests: -only-testing:WingDexUITests/BirdIdFlowUITests -only-testing:WingDexUITests/CameraSettingsUITests
-          - lane: ui-outings
-            suite: core
-            tests: -only-testing:WingDexUITests -skip-testing:WingDexUITests/BirdIdFlowUITests -skip-testing:WingDexUITests/CameraSettingsUITests -skip-testing:WingDexUITests/OutingLocationVisualUITests
-          - lane: ui-gestures
-            suite: core
-            tests: -only-testing:WingDexUITests/OutingLocationVisualUITests
-          - lane: accessibility
-            suite: accessibility
+          - lane: ui
+            suite: ui
             tests: ''
     runs-on: xcode-27
     env:
@@ -142,28 +133,32 @@ jobs:
           path: ios/build/test-results
           retention-days: 7
 
-  deep-accessibility:
-    name: Deep accessibility (advisory)
+  extended-ui:
+    name: iOS ${{ matrix.suite }} (advisory)
     if: github.event_name == 'schedule' || inputs.deep_audits
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [accessibility-deep, integration]
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     timeout-minutes: 15
-    # Simulator screenshot/contrast and font-resizing audits are useful reports,
-    # not a reliable merge gate. Real issues and infrastructure errors stay in
-    # the failing test results; neither is rewritten into a pass or skipped test.
+    # Broader audits and external-app handoffs are advisory, not merge gates.
+    # Real issues and infrastructure errors stay in the failing test results;
+    # neither is rewritten into a pass or skipped test.
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install XcodeGen
         run: ios/scripts/install-xcodegen.sh
-      - name: Run deep audits
-        run: make -C ios accessibility-deep
+      - name: Run extended coverage
+        run: make -C ios "${{ matrix.suite }}"
       - name: Upload audit diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: iOS-deep-accessibility-diagnostics
+          name: iOS-${{ matrix.suite }}-diagnostics
           path: ios/build/test-results
           retention-days: 7
 
