@@ -13,7 +13,7 @@ export SCHEME DESTINATION DERIVED_DATA_PATH XCODEBUILD_ARGS \
 BUILD_DESTINATION := $(if $(strip $(DESTINATION)),$(DESTINATION),generic/platform=iOS Simulator)
 BUILD_DERIVED_DATA_PATH := $(if $(strip $(DERIVED_DATA_PATH)),$(DERIVED_DATA_PATH),build/DerivedData)
 
-.PHONY: build check-project test all core accessibility accessibility-deep
+.PHONY: build check-project test all core ui integration device accessibility accessibility-deep
 
 build:
 	WINGDEX_SKIP_APP_ICON=0 xcodegen generate
@@ -27,5 +27,5 @@ check-project:
 test all:
 	./scripts/test.sh all $(TESTS)
 
-core accessibility accessibility-deep:
+core ui integration device accessibility accessibility-deep:
 	./scripts/test.sh $@ $(TESTS)

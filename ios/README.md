@@ -36,7 +36,7 @@ accounts, using the email only as the empty display-name field's placeholder.
 
 The implementation uses Apple's documented `UIImagePickerController.InfoKey.mediaMetadata`, `PHAssetCreationRequest`, `PHAccessLevel.addOnly`, and SwiftUI form, menu, and focus APIs. It leaves the native library picker unchanged.
 
-For device validation, check camera acceptance versus Retake/Cancel, denied Photos permission, Settings recovery, saving with location access on/off, image orientation, and identification canceled after a capture. Simulator tests cover metadata, save deduplication, timezone resolution, rename behavior, outing actions, and preference persistence; they cannot exercise a physical camera.
+For device validation, check camera acceptance versus Retake/Cancel, denied Photos permission, Settings recovery, saving with location access on/off, image orientation, and identification canceled after a capture. Simulator tests cover metadata, save deduplication, timezone resolution, app-outcome journeys, and preference persistence; they cannot exercise a physical camera.
 
 ## Prerequisites
 
@@ -155,9 +155,7 @@ UDID. Fixture UI tests clear local app data, so do not use a simulator holding a
 populated personal account:
 
 ```bash
-make -C ios core DESTINATION='platform=iOS Simulator,id=YOUR-DUO-TEST-UDID' \
-  XCODEBUILD_ARGS='CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never' \
-  TESTS='-only-testing:WingDexTests/PhotoComparisonLayoutTests -only-testing:WingDexTests/PhotoSelectionLayoutTests -only-testing:WingDexTests/CropViewportGeometryTests -only-testing:WingDexTests/ImageLoaderTests -only-testing:WingDexUITests/HomeNavigationUITests -only-testing:WingDexUITests/BirdIdFlowUITests -only-testing:WingDexUITests/ResizabilityUITests -only-testing:WingDexUITests/DuoReviewLayoutUITests'
+make -C ios device DESTINATION='platform=iOS Simulator,id=YOUR-DUO-TEST-UDID'
 ```
 
 Open the dedicated Duo in unfolded landscape before running
@@ -182,9 +180,12 @@ replaces, these live-resize checks and physical-device validation.
 From the repository root:
 
 ```bash
-npm run test:ios                      # all required unit, UI and accessibility tests
+npm run test:ios                      # unit tests and six core UI journeys
 make -C ios                           # the same default, without Node/npm
-make -C ios core                      # unit tests and native interaction smoke tests
+make -C ios core                      # unit tests and six core UI journeys
+make -C ios ui                        # the single normal-PR UI job
+make -C ios integration               # one external-link handoff/return
+make -C ios device                    # explicit adaptive toolbar and Duo checks
 make -C ios accessibility             # deterministic structural accessibility audits
 make -C ios accessibility-deep        # opt-in OS-sensitive full audits
 
@@ -275,7 +276,7 @@ release archives do not omit it.
 Open `ios/WingDex.xcodeproj` after `cd ios && xcodegen generate`, select an iPhone
 Simulator, and click any test diamond, including
 `test://com.apple.xcode/WingDex/WingDexAccessibilityUITests`. The canonical
-`WingDex` scheme contains all three required test targets. `Localhost`, `Dev`,
+`WingDex` scheme contains all three test targets. `Localhost`, `Dev`,
 and `Production` also contain them; their API build settings do not affect test
 fixtures. `Dev CI` was removed: it offered no different coverage, and disabling
 its debugger did not prevent the launch-snapshot diagnostic below. Ordinary Run,
@@ -294,20 +295,41 @@ replace the app's account with fixtures.
 | Layer | Responsibility |
 |-------|----------------|
 | Unit | Native bearer transport, session rejection and token handling, auth/passkey parsing, view-model state and cancellation, offline persistence, RAW/JPEG/HEIF handling, real Core ML inference and web/native golden-vector parity |
-| Core UI | Sessionless photo/share entry, share failure and relaunch, crop gestures, missing-GPS permission intent/manual entry, native sheet/search/map/photo gestures, outing actions/rename retry, camera preference persistence |
-| Accessibility | Hit regions, sufficient descriptions and traits on populated/empty tabs, settings/deletion, sign-in, outing review, search, map and photo sheets |
-| Deep accessibility | The same journeys with full requested audit categories, including screenshot contrast, text clipping, element detection and Dynamic Type resizing |
+| Core UI | Six independent outcomes: add/identify/save/find, custom photo review/crop, browse/edit notes/back stack, interrupted cold share, deferred warm share, profile/preference persistence; one terminal structural audit |
+| Accessibility (explicit) | Hit regions, sufficient descriptions and traits on populated/empty tabs, settings/deletion, sign-in, outing review, search, map and photo sheets |
+| Deep accessibility (scheduled/manual) | The same audit journeys with full requested categories, including screenshot contrast, text clipping, element detection and Dynamic Type resizing |
+| Integration (scheduled/manual) | One real external-link handoff and preserved review after returning |
+| Device (explicit) | Adaptive toolbar reachability and unfolded Duo review/crop checks, supplemented by manual fold/resize/assistive-technology validation |
 
-The previous 26 bird-flow UI tests repeated location-state permutations already
-covered by `OutingLocationReviewModelTests` and `OutingLocationSearchModelTests`.
-They are now seven native wiring/lifecycle tests. In particular, the former
-64.9-second manual-location cancellation journey is a continuation-controlled
-unit test of both late current-location and reverse-lookup responses, with no
-11-second inverted UI waits. Six outing UI launches become two journeys; five
-visual journeys become three, keeping real camera movement and photo paging.
-Single-photo/index/removal semantics remain in `PhotoReviewCarouselTests`,
-`PhotoFlowStoreTests` and `AddPhotosViewModelTests`. The repeated light/large-text
-journey is consolidated into the large-text native interaction test.
+`CoreJourneysUITests` replaces 27 core-target test methods (including one pure
+helper test and one normally skipped Duo case) with six independent journeys,
+approximately eight app launches. CLI defaults select that class explicitly,
+so adding an unrelated UI class does not silently expand the PR job. The
+default no longer runs eight separate broad accessibility cases; a terminal
+structural audit remains in the save/find journey and full audits run on the
+schedule or explicit command. Device checks are intentionally explicit because
+an ordinary phone cannot prove unfolded Duo behavior.
+
+The save fixture uses the real `DataStore` pending queue, successful submission,
+and refreshed account snapshot, not a view-model jump to Done. Camera and
+file/share photo preparation receive a deterministic focal-point provider in
+explicit UI-testing processes; each account fixture clears only its test
+account's pending uploads so an earlier failed run cannot pollute the next one.
+Production still uses Vision. ImageIO decoding,
+real image/saliency caching, crop geometry and the classifier remain covered in
+focused unit/integration tests. UI navigation and share tests no longer depend
+on optional Vision analysis. Fixture images delivered after tapping Identify
+Birds are camera captures, not automated system PhotosPicker selection.
+
+Intentional coverage cuts: standalone current-location success/denial/manual
+entry and loading-layout UI permutations; MapKit pan/zoom telemetry; exact-frame
+confirmation choreography; confirmation Next/Back/context-menu routes; photo
+removal/swipe-dismissal integration; rename/delete-cancel/error-draft UI routes;
+the second notes-editor route; repeated Settings/navigation/Safari cycles.
+State, transport, persistence and geometry tests retain their own responsibilities,
+but do not pretend to preserve all removed view wiring or transient-layout
+coverage. Broad audits and a representative external-return/device regression
+remain outside normal PR execution; pointless choreography is not copied to cron.
 
 Eight live `AuthIntegrationTests` mostly retested Worker HTTP CRUD/auth behavior.
 Four `AuthTransportTests` instead exercise the real native `AuthService` and
@@ -317,36 +339,59 @@ session validation/sign-out, unauthorized data, sessionless calls and failed
 sign-in. Server behavior stays in the web/Worker suites. UI auth transport is a
 Debug-only, explicitly enabled in-process fixture that rejects unknown requests
 rather than falling through to a real backend. Real model inference is not
-repeated through UI: the accuracy unit test keeps all eight real photos and their
-former JPEG derivatives, reusing each original result instead of inferring it
-twice. Missing accuracy fixtures now fail instead of silently skipping.
+repeated through UI: the accuracy unit test keeps all eight original real photos.
+The former import-reencoding comparison was retired with that removed import
+path, deliberately dropping that specific JPEG-perturbation invariant. Missing
+accuracy fixtures fail instead of silently skipping.
 
 All UI existence/disappearance waits first read `.exists` synchronously, then
-fall back to XCTest's native wait only when needed. Value/camera predicates also
-check their current value first. No private XCTest polling or quiescence settings
+fall back to XCTest's native wait only when needed. No private XCTest polling or quiescence settings
 are used; Apple does not guarantee the waiter's polling interval.
 
 Outing-review readiness has a bounded 60-second startup allowance for anonymous
-session creation and first-use photo analysis on cold simulators. Share bootstrap
+session creation and photo preparation on cold simulators. Share bootstrap
 journeys use the same readiness helper. This is a predicate wait, not a sleep or
 test retry; failures include the current UI hierarchy.
 
-Required CI lanes target **under 10 minutes each**, not a 10-minute kill switch.
-Unit, photo/camera UI, outing-list UI, location/photo gestures, and structural
-accessibility run on separate Xcode 27 ARM images, using a
+Normal PR CI runs **one UI job**, alongside unit tests on a separate Xcode 27
+ARM image, using a
 fresh iPhone 17 Pro simulator in CI. Local runs reuse their dedicated simulator
 unless `DESTINATION` overrides it. Smaller SE displays did not improve hosted
 runtime consistently and introduced tight-viewport scrolling failures, so CI
 does not override the device type.
-The 15-minute infrastructure ceiling still leaves failure diagnostics time to
-finish. CI calls these exact repo commands; it does not deploy/select a backend
-or manage a second simulator lifecycle. Backend-only changes no longer trigger
-native UI builds. Full visual/font audits run nightly or via the workflow's
-`deep_audits` input as an explicitly advisory job, not a merge gate. Run failures,
+The preferred goal is **under eight minutes end to end**, including checkout,
+cache restore/save, build, simulator boot/appearance, test execution, artifacts
+and cleanup. It is a measurement target, not a new timeout or a claim based on
+a warm local run. The 15-minute infrastructure ceiling is unchanged. With
+historical UI setup alone taking about three minutes, the journey budget is
+approximately eight launches, not an expanding interaction matrix. Record
+hosted job and workflow wall-clock timings before claiming that target is met.
+The aggregate `Build & Test (iOS Simulator)` still requires both normal jobs.
+No remote required-check settings are changed.
+
+CI calls the same repo commands; it does not deploy/select a backend or manage
+a second simulator lifecycle. Backend-only changes do not trigger native UI
+builds. Full visual/font audits and the external-return check run nightly or via
+the workflow's `deep_audits` input as advisory jobs, not merge gates. Run failures,
 including infrastructure timeouts, remain failures in the logs and `.xcresult`;
 they are not converted to passes/skips or swallowed with a generic issue filter.
-The default structural checks remain required. Full audits supplement, not
+Only the journey's terminal structural audit is a PR requirement. Moving the
+broader audit suite off PRs reduces detection frequency, not its categories;
+it does not preserve identical gate coverage. Full audits supplement, not
 replace, manual VoiceOver, contrast, dark appearance and Dynamic Type checks.
+
+New UI coverage must name a WingDex-owned failure not adequately caught below
+UI, have one primary goal and a user-visible outcome, and justify every extra
+launch or cross-app hop against the measured job budget. Prefer direct fixture
+setup and explicit readiness over sleeps. Review the slowest action logs,
+remove retired behavior and duplicate routes, and record coverage losses when
+cutting tests. Past bugs justify focused regression checks, not permanent
+immunity for all surrounding choreography. Do not share mutable state between
+tests, add retry-until-green loops, or migrate testing frameworks to fix latency.
+
+This follows Apple's [testing-layer guidance](https://developer.apple.com/videos/play/wwdc2018/417/)
+and [focused UI test guidance](https://developer.apple.com/videos/play/wwdc2020/10091/).
+Neither Apple nor those sources mandates a numeric test or runtime budget.
 
 Historical CI-style verification on 2026-09-07, Xcode 27/iOS 27, iPhone
 17 Pro, fresh simulators and a warm build cache:
@@ -373,7 +418,7 @@ categories or increasing timeouts:
   It was not the map audit taking too long: that audit was never reached. Outing
   review, search and map now have independent launches and terminal audits,
   following Apple's [per-screen audit guidance](https://developer.apple.com/videos/play/wwdc2023/10035/).
-  The same real search/map navigation remains covered by the separate UI flow.
+  The search/map setup remains in the explicit audit journeys, not the PR flow.
   No missing-animation waits appeared in the passing full run.
 - Settings' "Contrast nearly passed" attachment identified **Log Out**, whose
   destructive red text measured about 3.20:1 against white. Ordinary logout is

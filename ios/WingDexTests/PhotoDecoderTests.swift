@@ -49,6 +49,7 @@ final class PhotoDecoderTests: XCTestCase {
         XCTAssertEqual(Double(got.width) / Double(got.height), 4128.0 / 6192.0, accuracy: 0.01)
         XCTAssertEqual(got.data.count, got.width * got.height * 4)
         XCTAssertEqual(got.channels, 4)
+        XCTAssertLessThan(got.data.count, 4128 * 6192 * 4 / 40)
     }
 
     func testLeavesPhotosSmallerThanTheCapAlone() throws {
@@ -75,14 +76,6 @@ final class PhotoDecoderTests: XCTestCase {
 
     func testReturnsNilForNonImageData() {
         XCTAssertNil(PhotoDecoder.decode(Data("not an image".utf8)))
-    }
-
-    /// The whole point of decoding at reduced scale: a 4128x6192 photo is 102 MB
-    /// of RGBA at full size and about 2 MB at the cap.
-    func testCappedDecodeAllocatesFarLessThanFullSize() throws {
-        let got = try XCTUnwrap(PhotoDecoder.decode(try makeJPEG(width: 4128, height: 6192)))
-        let fullSize = 4128 * 6192 * 4
-        XCTAssertLessThan(got.data.count, fullSize / 40)
     }
 
     func testFeedsCLIPPreprocessDirectly() throws {

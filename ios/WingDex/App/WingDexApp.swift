@@ -52,11 +52,18 @@ struct WingDexApp: App {
         let cache = try? AccountDataCache()
     let pendingUploads: PendingUploadStore?
     do {
-      pendingUploads = try PendingUploadStore()
+      let pendingStore = try PendingUploadStore()
+      #if DEBUG
+      if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1",
+         UITestDataService.Mode(arguments: ProcessInfo.processInfo.arguments) != nil {
+        try pendingStore.clear(accountID: "ui-test-account")
+      }
+      #endif
+      pendingUploads = pendingStore
     } catch {
       pendingUploads = nil
       appLog.error(
-        "Could not open the pending upload store: \(error.localizedDescription, privacy: .public)")
+        "Could not prepare the pending upload store: \(error.localizedDescription, privacy: .public)")
     }
         #if DEBUG
         let uiTestDataMode = UITestDataService.Mode(arguments: ProcessInfo.processInfo.arguments)
@@ -76,7 +83,8 @@ struct WingDexApp: App {
                 if let uiTestDataMode {
                     return UITestDataService(
                         mode: uiTestDataMode,
-                        allowsOutingUpdates: ProcessInfo.processInfo.arguments.contains("--ui-test-allow-outing-updates")
+                        allowsOutingUpdates: ProcessInfo.processInfo.arguments.contains("--ui-test-allow-outing-updates"),
+                        allowsPhotoUploads: ProcessInfo.processInfo.arguments.contains("--ui-test-allow-photo-uploads")
                     )
                 }
                 #endif
@@ -585,7 +593,7 @@ struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingSettings = false
     @State private var showingAccount = false
-    @State private var addPhotosVM = AddPhotosViewModel()
+    @State private var addPhotosVM = MainTabView.makePhotoFlowModel()
     @State private var showingWizard = false
     @State private var incomingShareImportInFlight = false
     @State private var incomingShareImportRequested = false
@@ -687,7 +695,7 @@ struct MainTabView: View {
                 await importTask?.value
                 await sessionViewModel.cancelSession()
                 guard addPhotosVM === sessionViewModel else { return }
-                addPhotosVM = AddPhotosViewModel()
+                addPhotosVM = Self.makePhotoFlowModel()
                 addPhotosVM.configure(
                     auth: auth,
                     dataStore: store
@@ -769,18 +777,11 @@ struct MainTabView: View {
             }
             #endif
             scheduleIncomingShareImport()
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-stage-share-after-launch") {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(1))
-                    try? await stageUITestSharePhoto()
-                    navigation.handleIncomingShare()
-                }
-            }
-            #endif
             _ = await taxonomyWarmup
             #if DEBUG
-            await startUITestIdentificationIfRequested()
+            if !ProcessInfo.processInfo.arguments.contains("--ui-test-photo-on-add") {
+                await startUITestIdentificationIfRequested()
+            }
             #endif
         }
         .onChange(of: store.hasLoadedAll) { _, hasLoadedAll in
@@ -841,8 +842,27 @@ struct MainTabView: View {
                 // Opening this tab is the first sign the user intends to
                 // identify, and paying the model load here keeps it off launch
                 // for everyone who never does.
-                .task { try? await BirdIdEngine.shared.warmUp() }
+                .task {
+                    #if DEBUG
+                    if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1" {
+                        if ProcessInfo.processInfo.arguments.contains("--ui-test-photo-on-add") {
+                            await startUITestIdentificationIfRequested()
+                        }
+                        return
+                    }
+                    #endif
+                    try? await BirdIdEngine.shared.warmUp()
+                }
         }
+    }
+
+    private static func makePhotoFlowModel() -> AddPhotosViewModel {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["WINGDEX_UI_TESTING"] == "1" {
+            return AddPhotosViewModel(suggestFocalPoint: { _, _ in CGPoint(x: 0.5, y: 0.5) })
+        }
+        #endif
+        return AddPhotosViewModel()
     }
 
     private func acknowledgeReverseGeocodingCancellation() {

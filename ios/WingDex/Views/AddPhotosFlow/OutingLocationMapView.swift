@@ -68,9 +68,6 @@ struct OutingLocationMapView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var camera: MapCameraPosition
     @State private var showMapsError = false
-    #if DEBUG
-    @State private var observedCameraValue = ""
-    #endif
 
     init(location: OutingMapLocation, title: String = "Location", subtitle: String? = nil) {
         self.location = location
@@ -87,13 +84,6 @@ struct OutingLocationMapView: View {
         .mapControls {
             MapScaleView()
         }
-        #if DEBUG
-        .onMapCameraChange { context in
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-observe-map-camera") {
-                observedCameraValue = "\(context.camera.centerCoordinate.latitude),\(context.camera.centerCoordinate.longitude),\(context.camera.distance)"
-            }
-        }
-        #endif
         .accessibilityIdentifier("outing.map")
         .ignoresSafeArea(edges: .bottom)
         .overlay(alignment: .bottom) {
@@ -106,9 +96,6 @@ struct OutingLocationMapView: View {
             .buttonStyle(.glass)
             .controlSize(.large)
             .accessibilityIdentifier("outing.openAppleMaps")
-            #if DEBUG
-            .accessibilityValue(observedCameraValue)
-            #endif
             .padding(.bottom, 16)
         }
         .navigationTitle(title)

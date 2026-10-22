@@ -170,10 +170,16 @@ final class AddPhotosViewModel {
     private var identificationTask: Task<Void, Never>?
     private(set) var identificationRequestID = UUID()
     private let identify: @MainActor (Data, (lat: Double, lon: Double)?, Int?) async throws -> [BirdIdEngine.Result]
+    typealias FocalPointProvider = @Sendable (Data, String) async -> CGPoint?
+    private let suggestFocalPoint: FocalPointProvider
 
     init(
+        suggestFocalPoint: @escaping FocalPointProvider = { data, label in
+            await ImageLoader.suggestedFocalPoint(for: data, label: label)
+        },
         identify: (@MainActor (Data, (lat: Double, lon: Double)?, Int?) async throws -> [BirdIdEngine.Result])? = nil
     ) {
+        self.suggestFocalPoint = suggestFocalPoint
         self.identify = identify ?? { imageData, location, month in
             try await BirdIdEngine.shared.identify(imageData: imageData, location: location, month: month)
         }
@@ -466,9 +472,8 @@ final class AddPhotosViewModel {
                     rejectedPhotoCount += 1
                     continue
                 }
-                let suggestedFocalPoint = await ImageLoader.suggestedFocalPoint(
-                    for: prepared.thumbnail,
-                    label: "camera_\(id).jpg"
+                let suggestedFocalPoint = await suggestFocalPoint(
+                    prepared.thumbnail, "camera_\(id).jpg"
                 )
         candidatePhotos.append(
           ProcessedPhoto(
@@ -550,6 +555,7 @@ final class AddPhotosViewModel {
         guard !inputs.isEmpty else { return [] }
         let concurrencyLimit = min(4, inputs.count)
         let batch = PhotoPreparationBatch()
+        let suggestFocalPoint = self.suggestFocalPoint
 
         do {
             let outcomes = try await withThrowingTaskGroup(
@@ -559,7 +565,9 @@ final class AddPhotosViewModel {
                 for index in 0..<concurrencyLimit {
                     let input = inputs[index]
                     group.addTask {
-                        try await Self.preparePhoto(input, index: index, batch: batch)
+                        try await Self.preparePhoto(
+                            input, index: index, batch: batch, suggestFocalPoint: suggestFocalPoint
+                        )
                     }
                 }
 
@@ -575,7 +583,9 @@ final class AddPhotosViewModel {
                         let index = nextIndex
                         let input = inputs[index]
                         group.addTask {
-                            try await Self.preparePhoto(input, index: index, batch: batch)
+                            try await Self.preparePhoto(
+                                input, index: index, batch: batch, suggestFocalPoint: suggestFocalPoint
+                            )
                         }
                         nextIndex += 1
                     }
@@ -593,7 +603,8 @@ final class AddPhotosViewModel {
     private nonisolated static func preparePhoto(
         _ input: PhotoPreparationInput,
         index: Int,
-        batch: PhotoPreparationBatch
+        batch: PhotoPreparationBatch,
+        suggestFocalPoint: FocalPointProvider
     ) async throws -> PhotoPreparationOutcome {
         try Task.checkCancellation()
         switch input {
@@ -610,7 +621,8 @@ final class AddPhotosViewModel {
           let photo = await makeProcessedPhoto(
                     fileURL: imported.url,
                     fileName: nil,
-                    cleanupOriginal: true
+                    cleanupOriginal: true,
+                    suggestFocalPoint: suggestFocalPoint
           )
         else {
                     PhotoFlowStore.remove([imported.url])
@@ -644,7 +656,8 @@ final class AddPhotosViewModel {
           let photo = await makeProcessedPhoto(
                     fileURL: sharedPhoto.fileURL,
                     fileName: sharedPhoto.fileName,
-                    cleanupOriginal: false
+                    cleanupOriginal: false,
+                    suggestFocalPoint: suggestFocalPoint
           )
         else {
           log.error(
@@ -680,18 +693,16 @@ final class AddPhotosViewModel {
         extractionProgress = 0
     }
 
-    private nonisolated static func makeProcessedPhoto(
+    nonisolated static func makeProcessedPhoto(
         fileURL: URL,
         fileName: String?,
-        cleanupOriginal: Bool
+        cleanupOriginal: Bool,
+        suggestFocalPoint: FocalPointProvider
     ) async -> ProcessedPhoto? {
         guard let prepared = PhotoService.preparePhoto(at: fileURL) else { return nil }
         let id = UUID().uuidString
         let resolvedFileName = fileName ?? fileURL.lastPathComponent
-        let suggestedFocalPoint = await ImageLoader.suggestedFocalPoint(
-            for: prepared.thumbnail,
-            label: id
-        )
+        let suggestedFocalPoint = await suggestFocalPoint(prepared.thumbnail, id)
         return ProcessedPhoto(
             id: id,
             originalURL: fileURL,

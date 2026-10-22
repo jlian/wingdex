@@ -32,7 +32,9 @@ final class AddPhotosViewModelTests: XCTestCase {
     }
 
     private func configuredModel(
-        _ viewModel: AddPhotosViewModel = AddPhotosViewModel()
+        _ viewModel: AddPhotosViewModel = AddPhotosViewModel(
+            suggestFocalPoint: { _, _ in CGPoint(x: 0.5, y: 0.5) }
+        )
     ) async throws -> (AddPhotosViewModel, DataStore) {
         let auth = AuthService()
         auth.installUITestAnonymousIdentity()
@@ -231,6 +233,41 @@ final class AddPhotosViewModelTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: originalURL.path))
         await viewModel.cancelSession()
         XCTAssertFalse(FileManager.default.fileExists(atPath: originalURL.path))
+    }
+
+    func testCameraPreparationUsesInjectedFocalPoint() async throws {
+        let point = CGPoint(x: 0.2, y: 0.7)
+        let (model, _) = try await configuredModel(AddPhotosViewModel(
+            suggestFocalPoint: { data, label in
+                XCTAssertFalse(data.isEmpty)
+                XCTAssertTrue(label.hasPrefix("camera_"))
+                return point
+            }
+        ))
+        model.addCameraPhoto(try cameraCapture(cameraImage()))
+        await model.processSelectedPhotos()
+        XCTAssertEqual(model.currentStep, .outingReview)
+        XCTAssertEqual(model.processedPhotos.first?.suggestedFocalPoint, point)
+        await model.cancelSession()
+    }
+
+    func testFilePreparationUsesInjectedFocalPointAndKeepsSource() async throws {
+        let data = try XCTUnwrap(cameraImage().jpegData(compressionQuality: 0.8))
+        let url = try PhotoFlowStore.writeCameraData(data)
+        defer { PhotoFlowStore.remove([url]) }
+        let point = CGPoint(x: 0.7, y: 0.2)
+        let photo = await AddPhotosViewModel.makeProcessedPhoto(
+            fileURL: url, fileName: "shared.jpg", cleanupOriginal: false,
+            suggestFocalPoint: { thumbnail, _ in
+                XCTAssertFalse(thumbnail.isEmpty)
+                return point
+            }
+        )
+        XCTAssertEqual(photo?.suggestedFocalPoint, point)
+        XCTAssertEqual(photo?.fileName, "shared.jpg")
+        XCTAssertEqual(photo?.originalURL, url)
+        XCTAssertEqual(photo?.cleanupOriginal, false)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
     }
 
     func testRejectedPhotoWarningSurvivesBothDuplicateChoices() async throws {
