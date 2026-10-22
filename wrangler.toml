@@ -2,8 +2,9 @@ name = "wingdex-app"
 compatibility_date = "2025-11-01"
 compatibility_flags = ["nodejs_compat"]
 main = "./worker/index.ts"
-preview_urls = true
-workers_dev = true
+# Production uses its existing custom domain, not alternate workers.dev URLs.
+preview_urls = false
+workers_dev = false
 
 [assets]
 directory = "./dist/client"
@@ -80,6 +81,7 @@ enabled = false
 [env.preview]
 main = "./worker/index.ts"
 workers_dev = true
+preview_urls = true
 
 [env.preview.assets]
 directory = "./dist/client"
