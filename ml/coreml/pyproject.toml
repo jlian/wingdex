@@ -10,7 +10,7 @@ requires-python = ">=3.12,<3.14"
 # a tested pair removes the question.
 dependencies = [
     "coremltools==9.0",
-    "torch==2.7.0",
+    "torch==2.13.0",
     "timm==1.0.28",
     "numpy>=2.0",
     "huggingface_hub>=1.0",
