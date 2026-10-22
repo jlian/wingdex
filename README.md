@@ -189,8 +189,9 @@ image; compare its end-to-end timing rather than just the runner's duration.
 CI registers each PR as `preview (#<number>)` in GitHub. **Cleanup Preview**
 runs when a PR closes, rechecks its live state, and deactivates all of its
 deployment records, including paginated history. Deployment history is retained.
-CI and close-event cleanup share a concurrency group, and rerunning CI for a
-closed PR does not recreate its preview.
+CI publication and each PR's cleanup share a concurrency group with
+`queue: max`, so pending work is retained up to GitHub's 100-entry queue limit.
+Rerunning CI for a closed PR does not recreate its preview.
 
 The built-in `GITHUB_TOKEN` cannot delete GitHub environments. To remove the
 environment records too, configure the optional repository secret
@@ -204,6 +205,12 @@ Leave `dry_run` enabled to inspect candidates first, then disable it to apply.
 Set `pr_number` to scope a run to one PR, or leave it blank to scan all
 `preview (#<number>)` environments. Open PRs and other environment names,
 including `production` and `dev`, are never cleaned up.
+Backlog discovery is read-only and fans out into per-PR jobs. Each job acquires
+the publication lock before checking the PR's live state or making changes,
+so a reopened PR's new preview cannot be deleted by overlapping cleanup.
+Dry runs use separate concurrency groups and cannot displace pending cleanup.
+GitHub supports at most 256 matrix jobs per run; larger backlogs must use
+targeted `pr_number` runs.
 
 Cloudflare cleanup is not included: PRs currently use aliased version URLs on
 the shared `wingdex-app-preview` Worker, not individually deletable Workers.

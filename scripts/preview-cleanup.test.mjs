@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import test from 'node:test'
 
 const require = createRequire(import.meta.url)
-const { cleanupPreviews } = require('../.github/scripts/cleanup-preview.cjs')
+const { cleanupPreviews, discoverPreviewNumbers } = require('../.github/scripts/cleanup-preview.cjs')
 const repo = { owner: 'owner', repo: 'repo' }
 
 function fixture({ names = [], state = 'closed', deployments = [], deleteError, statusError } = {}) {
@@ -72,7 +72,10 @@ test('backlog cleanup touches only exact numbered preview names for closed PRs',
     state: number => number === 1 ? 'closed' : 'open',
     deployments: [{ id: 10 }],
   })
-  await cleanupPreviews(f.options)
+  const numbers = await discoverPreviewNumbers(f.options)
+  assert.deepEqual(numbers, ['1', '2'])
+  assert.deepEqual(f.calls.map(([name]) => name), ['environments'])
+  for (const prNumber of numbers) await cleanupPreviews({ ...f.options, prNumber })
   assert.deepEqual(f.calls.filter(([name]) => name === 'pull').map(([, params]) => params.pull_number), [1, 2])
   assert.deepEqual(f.calls.filter(([name]) => name === 'delete').map(([, params]) => params.environment_name), ['preview (#1)'])
   assert.equal(f.calls.filter(([name]) => name === 'status').length, 1)
@@ -81,10 +84,17 @@ test('backlog cleanup touches only exact numbered preview names for closed PRs',
 
 test('dry run discovers closed candidates without writing statuses or environments', async () => {
   const f = fixture({ names: ['preview (#1)'], deployments: [{ id: 1 }] })
-  await cleanupPreviews({ ...f.options, dryRun: true })
+  await cleanupPreviews({ ...f.options, dryRun: true, prNumber: '1' })
   assert.equal(f.calls.some(([name]) => name === 'status' || name === 'delete'), false)
   assert.ok(f.logs.some(message => message.includes('Would deactivate 1')))
   assert.ok(f.logs.some(message => message.includes('Would delete preview (#1)')))
+})
+
+test('discovery returns an empty matrix for an empty backlog and scopes targeted runs without listing', async () => {
+  const f = fixture()
+  assert.deepEqual(await discoverPreviewNumbers(f.options), [])
+  assert.deepEqual(await discoverPreviewNumbers({ ...f.options, prNumber: '458' }), ['458'])
+  assert.deepEqual(f.calls.map(([name]) => name), ['environments'])
 })
 
 test('a reopened PR is skipped even for a targeted close-event cleanup', async () => {
@@ -125,22 +135,59 @@ test('invalid manual PR numbers fail before any API calls', async () => {
   for (const prNumber of ['0', '-1', '1.5', '1; echo nope', '01', '9007199254740992']) {
     const f = fixture()
     await assert.rejects(cleanupPreviews({ ...f.options, prNumber }), /pr_number must/)
+    await assert.rejects(discoverPreviewNumbers({ ...f.options, prNumber }), /pr_number must/)
     assert.equal(f.calls.length, 0)
   }
 })
 
-test('CI and close cleanup serialize on the same PR and cleanup checks out trusted code', () => {
+test('unscoped cleanup cannot mutate the backlog outside per-PR concurrency', async () => {
+  const f = fixture({ names: ['preview (#1)'] })
+  await assert.rejects(cleanupPreviews(f.options), /requires one pr_number/)
+  assert.equal(f.calls.length, 0)
+})
+
+test('a PR reopened after backlog discovery is rechecked by its cleanup job', async () => {
+  let state = 'closed'
+  const f = fixture({ names: ['preview (#1)'], state: () => state })
+  const numbers = await discoverPreviewNumbers(f.options)
+  state = 'open'
+  await cleanupPreviews({ ...f.options, prNumber: numbers[0] })
+  assert.deepEqual(f.calls.map(([name]) => name), ['environments', 'pull'])
+})
+
+test('CI and each cleanup matrix job share a non-dropping per-PR publication queue', () => {
   const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   const cleanup = readFileSync(new URL('../.github/workflows/cleanup-preview.yml', import.meta.url), 'utf8')
   const deployJob = ci.split('  build-and-test:')[1]
   assert.ok(ci.includes('group: ci-preview-${{ github.event.pull_request.number }}'))
   assert.ok(deployJob.includes('group: preview-${{ github.event.pull_request.number }}'))
-  assert.match(deployJob, /cancel-in-progress: false/)
-  assert.ok(cleanup.includes("group: preview-${{ github.event.pull_request.number || inputs.pr_number || 'backlog' }}"))
-  assert.match(cleanup, /cancel-in-progress: false/)
+  assert.match(deployJob, /cancel-in-progress: false\n\s+queue: max/)
+  assert.match(cleanup, /needs: discover/)
+  assert.match(cleanup, /if: needs.discover.outputs.pr_numbers != '\[\]'/)
+  assert.ok(cleanup.includes('pr_number: ${{ fromJSON(needs.discover.outputs.pr_numbers) }}'))
+  assert.ok(cleanup.includes("format('preview-{0}', matrix.pr_number)"))
+  assert.ok(cleanup.includes('PR_NUMBER: ${{ matrix.pr_number }}'))
+  assert.match(cleanup, /cancel-in-progress: false\n\s+queue: max/)
+  assert.equal(cleanup.includes('preview-backlog'), false)
   assert.match(cleanup, /pull_request_target:\n\s+types: \[closed\]/)
   assert.ok(cleanup.includes('ref: ${{ github.event.repository.default_branch }}'))
   assert.match(cleanup, /dry_run:[\s\S]*?default: true/)
+})
+
+test('dry runs do not join or displace pending mutation jobs', () => {
+  const cleanup = readFileSync(new URL('../.github/workflows/cleanup-preview.yml', import.meta.url), 'utf8')
+  const expression = cleanup.match(/^\s+group: \$\{\{ (.+) \}\}$/m)[1]
+  const group = new Function('inputs', 'github', 'matrix', 'format', `return ${expression}`)
+  const format = (pattern, ...values) => pattern.replace(/\{(\d+)\}/g, (_, index) => values[index])
+  const getGroup = (inputs, run_id) => group(inputs, { run_id }, { pr_number: '123' }, format)
+  const closeCleanup = getGroup({}, 1)
+  const backlogCleanup = getGroup({ dry_run: false }, 2)
+  const dryRun = getGroup({ dry_run: true }, 3)
+  assert.equal(closeCleanup, 'preview-123')
+  assert.equal(backlogCleanup, closeCleanup)
+  assert.equal(dryRun, 'preview-dry-run-3-123')
+  assert.notEqual(getGroup({ dry_run: true }, 4), dryRun)
+  assert.equal(/^concurrency:/m.test(cleanup), false, 'discovery must not take the publication lock')
 })
 
 test('late CI publication rechecks the PR before creating a deployment', async () => {

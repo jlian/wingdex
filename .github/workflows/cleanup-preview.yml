@@ -15,18 +15,56 @@ on:
         type: string
         required: false
 
-concurrency:
-  group: preview-${{ github.event.pull_request.number || inputs.pr_number || 'backlog' }}
-  cancel-in-progress: false
-
 permissions:
   contents: read
   deployments: write
   pull-requests: read
 
 jobs:
+  discover:
+    name: Find preview cleanup candidates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pr_numbers: ${{ steps.previews.outputs.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Discover numbered preview environments
+        id: previews
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        with:
+          script: |
+            const { discoverPreviewNumbers } = require('./.github/scripts/cleanup-preview.cjs');
+            const numbers = await discoverPreviewNumbers({
+              github, context, prNumber: process.env.PR_NUMBER,
+            });
+            if (numbers.length > 256) {
+              throw new Error('More than 256 preview environments found; use pr_number to run targeted cleanup.');
+            }
+            core.info(`Found ${numbers.length} numbered preview environment(s).`);
+            return numbers;
+
   cleanup:
-    name: Clean up closed PR previews
+    name: Clean up preview PR ${{ matrix.pr_number }}
+    needs: discover
+    if: needs.discover.outputs.pr_numbers != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        pr_number: ${{ fromJSON(needs.discover.outputs.pr_numbers) }}
+    concurrency:
+      # Discovery never writes. Each mutation takes the publication lock;
+      # dry runs cannot consume or displace entries in that queue.
+      group: ${{ inputs.dry_run && format('preview-dry-run-{0}-{1}', github.run_id, matrix.pr_number) || format('preview-{0}', matrix.pr_number) }}
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,7 +78,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          PR_NUMBER: ${{ matrix.pr_number }}
           DELETE_ENVIRONMENTS: ${{ secrets.PREVIEW_CLEANUP_TOKEN != '' }}
         with:
           # Environment deletion requires Administration: write, which the

@@ -151,6 +151,7 @@ jobs:
     concurrency:
       group: preview-${{ github.event.pull_request.number }}
       cancel-in-progress: false
+      queue: max
     needs: [checks, unit, browser]
     if: always()
     runs-on: ubuntu-24.04
