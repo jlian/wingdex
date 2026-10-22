@@ -24,3 +24,14 @@ test('third-party Actions are pinned to full commit SHAs', () => {
   })
   assert.equal(unpinned.length, 0, `Unpinned Actions:\n${unpinned.join('\n')}`)
 })
+
+test('production Worker URLs are disabled while PR preview URLs stay enabled', () => {
+  const config = readFileSync(join(root, 'wrangler.toml'), 'utf8')
+  const production = config.split(/^\[/m)[0]
+  const preview = config.split('[env.preview]')[1]?.split(/^\[/m)[0]
+  assert.ok(preview, 'preview environment must remain configured')
+  for (const setting of ['workers_dev', 'preview_urls']) {
+    assert.equal(new RegExp(`^${setting} = false$`, 'm').test(production), true, `${setting} must be disabled in production`)
+    assert.equal(new RegExp(`^${setting} = true$`, 'm').test(preview), true, `${setting} must stay explicitly enabled in preview`)
+  }
+})
