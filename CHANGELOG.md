@@ -1,3 +1,10 @@
+## [1.33.2](https://github.com/jlian/wingdex/compare/v1.33.1...v1.33.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **Security:** resolve CodeQL alerts and restore Swift scanning ([0724690](https://github.com/jlian/wingdex/commit/0724690c6fd5d50e3a87e112af02618725617236))
+
 ## [1.33.1](https://github.com/jlian/wingdex/compare/v1.33.0...v1.33.1) (2026-10-19)
 
 
