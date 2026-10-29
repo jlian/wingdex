@@ -21,8 +21,8 @@ function legacyDatabase(): DatabaseSync {
   return db
 }
 
-describe('Better Auth 1.7 account issuer migration', () => {
-  it('backfills configured providers and supports issuer-scoped ownership lookup', () => {
+describe('Better Auth account identity migrations', () => {
+  it('transitions issuer identities to provider-scoped ownership and preserves Apple credentials', () => {
     const db = legacyDatabase()
 
     const insertUser = db.prepare(
@@ -67,16 +67,35 @@ describe('Better Auth 1.7 account issuer migration', () => {
     })
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 
+    db.exec(readFileSync(path.join(migrationsDirectory, '0011_better_auth_account_provider_identity.sql'), 'utf8'))
+
+    const migratedColumns = db.prepare('PRAGMA table_info(account)').all() as Array<{ name: string }>
+    expect(migratedColumns.some(column => column.name === 'issuer')).toBe(false)
+    const providerOwnershipLookup = db.prepare(
+      'SELECT userId FROM account WHERE providerId = ? AND accountId = ?',
+    )
+    expect(providerOwnershipLookup.get('apple', 'apple-subject')).toEqual({ userId: 'user-apple' })
+    expect(providerOwnershipLookup.get('github', 'github-id')).toEqual({ userId: 'user-github' })
+    expect(providerOwnershipLookup.get('google', 'google-subject')).toEqual({ userId: 'user-google' })
+    expect(db.prepare(`
+      SELECT authAccountId, accessToken, refreshToken
+      FROM apple_native_revocation_credential
+    `).get()).toEqual({
+      authAccountId: 'account-apple',
+      accessToken: 'apple-access',
+      refreshToken: 'apple-refresh',
+    })
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+
     const insertMigratedAccount = db.prepare(
-      'INSERT INTO account (id, userId, accountId, providerId, issuer) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO account (id, userId, accountId, providerId) VALUES (?, ?, ?, ?)',
     )
     expect(() => {
       insertMigratedAccount.run(
         'duplicate',
         'user-github',
         'github-id',
-        'github-alias',
-        'local:oauth:github',
+        'github',
       )
     }).toThrow()
   })
