@@ -7,9 +7,13 @@ import { getAuthTables } from '@better-auth/core/db'
 
 const migrationsDirectory = path.resolve('migrations')
 
-function applyMigrations(db: DatabaseSync, through = '0010_better_auth_account_issuer.sql') {
+function applyMigrations(
+  db: DatabaseSync,
+  through = '0011_better_auth_account_provider_identity.sql',
+  after = '',
+) {
   const files = readdirSync(migrationsDirectory)
-    .filter(file => file.endsWith('.sql') && file <= through)
+    .filter(file => file.endsWith('.sql') && file > after && file <= through)
     .sort()
   for (const file of files) {
     db.exec(readFileSync(path.join(migrationsDirectory, file), 'utf8'))
@@ -49,7 +53,7 @@ function authEnv(db: DatabaseSync): Env {
   } as Env
 }
 
-describe('Better Auth account issuer ownership lookup', () => {
+describe('Better Auth account provider ownership lookup', () => {
   it('matches every required table field and index from the pinned Better Auth schema', async () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys = ON')
@@ -87,7 +91,7 @@ describe('Better Auth account issuer ownership lookup', () => {
     }
   })
 
-  it('fails against the pre-1.7 account schema', async () => {
+  it('preserves provider account identities while migrating the pre-1.7 schema', async () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys = ON')
     applyMigrations(db, '0009_import_identity.sql')
@@ -96,28 +100,35 @@ describe('Better Auth account issuer ownership lookup', () => {
       INSERT INTO account (id, userId, accountId, providerId)
       VALUES ('account-github', 'user-github', 'github-id', 'github');
     `)
+    applyMigrations(db, '0011_better_auth_account_provider_identity.sql', '0009_import_identity.sql')
 
     const context = await createAuth(authEnv(db)).$context
-    await expect(context.internalAdapter.findAccountOwnerByKey({
-      issuer: 'local:oauth:github',
+    const owner = await context.internalAdapter.findAccountOwnerByKey({
+      providerId: 'github',
       accountId: 'github-id',
-    })).rejects.toThrow()
+    })
+
+    expect(owner?.kind).toBe('owned')
+    if (owner?.kind === 'owned') {
+      expect(owner.user.id).toBe('user-github')
+      expect(owner.account.providerId).toBe('github')
+    }
   })
 
-  it('finds an OAuth account by issuer and provider account id', async () => {
+  it('finds an OAuth account by provider and provider account id', async () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys = ON')
     applyMigrations(db)
     db.exec(`
       INSERT INTO user (id, name, email) VALUES ('user-github', 'github', 'github@example.com');
-      INSERT INTO account (id, userId, accountId, providerId, issuer)
-      VALUES ('account-github', 'user-github', 'github-id', 'github', 'local:oauth:github');
+      INSERT INTO account (id, userId, accountId, providerId)
+      VALUES ('account-github', 'user-github', 'github-id', 'github');
     `)
 
     const auth = createAuth(authEnv(db))
     const context = await auth.$context
     const owner = await context.internalAdapter.findAccountOwnerByKey({
-      issuer: 'local:oauth:github',
+      providerId: 'github',
       accountId: 'github-id',
     })
 

@@ -81,8 +81,8 @@ function seedUsers(sqlite: DatabaseSync) {
     VALUES
       ('source-session', 'source-user', 'source-token', datetime('now', '+1 hour')),
       ('target-session', 'target-user', 'target-token', datetime('now', '+1 hour'));
-    INSERT INTO account (id, userId, accountId, providerId, issuer)
-    VALUES ('target-account', 'target-user', 'github-target', 'github', 'local:oauth:github');
+    INSERT INTO account (id, userId, accountId, providerId)
+    VALUES ('target-account', 'target-user', 'github-target', 'github');
     INSERT INTO passkey (id, name, publicKey, userId, credentialID)
     VALUES ('target-passkey', 'Target passkey', 'public-key', 'target-user', 'credential-id');
   `)
@@ -307,8 +307,8 @@ describe('account merge', () => {
     const { sqlite, d1 } = database()
     seedUsers(sqlite)
     sqlite.exec(`
-      INSERT INTO account (id, userId, accountId, providerId, issuer)
-      VALUES ('source-account', 'source-user', 'source-provider-id', 'google', 'https://accounts.google.com');
+      INSERT INTO account (id, userId, accountId, providerId)
+      VALUES ('source-account', 'source-user', 'source-provider-id', 'google');
     `)
     const token = await createAccountMergeIntent(d1, 'source-session', 'google')
 
@@ -413,8 +413,8 @@ describe('account merge', () => {
     const token = await createAccountMergeIntent(d1, 'source-session', 'github')
     beforeNextBatch(() => {
       sqlite.exec(`
-        INSERT INTO account (id, userId, accountId, providerId, issuer)
-        VALUES ('racing-account', 'source-user', 'racing-id', 'google', 'https://accounts.google.com');
+        INSERT INTO account (id, userId, accountId, providerId)
+        VALUES ('racing-account', 'source-user', 'racing-id', 'google');
       `)
     })
 
