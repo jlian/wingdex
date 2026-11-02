@@ -1,3 +1,10 @@
+## [1.33.4](https://github.com/jlian/wingdex/compare/v1.33.3...v1.33.4) (2026-11-02)
+
+
+### Bug Fixes
+
+* **Auth:** stage preview Apple secrets without deployment ([#467](https://github.com/jlian/wingdex/issues/467)) ([1301772](https://github.com/jlian/wingdex/commit/1301772e0eb8d491d813a8dda4ba7bb8d4e47a5f))
+
 ## [1.33.3](https://github.com/jlian/wingdex/compare/v1.33.2...v1.33.3) (2026-10-22)
 
 
