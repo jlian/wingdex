@@ -287,6 +287,8 @@ schemes:
       config: Dev Debug
       commandLineArguments:
         "--auto-sign-in": false
+        "--ui-test-fixture-populated": false
+        "--ui-test-ignore-shares": false
     test:
       config: Dev Debug
       preferredScreenCaptureFormat: screenshots

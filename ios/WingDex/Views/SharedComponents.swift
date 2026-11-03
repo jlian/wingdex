@@ -199,9 +199,9 @@ extension View {
     func keyboardIndependentViewportSize(_ size: Binding<CGSize?>) -> some View {
         background {
             // Only the measurement ignores the keyboard; content keeps native avoidance.
-            GeometryReader { geometry in
+            GeometryReader { _ in
                 Color.clear
-                    .onGeometryChange(for: CGSize.self) { _ in
+                    .onGeometryChange(for: CGSize.self) { geometry in
                         geometry.size
                     } action: { newSize in
                         size.wrappedValue = newSize

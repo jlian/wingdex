@@ -69,6 +69,14 @@ The `Localhost` app scheme uses `https://localhost.wingdex.app`, through the LAN
 reverse proxy described in the root README. This is only for interactive backend
 development; **none of the iOS tests require that host or a running backend**.
 
+For interactive layout work, the `WingDex` scheme includes disabled
+`--ui-test-fixture-populated` and `--ui-test-ignore-shares` Run arguments.
+Enable both in Edit Scheme > Run > Arguments to browse a populated, in-process
+fixture account without a backend or sign-in. Disable them for normal use.
+Use a dedicated simulator: fixture mode replaces the active account identity,
+and most writes are unsupported. These options are defined in `project.yml`,
+so project regeneration preserves the available switches without enabling them.
+
 ## Builds
 
 ```bash
@@ -179,7 +187,7 @@ make -C ios device DESTINATION='platform=iOS Simulator,id=YOUR-DUO-TEST-UDID'
 ```
 
 Open the dedicated Duo in unfolded landscape before running
-`DuoReviewLayoutUITests`. It checks the review gutter, metadata clearance from
+`DuoReviewLayoutUITests`. It checks the review and outing-detail gutters, metadata clearance from
 navigation controls on either edge, stacked comparison, and crop reachability.
 Layout tests use the actual app window's bounds and screenshots because Duo's
 main screen can describe the inactive outer display.
