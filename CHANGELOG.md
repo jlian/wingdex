@@ -1,3 +1,10 @@
+## [1.33.5](https://github.com/jlian/wingdex/compare/v1.33.4...v1.33.5) (2026-11-03)
+
+
+### Bug Fixes
+
+* **AppStore:** cover photo rows and make creative loops seamless ([0454d98](https://github.com/jlian/wingdex/commit/0454d98096c099d1dbb2b14af7834592ca6d2a5b))
+
 ## [1.33.4](https://github.com/jlian/wingdex/compare/v1.33.3...v1.33.4) (2026-11-02)
 
 
