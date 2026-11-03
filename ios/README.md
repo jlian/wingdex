@@ -135,7 +135,10 @@ species grid beside recent outings, with 44-point minimum section-heading tap
 targets. Recent-species cards and sighting links share
 one value-driven Home navigation path. Full-width species and outing details
 separate the visual overview from their history and notes; narrower detail
-panes remain stacked. Species photos are bounded by the offered viewport height.
+panes remain stacked. Paired outing lists use SwiftUI's default horizontal padding
+so the overview and sightings keep a gutter even when the display is flat.
+The unselected WingDex detail pane uses the outline custom bird symbol.
+Species photos are bounded by the offered viewport height.
 Detail pane selection measures the keyboard-independent viewport while lists retain
 native keyboard avoidance, so opening notes does not recreate the editor.
 Identification keeps both comparison photos together, placing results alongside

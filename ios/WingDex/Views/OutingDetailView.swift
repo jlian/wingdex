@@ -143,12 +143,17 @@ struct OutingDetailView: View {
                 in: geo, sizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize,
                 viewportSize: viewportSize
             ) {
+                // Plain lists don't provide a gutter at the arrangement's inner edges.
                 AdaptiveColumns {
                     List {
                         overviewSection(outing, mapHeight: min(300, geo.size.height / 2))
                     }
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal)
                 } secondary: {
                     List { sightingsSections(outing) }
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal)
                 }
             } else {
                 List {
