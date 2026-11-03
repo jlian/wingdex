@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WingDex - header and search review</title>
+  <style>
+    body { margin: 0 auto; max-width: 1200px; padding: 32px; background: #f5efdf; color: #173d2c; font: 18px/1.4 Arial, sans-serif; }
+    h1, h2 { font-family: Georgia, serif; font-weight: 400; }
+    h2 { margin-top: 48px; }
+    video, img { display: block; width: 100%; border-radius: 12px; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>WingDex header and search assets</h1>
+  <p>Run <code>node render.cjs --video --guides</code> first. Green outlines mark Apple's art safe area.</p>
+  <h2>Product page header, 3840 x 1646</h2>
+  <video src=".generated/wingdex-header-30fps.mp4" autoplay muted loop playsinline></video>
+  <div class="pair"><img src=".generated/wingdex-header.png" alt="Header still"><img src=".generated/wingdex-header-guides.png" alt="Header still with safe area"></div>
+  <h2>Search results, 3840 x 2560 still, 3600 x 2400 video</h2>
+  <video src=".generated/wingdex-search-30fps.mp4" autoplay muted loop playsinline></video>
+  <div class="pair"><img src=".generated/wingdex-search.png" alt="Search still"><img src=".generated/wingdex-search-guides.png" alt="Search still with safe area"></div>
+</body>
+</html>
