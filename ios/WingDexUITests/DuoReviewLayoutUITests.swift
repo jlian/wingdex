@@ -8,10 +8,9 @@ final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
         app.launch()
         waitForDataSetup(in: app)
         let window = app.windows.firstMatch
-        let bounds = window.frame
         try XCTSkipIf(
-            bounds.width < 640 || bounds.width <= bounds.height,
-            "Requires an unfolded, wide simulator window. Current window: \(bounds)."
+            window.frame.width < 640,
+            "Requires an expanded simulator window. Current window: \(window.frame)."
         )
 
         app.buttons.matching(
@@ -21,7 +20,24 @@ final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
         let sighting = app.buttons["Chalk-browed Mockingbird, Mimus saturninus"]
         XCTAssertTrue(map.existsOrWait(timeout: 5))
         XCTAssertTrue(sighting.existsOrWait(timeout: 5))
-        XCTAssertGreaterThan(sighting.frame.minX - map.frame.maxX, 0)
+        let overviewList = app.collectionViews.containing(
+            .button, identifier: "Open outing in Apple Maps"
+        ).firstMatch
+        let sightingsList = app.collectionViews.containing(
+            .button, identifier: "Chalk-browed Mockingbird, Mimus saturninus"
+        ).firstMatch
+        XCTAssertTrue(overviewList.exists, app.debugDescription)
+        XCTAssertTrue(sightingsList.exists, app.debugDescription)
+        let overviewFrame = overviewList.frame
+        let sightingsFrame = sightingsList.frame
+        try XCTSkipIf(
+            sightingsFrame.minX <= overviewFrame.minX,
+            "Requires side-by-side outing lists. Overview: \(overviewFrame); sightings: \(sightingsFrame)."
+        )
+        // A positive gap alone can be the fallback HStack's 16-point spacing.
+        XCTAssertGreaterThanOrEqual(
+            sightingsFrame.minX - overviewFrame.maxX, 24
+        )
         capture("Outing_Detail_Gutter", in: window)
     }
 

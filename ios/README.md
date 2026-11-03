@@ -189,9 +189,11 @@ make -C ios device DESTINATION='platform=iOS Simulator,id=YOUR-DUO-TEST-UDID'
 Open the dedicated Duo in unfolded landscape before running
 `DuoReviewLayoutUITests`. It checks the review and outing-detail gutters, metadata clearance from
 navigation controls on either edge, stacked comparison, and crop reachability.
+The outing-detail check measures the containing List frames, not inset row
+contents, and requires more than the fallback HStack's 16-point gap.
 Layout tests use the actual app window's bounds and screenshots because Duo's
 main screen can describe the inactive outer display.
-It skips compact or tall windows.
+Checks skip layouts without the required side-by-side panes.
 
 Before release, fold and unfold the Duo simulator without relaunching while
 viewing each tab, photo selection, outing review, identification, crop, the
