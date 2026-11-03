@@ -1,7 +1,8 @@
 # App Store media
 
 This contains the selected six-screenshot set, its inputs, and reusable screenshot
-and App Preview generators. Video recordings, exports, and generated posters are
+and App Preview generators, plus iPhone Duo screenshots and product-page/search
+creative assets. Video recordings, exports, and generated posters are
 local-only and ignored by Git. No running app, account, backend, or session
 workspace is needed to render; supply your own video recordings first.
 Open `sentence-set.html` for screenshots; after rendering videos, use the local
@@ -120,6 +121,48 @@ The sample cuts below refer to the original launch recordings; they are not
 automatically suitable for new footage. Keep each complete preview, including
 title cards, between 15 and 30 seconds. Render again with the command above.
 If you change output filenames, update the links in `preview-pair.html` too.
+
+## iPhone Duo screenshots
+
+`duo/artwork.html` composes five selected landscape screenshots from the
+checked-in `duo/raw-*.png` captures and the shared app icon. Open it without
+query parameters for the gallery, or with `?slide=0` through `?slide=4` to
+inspect an individual composition. Regenerate the five selected PNGs with:
+
+```sh
+node design/app-store/duo/render.cjs
+```
+
+The exports are opaque 2853 x 2007 PNGs. The renderer waits for images and fonts,
+reports page errors, and rejects overflowing compositions. It overwrites the
+selected exports; preserve a copy before comparing a new toolchain's output.
+The captures are artwork inputs, not fixtures for automatically recapturing the
+app. Keep their displayed image attribution and review them for privacy before
+public reuse.
+
+## Product-page and search creative
+
+`creative/creative.html` renders a twelve-second bird-photo animation using
+the checked-in `creative/photos/` inputs and shared app icon. The header and
+search formats have separate compositions and safe-area guides. Generate
+stills only, or add silent H.264 videos and guides:
+
+```sh
+node design/app-store/creative/render.cjs
+node design/app-store/creative/render.cjs --video --fps 30 --guides
+```
+
+Outputs stay local in the already-ignored `creative/.generated/` directory.
+Open `creative/index.html` after rendering videos and guides to review them.
+Stills are 3840 x 1646 for the header and 3840 x 2560 for search. Videos are
+3840 x 1646 and 3600 x 2400 respectively, at 30 fps by default; `--fps 60`
+selects 60 fps. The search video uses the smaller 3:2 size for H.264 decoder
+compatibility. These are creative assets, not the 15-30 second App Previews
+described above. Confirm current App Store Connect requirements before uploading.
+
+The source photo crops and depicted outings are the supplied artwork inputs.
+This repository does not establish ownership of the new photos or grant rights
+to redistribute them; the provenance, rights, and privacy checks below apply.
 
 ## Editing and output specifications
 
