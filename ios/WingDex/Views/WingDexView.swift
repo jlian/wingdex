@@ -108,8 +108,14 @@ struct WingDexView: View {
                 if let selectedSpeciesID, let entry = store.dexEntry(byKey: selectedSpeciesID) {
                     SpeciesDetailView(speciesName: entry.speciesName, speciesKey: entry.id)
                 } else {
-                    ContentUnavailableView("Select a Species", systemImage: "bird")
-                        .background(Color.pageBg.ignoresSafeArea())
+                    ContentUnavailableView {
+                        Label {
+                            Text("Select a Species")
+                        } icon: {
+                            Image("BirdLogo")
+                        }
+                    }
+                    .background(Color.pageBg.ignoresSafeArea())
                 }
             }
             .id(selectedSpeciesID)

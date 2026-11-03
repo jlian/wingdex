@@ -2,6 +2,29 @@ import XCTest
 
 @MainActor
 final class DuoReviewLayoutUITests: BirdIdFlowUITestCase {
+    func testWideOutingKeepsAGutterBetweenOverviewAndSightings() throws {
+        let app = application()
+        app.launchArguments += ["--ui-test-fixture-populated", "--ui-test-ignore-shares"]
+        app.launch()
+        waitForDataSetup(in: app)
+        let window = app.windows.firstMatch
+        let bounds = window.frame
+        try XCTSkipIf(
+            bounds.width < 640 || bounds.width <= bounds.height,
+            "Requires an unfolded, wide simulator window. Current window: \(bounds)."
+        )
+
+        app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Parque Ibirapuera, Sao Paulo")
+        ).firstMatch.tap()
+        let map = app.buttons["Open outing in Apple Maps"]
+        let sighting = app.buttons["Chalk-browed Mockingbird, Mimus saturninus"]
+        XCTAssertTrue(map.existsOrWait(timeout: 5))
+        XCTAssertTrue(sighting.existsOrWait(timeout: 5))
+        XCTAssertGreaterThan(sighting.frame.minX - map.frame.maxX, 0)
+        capture("Outing_Detail_Gutter", in: window)
+    }
+
     func testExpandedReviewGutterStackedPhotosAndCrop() throws {
         let app = launchApp(extraArguments: [
             "--ui-test-geocoding-success", "--ui-test-stub-identification",
