@@ -102,6 +102,14 @@
             argument = "--auto-sign-in"
             isEnabled = "NO">
          </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--ui-test-fixture-populated"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--ui-test-ignore-shares"
+            isEnabled = "NO">
+         </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
