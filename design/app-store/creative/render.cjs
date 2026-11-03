@@ -28,6 +28,30 @@ async function open(page, format, seconds) {
   await page.evaluate(() => window.ready)
 }
 
+async function verifyLoop(page) {
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.row')]
+    const frames = window.loopSeconds * 60
+    for (let frame = 0; frame < frames; frame++) {
+      window.render(frame / 60)
+      for (const [index, row] of rows.entries()) {
+        const bounds = row.getBoundingClientRect()
+        if (bounds.left > 0 || bounds.right < innerWidth) {
+          throw new Error(`Row ${index} does not cover the canvas at frame ${frame}`)
+        }
+      }
+    }
+    const last = rows.map(row => row.getBoundingClientRect().left)
+    window.render(0)
+    rows.forEach((row, index) => {
+      const pitch = row.children[1].offsetLeft - row.children[0].offsetLeft
+      if (Math.abs(row.getBoundingClientRect().left - last[index]) > pitch / frames) {
+        throw new Error(`Row ${index} jumps at the loop boundary`)
+      }
+    })
+  })
+}
+
 function encode(file, width, height) {
   const ffmpeg = spawn('ffmpeg', [
     '-loglevel', 'error', '-y', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
@@ -50,6 +74,8 @@ async function render() {
       page.on('pageerror', error => errors.push(error.message))
       await open(page, format, posterSeconds)
       if (errors.length) throw new Error(errors.join('\n'))
+      await verifyLoop(page)
+      await page.evaluate(seconds => window.render(seconds), posterSeconds)
       const still = path.join(outputDirectory, `wingdex-${format}.png`)
       await page.screenshot({ path: still })
       console.log(`${path.basename(still)}: ${width} x ${height}`)

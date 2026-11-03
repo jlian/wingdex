@@ -152,6 +152,10 @@ node design/app-store/creative/render.cjs
 node design/app-store/creative/render.cjs --video --fps 30 --guides
 ```
 
+The background drifts out and back smoothly over each loop. Before exporting,
+the renderer checks every background row for full canvas coverage at 60 fps
+and rejects jumps across the loop boundary.
+
 Outputs stay local in the already-ignored `creative/.generated/` directory.
 Open `creative/index.html` after rendering videos and guides to review them.
 Stills are 3840 x 1646 for the header and 3840 x 2560 for search. Videos are

@@ -70,7 +70,9 @@
     const tile = format.tile
     const gap = Math.round(36 * s)
     const pitch = tile + gap
-    const perRow = Math.ceil(format.width / pitch) + 2
+    // Cover two pitches of translation plus up to one pitch of row stagger.
+    const maxTranslation = 3 * pitch
+    const perRow = Math.ceil((format.width + maxTranslation + gap) / pitch)
     const firstRowTop = format.height / 2 - tile / 2 - Math.ceil((format.height / 2) / pitch) * pitch
     const rows = []
     for (let top = firstRowTop, index = 0; top < format.height; top += pitch, index++) {
@@ -114,7 +116,7 @@
     window.render = time => {
       const t = ((time % loopSeconds) + loopSeconds) % loopSeconds
       for (const { row, direction, stagger } of rows) {
-        const offset = (t / loopSeconds) * pitch
+        const offset = (1 - Math.cos(t / loopSeconds * 2 * Math.PI)) / 2 * pitch
         const x = direction < 0 ? -pitch - stagger - offset : -2 * pitch - stagger + offset
         row.style.transform = `translate3d(${x}px,0,0)`
       }
